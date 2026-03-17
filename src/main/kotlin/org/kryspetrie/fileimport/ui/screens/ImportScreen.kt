@@ -34,6 +34,7 @@ import org.kryspetrie.fileimport.application.WatchFolderConfig
 import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.model.*
 import org.kryspetrie.fileimport.domain.model.ImportHistoryEntry
+import org.kryspetrie.fileimport.domain.port.DeviceEvent
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
@@ -100,7 +101,7 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
 
   // Camera detection
   var detectedDevices by remember { mutableStateOf<List<CameraDevice>>(emptyList()) }
-  var hasAutoSelected by remember { mutableStateOf(false) }
+  val currentSettings by rememberUpdatedState(settings)
 
   // Profile
   var selectedProfileId by remember { mutableStateOf(settings.activeProfileId) }
@@ -119,19 +120,28 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
   var settingsExpanded by remember { mutableStateOf(false) }
   var wantsReview by remember { mutableStateOf(false) }
 
-  // Detect cameras on launch and auto-select matching profile
+  // Flow state
+  var flowStep by remember { mutableStateOf(FlowStep.SETUP) }
+  var images by remember { mutableStateOf<List<ImageFile>>(emptyList()) }
+  var filteredImages by remember { mutableStateOf<List<ImageFile>>(emptyList()) }
+  var duplicates by remember { mutableStateOf<List<DuplicateInfo>>(emptyList()) }
+  var importProgress by remember { mutableStateOf(ImportProgress()) }
+  var importResult by remember { mutableStateOf<ImportResult?>(null) }
+  var importJob by remember { mutableStateOf<Job?>(null) }
+
+  // Detect cameras on launch, then monitor for hot-plug events
   LaunchedEffect(Unit) {
-    val devices =
+    val initialDevices =
         try {
           devicePort.detectDevices()
         } catch (_: Exception) {
           emptyList()
         }
-    detectedDevices = devices
-    if (!hasAutoSelected && devices.isNotEmpty() && settings.profiles.isNotEmpty()) {
-      val device = devices.first()
+    detectedDevices = initialDevices
+    if (initialDevices.isNotEmpty() && currentSettings.profiles.isNotEmpty()) {
+      val device = initialDevices.first()
       val matchingProfile =
-          settings.profiles.find { profile ->
+          currentSettings.profiles.find { profile ->
             profile.cameraName.isNotBlank() &&
                 (device.name.equals(profile.cameraName, ignoreCase = true) ||
                     device.displayName.equals(profile.cameraName, ignoreCase = true))
@@ -142,18 +152,35 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
         destinationPath = matchingProfile.lastDestinationPath
         customConfig = matchingProfile.configuration
       }
-      hasAutoSelected = true
+    }
+
+    devicePort.observeDeviceChanges().collect { event ->
+      when (event) {
+        is DeviceEvent.Connected -> {
+          val device = event.device
+          detectedDevices = detectedDevices.filter { it.id != device.id } + device
+          if (flowStep == FlowStep.SETUP && currentSettings.profiles.isNotEmpty()) {
+            val matchingProfile =
+                currentSettings.profiles.find { profile ->
+                  profile.cameraName.isNotBlank() &&
+                      (device.name.equals(profile.cameraName, ignoreCase = true) ||
+                          device.displayName.equals(profile.cameraName, ignoreCase = true))
+                }
+            if (matchingProfile != null) {
+              selectedProfileId = matchingProfile.id
+              sourcePath = device.mountPoint ?: matchingProfile.lastSourcePath
+              destinationPath = matchingProfile.lastDestinationPath
+              customConfig = matchingProfile.configuration
+            }
+          }
+        }
+        is DeviceEvent.Disconnected -> {
+          detectedDevices = detectedDevices.filter { it.id != event.deviceId }
+        }
+        is DeviceEvent.MountChanged -> {}
+      }
     }
   }
-
-  // Flow state
-  var flowStep by remember { mutableStateOf(FlowStep.SETUP) }
-  var images by remember { mutableStateOf<List<ImageFile>>(emptyList()) }
-  var filteredImages by remember { mutableStateOf<List<ImageFile>>(emptyList()) }
-  var duplicates by remember { mutableStateOf<List<DuplicateInfo>>(emptyList()) }
-  var importProgress by remember { mutableStateOf(ImportProgress()) }
-  var importResult by remember { mutableStateOf<ImportResult?>(null) }
-  var importJob by remember { mutableStateOf<Job?>(null) }
 
   // Scanning / indexing progress
   var scanProgress by remember { mutableStateOf("") }
