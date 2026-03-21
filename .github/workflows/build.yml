@@ -27,7 +27,7 @@ jobs:
   build-macos-intel:
     name: Build macOS (Intel)
     needs: test
-    runs-on: macos-13  # macOS 13 runs on Intel hardware
+    runs-on: macos-15-intel # macOS 15 runs on Intel hardware
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
