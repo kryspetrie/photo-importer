@@ -1,6 +1,10 @@
 package org.kryspetrie.fileimport
 
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import javax.imageio.ImageIO
 import org.kryspetrie.fileimport.ui.createAppIcon
 
@@ -16,8 +20,7 @@ fun main() {
   ImageIO.write(icon512, "png", pngFile)
   println("Created: ${pngFile.absolutePath}")
 
-  val icon256 = createAppIcon(256)
-  ImageIO.write(icon256, "png", icoFile)
+  writeIco(icoFile, listOf(16, 32, 48, 256).map { createAppIcon(it) })
   println("Created: ${icoFile.absolutePath}")
 
   if (System.getProperty("os.name").lowercase().contains("mac")) {
@@ -28,6 +31,48 @@ fun main() {
   }
 
   println("Icons generated in ${resourceDir.absolutePath}")
+}
+
+private fun writeIco(file: File, images: List<BufferedImage>) {
+  val pngBlobs =
+      images.map { img ->
+        val baos = ByteArrayOutputStream()
+        ImageIO.write(img, "png", baos)
+        baos.toByteArray()
+      }
+
+  val headerSize = 6
+  val dirEntrySize = 16
+  var dataOffset = headerSize + dirEntrySize * images.size
+
+  val buf = ByteBuffer.allocate(dataOffset + pngBlobs.sumOf { it.size })
+  buf.order(ByteOrder.LITTLE_ENDIAN)
+
+  // ICO header: reserved(2) + type 1=ICO(2) + count(2)
+  buf.putShort(0)
+  buf.putShort(1)
+  buf.putShort(images.size.toShort())
+
+  // Directory entries
+  for ((i, img) in images.withIndex()) {
+    val w = if (img.width >= 256) 0 else img.width
+    val h = if (img.height >= 256) 0 else img.height
+    buf.put(w.toByte()) // width (0 = 256)
+    buf.put(h.toByte()) // height (0 = 256)
+    buf.put(0) // color palette count
+    buf.put(0) // reserved
+    buf.putShort(1) // color planes
+    buf.putShort(32) // bits per pixel
+    buf.putInt(pngBlobs[i].size) // image data size
+    buf.putInt(dataOffset) // offset to image data
+    dataOffset += pngBlobs[i].size
+  }
+
+  for (blob in pngBlobs) {
+    buf.put(blob)
+  }
+
+  file.writeBytes(buf.array())
 }
 
 private fun generateIcns(sourcePng: File, outputIcns: File) {

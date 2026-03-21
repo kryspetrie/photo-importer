@@ -54,7 +54,25 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew ${{ matrix.task }}
+
+      - name: Regenerate icons
+        run: |
+          rm -f src/main/resources/icon.png src/main/resources/icon.ico src/main/resources/icon.icns
+          ./gradlew generateIcons
+        shell: bash
+
+      - name: Package
+        run: ./gradlew ${{ matrix.task }}
+
+      - name: Print jpackage logs on failure
+        if: failure()
+        run: |
+          for f in build/compose/logs/${{ matrix.task }}/*.txt; do
+            echo "=== $f ==="
+            cat "$f"
+          done
+        shell: bash
+
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.artifact }}
