@@ -37,6 +37,18 @@ jobs:
           architecture: x64
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Get version from tag or branch
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=${GITHUB_REF#refs/heads/}-$(date +%Y%m%d-%H%M)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+        shell: bash
+
       - name: Regenerate icons
         run: |
           rm -f src/main/resources/icon.png src/main/resources/icon.ico src/main/resources/icon.icns
@@ -61,7 +73,7 @@ jobs:
       - name: Prepare Intel artifact
         run: |
           mkdir -p output
-          cp build/compose/binaries/main/dmg/*.dmg output/Petrie-Image-Importer-Intel.dmg
+          cp build/compose/binaries/main/dmg/*.dmg "output/Petrie-Image-Importer-${{ steps.version.outputs.version }}-Intel.dmg"
           echo "Intel build ready:"
           ls -lh output/
           file output/*.dmg
@@ -71,7 +83,7 @@ jobs:
       - name: Upload Intel DMG
         uses: actions/upload-artifact@v4
         with:
-          name: Petrie-Image-Importer-Intel
+          name: Petrie-Image-Importer-${{ steps.version.outputs.version }}-Intel
           path: output/*.dmg
           if-no-files-found: error
           retention-days: 30
@@ -89,6 +101,18 @@ jobs:
           java-version: 21
           architecture: arm64
       - uses: gradle/actions/setup-gradle@v4
+
+      - name: Get version from tag or branch
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=${GITHUB_REF#refs/heads/}-$(date +%Y%m%d-%H%M)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+        shell: bash
 
       - name: Regenerate icons
         run: |
@@ -114,7 +138,7 @@ jobs:
       - name: Prepare ARM artifact
         run: |
           mkdir -p output
-          cp build/compose/binaries/main/dmg/*.dmg output/Petrie-Image-Importer-ARM.dmg
+          cp build/compose/binaries/main/dmg/*.dmg "output/Petrie-Image-Importer-${{ steps.version.outputs.version }}-ARM.dmg"
           echo "ARM build ready:"
           ls -lh output/
           file output/*.dmg
@@ -124,7 +148,7 @@ jobs:
       - name: Upload ARM DMG
         uses: actions/upload-artifact@v4
         with:
-          name: Petrie-Image-Importer-ARM
+          name: Petrie-Image-Importer-${{ steps.version.outputs.version }}-ARM
           path: output/*.dmg
           if-no-files-found: error
           retention-days: 30
