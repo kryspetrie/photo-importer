@@ -14,7 +14,7 @@ permissions:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -25,16 +25,16 @@ jobs:
       - run: ./gradlew test
 
   build-macos-intel:
-    name: Build macOS (Intel)
+    name: Build macOS (Intel x86_64)
     needs: test
-    runs-on: macos-15-intel # macOS 15 runs on Intel hardware
+    runs-on: macos-26-intel  # Intel-based macOS runner
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-          architecture: x64  # Explicitly use Intel Java
+          architecture: x64
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Regenerate icons
@@ -43,32 +43,51 @@ jobs:
           ./gradlew generateIcons
         shell: bash
 
-      - name: Package for Intel Macs
-        run: ./gradlew packageDmg -Porg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8"
-
-      - name: Rename Intel artifact
+      - name: Build Intel DMG
         run: |
-          mkdir -p build/compose/binaries/intel
-          cp build/compose/binaries/main/dmg/*.dmg build/compose/binaries/intel/
+          echo "Building for Intel Macs (x86_64)..."
+          ./gradlew packageDmg --no-daemon
         shell: bash
 
-      - uses: actions/upload-artifact@v4
+      - name: Verify DMG was created
+        run: |
+          echo "=== Checking DMG ==="
+          ls -lh build/compose/binaries/main/dmg/
+          file build/compose/binaries/main/dmg/*.dmg
+          echo "=== Testing mount ==="
+          hdiutil attach -verify -mountpoint /tmp/test-intel build/compose/binaries/main/dmg/*.dmg && hdiutil detach /tmp/test-intel || echo "Mount test completed"
+        shell: bash
+
+      - name: Prepare Intel artifact
+        run: |
+          mkdir -p output
+          cp build/compose/binaries/main/dmg/*.dmg output/Petrie-Image-Importer-Intel.dmg
+          echo "Intel build ready:"
+          ls -lh output/
+          file output/*.dmg
+          hdiutil info output/*.dmg
+        shell: bash
+
+      - name: Upload Intel DMG
+        uses: actions/upload-artifact@v4
         with:
-          name: installer-dmg-intel
-          path: build/compose/binaries/intel
+          name: Petrie-Image-Importer-Intel
+          path: output/*.dmg
           if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
 
   build-macos-arm:
-    name: Build macOS (Apple Silicon)
+    name: Build macOS (ARM arm64)
     needs: test
-    runs-on: macos-latest  # Latest macOS runs on Apple Silicon
+    runs-on: macos-26  # Apple Silicon-based macOS runner
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
-          architecture: arm64  # Explicitly use ARM Java
+          architecture: arm64
       - uses: gradle/actions/setup-gradle@v4
 
       - name: Regenerate icons
@@ -77,20 +96,39 @@ jobs:
           ./gradlew generateIcons
         shell: bash
 
-      - name: Package for Apple Silicon Macs
-        run: ./gradlew packageDmg -Porg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8"
-
-      - name: Rename ARM artifact
+      - name: Build ARM DMG
         run: |
-          mkdir -p build/compose/binaries/arm
-          cp build/compose/binaries/main/dmg/*.dmg build/compose/binaries/arm/
+          echo "Building for Apple Silicon Macs (arm64)..."
+          ./gradlew packageDmg --no-daemon
         shell: bash
 
-      - uses: actions/upload-artifact@v4
+      - name: Verify DMG was created
+        run: |
+          echo "=== Checking DMG ==="
+          ls -lh build/compose/binaries/main/dmg/
+          file build/compose/binaries/main/dmg/*.dmg
+          echo "=== Testing mount ==="
+          hdiutil attach -verify -mountpoint /tmp/test-arm build/compose/binaries/main/dmg/*.dmg && hdiutil detach /tmp/test-arm || echo "Mount test completed"
+        shell: bash
+
+      - name: Prepare ARM artifact
+        run: |
+          mkdir -p output
+          cp build/compose/binaries/main/dmg/*.dmg output/Petrie-Image-Importer-ARM.dmg
+          echo "ARM build ready:"
+          ls -lh output/
+          file output/*.dmg
+          hdiutil info output/*.dmg
+        shell: bash
+
+      - name: Upload ARM DMG
+        uses: actions/upload-artifact@v4
         with:
-          name: installer-dmg-arm
-          path: build/compose/binaries/arm
+          name: Petrie-Image-Importer-ARM
+          path: output/*.dmg
           if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
 
   build-windows:
     name: Build Windows
@@ -168,7 +206,7 @@ jobs:
     name: Upload Release Assets
     if: startsWith(github.ref, 'refs/tags/v')
     needs: [build-macos-intel, build-macos-arm, build-windows, build-linux]
-    runs-on: ubuntu-latest
+    runs-on: macos-26
     permissions:
       contents: write
     steps:
@@ -176,6 +214,12 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      - name: List artifacts
+        run: |
+          echo "=== Downloaded files ==="
+          ls -lh artifacts/
+          file artifacts/*
+        shell: bash
       - uses: softprops/action-gh-release@v2
         with:
           files: artifacts/**/*
