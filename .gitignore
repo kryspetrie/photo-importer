@@ -13,6 +13,9 @@ out/
 # Kotlin
 *.class
 
+# Build artifacts
+dist/
+
 # OS
 .DS_Store
 Thumbs.db

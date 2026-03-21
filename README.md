@@ -38,20 +38,28 @@ cd petrie-file-importer
 
 ### Build Native Installers
 
-Native installers bundle a JRE so end users don't need Java installed.
+Native installers bundle a JRE so end users don't need Java installed. `jpackage` does not support cross-compilation, so each platform's installer must be built on that platform.
+
+#### Local Build (current platform only)
 
 ```bash
-# Build for current platform (DMG on macOS, DEB on Linux, MSI on Windows)
-./build-installers.sh
+# Build for your current OS
+./build-all.sh            # macOS .dmg natively + Linux .deb via Docker
+./build-all.sh macos      # macOS .dmg only
+./build-all.sh linux      # Linux .deb only (requires Docker)
 
 # Or use Gradle directly
-./gradlew packageDmg    # macOS
-./gradlew packageDeb    # Linux
-./gradlew packageMsi    # Windows
+./gradlew packageDmg      # macOS
+./gradlew packageDeb      # Linux
+./gradlew packageMsi      # Windows
 
 # Build an uber JAR (requires Java on the target machine)
 ./gradlew packageUberJarForCurrentOS
 ```
+
+#### CI Build (all platforms)
+
+The included GitHub Actions workflow builds `.dmg`, `.deb`, and `.msi` installers in parallel. See [CI / GitHub Actions](#ci--github-actions) below for setup instructions.
 
 ### Install from Native Package
 
@@ -145,6 +153,44 @@ Combine them to create hierarchies: `{yyyy}/{MM}/{dd}` produces `2024/03/15/`.
 | `{counter}` | Sequence number | `0001` |
 | `{duration}` | Video duration | `1m30s` |
 | `{fps}` | Video frame rate | `60` |
+
+## CI / GitHub Actions
+
+A GitHub Actions workflow at `.github/workflows/build.yml` builds and tests all three platform installers. It runs automatically on pushes to `main` and on pull requests.
+
+### Setup
+
+1. **Push to GitHub** — the workflow runs automatically, no configuration needed:
+   ```bash
+   git remote add origin https://github.com/<you>/petrie-file-importer.git
+   git push -u origin main
+   ```
+2. **Download artifacts** — after a successful run, go to **Actions → Build Installers → (latest run)** and download the installers from the **Artifacts** section at the bottom of the run page.
+
+### Triggers
+
+| Trigger | What happens |
+|---------|-------------|
+| Push to `main` | Tests run, then all three installers are built and uploaded as artifacts |
+| Pull request to `main` | Same — validates the PR builds cleanly on all platforms |
+| Push a tag like `v1.0.0` | Builds all installers, then creates a GitHub Release with the .dmg, .deb, and .msi attached |
+| Manual (Actions → Run workflow) | On-demand build from any branch |
+
+### Creating a Release
+
+Tag a commit and push it to trigger an automatic release with all installers attached:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow uploads the `.dmg`, `.deb`, and `.msi` to a GitHub Release with auto-generated release notes.
+
+### Costs
+
+- **Public repos**: GitHub Actions is free with generous limits.
+- **Private repos**: Uses your account's included Actions minutes. Each full build uses ~10-15 minutes across the three runners. Free-tier accounts get 2,000 minutes/month.
 
 ## Architecture
 

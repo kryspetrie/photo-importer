@@ -196,11 +196,14 @@ Never import infrastructure classes from the domain layer. The UI layer may refe
 ./gradlew packageMsi       # Windows
 ./gradlew packageDeb       # Linux
 
-# Or use the convenience script
-./build-installers.sh      # Detects OS and builds the right one
+# Multi-platform local build (macOS native + Linux via Docker)
+./build-all.sh
 
 # Uber JAR (requires Java on the target machine)
 ./gradlew packageUberJarForCurrentOS
+
+# All three platforms via CI — push to main or open a PR.
+# See .github/workflows/build.yml and README.md § "CI / GitHub Actions".
 ```
 
 ### Code Formatting
