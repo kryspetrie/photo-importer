@@ -260,3 +260,117 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details, coding standard
 ## License
 
 MIT License
+
+## Documentation
+
+### For New Developers (Especially Backend/Spring Developers)
+
+📚 **[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)** - Comprehensive guide for developing Compose Multiplatform applications
+
+This guide is specifically written for backend developers transitioning to desktop UI development. It covers:
+
+- **Compose Multiplatform Fundamentals**: Declarative UI, composables, state management
+- **Development Setup**: IntelliJ IDEA (no Android Studio needed for desktop!)
+- **Testing UI Components**: Unit tests, component tests, and preview system
+- **Architecture**: Hexagonal architecture with Koin dependency injection
+- **Spring Developer Mappings**: Direct comparison of Spring vs. Compose/Koin concepts
+- **Common Patterns**: Best practices, anti-patterns, and debugging tips
+
+### Quick Reference
+
+⚡ **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** - Fast answers for common tasks
+
+- Running and building the application
+- Compose UI patterns and examples
+- Testing patterns
+- Gradle commands
+- Keyboard shortcuts
+
+### Documentation Summary
+
+📋 **[DOCUMENTATION_SUMMARY.md](DOCUMENTATION_SUMMARY.md)** - Overview of all documentation
+
+Complete index of all documentation with explanations of what's covered and how to use it.
+
+### Inline Documentation
+
+💡 **KDoc Comments** - Hover in IntelliJ IDEA
+
+All major source files include extensive KDoc documentation:
+- Entry points and main composables
+- UI components and screens
+- Domain models and configurations
+- Services and dependency injection
+- Theme and styling
+
+Just hover over any symbol in IntelliJ or press `Cmd/Ctrl + Q` to view documentation.
+
+## Key Documentation Highlights
+
+### Do I Need Android Studio?
+
+**No!** For desktop-only development (Windows, macOS, Linux), **IntelliJ IDEA** is sufficient and recommended:
+- IntelliJ IDEA Community Edition (free) works perfectly
+- No Android SDK required
+- Full support for Compose Multiplatform desktop
+
+See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#do-you-need-android-studio) for details.
+
+### How to Test UI Components
+
+The project uses multiple testing strategies:
+
+1. **Unit Tests**: Test pure functions and business logic
+   ```bash
+   ./gradlew test
+   ```
+
+2. **UI Component Previews**: Live preview while developing
+   - Add `@Preview` annotation to composables
+   - View in IntelliJ preview panel
+   - Similar to WidgetBook/Storybook
+
+3. **UI Component Tests**: Test UI interactions
+   - Uses Compose UI Test framework
+   - See examples in `src/test/kotlin/org/kryspetrie/fileimport/ui/`
+
+See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#testing-ui-components) for detailed examples.
+
+### Development Workflow
+
+```bash
+# Run with hot reload
+./gradlew run
+
+# Run tests
+./gradlew test
+
+# Format code
+./gradlew ktfmtFormatMain
+
+# Build native installer
+./gradlew packageDmg      # macOS
+./gradlew packageMsi      # Windows
+./gradlew packageDeb      # Linux
+```
+
+See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for complete command reference.
+
+### Component Preview System
+
+Compose provides a built-in preview system similar to WidgetBook:
+
+```kotlin
+@Preview(showBackground = true)
+@Composable
+fun MyComponentPreview() {
+    PetrieTheme {
+        MyComponent(text = "Preview")
+    }
+}
+```
+
+Click the "Preview" button in IntelliJ to see live preview. Multiple previews appear as tabs.
+
+See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#previewing-components-like-widgetbook) for more details.
+

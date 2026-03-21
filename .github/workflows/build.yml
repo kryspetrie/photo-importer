@@ -24,29 +24,78 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: ./gradlew test
 
-  build:
-    name: Build (${{ matrix.name }})
+  build-macos-intel:
+    name: Build macOS (Intel)
     needs: test
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: macOS
-            os: macos-latest
-            task: packageDmg
-            artifact: dmg
-            path: build/compose/binaries/main/dmg
-          - name: Windows
-            os: windows-latest
-            task: packageMsi
-            artifact: msi
-            path: build/compose/binaries/main/msi
-          - name: Linux
-            os: ubuntu-latest
-            task: packageDeb
-            artifact: deb
-            path: build/compose/binaries/main/deb
+    runs-on: macos-13  # macOS 13 runs on Intel hardware
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          architecture: x64  # Explicitly use Intel Java
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Regenerate icons
+        run: |
+          rm -f src/main/resources/icon.png src/main/resources/icon.ico src/main/resources/icon.icns
+          ./gradlew generateIcons
+        shell: bash
+
+      - name: Package for Intel Macs
+        run: ./gradlew packageDmg -Porg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8"
+
+      - name: Rename Intel artifact
+        run: |
+          mkdir -p build/compose/binaries/intel
+          cp build/compose/binaries/main/dmg/*.dmg build/compose/binaries/intel/
+        shell: bash
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-dmg-intel
+          path: build/compose/binaries/intel
+          if-no-files-found: error
+
+  build-macos-arm:
+    name: Build macOS (Apple Silicon)
+    needs: test
+    runs-on: macos-latest  # Latest macOS runs on Apple Silicon
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          architecture: arm64  # Explicitly use ARM Java
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Regenerate icons
+        run: |
+          rm -f src/main/resources/icon.png src/main/resources/icon.ico src/main/resources/icon.icns
+          ./gradlew generateIcons
+        shell: bash
+
+      - name: Package for Apple Silicon Macs
+        run: ./gradlew packageDmg -Porg.gradle.jvmargs="-Xmx2g -Dfile.encoding=UTF-8"
+
+      - name: Rename ARM artifact
+        run: |
+          mkdir -p build/compose/binaries/arm
+          cp build/compose/binaries/main/dmg/*.dmg build/compose/binaries/arm/
+        shell: bash
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-dmg-arm
+          path: build/compose/binaries/arm
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows
+    needs: test
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -62,12 +111,12 @@ jobs:
         shell: bash
 
       - name: Package
-        run: ./gradlew ${{ matrix.task }}
+        run: ./gradlew packageMsi
 
       - name: Print jpackage logs on failure
         if: failure()
         run: |
-          for f in build/compose/logs/${{ matrix.task }}/*.txt; do
+          for f in build/compose/logs/packageMsi/*.txt; do
             echo "=== $f ==="
             cat "$f"
           done
@@ -75,14 +124,50 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: installer-${{ matrix.artifact }}
-          path: ${{ matrix.path }}
+          name: installer-msi
+          path: build/compose/binaries/main/msi
+          if-no-files-found: error
+
+  build-linux:
+    name: Build Linux
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Regenerate icons
+        run: |
+          rm -f src/main/resources/icon.png src/main/resources/icon.ico src/main/resources/icon.icns
+          ./gradlew generateIcons
+        shell: bash
+
+      - name: Package
+        run: ./gradlew packageDeb
+
+      - name: Print jpackage logs on failure
+        if: failure()
+        run: |
+          for f in build/compose/logs/packageDeb/*.txt; do
+            echo "=== $f ==="
+            cat "$f"
+          done
+        shell: bash
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-deb
+          path: build/compose/binaries/main/deb
           if-no-files-found: error
 
   release:
     name: Upload Release Assets
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: build
+    needs: [build-macos-intel, build-macos-arm, build-windows, build-linux]
     runs-on: ubuntu-latest
     permissions:
       contents: write
