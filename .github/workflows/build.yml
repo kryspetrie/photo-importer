@@ -164,6 +164,18 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Get version from tag or branch
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=${GITHUB_REF#refs/heads/}-$(date +%Y%m%d-%H%M)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+        shell: bash
+
       - name: Regenerate icons
         run: |
           rm -f src/main/resources/icon.png src/main/resources/icon.ico src/main/resources/icon.icns
@@ -182,10 +194,17 @@ jobs:
           done
         shell: bash
 
+      - name: Prepare Windows artifact
+        run: |
+          mkdir -p output
+          cp build/compose/binaries/main/msi/*.msi "output/Petrie-Image-Importer-${{ steps.version.outputs.version }}-Windows.msi"
+          ls -lh output/
+        shell: bash
+
       - uses: actions/upload-artifact@v4
         with:
-          name: installer-msi
-          path: build/compose/binaries/main/msi
+          name: Petrie-Image-Importer-${{ steps.version.outputs.version }}-Windows
+          path: output/*.msi
           if-no-files-found: error
 
   build-linux:
@@ -199,6 +218,18 @@ jobs:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
+
+      - name: Get version from tag or branch
+        id: version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/v}
+          else
+            VERSION=${GITHUB_REF#refs/heads/}-$(date +%Y%m%d-%H%M)
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+        shell: bash
 
       - name: Regenerate icons
         run: |
@@ -218,10 +249,17 @@ jobs:
           done
         shell: bash
 
+      - name: Prepare Linux artifact
+        run: |
+          mkdir -p output
+          cp build/compose/binaries/main/deb/*.deb "output/Petrie-Image-Importer-${{ steps.version.outputs.version }}-Linux.deb"
+          ls -lh output/
+        shell: bash
+
       - uses: actions/upload-artifact@v4
         with:
-          name: installer-deb
-          path: build/compose/binaries/main/deb
+          name: Petrie-Image-Importer-${{ steps.version.outputs.version }}-Linux
+          path: output/*.deb
           if-no-files-found: error
 
   release:
