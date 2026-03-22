@@ -292,12 +292,6 @@ This guide is specifically written for backend developers transitioning to deskt
 - Gradle commands
 - Keyboard shortcuts
 
-### Documentation Summary
-
-📋 **[DOCUMENTATION_SUMMARY.md](DOCUMENTATION_SUMMARY.md)** - Overview of all documentation
-
-Complete index of all documentation with explanations of what's covered and how to use it.
-
 ### Inline Documentation
 
 💡 **KDoc Comments** - Hover in IntelliJ IDEA
