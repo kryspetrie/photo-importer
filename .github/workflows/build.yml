@@ -77,7 +77,6 @@ jobs:
           echo "Intel build ready:"
           ls -lh output/
           file output/*.dmg
-          hdiutil info output/*.dmg
         shell: bash
 
       - name: Upload Intel DMG
@@ -142,7 +141,6 @@ jobs:
           echo "ARM build ready:"
           ls -lh output/
           file output/*.dmg
-          hdiutil info output/*.dmg
         shell: bash
 
       - name: Upload ARM DMG
