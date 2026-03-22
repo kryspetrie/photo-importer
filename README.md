@@ -261,6 +261,12 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for architecture details, coding standard
 
 MIT License
 
+## Support
+
+If you find this project helpful, consider buying me a coffee! ☕
+
+[![Support on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/kryspetrie)
+
 ## Documentation
 
 ### For New Developers (Especially Backend/Spring Developers)
