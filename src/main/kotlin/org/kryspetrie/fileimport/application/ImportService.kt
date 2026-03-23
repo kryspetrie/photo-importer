@@ -604,6 +604,7 @@ class ImportService(
   ): ImportResult {
     val startTime = System.currentTimeMillis()
     val copiedFiles = mutableListOf<CopiedFile>()
+    val fileDetails = mutableListOf<org.kryspetrie.fileimport.domain.model.ImportFileDetail>()
 
     val errors = mutableListOf<ImportError>()
     var successCount = 0
@@ -630,20 +631,56 @@ class ImportService(
         var destFile = java.io.File(destPath)
         destFile.parentFile?.mkdirs()
 
+        var conflictResolution = configuration.conflictResolution.toString()
         if (destFile.exists()) {
           when (configuration.conflictResolution) {
             ConflictResolution.SKIP -> {
               skippedCount++
+              fileDetails.add(
+                  org.kryspetrie.fileimport.domain.model.ImportFileDetail(
+                      sourcePath = image.filePath,
+                      destinationPath = "",
+                      destinationFolder = "",
+                      finalFilename = "",
+                      originalFilename = image.fileName,
+                      folderPattern = configuration.folderPattern,
+                      filenamePattern = configuration.fileNamePattern,
+                      resolvedFolder = "",
+                      fileSize = image.fileSize,
+                      fileHash = image.hash,
+                      success = false,
+                      errorMessage = "Skipped due to conflict",
+                      wasSkipped = true,
+                      conflictResolution = conflictResolution,
+                      sequenceNumber = counter))
               continue
             }
             ConflictResolution.RENAME -> {
               destPath = namingPort.resolveConflict(image, destinationPath, configuration)
               destFile = java.io.File(destPath)
               destFile.parentFile?.mkdirs()
+              conflictResolution = "RENAME"
             }
             ConflictResolution.REPLACE -> {}
             ConflictResolution.ASK_USER -> {
               skippedCount++
+              fileDetails.add(
+                  org.kryspetrie.fileimport.domain.model.ImportFileDetail(
+                      sourcePath = image.filePath,
+                      destinationPath = "",
+                      destinationFolder = "",
+                      finalFilename = "",
+                      originalFilename = image.fileName,
+                      folderPattern = configuration.folderPattern,
+                      filenamePattern = configuration.fileNamePattern,
+                      resolvedFolder = "",
+                      fileSize = image.fileSize,
+                      fileHash = image.hash,
+                      success = false,
+                      errorMessage = "Skipped - user decision required",
+                      wasSkipped = true,
+                      conflictResolution = "ASK_USER",
+                      sequenceNumber = counter))
               continue
             }
           }
@@ -657,6 +694,21 @@ class ImportService(
 
         if (!copyResult) {
           errors.add(ImportError(image, ErrorType.UNKNOWN, "Failed to copy file"))
+          fileDetails.add(
+              org.kryspetrie.fileimport.domain.model.ImportFileDetail(
+                  sourcePath = image.filePath,
+                  destinationPath = "",
+                  destinationFolder = destFolder,
+                  finalFilename = destFileName,
+                  originalFilename = image.fileName,
+                  folderPattern = configuration.folderPattern,
+                  filenamePattern = configuration.fileNamePattern,
+                  resolvedFolder = destFolder,
+                  fileSize = image.fileSize,
+                  fileHash = image.hash,
+                  success = false,
+                  errorMessage = "Failed to copy file",
+                  sequenceNumber = counter))
           continue
         }
 
@@ -668,6 +720,22 @@ class ImportService(
           if (!hashMatches) {
             errors.add(ImportError(image, ErrorType.HASH_MISMATCH, "Hash verification failed"))
             destFile.delete()
+            fileDetails.add(
+                org.kryspetrie.fileimport.domain.model.ImportFileDetail(
+                    sourcePath = image.filePath,
+                    destinationPath = "",
+                    destinationFolder = destFolder,
+                    finalFilename = destFileName,
+                    originalFilename = image.fileName,
+                    folderPattern = configuration.folderPattern,
+                    filenamePattern = configuration.fileNamePattern,
+                    resolvedFolder = destFolder,
+                    fileSize = image.fileSize,
+                    fileHash = image.hash,
+                    hashVerified = false,
+                    success = false,
+                    errorMessage = "Hash verification failed",
+                    sequenceNumber = counter))
             continue
           }
         }
@@ -680,6 +748,7 @@ class ImportService(
                 hashMatches = hashMatches))
 
         // Copy sidecars to same destination
+        val sidecarFiles = mutableListOf<String>()
         if (configuration.importSidecars && image.sidecars.isNotEmpty()) {
           for (sidecar in image.sidecars) {
             try {
@@ -687,12 +756,17 @@ class ImportService(
                   java.io.File(
                       destFile.parentFile, "${destFile.nameWithoutExtension}.${sidecar.extension}")
               sidecar.copyTo(sidecarDest, overwrite = true)
+              sidecarFiles.add(sidecarDest.absolutePath)
             } catch (_: Exception) {}
           }
         }
 
+        var sourceDeleted = false
         if (configuration.deleteAfterImport) {
-          if (imageRepository.deleteFile(image)) deletedCount++
+          if (imageRepository.deleteFile(image)) {
+            sourceDeleted = true
+            deletedCount++
+          }
           if (configuration.importSidecars) {
             image.sidecars.forEach { it.delete() }
           }
@@ -700,6 +774,30 @@ class ImportService(
 
         successCount++
         copiedBytes += image.fileSize
+        
+        fileDetails.add(
+            org.kryspetrie.fileimport.domain.model.ImportFileDetail(
+                sourcePath = image.filePath,
+                destinationPath = destPath,
+                destinationFolder = destFolder,
+                finalFilename = destFile.name,
+                originalFilename = image.fileName,
+                folderPattern = configuration.folderPattern,
+                filenamePattern = configuration.fileNamePattern,
+                resolvedFolder = destFolder,
+                fileSize = image.fileSize,
+                fileHash = image.hash,
+                hashVerified = hashVerified,
+                hashMatches = hashMatches,
+                success = true,
+                conflictResolution = conflictResolution,
+                sidecarsImported = sidecarFiles.isNotEmpty(),
+                sidecarFiles = sidecarFiles,
+                sourceDeleted = sourceDeleted,
+                exifDate = image.metadata?.dateTimeOriginal?.toString() ?: "",
+                cameraModel = image.metadata?.cameraModel ?: "",
+                sequenceNumber = counter))
+
         counter++
       } catch (e: Exception) {
         val errorType =
@@ -709,10 +807,24 @@ class ImportService(
               else -> ErrorType.UNKNOWN
             }
         errors.add(ImportError(image, errorType, e.message ?: "Unknown error"))
+        fileDetails.add(
+            org.kryspetrie.fileimport.domain.model.ImportFileDetail(
+                sourcePath = image.filePath,
+                destinationPath = "",
+                destinationFolder = "",
+                finalFilename = "",
+                originalFilename = image.fileName,
+                folderPattern = configuration.folderPattern,
+                filenamePattern = configuration.fileNamePattern,
+                fileSize = image.fileSize,
+                fileHash = image.hash,
+                success = false,
+                errorMessage = e.message ?: "Unknown error",
+                sequenceNumber = counter))
       }
     }
 
-    return ImportResult(
+    val result = ImportResult(
             totalFiles = images.size,
             successCount = successCount,
             errorCount = errors.size,
@@ -724,6 +836,33 @@ class ImportService(
             startTime = startTime,
             endTime = System.currentTimeMillis())
         .also { _importProgress.value = ImportProgress() }
+
+    // Build history entry with detailed file information for caller to persist
+    val historyEntry = org.kryspetrie.fileimport.domain.model.ImportHistoryEntry(
+        timestamp = startTime,
+        timestampString = org.kryspetrie.fileimport.domain.model.ImportHistoryEntry.createTimestampString(startTime),
+        sourcePath = images.firstOrNull()?.filePath?.substringBeforeLast("/") ?: "",
+        destinationPath = destinationPath,
+        profileName = "",
+        folderPattern = configuration.folderPattern,
+        filenamePattern = configuration.fileNamePattern,
+        totalFiles = images.size,
+        successCount = successCount,
+        errorCount = errors.size,
+        skippedCount = skippedCount,
+        duplicateCount = duplicateCount,
+        deletedSourceCount = deletedCount,
+        totalBytes = totalBytes,
+        copiedBytes = copiedBytes,
+        durationMs = System.currentTimeMillis() - startTime,
+        fileDetails = fileDetails,
+        importMode = "Import All",
+        verifyHashes = configuration.verifyAfterCopy,
+        conflictResolution = configuration.conflictResolution.toString(),
+        importSidecars = configuration.importSidecars)
+    
+    // Store in result for caller to persist
+    return result.copy(historyEntry = historyEntry)
   }
 
   /**

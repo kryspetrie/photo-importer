@@ -13,10 +13,10 @@ A cross-platform Kotlin desktop application for organizing and importing photos 
 - **Safe Transfers**: Hash verification ensures files are copied correctly
 - **Import Profiles**: Save complete import configurations for different cameras or workflows
 - **Camera Auto-Detection**: Automatically selects the right profile when a camera is connected
-- **Library Reorganization**: Reorganize existing photo libraries with rename previews and undo support
+- **Library Reorganization**: Reorganize existing libraries with move or copy mode, full undo support to restore original locations and filenames
 - **Standalone Duplicate Scanner**: Find and resolve duplicates across your entire photo library
 - **Watch Folder**: Automatically import new files dropped into a monitored folder
-- **Import History**: Track past imports with file counts, sizes, and timestamps
+- **Detailed Import History**: Complete file-by-file tracking with source/destination paths, naming patterns, hash verification, sidecar imports, and per-file status
 - **CLI Mode**: Scriptable command-line interface with dry-run support
 - **Cross-Platform**: Native installers for macOS, Windows, and Linux with bundled JRE
 

@@ -242,22 +242,33 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
         scope.launch {
           try {
             val result =
-                importService.executeImport(toImport, destinationPath, customConfig) {
-                  importProgress = it
+                importService.executeImport(toImport, destinationPath, customConfig) { p ->
+                  importProgress = p
                 }
             importResult = result
-            historyAdapter.addEntry(
-                ImportHistoryEntry(
-                    sourcePath = sourcePath,
-                    destinationPath = destinationPath,
-                    profileName = selectedProfile?.name ?: "Default",
-                    totalFiles = result.totalFiles,
-                    successCount = result.successCount,
-                    errorCount = result.errorCount,
-                    skippedCount = result.skippedCount,
-                    duplicateCount = result.duplicateCount,
-                    totalBytes = toImport.sumOf { it.fileSize },
-                    durationMs = result.duration))
+            // Save detailed history entry with per-file information
+            result.historyEntry?.let { entry ->
+              historyAdapter.addEntry(entry)
+            } ?: run {
+              // Fallback for backward compatibility
+              historyAdapter.addEntry(
+                  ImportHistoryEntry(
+                      timestamp = System.currentTimeMillis(),
+                      timestampString = ImportHistoryEntry.createTimestampString(System.currentTimeMillis()),
+                      sourcePath = sourcePath,
+                      destinationPath = destinationPath,
+                      profileName = selectedProfile?.name ?: "Default",
+                      folderPattern = customConfig.folderPattern,
+                      filenamePattern = customConfig.fileNamePattern,
+                      totalFiles = result.totalFiles,
+                      successCount = result.successCount,
+                      errorCount = result.errorCount,
+                      skippedCount = result.skippedCount,
+                      duplicateCount = result.duplicateCount,
+                      deletedSourceCount = result.deletedSourceCount,
+                      totalBytes = toImport.sumOf { it.fileSize },
+                      durationMs = result.duration))
+            }
             importService.indexFolder(destinationPath, true) {}
             flowStep = FlowStep.COMPLETE
           } catch (e: Exception) {

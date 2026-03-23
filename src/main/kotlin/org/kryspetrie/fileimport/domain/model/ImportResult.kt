@@ -10,7 +10,9 @@ data class ImportResult(
     val copiedFiles: List<CopiedFile> = emptyList(),
     val errors: List<ImportError> = emptyList(),
     val startTime: Long = System.currentTimeMillis(),
-    val endTime: Long = 0
+    val endTime: Long = 0,
+    /** Optional history entry with detailed file information for persistence */
+    val historyEntry: ImportHistoryEntry? = null
 ) {
   val duration: Long
     get() = endTime - startTime

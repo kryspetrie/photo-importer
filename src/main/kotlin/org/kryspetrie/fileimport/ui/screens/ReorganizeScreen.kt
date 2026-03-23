@@ -73,6 +73,7 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
   var folderPath by remember { mutableStateOf("") }
   var config by remember { mutableStateOf(ImportConfiguration()) }
   var renameOnly by remember { mutableStateOf(false) }
+  var reorgMode by remember { mutableStateOf(ReorganizeMode.MOVE) }
   var settingsExpanded by remember { mutableStateOf(false) }
 
   var step by remember { mutableStateOf(ReorgStep.SETUP) }
@@ -82,8 +83,9 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
   // Undo state
-  var journals by remember { mutableStateOf(reorgService.listJournals()) }
-  var showUndoConfirm by remember { mutableStateOf<File?>(null) }
+  var journals by remember { mutableStateOf<List<ReorganizeJournalSummary>>(reorgService.listJournals()) }
+  var showUndoConfirm by remember { mutableStateOf<ReorganizeJournalSummary?>(null) }
+  var selectedJournal by remember { mutableStateOf<ReorganizeJournalSummary?>(null) }
 
   fun reset() {
     step = ReorgStep.SETUP
@@ -98,7 +100,7 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
     step = ReorgStep.SCANNING
     scope.launch {
       try {
-        val p = reorgService.scanAndPreview(folderPath, config, renameOnly) { progress = it }
+        val p = reorgService.scanAndPreview(folderPath, config, renameOnly, reorgMode) { progress = it }
         preview = p
         step = ReorgStep.PREVIEW
       } catch (e: Exception) {
@@ -130,24 +132,40 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
         onDismissRequest = { showUndoConfirm = null },
         title = { Text("Undo Reorganization") },
         text = {
-          Text(
-              "Reverse all file moves recorded in this journal? Files will be moved back to their original locations.")
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Reverse all file operations recorded in this journal?")
+            Spacer(Modifier.height(8.dp))
+            Text("Journal details:", style = MaterialTheme.typography.labelMedium)
+            Text("• Folder: ${journal.rootFolder}", style = MaterialTheme.typography.bodySmall)
+            Text("• Mode: ${journal.operationMode}", style = MaterialTheme.typography.bodySmall)
+            Text("• Files changed: ${journal.changedFiles}", style = MaterialTheme.typography.bodySmall)
+            Text("• Date: ${journal.timestampString}", style = MaterialTheme.typography.bodySmall)
+            Spacer(Modifier.height(8.dp))
+            when (journal.operationMode) {
+              ReorganizeMode.MOVE -> Text("Files will be moved back to their original locations.")
+              ReorganizeMode.COPY -> Text("Copied files will be deleted (originals were preserved).")
+            }
+          }
         },
         confirmButton = {
           Button(
               onClick = {
-                val j = journal
                 showUndoConfirm = null
-                step = ReorgStep.EXECUTING
-                scope.launch {
-                  try {
-                    val r = reorgService.undo(j.absolutePath) { progress = it }
-                    result = r
-                    journals = reorgService.listJournals()
-                    step = ReorgStep.COMPLETE
-                  } catch (e: Exception) {
-                    errorMessage = "Undo failed: ${e.message}"
-                    step = ReorgStep.SETUP
+                // Find the actual journal file
+                val journalDir = File(System.getProperty("user.home"), ".petrie-importer/journals")
+                val journalFile = journalDir.listFiles()?.find { it.nameWithoutExtension == "reorg_${journal.id}" }
+                if (journalFile != null && journalFile.exists()) {
+                  step = ReorgStep.EXECUTING
+                  scope.launch {
+                    try {
+                      val r = reorgService.undo(journalFile.absolutePath) { progress = it }
+                      result = r
+                      journals = reorgService.listJournals()
+                      step = ReorgStep.COMPLETE
+                    } catch (e: Exception) {
+                      errorMessage = "Undo failed: ${e.message}"
+                      step = ReorgStep.SETUP
+                    }
                   }
                 }
               }) {
@@ -163,7 +181,7 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
           Text("Reorganize Library", style = MaterialTheme.typography.headlineSmall)
           Text(
-              "Apply folder and filename patterns to an existing media library. Files will be moved/renamed in place.",
+              "Apply folder and filename patterns to an existing media library.",
               style = MaterialTheme.typography.bodyMedium,
               color = MaterialTheme.colorScheme.onSurfaceVariant)
 
@@ -185,6 +203,38 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
               supportingText = {
                 Text("Paste a path or browse", style = MaterialTheme.typography.labelSmall)
               })
+
+          // Operation mode selection
+          OutlinedCard(Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+              Text("Operation Mode", style = MaterialTheme.typography.labelMedium)
+              Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                ReorganizeMode.entries.forEach { mode ->
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(
+                        reorgMode == mode,
+                        { reorgMode = mode })
+                    Spacer(Modifier.width(4.dp))
+                    Column {
+                      Text(
+                          when (mode) {
+                            ReorganizeMode.MOVE -> "Move files"
+                            ReorganizeMode.COPY -> "Copy files"
+                          },
+                          style = MaterialTheme.typography.bodySmall)
+                      Text(
+                          when (mode) {
+                            ReorganizeMode.MOVE -> "Originals removed, moved to new locations"
+                            ReorganizeMode.COPY -> "Originals preserved, copies in new locations"
+                          },
+                          style = MaterialTheme.typography.labelSmall,
+                          color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                  }
+                }
+              }
+            }
+          }
 
           // Rename only toggle
           Row(verticalAlignment = Alignment.CenterVertically) {
@@ -256,9 +306,12 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
                           horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
                             Text(
-                                if (progress.phase == ReorganizePhase.ROLLING_BACK)
-                                    "Undoing changes..."
-                                else "Reorganizing files...",
+                                when (progress.phase) {
+                                  ReorganizePhase.ROLLING_BACK -> "Undoing changes..."
+                                  ReorganizePhase.UNDOING -> "Undoing changes..."
+                                  ReorganizePhase.EXECUTING -> "Reorganizing files..."
+                                  else -> "Processing..."
+                                },
                                 style = MaterialTheme.typography.titleSmall)
                           }
                       if (progress.total > 0) {
@@ -300,8 +353,15 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceEvenly) {
-                              StatItem("${r.movedCount}", "Moved")
-                              StatItem("${r.renamedCount}", "Renamed")
+                              when (r.operationMode) {
+                                ReorganizeMode.MOVE -> {
+                                  StatItem("${r.movedCount}", "Moved")
+                                  StatItem("${r.renamedCount}", "Renamed")
+                                }
+                                ReorganizeMode.COPY -> {
+                                  StatItem("${r.copiedCount}", "Copied")
+                                }
+                              }
                               StatItem("${r.skippedCount}", "Skipped")
                               StatItem("${r.errorCount}", "Errors")
                             }
@@ -344,7 +404,7 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary)
                 Text(
-                    "No files have been changed. Review the planned renames below before applying.",
+                    "No files have been changed. Review the planned operations below before applying.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -352,6 +412,12 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
                   StatItem("${p.changedFiles}", "Will Change")
                   StatItem("${p.conflictCount}", "Conflicts")
                   StatItem("${p.newFolderCount}", "New Folders")
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                  Text(
+                      "Mode: ${p.operationMode}",
+                      style = MaterialTheme.typography.labelMedium,
+                      color = MaterialTheme.colorScheme.primary)
                 }
                 if (p.changedFiles == 0) {
                   Text(
@@ -589,11 +655,17 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
             OutlinedCard(Modifier.fillMaxWidth()) {
               Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("Undo History", style = MaterialTheme.typography.titleSmall)
-                journals.take(5).forEach { journal ->
+                Text("Select a journal to view details or undo the operation", 
+                     style = MaterialTheme.typography.bodySmall,
+                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                journals.forEach { journal ->
                   Row(
                       Modifier.fillMaxWidth()
                           .clip(MaterialTheme.shapes.small)
-                          .clickable { showUndoConfirm = journal }
+                          .clickable { 
+                            if (!journal.undone) showUndoConfirm = journal 
+                            else selectedJournal = journal 
+                          }
                           .padding(8.dp),
                       verticalAlignment = Alignment.CenterVertically,
                       horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -601,22 +673,28 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
                             Icons.AutoMirrored.Filled.Undo,
                             null,
                             Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary)
+                            tint = 
+                                if (journal.undone) MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.primary)
                         Column(Modifier.weight(1f)) {
+                          Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "${journal.operationMode} - ${journal.rootFolder.substringAfterLast("/")}",
+                                style = MaterialTheme.typography.bodySmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis)
+                            if (journal.undone) {
+                              Spacer(Modifier.width(4.dp))
+                              Badge { Text("Undone", Modifier.padding(horizontal = 4.dp)) }
+                            }
+                          }
                           Text(
-                              journal.nameWithoutExtension,
-                              style = MaterialTheme.typography.bodySmall,
-                              maxLines = 1,
-                              overflow = TextOverflow.Ellipsis)
-                          Text(
-                              java.text
-                                  .SimpleDateFormat("yyyy-MM-dd HH:mm")
-                                  .format(java.util.Date(journal.lastModified())),
+                              "${journal.changedFiles} files changed • ${journal.timestampString}",
                               style = MaterialTheme.typography.labelSmall,
                               color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(
-                            "Undo",
+                            if (!journal.undone) "Undo" else "View",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.primary)
                       }
