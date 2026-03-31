@@ -676,3 +676,109 @@ val scope = rememberCoroutineScope()
 6. **Build an installer**: `./gradlew packageDmg` (or your OS)
 
 Remember: Compose is declarative. Think "UI is a function of state" and you'll be productive quickly!
+
+## Photo Scan Feature
+
+The Photo Scan feature allows importing physical photographs that have been photographed on a solid background. See [PHOTO_SCAN_FEATURE.md](docs/PHOTO_SCAN_FEATURE.md) for detailed documentation.
+
+### Quick Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      Photo Scan Workflow                         │
+├─────────────────────────────────────────────────────────────────┤
+│  DETECTING → CORNER_EDITING → METADATA_EDITING → EXPORTING     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Key Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| `PhotoScanState` | `domain/model/` | Workflow state management |
+| `PhotoScanDetectorService` | `application/` | Edge detection for photos |
+| `PerspectiveCorrectionService` | `application/` | Bilinear interpolation |
+| `PhotoScanExportService` | `application/` | JPEG export with metadata |
+| `PhotoScanScreen` | `ui/screens/` | Main orchestration |
+| `PhotoScanPreviewScreen` | `ui/screens/` | Corner editing canvas |
+
+### Domain Models
+
+```kotlin
+// Photo detection result
+data class DetectedPhoto(
+    val id: String,
+    val topLeft: PhotoCorner,
+    val topRight: PhotoCorner,
+    val bottomLeft: PhotoCorner,
+    val bottomRight: PhotoCorner,
+    val configuration: PhotoScanConfiguration
+)
+
+// Metadata override
+data class PhotoScanConfiguration(
+    val dateYear: Int? = null,
+    val dateMonth: Int? = null,
+    val dateDay: Int? = null,
+    val tags: List<String> = emptyList(),
+    val notes: String? = null
+)
+```
+
+### Testing Photo Scan
+
+```bash
+# Run all photo scan tests
+./gradlew test --tests "*PhotoScan*"
+
+# Run specific service tests
+./gradlew test --tests "*PhotoScanDetectorServiceTest*"
+./gradlew test --tests "*PerspectiveCorrectionServiceTest*"
+./gradlew test --tests "*PhotoScanExportServiceTest*"
+./gradlew test --tests "*PhotoScanStateTest*"
+```
+
+### Adding a New Feature to Photo Scan
+
+1. **Add domain model**: Update `PhotoScanModels.kt` or `PhotoScanConfiguration.kt`
+2. **Add state management**: Update `PhotoScanState.kt` with new methods
+3. **Implement service logic**: Create or update service in `application/`
+4. **Add UI**: Create composable in `ui/screens/`
+5. **Register in DI**: Update `di/AppModule.kt`
+6. **Add tests**: Create test in `src/test/kotlin/`
+
+### Example: Adding a New Workflow Step
+
+```kotlin
+// 1. Add step to enum in PhotoScanState.kt
+enum class Step {
+    DETECTING,
+    CORNER_EDITING,
+    METADATA_EDITING,
+    EXPORTING,
+    COMPLETE,
+    NEW_STEP  // <-- Add here
+}
+
+// 2. Add state and handlers
+fun proceedToNewStep() {
+    step.value = Step.NEW_STEP
+}
+
+// 3. Add UI in PhotoScanScreen.kt
+when (scanState.step.value) {
+    PhotoScanState.Step.NEW_STEP -> NewStepScreen(...)
+}
+
+// 4. Add transition logic
+when (event) {
+    is ScanEvent.ProceedToNewStep -> scanState.proceedToNewStep()
+}
+
+// 5. Add test
+@Test
+fun shouldTransitionToNewStep() {
+    scanState.proceedToNewStep()
+    assertThat(scanState.step.value).isEqualTo(PhotoScanState.Step.NEW_STEP)
+}
+```

@@ -31,10 +31,9 @@ private val METADATA_CONCURRENCY = Runtime.getRuntime().availableProcessors().co
 /**
  * Main application service orchestrating the photo/video import workflow.
  *
- * This service coordinates the entire import process from scanning source files
- * to copying them to the destination with all configured processing steps.
- * It follows the application layer pattern in hexagonal architecture,
- * orchestrating domain ports to execute the import use case.
+ * This service coordinates the entire import process from scanning source files to copying them to
+ * the destination with all configured processing steps. It follows the application layer pattern in
+ * hexagonal architecture, orchestrating domain ports to execute the import use case.
  *
  * ## Import Workflow
  *
@@ -56,7 +55,6 @@ private val METADATA_CONCURRENCY = Runtime.getRuntime().availableProcessors().co
  * - **Cancellation support**: Coroutines can be cancelled mid-operation
  *
  * ## Thread Safety
- *
  * - All public methods are suspend functions (run on IO dispatcher)
  * - Progress updates use MutableStateFlow (thread-safe)
  * - File operations are atomic where possible
@@ -94,17 +92,16 @@ private val METADATA_CONCURRENCY = Runtime.getRuntime().availableProcessors().co
  * )
  * ```
  *
- * @property imageRepository Port for image metadata and file operations.
- *                           Provides scanning, metadata extraction, hash calculation.
- * @property deduplicationPort Port for duplicate detection.
- *                             Provides hash comparison, perceptual hashing, SURF matching.
- * @property namingPort Port for folder/filename pattern resolution.
- *                      Generates destination paths from patterns.
- * @property devicePort Optional port for device detection.
- *                      Used for camera auto-detection. Can be null for testing.
- * @property hashCache Optional port for hash caching.
- *                     Speeds up repeated operations. Can be null for testing.
- *
+ * @property imageRepository Port for image metadata and file operations. Provides scanning,
+ *   metadata extraction, hash calculation.
+ * @property deduplicationPort Port for duplicate detection. Provides hash comparison, perceptual
+ *   hashing, SURF matching.
+ * @property namingPort Port for folder/filename pattern resolution. Generates destination paths
+ *   from patterns.
+ * @property devicePort Optional port for device detection. Used for camera auto-detection. Can be
+ *   null for testing.
+ * @property hashCache Optional port for hash caching. Speeds up repeated operations. Can be null
+ *   for testing.
  * @see ImportProgress Progress tracking during import operations
  * @see ImportResult Results of import operation
  * @see ImageFile Represents a media file with metadata
@@ -120,7 +117,7 @@ class ImportService(
      * - File copy operations
      */
     private val imageRepository: ImageRepositoryPort,
-    
+
     /**
      * Deduplication port for duplicate detection.
      *
@@ -131,7 +128,7 @@ class ImportService(
      * - EXIF-based duplicate detection
      */
     private val deduplicationPort: DeduplicationPort,
-    
+
     /**
      * Naming port for pattern resolution.
      *
@@ -142,7 +139,7 @@ class ImportService(
      * - Conflict detection and resolution
      */
     private val namingPort: NamingPort,
-    
+
     /**
      * Device port for camera detection.
      *
@@ -154,7 +151,7 @@ class ImportService(
      * Can be null when device detection not needed.
      */
     private val devicePort: DevicePort? = null,
-    
+
     /**
      * Hash cache port for performance optimization.
      *
@@ -182,7 +179,7 @@ class ImportService(
    * @see StateFlow Kotlin Flow for state observation
    */
   private val _importProgress = MutableStateFlow(ImportProgress())
-  
+
   /**
    * Public read-only access to import progress.
    *
@@ -197,8 +194,8 @@ class ImportService(
   /**
    * Scans a source directory for media files with metadata extraction.
    *
-   * This is the primary entry point for discovering files to import.
-   * It performs a three-phase scan optimized for performance:
+   * This is the primary entry point for discovering files to import. It performs a three-phase scan
+   * optimized for performance:
    *
    * ## Phase 1: Fast Directory Walk
    * - Recursively discovers all files in source directory
@@ -225,7 +222,6 @@ class ImportService(
    * - Keeps system responsive during scan
    *
    * ## Error Handling
-   *
    * - Invalid source path throws IllegalArgumentException
    * - Individual file errors are logged but don't stop scan
    * - Files with errors are included with null metadata/hash
@@ -242,16 +238,14 @@ class ImportService(
    * )
    * ```
    *
-   * @param sourcePath Absolute path to source directory to scan.
-   *                   Must exist and be a directory.
-   * @param recursive Whether to scan subdirectories. Default true.
-   *                  Set false for flat directory structure.
-   * @param onProgress Progress callback invoked periodically.
-   *                   Parameters: (scannedCount, totalCount, currentFileName)
-   * @return List of [ImageFile] objects with metadata and hashes.
-   *         Empty list if no media files found.
+   * @param sourcePath Absolute path to source directory to scan. Must exist and be a directory.
+   * @param recursive Whether to scan subdirectories. Default true. Set false for flat directory
+   *   structure.
+   * @param onProgress Progress callback invoked periodically. Parameters: (scannedCount,
+   *   totalCount, currentFileName)
+   * @return List of [ImageFile] objects with metadata and hashes. Empty list if no media files
+   *   found.
    * @throws IllegalArgumentException if sourcePath doesn't exist or isn't a directory.
-   *
    * @see ImageFile Media file with metadata
    * @see scanDevices Alternative scan for connected cameras
    */
@@ -309,12 +303,10 @@ class ImportService(
   /**
    * Indexes a folder for fast duplicate detection.
    *
-   * Creates a persistent index of all files in a folder with their hashes.
-   * This index is used to quickly detect already-imported files without
-   * re-scanning the entire destination.
+   * Creates a persistent index of all files in a folder with their hashes. This index is used to
+   * quickly detect already-imported files without re-scanning the entire destination.
    *
    * ## Index Contents
-   *
    * - File paths
    * - File hashes (SHA-256)
    * - File sizes
@@ -349,8 +341,8 @@ class ImportService(
   /**
    * Gets set of all file hashes in a destination folder.
    *
-   * Used to detect already-transferred files by comparing source file hashes
-   * against destination hashes.
+   * Used to detect already-transferred files by comparing source file hashes against destination
+   * hashes.
    *
    * @param folderPath Destination folder path
    * @return Set of file hashes (SHA-256)
@@ -372,8 +364,8 @@ class ImportService(
   /**
    * Clears all hash indexes.
    *
-   * Use for full re-index or troubleshooting.
-   * Warning: Will slow down subsequent imports until cache is rebuilt.
+   * Use for full re-index or troubleshooting. Warning: Will slow down subsequent imports until
+   * cache is rebuilt.
    */
   suspend fun clearAllIndexes() {
     hashCache?.clearAllIndexes()
@@ -382,16 +374,14 @@ class ImportService(
   /**
    * Filters out already-transferred files from a list.
    *
-   * Implements the "Import New" mode by removing files that have already
-   * been imported to the destination. Uses hash-based detection for accuracy.
+   * Implements the "Import New" mode by removing files that have already been imported to the
+   * destination. Uses hash-based detection for accuracy.
    *
    * ## Detection Strategies
-   *
-   * - **Hash-based** ([ImportConfiguration.detectTransferredByHash]):
-   *   Compares file hashes against destination hashes. Most accurate.
-   *
-   * - **EXIF-based** ([ImportConfiguration.detectTransferredByExif]):
-   *   Compares EXIF metadata. Catches edited versions.
+   * - **Hash-based** ([ImportConfiguration.detectTransferredByHash]): Compares file hashes against
+   *   destination hashes. Most accurate.
+   * - **EXIF-based** ([ImportConfiguration.detectTransferredByExif]): Compares EXIF metadata.
+   *   Catches edited versions.
    *
    * ## Usage
    *
@@ -449,8 +439,8 @@ class ImportService(
    *
    * @param images List of images to check for duplicates
    * @param configuration Import configuration with duplicate detection settings
-   * @return List of [DuplicateInfo] grouping duplicate images
-   *         Empty list if visual duplicate detection disabled
+   * @return List of [DuplicateInfo] grouping duplicate images Empty list if visual duplicate
+   *   detection disabled
    */
   suspend fun findVisualDuplicates(
       images: List<ImageFile>,
@@ -471,11 +461,10 @@ class ImportService(
   /**
    * Scans for connected camera devices.
    *
-   * Detects cameras, phones, and removable storage devices that may contain
-   * photos/videos. Used for auto-detection in the Import screen.
+   * Detects cameras, phones, and removable storage devices that may contain photos/videos. Used for
+   * auto-detection in the Import screen.
    *
    * ## Detected Devices
-   *
    * - DSLR/Mirrorless cameras (Canon, Nikon, Sony, etc.)
    * - Smartphones (iPhone, Android)
    * - SD card readers
@@ -490,17 +479,16 @@ class ImportService(
    * }
    * ```
    *
-   * @return List of detected [CameraDevice] objects
-   *         Empty list if no devices found or devicePort is null
+   * @return List of detected [CameraDevice] objects Empty list if no devices found or devicePort is
+   *   null
    */
   suspend fun scanDevices(): List<CameraDevice> = devicePort?.detectDevices() ?: emptyList()
 
   /**
    * Previews the destination file structure for an import.
    *
-   * Generates a preview of where each file will be imported without actually
-   * copying anything. This allows users to review the organization before
-   * committing to the import.
+   * Generates a preview of where each file will be imported without actually copying anything. This
+   * allows users to review the organization before committing to the import.
    *
    * ## Preview Information
    *
@@ -539,18 +527,13 @@ class ImportService(
   /**
    * Executes the import operation, copying files to destination.
    *
-   * This is the main import method that performs the actual file copying
-   * with all configured options (verification, renaming, etc.).
+   * This is the main import method that performs the actual file copying with all configured
+   * options (verification, renaming, etc.).
    *
    * ## Import Process
-   *
    * 1. Create destination folders
-   * 2. For each image:
-   *    a. Generate destination path
-   *    b. Handle conflicts (rename/skip/replace)
-   *    c. Copy file
-   *    d. Verify hash (if enabled)
-   *    e. Delete source (if enabled)
+   * 2. For each image: a. Generate destination path b. Handle conflicts (rename/skip/replace) c.
+   *    Copy file d. Verify hash (if enabled) e. Delete source (if enabled)
    * 3. Update import history
    * 4. Return results
    *
@@ -564,7 +547,6 @@ class ImportService(
    * - Estimated time remaining
    *
    * ## Error Handling
-   *
    * - Continues on individual file errors
    * - Records errors in [ImportResult]
    * - Rolls back partial imports on critical errors
@@ -592,7 +574,6 @@ class ImportService(
    * @param configuration Import configuration with all options
    * @param onProgress Progress callback (also updates importProgress StateFlow)
    * @return [ImportResult] with import statistics and any errors
-   *
    * @see ImportResult Import operation results
    * @see ImportProgress Progress tracking
    */
@@ -774,7 +755,7 @@ class ImportService(
 
         successCount++
         copiedBytes += image.fileSize
-        
+
         fileDetails.add(
             org.kryspetrie.fileimport.domain.model.ImportFileDetail(
                 sourcePath = image.filePath,
@@ -824,43 +805,47 @@ class ImportService(
       }
     }
 
-    val result = ImportResult(
+    val result =
+        ImportResult(
+                totalFiles = images.size,
+                successCount = successCount,
+                errorCount = errors.size,
+                duplicateCount = duplicateCount,
+                skippedCount = skippedCount,
+                deletedSourceCount = deletedCount,
+                copiedFiles = copiedFiles,
+                errors = errors,
+                startTime = startTime,
+                endTime = System.currentTimeMillis())
+            .also { _importProgress.value = ImportProgress() }
+
+    // Build history entry with detailed file information for caller to persist
+    val historyEntry =
+        org.kryspetrie.fileimport.domain.model.ImportHistoryEntry(
+            timestamp = startTime,
+            timestampString =
+                org.kryspetrie.fileimport.domain.model.ImportHistoryEntry.createTimestampString(
+                    startTime),
+            sourcePath = images.firstOrNull()?.filePath?.substringBeforeLast("/") ?: "",
+            destinationPath = destinationPath,
+            profileName = "",
+            folderPattern = configuration.folderPattern,
+            filenamePattern = configuration.fileNamePattern,
             totalFiles = images.size,
             successCount = successCount,
             errorCount = errors.size,
-            duplicateCount = duplicateCount,
             skippedCount = skippedCount,
+            duplicateCount = duplicateCount,
             deletedSourceCount = deletedCount,
-            copiedFiles = copiedFiles,
-            errors = errors,
-            startTime = startTime,
-            endTime = System.currentTimeMillis())
-        .also { _importProgress.value = ImportProgress() }
+            totalBytes = totalBytes,
+            copiedBytes = copiedBytes,
+            durationMs = System.currentTimeMillis() - startTime,
+            fileDetails = fileDetails,
+            importMode = "Import All",
+            verifyHashes = configuration.verifyAfterCopy,
+            conflictResolution = configuration.conflictResolution.toString(),
+            importSidecars = configuration.importSidecars)
 
-    // Build history entry with detailed file information for caller to persist
-    val historyEntry = org.kryspetrie.fileimport.domain.model.ImportHistoryEntry(
-        timestamp = startTime,
-        timestampString = org.kryspetrie.fileimport.domain.model.ImportHistoryEntry.createTimestampString(startTime),
-        sourcePath = images.firstOrNull()?.filePath?.substringBeforeLast("/") ?: "",
-        destinationPath = destinationPath,
-        profileName = "",
-        folderPattern = configuration.folderPattern,
-        filenamePattern = configuration.fileNamePattern,
-        totalFiles = images.size,
-        successCount = successCount,
-        errorCount = errors.size,
-        skippedCount = skippedCount,
-        duplicateCount = duplicateCount,
-        deletedSourceCount = deletedCount,
-        totalBytes = totalBytes,
-        copiedBytes = copiedBytes,
-        durationMs = System.currentTimeMillis() - startTime,
-        fileDetails = fileDetails,
-        importMode = "Import All",
-        verifyHashes = configuration.verifyAfterCopy,
-        conflictResolution = configuration.conflictResolution.toString(),
-        importSidecars = configuration.importSidecars)
-    
     // Store in result for caller to persist
     return result.copy(historyEntry = historyEntry)
   }

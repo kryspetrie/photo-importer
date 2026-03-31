@@ -81,13 +81,22 @@ class ReorganizeOperationTest {
             ReorganizePhase.PREVIEWING,
             ReorganizePhase.EXECUTING,
             ReorganizePhase.COMPLETE,
-            ReorganizePhase.ROLLING_BACK)
+            ReorganizePhase.ROLLING_BACK,
+            ReorganizePhase.UNDOING)
   }
 
   @Test
   @DisplayName("JournalEntry should record paths")
   fun journalEntryShouldRecordPaths() {
-    val entry = JournalEntry(originalPath = "/old/photo.jpg", newPath = "/new/photo.jpg")
+    val file = File("/old/photo.jpg")
+    val entry =
+        JournalEntry(
+            originalPath = "/old/photo.jpg",
+            newPath = "/new/photo.jpg",
+            originalFilename = "photo.jpg",
+            newFilename = "photo.jpg",
+            originalParent = file.parent,
+            newParent = file.parent)
     assertThat(entry.originalPath).isEqualTo("/old/photo.jpg")
     assertThat(entry.newPath).isEqualTo("/new/photo.jpg")
   }
@@ -96,12 +105,22 @@ class ReorganizeOperationTest {
   @DisplayName("ReorganizeJournal should have timestamp")
   fun journalShouldHaveTimestamp() {
     val before = System.currentTimeMillis()
+    val file = File("/a")
+    val entry =
+        JournalEntry(
+            originalPath = "/a",
+            newPath = "/b",
+            originalFilename = "a",
+            newFilename = "b",
+            originalParent = file.parent,
+            newParent = file.parent)
     val journal =
-        ReorganizeJournal(rootFolder = "/photos", moves = listOf(JournalEntry("/a", "/b")))
+        ReorganizeJournal(
+            rootFolder = "/photos", entries = listOf(entry), changedFiles = 1, totalFiles = 1)
     val after = System.currentTimeMillis()
 
     assertThat(journal.timestamp).isBetween(before, after)
     assertThat(journal.rootFolder).isEqualTo("/photos")
-    assertThat(journal.moves).hasSize(1)
+    assertThat(journal.entries).hasSize(1)
   }
 }

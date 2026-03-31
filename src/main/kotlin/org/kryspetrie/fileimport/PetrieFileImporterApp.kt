@@ -19,13 +19,11 @@ import org.kryspetrie.fileimport.ui.createAppIcon
 /**
  * Main entry point for the Petrie Image Importer desktop application.
  *
- * This is the application bootstrap that initializes the dependency injection container,
- * loads persisted settings, and launches the Compose Desktop window. It serves as the
- * composition root for the entire application, similar to a Spring Boot application's
- * main method.
+ * This is the application bootstrap that initializes the dependency injection container, loads
+ * persisted settings, and launches the Compose Desktop window. It serves as the composition root
+ * for the entire application, similar to a Spring Boot application's main method.
  *
  * ## Application Lifecycle
- *
  * 1. **CLI Mode Check**: If launched with `--cli` argument, runs command-line interface instead
  * 2. **Koin Initialization**: Starts the Koin dependency injection container with [appModule]
  * 3. **Settings Load**: Retrieves persisted application settings from disk
@@ -41,9 +39,9 @@ import org.kryspetrie.fileimport.ui.createAppIcon
  *
  * ## Threading Model
  *
- * Runs on the main UI thread. Settings are loaded using [runBlocking] to ensure
- * they're available before the UI is composed. After initialization, all UI
- * operations run in the Compose runtime with coroutine support for async operations.
+ * Runs on the main UI thread. Settings are loaded using [runBlocking] to ensure they're available
+ * before the UI is composed. After initialization, all UI operations run in the Compose runtime
+ * with coroutine support for async operations.
  *
  * @see PetrieFileImporterApp The main composable that renders the UI
  * @see org.kryspetrie.fileimport.cli.main CLI entry point for command-line mode
@@ -54,8 +52,8 @@ private const val APP_TITLE = "Petrie Image Importer"
 /**
  * Application entry point.
  *
- * Starts the Compose Desktop application lifecycle. This function is called by the JVM
- * when the application launches and handles both GUI and CLI modes.
+ * Starts the Compose Desktop application lifecycle. This function is called by the JVM when the
+ * application launches and handles both GUI and CLI modes.
  *
  * ## Usage
  *
@@ -69,9 +67,9 @@ private const val APP_TITLE = "Petrie Image Importer"
  *
  * ## CLI Mode
  *
- * When the first argument is `--cli`, delegates to the command-line interface
- * implemented in [org.kryspetrie.fileimport.cli.PhotoImportCli]. This allows
- * automation and scripting without launching the GUI.
+ * When the first argument is `--cli`, delegates to the command-line interface implemented in
+ * [org.kryspetrie.fileimport.cli.PhotoImportCli]. This allows automation and scripting without
+ * launching the GUI.
  *
  * ## GUI Mode
  *
@@ -83,7 +81,6 @@ private const val APP_TITLE = "Petrie Image Importer"
  * 5. Sets up state management for settings changes
  *
  * @param args Command-line arguments. Use `--cli` as first argument for CLI mode.
- *
  * @see org.kryspetrie.fileimport.cli.main CLI implementation
  * @see startKoin Koin dependency injection initialization
  * @see application Compose Desktop application lifecycle
@@ -103,12 +100,12 @@ fun main(args: Array<String>) {
   // Settings include: theme preference, import profiles, window dimensions
   val settingsAdapter = SettingsAdapter()
   val settings = runBlocking { settingsAdapter.loadSettings() }
-  
+
   // Initialize window state with persisted dimensions
   // Uses Compose's dp (density-independent pixels) for consistent sizing across displays
   val windowState =
       WindowState(width = settings.windowState.width.dp, height = settings.windowState.height.dp)
-  
+
   // Generate application icon from embedded PNG resource
   // Icon is used in window title bar, taskbar, and application switcher
   val appIcon = BitmapPainter(createAppIcon(512).toComposeImageBitmap())
@@ -119,7 +116,7 @@ fun main(args: Array<String>) {
     // Mutable state holder for current settings
     // Changes to this state trigger recomposition of dependent UI
     val currentSettings = mutableStateOf(settings)
-    
+
     // Callback to persist settings changes
     // Called when user changes theme or other persisted settings
     // Runs coroutine to save settings asynchronously, then updates state
@@ -142,9 +139,7 @@ fun main(args: Array<String>) {
           // Create application menu bar (File, View, Help)
           // Standard desktop application menu pattern
           MenuBar {
-            Menu("File") { 
-              Item("Quit", onClick = ::exitApplication) 
-            }
+            Menu("File") { Item("Quit", onClick = ::exitApplication) }
             Menu("View") {
               // Theme switching menu items
               // Updates persisted settings and triggers UI recomposition
@@ -162,9 +157,7 @@ fun main(args: Array<String>) {
                     onSettingsChange(currentSettings.value.copy(theme = AppTheme.SYSTEM))
                   })
             }
-            Menu("Help") { 
-              Item("About $APP_TITLE", onClick = {}) 
-            }
+            Menu("Help") { Item("About $APP_TITLE", onClick = {}) }
           }
 
           // Render the main application UI

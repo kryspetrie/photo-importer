@@ -9,11 +9,11 @@ import kotlinx.serialization.Serializable
  * Determines whether files are moved (originals removed) or copied (originals preserved).
  */
 enum class ReorganizeMode {
-    /** Move files to new locations, removing originals */
-    MOVE,
-    
-    /** Copy files to new locations, keeping originals intact */
-    COPY
+  /** Move files to new locations, removing originals */
+  MOVE,
+
+  /** Copy files to new locations, keeping originals intact */
+  COPY
 }
 
 /**
@@ -31,24 +31,22 @@ data class ReorganizeMapping(
     /** Operation mode: MOVE or COPY */
     val mode: ReorganizeMode = ReorganizeMode.MOVE
 ) {
-    val currentRelativePath: String
-        get() = file.file.name
+  val currentRelativePath: String
+    get() = file.file.name
 
-    val newRelativePath: String
-        get() = File(newPath).name
-    
-    /** Current parent directory */
-    val currentParent: String
-        get() = File(currentPath).parent
-    
-    /** New parent directory */
-    val newParent: String
-        get() = File(newPath).parent
+  val newRelativePath: String
+    get() = File(newPath).name
+
+  /** Current parent directory */
+  val currentParent: String
+    get() = File(currentPath).parent
+
+  /** New parent directory */
+  val newParent: String
+    get() = File(newPath).parent
 }
 
-/**
- * Preview of reorganization operation before execution.
- */
+/** Preview of reorganization operation before execution. */
 data class ReorganizePreview(
     val mappings: List<ReorganizeMapping>,
     val totalFiles: Int,
@@ -58,9 +56,7 @@ data class ReorganizePreview(
     val operationMode: ReorganizeMode = ReorganizeMode.MOVE
 )
 
-/**
- * Progress tracking during reorganization.
- */
+/** Progress tracking during reorganization. */
 data class ReorganizeProgress(
     val current: Int = 0,
     val total: Int = 0,
@@ -69,21 +65,17 @@ data class ReorganizeProgress(
     val operationMode: ReorganizeMode = ReorganizeMode.MOVE
 )
 
-/**
- * Phases of reorganization operation.
- */
+/** Phases of reorganization operation. */
 enum class ReorganizePhase {
-    SCANNING,
-    PREVIEWING,
-    EXECUTING,
-    COMPLETE,
-    ROLLING_BACK,
-    UNDOING
+  SCANNING,
+  PREVIEWING,
+  EXECUTING,
+  COMPLETE,
+  ROLLING_BACK,
+  UNDOING
 }
 
-/**
- * Results of a reorganization operation.
- */
+/** Results of a reorganization operation. */
 data class ReorganizeResult(
     val movedCount: Int,
     val renamedCount: Int,
@@ -104,53 +96,51 @@ data class ReorganizeResult(
 data class JournalEntry(
     /** Original file path before operation */
     val originalPath: String,
-    
+
     /** New file path after operation */
     val newPath: String,
-    
+
     /** Original filename */
     val originalFilename: String,
-    
+
     /** New filename */
     val newFilename: String,
-    
+
     /** Original parent directory */
     val originalParent: String,
-    
+
     /** New parent directory */
     val newParent: String,
-    
+
     /** Whether this was a move or copy operation */
     val operationType: ReorganizeMode = ReorganizeMode.MOVE,
-    
+
     /** Whether the operation was successful */
     val wasSuccessful: Boolean = true,
-    
+
     /** Original file size for verification */
     val fileSize: Long = 0,
-    
+
     /** Pattern used for renaming (if any) */
     val patternUsed: String = "",
-    
+
     /** Whether file was renamed, moved, or both */
     val changeType: FileChangeType = FileChangeType.BOTH
 )
 
-/**
- * Type of change applied to a file.
- */
+/** Type of change applied to a file. */
 enum class FileChangeType {
-    /** Only filename changed */
-    RENAME_ONLY,
-    
-    /** Only location changed */
-    MOVE_ONLY,
-    
-    /** Both filename and location changed */
-    BOTH,
-    
-    /** No changes applied */
-    NONE
+  /** Only filename changed */
+  RENAME_ONLY,
+
+  /** Only location changed */
+  MOVE_ONLY,
+
+  /** Both filename and location changed */
+  BOTH,
+
+  /** No changes applied */
+  NONE
 }
 
 /**
@@ -162,51 +152,49 @@ enum class FileChangeType {
 data class ReorganizeJournal(
     /** Unique identifier for this journal */
     val id: String = java.util.UUID.randomUUID().toString(),
-    
+
     /** Timestamp when operation started */
     val timestamp: Long = System.currentTimeMillis(),
-    
+
     /** Human-readable timestamp */
     val timestampString: String = "",
-    
+
     /** Root folder that was reorganized */
     val rootFolder: String,
-    
+
     /** Operation mode used (MOVE or COPY) */
     val operationMode: ReorganizeMode = ReorganizeMode.MOVE,
-    
+
     /** Folder pattern used for organization */
     val folderPattern: String = "",
-    
+
     /** Filename pattern used for renaming */
     val filenamePattern: String = "",
-    
+
     /** Total files processed */
     val totalFiles: Int = 0,
-    
+
     /** Files that were changed */
     val changedFiles: Int = 0,
-    
+
     /** Detailed entries for each file operation */
     val entries: List<JournalEntry> = emptyList(),
-    
+
     /** Whether undo was performed on this journal */
     val undone: Boolean = false,
-    
+
     /** Notes about the operation */
     val notes: String = ""
 ) {
-    companion object {
-        fun createTimestampString(timestamp: Long): String {
-            val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-            return sdf.format(java.util.Date(timestamp))
-        }
+  companion object {
+    fun createTimestampString(timestamp: Long): String {
+      val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
+      return sdf.format(java.util.Date(timestamp))
     }
+  }
 }
 
-/**
- * Summary of a reorganize journal for display purposes.
- */
+/** Summary of a reorganize journal for display purposes. */
 data class ReorganizeJournalSummary(
     val id: String,
     val timestamp: Long,

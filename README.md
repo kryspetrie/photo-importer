@@ -19,6 +19,38 @@ A cross-platform Kotlin desktop application for organizing and importing photos 
 - **Detailed Import History**: Complete file-by-file tracking with source/destination paths, naming patterns, hash verification, sidecar imports, and per-file status
 - **CLI Mode**: Scriptable command-line interface with dry-run support
 - **Cross-Platform**: Native installers for macOS, Windows, and Linux with bundled JRE
+- **Photo Scan Import**: Extract individual photos from scanned images with automatic corner detection, perspective correction, and metadata override
+
+## Photo Scan Feature
+
+Import physical photographs that have been photographed on a solid background. The app detects individual photos, allows corner adjustment, and exports with metadata.
+
+### How It Works
+
+```
+DETECTING → CORNER_EDITING → METADATA_EDITING → EXPORTING
+```
+
+### Features
+
+- **Automatic Detection**: Edge detection finds photo boundaries on solid backgrounds
+- **Corner Editing**: Visual preview with draggable corner handles
+- **Perspective Correction**: Bilinear interpolation corrects trapezoidal distortion
+- **Metadata Override**: Set original date, year, month, tags, and notes
+- **Batch Export**: Extract multiple photos from one scan with automatic naming (`photo_1.jpg`, `photo_2.jpg`)
+
+### Usage
+
+1. Select **Import Scans** mode in the Import screen
+2. Choose source folder with scanned images
+3. Review detected photos — drag corners to adjust
+4. Add/remove detected photos as needed
+5. Edit metadata (date, tags, notes)
+6. Export to destination folder
+
+### Documentation
+
+See [docs/PHOTO_SCAN_FEATURE.md](docs/PHOTO_SCAN_FEATURE.md) for detailed documentation.
 
 ## Quick Start
 

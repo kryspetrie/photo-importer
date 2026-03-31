@@ -3,7 +3,11 @@ package org.kryspetrie.fileimport.di
 import org.koin.dsl.module
 import org.kryspetrie.fileimport.application.DuplicateScannerService
 import org.kryspetrie.fileimport.application.ImportService
+import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.application.PhotoScanDetectorService
+import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.application.ReorganizeService
+import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.port.*
 import org.kryspetrie.fileimport.infrastructure.adapter.*
@@ -11,8 +15,8 @@ import org.kryspetrie.fileimport.infrastructure.adapter.*
 /**
  * Koin dependency injection module for the Petrie File Importer application.
  *
- * This module defines all dependencies and their wiring for the application.
- * It follows the Hexagonal Architecture pattern by:
+ * This module defines all dependencies and their wiring for the application. It follows the
+ * Hexagonal Architecture pattern by:
  * - Registering infrastructure adapters as implementations of domain ports
  * - Registering application services that orchestrate use cases
  * - Managing dependency injection throughout the application
@@ -73,7 +77,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.*
  *     // Inject services directly in composable
  *     val importService = koinInject<ImportService>()
  *     val namingPort = koinInject<NamingPort>()
- *     
+ *
  *     // Use services...
  * }
  * ```
@@ -83,7 +87,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.*
  * ```kotlin
  * class MyViewModel {
  *     private val importService: ImportService by inject()
- *     
+ *
  *     fun loadData() {
  *         importService.import(...)
  *     }
@@ -96,14 +100,11 @@ import org.kryspetrie.fileimport.infrastructure.adapter.*
  * - **Compile-time safe**: No reflection, errors caught at compile time
  * - **Simpler**: No annotations, just DSL configuration
  * - **Kotlin-first**: Uses Kotlin DSL instead of XML or annotations
- * - **Lightweight**: Minimal overhead, perfect for desktop/mobile apps
- *
- * | Spring | Koin |
- * |--------|------|
- * | `@Autowired` | `by inject()` or `koinInject()` |
- * | `@Configuration` + `@Bean` | `module { single { } }` |
- * | `ApplicationContext` | `startKoin { modules(...) }` |
- * | Component scanning | Explicit registration |
+ * - **Lightweight**: Minimal overhead, perfect for desktop/mobile apps | Spring | Koin |
+ *   |----------------------------|---------------------------------| | `@Autowired` | `by inject()`
+ *   or `koinInject()` | | `@Configuration` + `@Bean` | `module { single { } }` | |
+ *   `ApplicationContext` | `startKoin { modules(...) }` | | Component scanning | Explicit
+ *   registration |
  *
  * ## Scope Types
  *
@@ -124,12 +125,11 @@ import org.kryspetrie.fileimport.infrastructure.adapter.*
  */
 val appModule = module {
   // ==================== DOMAIN PORTS (Interfaces) ====================
-  
+
   /**
    * Image repository port implementation.
    *
-   * Provides access to the photo library database/storage.
-   * Used for:
+   * Provides access to the photo library database/storage. Used for:
    * - Storing image metadata
    * - Querying existing images
    * - Tracking import history
@@ -137,12 +137,11 @@ val appModule = module {
    * Implementation: [ImageRepositoryAdapter] (SQLite-backed)
    */
   single<ImageRepositoryPort> { ImageRepositoryAdapter() }
-  
+
   /**
    * Settings port implementation.
    *
-   * Provides access to application settings and preferences.
-   * Used for:
+   * Provides access to application settings and preferences. Used for:
    * - Loading/saving import profiles
    * - Persisting theme preference
    * - Storing window state
@@ -150,12 +149,11 @@ val appModule = module {
    * Implementation: [SettingsAdapter] (JSON file storage)
    */
   single<SettingsPort> { SettingsAdapter() }
-  
+
   /**
    * Naming port implementation.
    *
-   * Handles folder and filename pattern resolution.
-   * Used for:
+   * Handles folder and filename pattern resolution. Used for:
    * - Generating folder paths from patterns
    * - Generating filenames from patterns
    * - Resolving placeholders ({yyyy}, {camera}, etc.)
@@ -163,12 +161,11 @@ val appModule = module {
    * Implementation: [NamingAdapter] (pattern engine)
    */
   single<NamingPort> { NamingAdapter() }
-  
+
   /**
    * Deduplication port implementation.
    *
-   * Handles duplicate detection and resolution.
-   * Used for:
+   * Handles duplicate detection and resolution. Used for:
    * - Computing file hashes
    * - Perceptual hash comparison
    * - SURF feature matching
@@ -179,12 +176,11 @@ val appModule = module {
    * @see DeduplicationAdapter Wraps multiple duplicate detection strategies
    */
   single<DeduplicationPort> { DeduplicationAdapter(get()) }
-  
+
   /**
    * Hash cache port implementation.
    *
-   * Provides fast lookup of previously computed file hashes.
-   * Used for:
+   * Provides fast lookup of previously computed file hashes. Used for:
    * - Caching file hashes to avoid recomputation
    * - Speeding up duplicate detection
    * - Tracking imported files
@@ -192,12 +188,11 @@ val appModule = module {
    * Implementation: [HashCacheAdapter] (SQLite-backed)
    */
   single<HashCachePort> { HashCacheAdapter() }
-  
+
   /**
    * Device port implementation.
    *
-   * Handles camera and storage device detection.
-   * Used for:
+   * Handles camera and storage device detection. Used for:
    * - Detecting connected cameras
    * - Monitoring device hot-plug events
    * - Getting device mount points
@@ -205,12 +200,11 @@ val appModule = module {
    * Implementation: [DeviceAdapter] (OS-specific device enumeration)
    */
   single<DevicePort> { DeviceAdapter() }
-  
+
   /**
    * Import history adapter.
    *
-   * Tracks past import operations.
-   * Note: Not a port, used directly by UI and services.
+   * Tracks past import operations. Note: Not a port, used directly by UI and services.
    *
    * Used for:
    * - Recording import results
@@ -220,7 +214,7 @@ val appModule = module {
   single { ImportHistoryAdapter() }
 
   // ==================== APPLICATION SERVICES ====================
-  
+
   /**
    * Import service - orchestrates the photo import workflow.
    *
@@ -241,16 +235,15 @@ val appModule = module {
    *
    * @see ImportService Main import orchestration logic
    */
-  single { 
+  single {
     ImportService(
-      imageRepository = get(),
-      deduplicationPort = get(),
-      namingPort = get(),
-      devicePort = get(),
-      hashCache = get()
-    ) 
+        imageRepository = get(),
+        deduplicationPort = get(),
+        namingPort = get(),
+        devicePort = get(),
+        hashCache = get())
   }
-  
+
   /**
    * Reorganize service - orchestrates library reorganization.
    *
@@ -267,7 +260,7 @@ val appModule = module {
    * @see ReorganizeService Reorganization logic
    */
   single { ReorganizeService(get(), get()) }
-  
+
   /**
    * Duplicate scanner service - orchestrates duplicate detection.
    *
@@ -285,7 +278,7 @@ val appModule = module {
    * @see DuplicateScannerService Duplicate detection logic
    */
   single { DuplicateScannerService(get(), get(), get()) }
-  
+
   /**
    * Watch folder service - monitors folders for new files.
    *
@@ -301,4 +294,57 @@ val appModule = module {
    * @see WatchFolderService Folder monitoring logic
    */
   single { WatchFolderService(get()) }
+
+  /**
+   * Scan service - orchestrates photo scan operations.
+   *
+   * Handles scanning photos from images that contain multiple photos on a solid background:
+   * 1. Detect photo corners using edge detection
+   * 2. Allow manual corner adjustment via UI
+   * 3. Export multiple photos with filename incrementing
+   * 4. Support metadata override for each photo
+   *
+   * Dependencies:
+   * - [ImageRepositoryPort]: Store/retrieve image metadata
+   * - [NamingPort]: Generate folder/filename patterns
+   *
+   * @see ScanService Photo scan logic
+   */
+  single { ScanService(get(), get()) }
+
+  /**
+   * Photo scan detector service - detects corners of photos in scanned images.
+   *
+   * Uses BoofCV edge detection to find rectangular shapes that likely represent photographs on a
+   * solid background.
+   *
+   * @see PhotoScanDetectorService Corner detection using BoofCV
+   */
+  single { PhotoScanDetectorService() }
+
+  /**
+   * Perspective correction service - corrects perspective distortion in photos.
+   *
+   * Applies projective transformation to extract a quadrilateral region from a scanned image and
+   * warp it to a rectangle.
+   *
+   * @see PerspectiveCorrectionService Perspective correction using Java3D math
+   */
+  single { PerspectiveCorrectionService() }
+
+  /**
+   * Photo scan export service - exports extracted photos with metadata.
+   *
+   * Handles the complete export pipeline:
+   * 1. Perspective correction of extracted photos
+   * 2. EXIF metadata preservation and modification
+   * 3. Incremental filename generation
+   * 4. Writing images with Apache Imaging
+   *
+   * Dependencies:
+   * - [PerspectiveCorrectionService]: For correcting perspective distortion
+   *
+   * @see PhotoScanExportService Export with EXIF metadata
+   */
+  single { PhotoScanExportService(get()) }
 }

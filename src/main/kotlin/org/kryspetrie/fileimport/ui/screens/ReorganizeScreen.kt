@@ -83,7 +83,9 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
   var errorMessage by remember { mutableStateOf<String?>(null) }
 
   // Undo state
-  var journals by remember { mutableStateOf<List<ReorganizeJournalSummary>>(reorgService.listJournals()) }
+  var journals by remember {
+    mutableStateOf<List<ReorganizeJournalSummary>>(reorgService.listJournals())
+  }
   var showUndoConfirm by remember { mutableStateOf<ReorganizeJournalSummary?>(null) }
   var selectedJournal by remember { mutableStateOf<ReorganizeJournalSummary?>(null) }
 
@@ -100,7 +102,8 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
     step = ReorgStep.SCANNING
     scope.launch {
       try {
-        val p = reorgService.scanAndPreview(folderPath, config, renameOnly, reorgMode) { progress = it }
+        val p =
+            reorgService.scanAndPreview(folderPath, config, renameOnly, reorgMode) { progress = it }
         preview = p
         step = ReorgStep.PREVIEW
       } catch (e: Exception) {
@@ -138,12 +141,15 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
             Text("Journal details:", style = MaterialTheme.typography.labelMedium)
             Text("• Folder: ${journal.rootFolder}", style = MaterialTheme.typography.bodySmall)
             Text("• Mode: ${journal.operationMode}", style = MaterialTheme.typography.bodySmall)
-            Text("• Files changed: ${journal.changedFiles}", style = MaterialTheme.typography.bodySmall)
+            Text(
+                "• Files changed: ${journal.changedFiles}",
+                style = MaterialTheme.typography.bodySmall)
             Text("• Date: ${journal.timestampString}", style = MaterialTheme.typography.bodySmall)
             Spacer(Modifier.height(8.dp))
             when (journal.operationMode) {
               ReorganizeMode.MOVE -> Text("Files will be moved back to their original locations.")
-              ReorganizeMode.COPY -> Text("Copied files will be deleted (originals were preserved).")
+              ReorganizeMode.COPY ->
+                  Text("Copied files will be deleted (originals were preserved).")
             }
           }
         },
@@ -153,7 +159,10 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
                 showUndoConfirm = null
                 // Find the actual journal file
                 val journalDir = File(System.getProperty("user.home"), ".petrie-importer/journals")
-                val journalFile = journalDir.listFiles()?.find { it.nameWithoutExtension == "reorg_${journal.id}" }
+                val journalFile =
+                    journalDir.listFiles()?.find {
+                      it.nameWithoutExtension == "reorg_${journal.id}"
+                    }
                 if (journalFile != null && journalFile.exists()) {
                   step = ReorgStep.EXECUTING
                   scope.launch {
@@ -211,9 +220,7 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
               Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 ReorganizeMode.entries.forEach { mode ->
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(
-                        reorgMode == mode,
-                        { reorgMode = mode })
+                    RadioButton(reorgMode == mode, { reorgMode = mode })
                     Spacer(Modifier.width(4.dp))
                     Column {
                       Text(
@@ -650,55 +657,93 @@ fun ReorganizeScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> U
             }
           }
 
-          // Undo journals
+          // Undo journals (collapsible, like Import History)
           if (journals.isNotEmpty()) {
+            var undoExpanded by remember { mutableStateOf(false) }
             OutlinedCard(Modifier.fillMaxWidth()) {
-              Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Undo History", style = MaterialTheme.typography.titleSmall)
-                Text("Select a journal to view details or undo the operation", 
-                     style = MaterialTheme.typography.bodySmall,
-                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                journals.forEach { journal ->
-                  Row(
-                      Modifier.fillMaxWidth()
-                          .clip(MaterialTheme.shapes.small)
-                          .clickable { 
-                            if (!journal.undone) showUndoConfirm = journal 
-                            else selectedJournal = journal 
-                          }
-                          .padding(8.dp),
-                      verticalAlignment = Alignment.CenterVertically,
-                      horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.Undo,
-                            null,
-                            Modifier.size(16.dp),
-                            tint = 
-                                if (journal.undone) MaterialTheme.colorScheme.onSurfaceVariant
-                                else MaterialTheme.colorScheme.primary)
-                        Column(Modifier.weight(1f)) {
-                          Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "${journal.operationMode} - ${journal.rootFolder.substringAfterLast("/")}",
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis)
-                            if (journal.undone) {
-                              Spacer(Modifier.width(4.dp))
-                              Badge { Text("Undone", Modifier.padding(horizontal = 4.dp)) }
-                            }
-                          }
-                          Text(
-                              "${journal.changedFiles} files changed • ${journal.timestampString}",
-                              style = MaterialTheme.typography.labelSmall,
-                              color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
+              Column {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { undoExpanded = !undoExpanded }
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                      Icon(
+                          Icons.AutoMirrored.Filled.Undo,
+                          null,
+                          Modifier.size(18.dp),
+                          tint = MaterialTheme.colorScheme.primary)
+                      Column(Modifier.weight(1f)) {
+                        Text("Undo History", style = MaterialTheme.typography.titleSmall)
                         Text(
-                            if (!journal.undone) "Undo" else "View",
+                            "${journals.size} operations • ${journals.sumOf { it.changedFiles }} files changed",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                       }
-                }
+                      Icon(
+                          if (undoExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                          "Toggle",
+                          Modifier.size(18.dp))
+                    }
+                AnimatedVisibility(
+                    undoExpanded, enter = expandVertically(), exit = shrinkVertically()) {
+                      Column {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                        Column(
+                            Modifier.padding(14.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                              journals.forEach { journal ->
+                                Row(
+                                    Modifier.fillMaxWidth()
+                                        .clip(MaterialTheme.shapes.small)
+                                        .clickable {
+                                          if (!journal.undone) showUndoConfirm = journal
+                                          else selectedJournal = journal
+                                        }
+                                        .padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                      Icon(
+                                          Icons.AutoMirrored.Filled.Undo,
+                                          null,
+                                          Modifier.size(16.dp),
+                                          tint =
+                                              if (journal.undone)
+                                                  MaterialTheme.colorScheme.onSurfaceVariant
+                                              else MaterialTheme.colorScheme.primary)
+                                      Column(Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                          Text(
+                                              journal.rootFolder.substringAfterLast("/"),
+                                              style = MaterialTheme.typography.bodySmall,
+                                              maxLines = 1,
+                                              overflow = TextOverflow.Ellipsis)
+                                          Spacer(Modifier.width(4.dp))
+                                          Text(
+                                              "— ${journal.operationMode}",
+                                              style = MaterialTheme.typography.bodySmall,
+                                              color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                          if (journal.undone) {
+                                            Spacer(Modifier.width(4.dp))
+                                            Badge {
+                                              Text("Undone", Modifier.padding(horizontal = 4.dp))
+                                            }
+                                          }
+                                        }
+                                        Text(
+                                            "${journal.changedFiles} files • ${journal.timestampString}",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                      }
+                                      Text(
+                                          if (!journal.undone) "Undo" else "View",
+                                          style = MaterialTheme.typography.labelSmall,
+                                          color = MaterialTheme.colorScheme.primary)
+                                    }
+                              }
+                            }
+                      }
+                    }
               }
             }
           }

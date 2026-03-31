@@ -16,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -76,6 +77,7 @@ private enum class FlowStep {
   CHECKING_DUPES,
   DUPE_REVIEW,
   PREVIEW,
+  PHOTO_SCAN,
   IMPORTING,
   COMPLETE
 }
@@ -119,6 +121,10 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
   var customConfig by remember(selectedProfileId) { mutableStateOf(config) }
   var settingsExpanded by remember { mutableStateOf(false) }
   var wantsReview by remember { mutableStateOf(false) }
+  var scanMode by remember { mutableStateOf(ScanMode.STANDARD) }
+
+  // Sync scanMode to customConfig
+  customConfig = customConfig.copy(scanMode = scanMode)
 
   // Flow state
   var flowStep by remember { mutableStateOf(FlowStep.SETUP) }
@@ -247,28 +253,28 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
                 }
             importResult = result
             // Save detailed history entry with per-file information
-            result.historyEntry?.let { entry ->
-              historyAdapter.addEntry(entry)
-            } ?: run {
-              // Fallback for backward compatibility
-              historyAdapter.addEntry(
-                  ImportHistoryEntry(
-                      timestamp = System.currentTimeMillis(),
-                      timestampString = ImportHistoryEntry.createTimestampString(System.currentTimeMillis()),
-                      sourcePath = sourcePath,
-                      destinationPath = destinationPath,
-                      profileName = selectedProfile?.name ?: "Default",
-                      folderPattern = customConfig.folderPattern,
-                      filenamePattern = customConfig.fileNamePattern,
-                      totalFiles = result.totalFiles,
-                      successCount = result.successCount,
-                      errorCount = result.errorCount,
-                      skippedCount = result.skippedCount,
-                      duplicateCount = result.duplicateCount,
-                      deletedSourceCount = result.deletedSourceCount,
-                      totalBytes = toImport.sumOf { it.fileSize },
-                      durationMs = result.duration))
-            }
+            result.historyEntry?.let { entry -> historyAdapter.addEntry(entry) }
+                ?: run {
+                  // Fallback for backward compatibility
+                  historyAdapter.addEntry(
+                      ImportHistoryEntry(
+                          timestamp = System.currentTimeMillis(),
+                          timestampString =
+                              ImportHistoryEntry.createTimestampString(System.currentTimeMillis()),
+                          sourcePath = sourcePath,
+                          destinationPath = destinationPath,
+                          profileName = selectedProfile?.name ?: "Default",
+                          folderPattern = customConfig.folderPattern,
+                          filenamePattern = customConfig.fileNamePattern,
+                          totalFiles = result.totalFiles,
+                          successCount = result.successCount,
+                          errorCount = result.errorCount,
+                          skippedCount = result.skippedCount,
+                          duplicateCount = result.duplicateCount,
+                          deletedSourceCount = result.deletedSourceCount,
+                          totalBytes = toImport.sumOf { it.fileSize },
+                          durationMs = result.duration))
+                }
             importService.indexFolder(destinationPath, true) {}
             flowStep = FlowStep.COMPLETE
           } catch (e: Exception) {
@@ -328,6 +334,7 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
     wantsReview = withReview
     errorMessage = null
     updateProfilePaths()
+
     flowStep = FlowStep.SCANNING
     importJob =
         scope.launch {
@@ -339,6 +346,12 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
                   scanProgress = file
                 }
             images = scanned.map { it.copy(isSelected = true) }
+
+            // For photo scan mode, always show selection dialog first
+            if (scanMode == ScanMode.PHOTO_SCAN) {
+              flowStep = FlowStep.SELECTING
+              return@launch
+            }
 
             if (mode == ImportMode.SELECT) {
               flowStep = FlowStep.SELECTING
@@ -439,8 +452,18 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
                     onSelectAll = { images = images.map { it.copy(isSelected = true) } },
                     onSelectNone = { images = images.map { it.copy(isSelected = false) } },
                     onContinue = {
-                      flowStep = FlowStep.SETUP
-                      continueAfterSelection()
+                      // Filter to only selected images, then continue based on mode
+                      val selectedImages = images.filter { it.isSelected }
+                      filteredImages = selectedImages
+
+                      if (scanMode == ScanMode.PHOTO_SCAN) {
+                        // For photo scan mode, go to photo scan screen with selected images
+                        flowStep = FlowStep.PHOTO_SCAN
+                      } else {
+                        // For standard mode, go through normal flow
+                        flowStep = FlowStep.SETUP
+                        continueAfterSelection(selectedImages)
+                      }
                     },
                     onBack = { flowStep = FlowStep.SETUP },
                     selectedCount = images.count { it.isSelected })
@@ -482,6 +505,41 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
                 onBack = { resetFlow() })
           }
     }
+  }
+
+  // --- Photo Scan dialog ---
+  if (flowStep == FlowStep.PHOTO_SCAN) {
+    Dialog(
+        onDismissRequest = { resetFlow() },
+        properties = DialogProperties(usePlatformDefaultWidth = false)) {
+          Surface(
+              Modifier.fillMaxSize(0.95f),
+              shape = MaterialTheme.shapes.large,
+              color = MaterialTheme.colorScheme.surface,
+              tonalElevation = 2.dp) {
+                PhotoScanScreen(
+                    sourcePath = sourcePath,
+                    destinationPath = destinationPath,
+                    configuration = customConfig,
+                    onComplete = { result ->
+                      if (result.success) {
+                        flowStep = FlowStep.COMPLETE
+                        importResult =
+                            ImportResult(
+                                totalFiles = result.exportedFiles.size,
+                                successCount = result.exportedFiles.size,
+                                errorCount = result.errors.size,
+                                duplicateCount = 0,
+                                skippedCount = 0,
+                                deletedSourceCount = 0)
+                      } else {
+                        flowStep = FlowStep.SETUP
+                      }
+                    },
+                    onCancel = { resetFlow() },
+                    selectedFiles = filteredImages.takeIf { it.isNotEmpty() })
+              }
+        }
   }
 
   // --- Main layout ---
@@ -526,6 +584,51 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
           }
 
           HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+          // ── #8b: Scan mode toggle ──
+          Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.spacedBy(8.dp),
+              verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Mode:",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                FilterChip(
+                    selected = scanMode == ScanMode.STANDARD,
+                    onClick = { scanMode = ScanMode.STANDARD },
+                    label = { Text("Standard") },
+                    leadingIcon = {
+                      if (scanMode == ScanMode.STANDARD)
+                          Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                    })
+                FilterChip(
+                    selected = scanMode == ScanMode.PHOTO_SCAN,
+                    onClick = { scanMode = ScanMode.PHOTO_SCAN },
+                    label = { Text("Photo Scan") },
+                    leadingIcon = {
+                      if (scanMode == ScanMode.PHOTO_SCAN)
+                          Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                    })
+              }
+
+          // Mode description
+          Row(
+              modifier = Modifier.fillMaxWidth().padding(start = 44.dp),
+              horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(
+                    if (scanMode == ScanMode.STANDARD) Icons.Default.PhotoLibrary
+                    else Icons.Default.DocumentScanner,
+                    null,
+                    Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (scanMode == ScanMode.STANDARD)
+                        "Single photo import with duplicate detection"
+                    else "Extract multiple photos from scanned images",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+              }
 
           // ── #8: Camera detection banner ──
           if (detectedDevices.isNotEmpty()) {
@@ -756,11 +859,12 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
               destinationPath = destinationPath,
               watchFolderService = watchFolderService,
               watchStatus = watchStatus,
-              scope = scope)
+              scope = scope,
+              scanMode = scanMode)
 
-          // ── #6: Import history reload on flowStep change ──
-          var historyEntries by remember { mutableStateOf<List<ImportHistoryEntry>>(emptyList()) }
+          // ── #6: Import history (collapsible) ──
           var historyExpanded by remember { mutableStateOf(false) }
+          var historyEntries by remember { mutableStateOf<List<ImportHistoryEntry>>(emptyList()) }
           LaunchedEffect(flowStep) { historyEntries = historyAdapter.loadHistory() }
 
           if (historyEntries.isNotEmpty()) {
@@ -777,10 +881,13 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
                           null,
                           Modifier.size(18.dp),
                           tint = MaterialTheme.colorScheme.primary)
-                      Text(
-                          "Import History (${historyEntries.size})",
-                          style = MaterialTheme.typography.titleSmall,
-                          modifier = Modifier.weight(1f))
+                      Column(Modifier.weight(1f)) {
+                        Text("Import History", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "${historyEntries.size} imports • ${historyEntries.take(10).sumOf { it.successCount }} files",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                      }
                       Icon(
                           if (historyExpanded) Icons.Default.ExpandLess
                           else Icons.Default.ExpandMore,
@@ -793,27 +900,36 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         Column(
                             Modifier.padding(14.dp),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
                               historyEntries.take(10).forEach { entry ->
                                 Row(
-                                    Modifier.fillMaxWidth(),
+                                    Modifier.fillMaxWidth()
+                                        .clip(MaterialTheme.shapes.small)
+                                        .padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                       Icon(
                                           if (entry.errorCount == 0) Icons.Default.CheckCircle
                                           else Icons.Default.Warning,
                                           null,
-                                          Modifier.size(14.dp),
+                                          Modifier.size(16.dp),
                                           tint =
                                               if (entry.errorCount == 0)
                                                   MaterialTheme.colorScheme.primary
                                               else MaterialTheme.colorScheme.error)
                                       Column(Modifier.weight(1f)) {
-                                        Text(
-                                            "${entry.profileName} — ${entry.successCount} files",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis)
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                          Text(
+                                              entry.profileName,
+                                              style = MaterialTheme.typography.bodySmall,
+                                              maxLines = 1,
+                                              overflow = TextOverflow.Ellipsis)
+                                          Spacer(Modifier.width(4.dp))
+                                          Text(
+                                              "— ${entry.successCount} files",
+                                              style = MaterialTheme.typography.bodySmall,
+                                              color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
                                         Text(
                                             java.text
                                                 .SimpleDateFormat("yyyy-MM-dd HH:mm")
@@ -959,7 +1075,8 @@ private fun SettingsSection(
     destinationPath: String,
     watchFolderService: WatchFolderService,
     watchStatus: org.kryspetrie.fileimport.application.WatchFolderStatus,
-    scope: kotlinx.coroutines.CoroutineScope
+    scope: kotlinx.coroutines.CoroutineScope,
+    scanMode: ScanMode
 ) {
   OutlinedCard(Modifier.fillMaxWidth()) {
     Column {
@@ -1125,67 +1242,69 @@ private fun SettingsSection(
                   }
                 }
 
-            // ── Subsection 2: Deduplication ──
-            var dedupExpanded by remember { mutableStateOf(false) }
-            CollapsibleSubsection(
-                title = "Deduplication",
-                icon = Icons.Default.FindReplace,
-                expanded = dedupExpanded,
-                onToggle = { dedupExpanded = !dedupExpanded }) {
-                  // Already-transferred detection
-                  SectionLabel("Already-Transferred Detection")
-                  Text(
-                      "How to detect files that have already been copied to the destination.",
-                      style = MaterialTheme.typography.bodySmall,
-                      color = MaterialTheme.colorScheme.onSurfaceVariant)
-                  Row(Modifier.fillMaxWidth()) {
-                    Column(Modifier.weight(1f)) {
-                      CompactCheck(
-                          configuration.detectTransferredByHash,
-                          { onConfigChange(configuration.copy(detectTransferredByHash = it)) },
-                          "Match by file hash (MD5)")
+            // ── Subsection 2: Deduplication (hidden in Photo Scan mode) ──
+            if (scanMode == ScanMode.STANDARD) {
+              var dedupExpanded by remember { mutableStateOf(false) }
+              CollapsibleSubsection(
+                  title = "Deduplication",
+                  icon = Icons.Default.FindReplace,
+                  expanded = dedupExpanded,
+                  onToggle = { dedupExpanded = !dedupExpanded }) {
+                    // Already-transferred detection
+                    SectionLabel("Already-Transferred Detection")
+                    Text(
+                        "How to detect files that have already been copied to the destination.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(Modifier.fillMaxWidth()) {
+                      Column(Modifier.weight(1f)) {
+                        CompactCheck(
+                            configuration.detectTransferredByHash,
+                            { onConfigChange(configuration.copy(detectTransferredByHash = it)) },
+                            "Match by file hash (MD5)")
+                      }
+                      Column(Modifier.weight(1f)) {
+                        CompactCheck(
+                            configuration.detectTransferredByExif,
+                            { onConfigChange(configuration.copy(detectTransferredByExif = it)) },
+                            "Match by EXIF data")
+                      }
                     }
-                    Column(Modifier.weight(1f)) {
-                      CompactCheck(
-                          configuration.detectTransferredByExif,
-                          { onConfigChange(configuration.copy(detectTransferredByExif = it)) },
-                          "Match by EXIF data")
-                    }
-                  }
 
-                  Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(6.dp))
 
-                  // Visual duplicates
-                  SectionLabel("Visual Duplicate Detection")
-                  CompactCheck(
-                      configuration.detectVisualDuplicates,
-                      { onConfigChange(configuration.copy(detectVisualDuplicates = it)) },
-                      "Detect visual/resolution duplicates among source files")
-                  if (configuration.detectVisualDuplicates) {
+                    // Visual duplicates
+                    SectionLabel("Visual Duplicate Detection")
                     CompactCheck(
-                        configuration.useSurfMatching,
-                        { onConfigChange(configuration.copy(useSurfMatching = it)) },
-                        "Use SURF feature matching (slow, high accuracy)")
-                    if (configuration.useSurfMatching) {
-                      OutlinedCard(Modifier.fillMaxWidth()) {
-                        Row(
-                            Modifier.padding(10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                              Icon(
-                                  Icons.Default.Warning,
-                                  null,
-                                  Modifier.size(16.dp),
-                                  tint = MaterialTheme.colorScheme.error)
-                              Text(
-                                  "SURF matching is CPU-intensive and will be slow for large collections. It compares visual features between images to find near-duplicates regardless of resolution or format differences.",
-                                  style = MaterialTheme.typography.bodySmall,
-                                  color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                        configuration.detectVisualDuplicates,
+                        { onConfigChange(configuration.copy(detectVisualDuplicates = it)) },
+                        "Detect visual/resolution duplicates among source files")
+                    if (configuration.detectVisualDuplicates) {
+                      CompactCheck(
+                          configuration.useSurfMatching,
+                          { onConfigChange(configuration.copy(useSurfMatching = it)) },
+                          "Use SURF feature matching (slow, high accuracy)")
+                      if (configuration.useSurfMatching) {
+                        OutlinedCard(Modifier.fillMaxWidth()) {
+                          Row(
+                              Modifier.padding(10.dp),
+                              verticalAlignment = Alignment.CenterVertically,
+                              horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(
+                                    Icons.Default.Warning,
+                                    null,
+                                    Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.error)
+                                Text(
+                                    "SURF matching is CPU-intensive and will be slow for large collections. It compares visual features between images to find near-duplicates regardless of resolution or format differences.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                              }
+                        }
                       }
                     }
                   }
-                }
+            }
 
             // ── Subsection 3: Advanced ──
             var advancedExpanded by remember { mutableStateOf(false) }

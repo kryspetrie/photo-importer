@@ -5,34 +5,31 @@ import kotlinx.serialization.Serializable
 /**
  * Represents a saved import configuration profile.
  *
- * Import profiles allow users to save complete import configurations for different
- * cameras, workflows, or use cases. Instead of reconfiguring import settings each time,
- * users can select a profile and instantly apply all saved preferences.
+ * Import profiles allow users to save complete import configurations for different cameras,
+ * workflows, or use cases. Instead of reconfiguring import settings each time, users can select a
+ * profile and instantly apply all saved preferences.
  *
  * ## Use Cases
- *
  * 1. **Camera-Specific Profiles**: Different settings for each camera
- *    - "Canon R5 Profile": RAW+JPEG handling, specific naming pattern
- *    - "iPhone Profile": HEIC conversion, date-based organization
- *
+ *     - "Canon R5 Profile": RAW+JPEG handling, specific naming pattern
+ *     - "iPhone Profile": HEIC conversion, date-based organization
  * 2. **Workflow Profiles**: Different workflows for different scenarios
- *    - "Quick Import": Flat structure, original names, no verification
- *    - "Archive Import": Hierarchical folders, verified, backup enabled
- *
+ *     - "Quick Import": Flat structure, original names, no verification
+ *     - "Archive Import": Hierarchical folders, verified, backup enabled
  * 3. **Client/Project Profiles**: Separate configurations per client or project
- *    - "Client A": Specific folder structure, naming convention
- *    - "Personal": Different organization scheme
+ *     - "Client A": Specific folder structure, naming convention
+ *     - "Personal": Different organization scheme
  *
  * ## Auto-Selection
  *
- * Profiles can be associated with a specific camera via [cameraName]. When that
- * camera is connected, the profile is automatically selected, streamlining the
- * import workflow for users with multiple cameras.
+ * Profiles can be associated with a specific camera via [cameraName]. When that camera is
+ * connected, the profile is automatically selected, streamlining the import workflow for users with
+ * multiple cameras.
  *
  * ## Persistence
  *
- * Profiles are serialized to JSON and stored in `~/.petrie-importer/settings.json`.
- * The [id] field ensures profiles can be uniquely identified even if renamed.
+ * Profiles are serialized to JSON and stored in `~/.petrie-importer/settings.json`. The [id] field
+ * ensures profiles can be uniquely identified even if renamed.
  *
  * ## Example
  *
@@ -50,26 +47,24 @@ import kotlinx.serialization.Serializable
  * )
  * ```
  *
- * @property id Unique identifier for this profile. Auto-generated UUID ensures
- *              uniqueness even across different machines or sync scenarios.
- * @property name Human-readable name shown in the profile selector dropdown.
- *              Should be descriptive (e.g., "Canon R5 - RAW+JPEG").
- * @property description Optional detailed description of the profile's purpose.
- *                      Shown as tooltip or in profile management UI.
- * @property configuration Complete import configuration including folder patterns,
- *                        naming rules, duplicate detection settings, etc.
- * @property cameraName Optional camera model name for auto-selection. When a camera
- *                      with matching name is connected, this profile is automatically
- *                      selected. Match is case-insensitive.
- * @property lastSourcePath Last used source directory for this profile. Convenience
- *                          feature to remember where user typically imports from.
- * @property lastDestinationPath Last used destination directory for this profile.
- *                               Remembers user's preferred import location.
- * @property createdAt Unix timestamp (milliseconds) when profile was created.
- *                     Used for sorting and audit purposes.
- * @property updatedAt Unix timestamp (milliseconds) when profile was last modified.
- *                     Updated on every save to track changes.
- *
+ * @property id Unique identifier for this profile. Auto-generated UUID ensures uniqueness even
+ *   across different machines or sync scenarios.
+ * @property name Human-readable name shown in the profile selector dropdown. Should be descriptive
+ *   (e.g., "Canon R5 - RAW+JPEG").
+ * @property description Optional detailed description of the profile's purpose. Shown as tooltip or
+ *   in profile management UI.
+ * @property configuration Complete import configuration including folder patterns, naming rules,
+ *   duplicate detection settings, etc.
+ * @property cameraName Optional camera model name for auto-selection. When a camera with matching
+ *   name is connected, this profile is automatically selected. Match is case-insensitive.
+ * @property lastSourcePath Last used source directory for this profile. Convenience feature to
+ *   remember where user typically imports from.
+ * @property lastDestinationPath Last used destination directory for this profile. Remembers user's
+ *   preferred import location.
+ * @property createdAt Unix timestamp (milliseconds) when profile was created. Used for sorting and
+ *   audit purposes.
+ * @property updatedAt Unix timestamp (milliseconds) when profile was last modified. Updated on
+ *   every save to track changes.
  * @see ImportConfiguration Detailed import settings
  * @see AppSettings Collection of all profiles and application settings
  * @see Serializable Kotlin serialization for JSON persistence
@@ -85,7 +80,7 @@ data class ImportProfile(
      * - Can be referenced by [AppSettings.activeProfileId]
      */
     val id: String = java.util.UUID.randomUUID().toString(),
-    
+
     /**
      * Profile display name.
      *
@@ -95,7 +90,7 @@ data class ImportProfile(
      * - "Archive - Verified"
      */
     val name: String,
-    
+
     /**
      * Optional profile description.
      *
@@ -107,7 +102,7 @@ data class ImportProfile(
      * Displayed as tooltip or in profile management screen.
      */
     val description: String = "",
-    
+
     /**
      * Complete import configuration for this profile.
      *
@@ -121,7 +116,7 @@ data class ImportProfile(
      * Defaults to [ImportConfiguration] defaults if not specified.
      */
     val configuration: ImportConfiguration = ImportConfiguration(),
-    
+
     /**
      * Associated camera model name.
      *
@@ -131,13 +126,12 @@ data class ImportProfile(
      * 3. Finds profile with matching [cameraName]
      * 4. Automatically selects that profile
      *
-     * Match is case-insensitive and checks both [CameraDevice.name]
-     * and [CameraDevice.displayName].
+     * Match is case-insensitive and checks both [CameraDevice.name] and [CameraDevice.displayName].
      *
      * Leave blank for profiles not tied to specific camera.
      */
     val cameraName: String = "",
-    
+
     /**
      * Last used source directory path.
      *
@@ -148,31 +142,29 @@ data class ImportProfile(
      * Pre-populated when profile is selected to save user time.
      */
     val lastSourcePath: String = "",
-    
+
     /**
      * Last used destination directory path.
      *
-     * Remembers user's preferred import location for this profile.
-     * Pre-populated when profile is selected.
+     * Remembers user's preferred import location for this profile. Pre-populated when profile is
+     * selected.
      */
     val lastDestinationPath: String = "",
-    
+
     /**
      * Profile creation timestamp.
      *
-     * Unix timestamp in milliseconds since epoch.
-     * Used for:
+     * Unix timestamp in milliseconds since epoch. Used for:
      * - Sorting profiles by creation date
      * - Audit trail
      * - Sync conflict resolution
      */
     val createdAt: Long = System.currentTimeMillis(),
-    
+
     /**
      * Profile last modification timestamp.
      *
-     * Updated every time profile is saved.
-     * Used for:
+     * Updated every time profile is saved. Used for:
      * - Showing "recently modified" indicator
      * - Sort by last used
      * - Sync and backup decisions
@@ -183,16 +175,15 @@ data class ImportProfile(
 /**
  * Application-wide settings and preferences.
  *
- * This is the root settings object that contains all persisted application
- * configuration. It's loaded on startup and saved whenever settings change.
+ * This is the root settings object that contains all persisted application configuration. It's
+ * loaded on startup and saved whenever settings change.
  *
  * ## Persistence
  *
- * Serialized to JSON and stored in `~/.petrie-importer/settings.json`.
- * Uses Kotlinx Serialization for efficient, type-safe JSON handling.
+ * Serialized to JSON and stored in `~/.petrie-importer/settings.json`. Uses Kotlinx Serialization
+ * for efficient, type-safe JSON handling.
  *
  * ## Settings Categories
- *
  * 1. **Profiles**: Saved import configurations
  * 2. **Active Profile**: Currently selected profile
  * 3. **Window State**: Window size and position
@@ -210,18 +201,17 @@ data class ImportProfile(
  * saveSettings(settings)
  * ```
  *
- * @property profiles List of all saved import profiles. Users can create
- *                    multiple profiles for different cameras or workflows.
- * @property activeProfileId ID of currently selected profile. Used to restore
- *                           selection on app restart.
- * @property windowState Window dimensions and position. Restored on startup
- *                       for consistent user experience.
+ * @property profiles List of all saved import profiles. Users can create multiple profiles for
+ *   different cameras or workflows.
+ * @property activeProfileId ID of currently selected profile. Used to restore selection on app
+ *   restart.
+ * @property windowState Window dimensions and position. Restored on startup for consistent user
+ *   experience.
  * @property theme Theme preference (light/dark/system). Applied to entire UI.
- * @property savedFolderPresets User-created folder pattern presets. Shown in
- *                              pattern selector dropdown alongside built-ins.
- * @property savedFilenamePresets User-created filename pattern presets. Shown
- *                                in pattern selector alongside built-ins.
- *
+ * @property savedFolderPresets User-created folder pattern presets. Shown in pattern selector
+ *   dropdown alongside built-ins.
+ * @property savedFilenamePresets User-created filename pattern presets. Shown in pattern selector
+ *   alongside built-ins.
  * @see ImportProfile Individual import configuration profile
  * @see WindowState Window dimensions and position
  * @see AppTheme Theme selection enum
@@ -240,7 +230,7 @@ data class AppSettings(
      * Profiles are displayed in a dropdown selector in the Import screen.
      */
     val profiles: List<ImportProfile> = emptyList(),
-    
+
     /**
      * ID of currently active/selected profile.
      *
@@ -252,15 +242,15 @@ data class AppSettings(
      * Null if no profile is selected (using default configuration).
      */
     val activeProfileId: String? = null,
-    
+
     /**
      * Window state (size and position).
      *
-     * Persisted to provide consistent window size across sessions.
-     * Restored when application starts.
+     * Persisted to provide consistent window size across sessions. Restored when application
+     * starts.
      */
     val windowState: WindowState = WindowState(),
-    
+
     /**
      * Theme preference.
      *
@@ -272,22 +262,22 @@ data class AppSettings(
      * Can be changed via View menu or settings screen.
      */
     val theme: AppTheme = AppTheme.SYSTEM,
-    
+
     /**
      * User-saved folder pattern presets.
      *
-     * Users can create custom folder patterns and save them as presets.
-     * These appear in the folder pattern dropdown alongside built-in presets.
+     * Users can create custom folder patterns and save them as presets. These appear in the folder
+     * pattern dropdown alongside built-in presets.
      *
      * Example: User creates "Client / Date" pattern and saves it for reuse.
      */
     val savedFolderPresets: List<PatternPreset> = emptyList(),
-    
+
     /**
      * User-saved filename pattern presets.
      *
-     * Similar to [savedFolderPresets] but for filename patterns.
-     * Allows users to save and reuse custom naming conventions.
+     * Similar to [savedFolderPresets] but for filename patterns. Allows users to save and reuse
+     * custom naming conventions.
      */
     val savedFilenamePresets: List<PatternPreset> = emptyList()
 )
@@ -295,11 +285,10 @@ data class AppSettings(
 /**
  * Window state information for persistence.
  *
- * Stores window dimensions and position to restore on application restart.
- * This provides a consistent user experience across sessions.
+ * Stores window dimensions and position to restore on application restart. This provides a
+ * consistent user experience across sessions.
  *
  * ## Platform Considerations
- *
  * - **macOS**: Window position may be managed by system
  * - **Windows**: Full position/size restoration supported
  * - **Linux**: Varies by window manager
@@ -323,14 +312,13 @@ data class AppSettings(
  * )
  * ```
  *
- * @property width Window width in pixels. Default 1200px provides good
- *                 desktop experience without being too large.
+ * @property width Window width in pixels. Default 1200px provides good desktop experience without
+ *   being too large.
  * @property height Window height in pixels. Default 800px fits most screens.
  * @property x Window X position on screen (horizontal). Null to let OS decide.
  * @property y Window Y position on screen (vertical). Null to let OS decide.
- * @property isMaximized Whether window was maximized when last closed.
- *                       If true, restore to maximized state.
- *
+ * @property isMaximized Whether window was maximized when last closed. If true, restore to
+ *   maximized state.
  * @see AppSettings Contains window state as part of application settings
  */
 @Serializable
@@ -338,39 +326,38 @@ data class WindowState(
     /**
      * Window width in pixels.
      *
-     * Default 1200px provides comfortable desktop workspace.
-     * Minimum should be ~800px for usability.
+     * Default 1200px provides comfortable desktop workspace. Minimum should be ~800px for
+     * usability.
      */
     val width: Int = 1200,
-    
+
     /**
      * Window height in pixels.
      *
-     * Default 800px fits most laptop and desktop screens.
-     * Minimum should be ~600px for usability.
+     * Default 800px fits most laptop and desktop screens. Minimum should be ~600px for usability.
      */
     val height: Int = 800,
-    
+
     /**
      * Window horizontal position on screen.
      *
-     * Pixels from left edge of screen. Null to let OS position window
-     * (usually centered or cascaded).
+     * Pixels from left edge of screen. Null to let OS position window (usually centered or
+     * cascaded).
      */
     val x: Int? = null,
-    
+
     /**
      * Window vertical position on screen.
      *
      * Pixels from top edge of screen. Null to let OS position window.
      */
     val y: Int? = null,
-    
+
     /**
      * Whether window was maximized when last closed.
      *
-     * If true, window should be restored to maximized state on startup.
-     * Takes precedence over width/height when restoring.
+     * If true, window should be restored to maximized state on startup. Takes precedence over
+     * width/height when restoring.
      */
     val isMaximized: Boolean = false
 )
@@ -378,15 +365,14 @@ data class WindowState(
 /**
  * Application theme selection.
  *
- * Determines the color scheme used throughout the application.
- * Theme changes trigger recomposition of all themed UI elements.
+ * Determines the color scheme used throughout the application. Theme changes trigger recomposition
+ * of all themed UI elements.
  *
  * ## Theme Options
- *
  * - **LIGHT**: Light color scheme with dark text. Best for bright environments.
  * - **DARK**: Dark color scheme with light text. Reduces eye strain in low light.
- * - **SYSTEM**: Automatically follows operating system theme setting.
- *               Most convenient for users who switch themes during the day.
+ * - **SYSTEM**: Automatically follows operating system theme setting. Most convenient for users who
+ *   switch themes during the day.
  *
  * ## Implementation
  *
@@ -413,7 +399,7 @@ enum class AppTheme {
    * - Users who prefer traditional light UI
    */
   LIGHT,
-  
+
   /**
    * Dark theme - dark backgrounds, light text.
    *
@@ -424,7 +410,7 @@ enum class AppTheme {
    * - OLED displays (saves power)
    */
   DARK,
-  
+
   /**
    * System theme - follows operating system setting.
    *

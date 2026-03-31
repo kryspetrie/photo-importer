@@ -19,18 +19,16 @@ import org.kryspetrie.fileimport.ui.theme.PetrieTheme
 /**
  * Defines the available navigation tabs in the Petrie File Importer application.
  *
- * This enumeration represents the three main features/screens accessible through
- * the bottom navigation bar. Each tab corresponds to a distinct use case in the
- * photo import workflow:
- *
+ * This enumeration represents the three main features/screens accessible through the bottom
+ * navigation bar. Each tab corresponds to a distinct use case in the photo import workflow:
  * 1. **Import**: Primary workflow for importing photos from cameras, SD cards, or folders
  * 2. **Reorganize**: Reorganize existing photo libraries with new naming/folder patterns
  * 3. **Library Duplicates**: Scan and resolve duplicate photos across the library
  *
  * ## Navigation Pattern
  *
- * Uses a bottom navigation bar (Material Design [NavigationBar]) which is standard
- * for desktop applications with 3-5 main sections. Each tab has:
+ * Uses a bottom navigation bar (Material Design [NavigationBar]) which is standard for desktop
+ * applications with 3-5 main sections. Each tab has:
  * - A descriptive label for clarity
  * - An icon for quick visual recognition
  * - Exclusive selection (only one tab active at a time)
@@ -43,11 +41,10 @@ import org.kryspetrie.fileimport.ui.theme.PetrieTheme
  * 3. Add a branch in the `when` statement in [PetrieFileImporterApp]
  * 4. Ensure the screen follows the standard settings callback pattern
  *
- * @property label The display name shown to users in the navigation bar.
- *                 Should be concise (1-2 words) and clearly describe the feature.
- * @property icon The Material Design icon representing this tab.
- *                Uses [ImageVector] from compose.materialIcons for vector graphics.
- *
+ * @property label The display name shown to users in the navigation bar. Should be concise (1-2
+ *   words) and clearly describe the feature.
+ * @property icon The Material Design icon representing this tab. Uses [ImageVector] from
+ *   compose.materialIcons for vector graphics.
  * @see PetrieFileImporterApp Main application composable that uses these tabs
  * @see NavigationBar Material Design bottom navigation component
  * @see NavigationBarItem Individual tab item in the navigation bar
@@ -66,7 +63,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
    * @see ImportScreen The composable that implements this tab
    */
   IMPORT("Import", Icons.Default.Download),
-  
+
   /**
    * Reorganize tab - library reorganization workflow.
    *
@@ -77,13 +74,13 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
    * - Execute reorganization with undo support
    * - Track reorganization history
    *
-   * This is useful when users want to change their organization scheme
-   * after already importing photos.
+   * This is useful when users want to change their organization scheme after already importing
+   * photos.
    *
    * @see ReorganizeScreen The composable that implements this tab
    */
   REORGANIZE("Reorganize", Icons.AutoMirrored.Filled.DriveFileMove),
-  
+
   /**
    * Duplicate Scanner tab - library deduplication workflow.
    *
@@ -104,8 +101,8 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
 /**
  * Main application composable that renders the Petrie File Importer user interface.
  *
- * This is the root composable for the entire application UI. It sets up the main
- * application structure including:
+ * This is the root composable for the entire application UI. It sets up the main application
+ * structure including:
  * - Theme configuration (light/dark/system)
  * - Navigation bar with three main tabs
  * - Screen content based on selected tab
@@ -113,8 +110,8 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
  *
  * ## Architecture Role
  *
- * Acts as the composition root for the UI layer, similar to how a Spring Boot
- * application's main class acts as the application context root. It:
+ * Acts as the composition root for the UI layer, similar to how a Spring Boot application's main
+ * class acts as the application context root. It:
  * - Initializes the theme system
  * - Manages navigation state (which tab is selected)
  * - Delegates to feature-specific screen composables
@@ -122,9 +119,9 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
  *
  * ## State Management
  *
- * Uses Compose's state management with `remember` and `mutableStateOf` to track
- * the currently selected tab. When the tab changes, Compose automatically
- * recomposes only the affected parts of the UI (the screen content).
+ * Uses Compose's state management with `remember` and `mutableStateOf` to track the currently
+ * selected tab. When the tab changes, Compose automatically recomposes only the affected parts of
+ * the UI (the screen content).
  *
  * ## Layout Structure
  *
@@ -159,7 +156,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
  * fun MainWindow() {
  *     val settings = loadSettings()
  *     val windowState = rememberWindowState()
- *     
+ *
  *     PetrieFileImporterApp(
  *         settings = settings,
  *         onSettingsChange = { saveSettings(it) },
@@ -168,16 +165,14 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
  * }
  * ```
  *
- * @param settings Current application settings including theme, profiles, and preferences.
- *                 Changes to settings trigger UI updates through recomposition.
- * @param onSettingsChange Callback invoked when user modifies settings.
- *                         Should persist the new settings and update state.
- *                         Follows the unidirectional data flow pattern.
- * @param windowState State of the application window (size, position, etc.).
- *                    Can be used for window management operations.
- * @param modifier Optional [Modifier] for customizing layout behavior.
- *                 Defaults to [Modifier] (no modifications).
- *
+ * @param settings Current application settings including theme, profiles, and preferences. Changes
+ *   to settings trigger UI updates through recomposition.
+ * @param onSettingsChange Callback invoked when user modifies settings. Should persist the new
+ *   settings and update state. Follows the unidirectional data flow pattern.
+ * @param windowState State of the application window (size, position, etc.). Can be used for window
+ *   management operations.
+ * @param modifier Optional [Modifier] for customizing layout behavior. Defaults to [Modifier] (no
+ *   modifications).
  * @see PetrieTheme Application theme configuration
  * @see ImportScreen Import workflow screen
  * @see ReorganizeScreen Library reorganization screen
@@ -199,7 +194,7 @@ fun PetrieFileImporterApp(
      * When this parameter changes, the theme and all screens receive updated settings.
      */
     settings: AppSettings,
-    
+
     /**
      * Callback for settings changes.
      *
@@ -216,7 +211,7 @@ fun PetrieFileImporterApp(
      * @param newSettings The updated settings object
      */
     onSettingsChange: (AppSettings) -> Unit,
-    
+
     /**
      * Window state for the application window.
      *
@@ -231,7 +226,7 @@ fun PetrieFileImporterApp(
      * - Window management operations
      */
     windowState: WindowState,
-    
+
     /**
      * Modifier for layout customization.
      *
@@ -257,14 +252,11 @@ fun PetrieFileImporterApp(
     // Surface: Material Design container with background color
     // Provides consistent background across the application
     // Fills entire window area
-    Surface(
-        modifier = modifier.fillMaxSize(), 
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
       // Column: Vertical layout container
       // Arranges navigation bar and screen content vertically
       Column(modifier = Modifier.fillMaxSize()) {
-        
+
         // NavigationBar: Bottom navigation bar with tabs
         // tonalElevation adds subtle shadow for depth
         // Standard Material Design navigation pattern
@@ -275,57 +267,36 @@ fun PetrieFileImporterApp(
                 // Icon: Visual representation of the tab
                 // Uses 20.dp size for consistency
                 icon = {
-                  Icon(
-                      tab.icon, 
-                      contentDescription = tab.label, 
-                      modifier = Modifier.size(20.dp)
-                  )
+                  Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(20.dp))
                 },
                 // Label: Text shown below icon
                 // Uses Material Theme typography for consistency
-                label = { 
-                  Text(tab.label, style = MaterialTheme.typography.labelSmall) 
-                },
+                label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
                 // Selection state: Highlight when tab is active
                 selected = currentTab == tab,
                 // Click handler: Switch to this tab
-                onClick = { currentTab = tab }
-            )
+                onClick = { currentTab = tab })
           }
         }
 
         // Box: Container for screen content
         // Fills remaining space after navigation bar
         // Adds 12dp padding around content for breathing room
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp)
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
           // Conditional rendering based on selected tab
           // Only the active screen is composed (performance optimization)
           // Each screen receives settings and callback for consistency
           when (currentTab) {
             // Import tab: Main photo import workflow
-            AppTab.IMPORT -> 
-                ImportScreen(
-                    settings = settings, 
-                    onSettingsChange = onSettingsChange
-                )
-            
+            AppTab.IMPORT -> ImportScreen(settings = settings, onSettingsChange = onSettingsChange)
+
             // Reorganize tab: Library reorganization workflow
             AppTab.REORGANIZE ->
-                ReorganizeScreen(
-                    settings = settings, 
-                    onSettingsChange = onSettingsChange
-                )
-            
+                ReorganizeScreen(settings = settings, onSettingsChange = onSettingsChange)
+
             // Duplicates tab: Duplicate detection and resolution
             AppTab.DUPLICATES ->
-                DuplicateScannerScreen(
-                    settings = settings, 
-                    onSettingsChange = onSettingsChange
-                )
+                DuplicateScannerScreen(settings = settings, onSettingsChange = onSettingsChange)
           }
         }
       }

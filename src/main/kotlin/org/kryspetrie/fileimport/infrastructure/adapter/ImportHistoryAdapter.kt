@@ -43,22 +43,24 @@ class ImportHistoryAdapter(
    * @param entry Import history entry to save
    * @param fileDetails Optional list of per-file details (merged into entry if provided)
    */
-  suspend fun addEntry(entry: ImportHistoryEntry, fileDetails: List<org.kryspetrie.fileimport.domain.model.ImportFileDetail>? = null) =
+  suspend fun addEntry(
+      entry: ImportHistoryEntry,
+      fileDetails: List<org.kryspetrie.fileimport.domain.model.ImportFileDetail>? = null
+  ) =
       withContext(Dispatchers.IO) {
         try {
           val history = loadHistory().toMutableList()
-          val enrichedEntry = if (fileDetails != null && fileDetails.isNotEmpty()) {
-              entry.copy(fileDetails = fileDetails)
-          } else entry
+          val enrichedEntry =
+              if (fileDetails != null && fileDetails.isNotEmpty()) {
+                entry.copy(fileDetails = fileDetails)
+              } else entry
           history.add(0, enrichedEntry)
           val trimmed = history.take(500)
           historyFile.writeText(json.encodeToString(trimmed))
         } catch (_: Exception) {}
       }
 
-  /**
-   * Clears all import history.
-   */
+  /** Clears all import history. */
   suspend fun clearHistory() =
       withContext(Dispatchers.IO) {
         try {

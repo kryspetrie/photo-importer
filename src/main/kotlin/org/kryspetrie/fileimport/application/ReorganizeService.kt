@@ -56,7 +56,9 @@ class ReorganizeService(
               operationMode = mode)
         }
 
-        onProgress(ReorganizeProgress(phase = ReorganizePhase.PREVIEWING, total = files.size, operationMode = mode))
+        onProgress(
+            ReorganizeProgress(
+                phase = ReorganizePhase.PREVIEWING, total = files.size, operationMode = mode))
 
         val semaphore = Semaphore(SCAN_CONCURRENCY)
         val counter = AtomicInteger(0)
@@ -156,7 +158,11 @@ class ReorganizeService(
         val toProcess = preview.mappings.filter { it.isChanged }
         if (toProcess.isEmpty()) {
           return@withContext ReorganizeResult(
-              movedCount = 0, renamedCount = 0, skippedCount = 0, errorCount = 0, operationMode = preview.operationMode)
+              movedCount = 0,
+              renamedCount = 0,
+              skippedCount = 0,
+              errorCount = 0,
+              operationMode = preview.operationMode)
         }
 
         val journalEntries = mutableListOf<JournalEntry>()
@@ -192,66 +198,67 @@ class ReorganizeService(
             dest.parentFile?.mkdirs()
 
             val sameDir = source.parent == dest.parent
-            val changeType = when {
-                sameDir && source.name != dest.name -> FileChangeType.RENAME_ONLY
-                !sameDir && source.name == dest.name -> FileChangeType.MOVE_ONLY
-                else -> FileChangeType.BOTH
-            }
+            val changeType =
+                when {
+                  sameDir && source.name != dest.name -> FileChangeType.RENAME_ONLY
+                  !sameDir && source.name == dest.name -> FileChangeType.MOVE_ONLY
+                  else -> FileChangeType.BOTH
+                }
 
             when (mapping.mode) {
-                ReorganizeMode.MOVE -> {
-                    if (source.renameTo(dest)) {
-                        journalEntries.add(
-                            JournalEntry(
-                                originalPath = mapping.currentPath,
-                                newPath = mapping.newPath,
-                                originalFilename = source.name,
-                                newFilename = dest.name,
-                                originalParent = source.parent ?: "",
-                                newParent = dest.parent ?: "",
-                                operationType = ReorganizeMode.MOVE,
-                                wasSuccessful = true,
-                                fileSize = source.length(),
-                                patternUsed = "",
-                                changeType = changeType))
-                        if (sameDir) renamedCount++ else movedCount++
-                    } else {
-                        // renameTo can fail across filesystems — fall back to copy + delete
-                        source.copyTo(dest, overwrite = false)
-                        source.delete()
-                        journalEntries.add(
-                            JournalEntry(
-                                originalPath = mapping.currentPath,
-                                newPath = mapping.newPath,
-                                originalFilename = source.name,
-                                newFilename = dest.name,
-                                originalParent = source.parent ?: "",
-                                newParent = dest.parent ?: "",
-                                operationType = ReorganizeMode.MOVE,
-                                wasSuccessful = true,
-                                fileSize = dest.length(),
-                                patternUsed = "",
-                                changeType = changeType))
-                        movedCount++
-                    }
+              ReorganizeMode.MOVE -> {
+                if (source.renameTo(dest)) {
+                  journalEntries.add(
+                      JournalEntry(
+                          originalPath = mapping.currentPath,
+                          newPath = mapping.newPath,
+                          originalFilename = source.name,
+                          newFilename = dest.name,
+                          originalParent = source.parent ?: "",
+                          newParent = dest.parent ?: "",
+                          operationType = ReorganizeMode.MOVE,
+                          wasSuccessful = true,
+                          fileSize = source.length(),
+                          patternUsed = "",
+                          changeType = changeType))
+                  if (sameDir) renamedCount++ else movedCount++
+                } else {
+                  // renameTo can fail across filesystems — fall back to copy + delete
+                  source.copyTo(dest, overwrite = false)
+                  source.delete()
+                  journalEntries.add(
+                      JournalEntry(
+                          originalPath = mapping.currentPath,
+                          newPath = mapping.newPath,
+                          originalFilename = source.name,
+                          newFilename = dest.name,
+                          originalParent = source.parent ?: "",
+                          newParent = dest.parent ?: "",
+                          operationType = ReorganizeMode.MOVE,
+                          wasSuccessful = true,
+                          fileSize = dest.length(),
+                          patternUsed = "",
+                          changeType = changeType))
+                  movedCount++
                 }
-                ReorganizeMode.COPY -> {
-                    source.copyTo(dest, overwrite = false)
-                    journalEntries.add(
-                        JournalEntry(
-                            originalPath = mapping.currentPath,
-                            newPath = mapping.newPath,
-                            originalFilename = source.name,
-                            newFilename = dest.name,
-                            originalParent = source.parent ?: "",
-                            newParent = dest.parent ?: "",
-                            operationType = ReorganizeMode.COPY,
-                            wasSuccessful = true,
-                            fileSize = dest.length(),
-                            patternUsed = "",
-                            changeType = changeType))
-                    copiedCount++
-                }
+              }
+              ReorganizeMode.COPY -> {
+                source.copyTo(dest, overwrite = false)
+                journalEntries.add(
+                    JournalEntry(
+                        originalPath = mapping.currentPath,
+                        newPath = mapping.newPath,
+                        originalFilename = source.name,
+                        newFilename = dest.name,
+                        originalParent = source.parent ?: "",
+                        newParent = dest.parent ?: "",
+                        operationType = ReorganizeMode.COPY,
+                        wasSuccessful = true,
+                        fileSize = dest.length(),
+                        patternUsed = "",
+                        changeType = changeType))
+                copiedCount++
+              }
             }
           } catch (e: Exception) {
             errors.add("${mapping.file.fileName}: ${e.message}")
@@ -260,42 +267,46 @@ class ReorganizeService(
 
         // Clean up empty directories left behind (only for MOVE operations)
         if (preview.operationMode == ReorganizeMode.MOVE) {
-            cleanEmptyDirs(
-                File(
-                    preview.mappings.first().file.file.parentFile?.parent
-                        ?: return@withContext ReorganizeResult(
-                            movedCount = movedCount,
-                            renamedCount = renamedCount,
-                            copiedCount = copiedCount,
-                            skippedCount = skippedCount,
-                            errorCount = errors.size,
-                            errors = errors,
-                            operationMode = preview.operationMode)))
+          cleanEmptyDirs(
+              File(
+                  preview.mappings.first().file.file.parentFile?.parent
+                      ?: return@withContext ReorganizeResult(
+                          movedCount = movedCount,
+                          renamedCount = renamedCount,
+                          copiedCount = copiedCount,
+                          skippedCount = skippedCount,
+                          errorCount = errors.size,
+                          errors = errors,
+                          operationMode = preview.operationMode)))
         }
 
         // Save undo journal
         var journalPath: String? = null
         if (journalEntries.isNotEmpty()) {
-            val rootFolder =
-                preview.mappings.firstOrNull()?.file?.file?.parentFile?.absolutePath ?: ""
-            val journal = ReorganizeJournal(
-                rootFolder = rootFolder,
-                operationMode = preview.operationMode,
-                folderPattern = "",
-                filenamePattern = "",
-                totalFiles = preview.totalFiles,
-                changedFiles = preview.changedFiles,
-                entries = journalEntries)
-            val journalDir = File(System.getProperty("user.home"), ".petrie-importer/journals")
-            journalDir.mkdirs()
-            val journalFile = File(journalDir, "reorg_${System.currentTimeMillis()}.json")
-            journalFile.writeText(json.encodeToString(journal))
-            journalPath = journalFile.absolutePath
+          val rootFolder =
+              preview.mappings.firstOrNull()?.file?.file?.parentFile?.absolutePath ?: ""
+          val journal =
+              ReorganizeJournal(
+                  rootFolder = rootFolder,
+                  operationMode = preview.operationMode,
+                  folderPattern = "",
+                  filenamePattern = "",
+                  totalFiles = preview.totalFiles,
+                  changedFiles = preview.changedFiles,
+                  entries = journalEntries)
+          val journalDir = File(System.getProperty("user.home"), ".petrie-importer/journals")
+          journalDir.mkdirs()
+          val journalFile = File(journalDir, "reorg_${System.currentTimeMillis()}.json")
+          journalFile.writeText(json.encodeToString(journal))
+          journalPath = journalFile.absolutePath
         }
 
         onProgress(
             ReorganizeProgress(
-                current = toProcess.size, total = toProcess.size, phase = ReorganizePhase.COMPLETE, operationMode = preview.operationMode))
+                current = toProcess.size,
+                total = toProcess.size,
+                phase = ReorganizePhase.COMPLETE,
+                operationMode = preview.operationMode))
 
         ReorganizeResult(
             movedCount = movedCount,
@@ -311,8 +322,8 @@ class ReorganizeService(
   /**
    * Undoes a reorganization operation by restoring files to their original locations.
    *
-   * For MOVE operations: moves files back to original paths
-   * For COPY operations: deletes the copied files (originals were preserved)
+   * For MOVE operations: moves files back to original paths For COPY operations: deletes the copied
+   * files (originals were preserved)
    *
    * @param journalPath Path to journal file from reorganization
    * @param onProgress Progress callback
@@ -344,33 +355,33 @@ class ReorganizeService(
 
           try {
             when (entry.operationType) {
-                ReorganizeMode.MOVE -> {
-                    // Move file back to original location
-                    val current = File(entry.newPath)
-                    val original = File(entry.originalPath)
+              ReorganizeMode.MOVE -> {
+                // Move file back to original location
+                val current = File(entry.newPath)
+                val original = File(entry.originalPath)
 
-                    if (!current.exists()) {
-                      errors.add("File not found for undo: ${entry.newPath}")
-                      continue
-                    }
+                if (!current.exists()) {
+                  errors.add("File not found for undo: ${entry.newPath}")
+                  continue
+                }
 
-                    original.parentFile?.mkdirs()
-                    if (current.renameTo(original)) {
-                      restoredCount++
-                    } else {
-                      current.copyTo(original, overwrite = false)
-                      current.delete()
-                      restoredCount++
-                    }
+                original.parentFile?.mkdirs()
+                if (current.renameTo(original)) {
+                  restoredCount++
+                } else {
+                  current.copyTo(original, overwrite = false)
+                  current.delete()
+                  restoredCount++
                 }
-                ReorganizeMode.COPY -> {
-                    // For copy operations, just delete the copied file (originals preserved)
-                    val copied = File(entry.newPath)
-                    if (copied.exists()) {
-                      copied.delete()
-                      deletedCount++
-                    }
+              }
+              ReorganizeMode.COPY -> {
+                // For copy operations, just delete the copied file (originals preserved)
+                val copied = File(entry.newPath)
+                if (copied.exists()) {
+                  copied.delete()
+                  deletedCount++
                 }
+              }
             }
           } catch (e: Exception) {
             errors.add("Undo failed for ${entry.newPath}: ${e.message}")
@@ -379,13 +390,13 @@ class ReorganizeService(
 
         // Clean up empty directories (only for MOVE undos)
         if (journal.operationMode == ReorganizeMode.MOVE) {
-            cleanEmptyDirs(File(journal.rootFolder))
+          cleanEmptyDirs(File(journal.rootFolder))
         }
 
         // Mark journal as undone
         if (errors.isEmpty()) {
-            val updatedJournal = journal.copy(undone = true)
-            journalFile.writeText(json.encodeToString(updatedJournal))
+          val updatedJournal = journal.copy(undone = true)
+          journalFile.writeText(json.encodeToString(updatedJournal))
         }
 
         ReorganizeResult(
@@ -404,26 +415,25 @@ class ReorganizeService(
    */
   fun listJournals(): List<ReorganizeJournalSummary> {
     val dir = File(System.getProperty("user.home"), ".petrie-importer/journals")
-    val files = dir.listFiles()
-        ?.filter { it.extension == "json" }
-        ?.sortedByDescending { it.lastModified() } ?: emptyList()
-    
+    val files =
+        dir.listFiles()?.filter { it.extension == "json" }?.sortedByDescending { it.lastModified() }
+            ?: emptyList()
+
     return files.mapNotNull { file ->
-        try {
-            val journal = json.decodeFromString<ReorganizeJournal>(file.readText())
-            ReorganizeJournalSummary(
-                id = journal.id,
-                timestamp = journal.timestamp,
-                timestampString = ReorganizeJournal.createTimestampString(journal.timestamp),
-                rootFolder = journal.rootFolder,
-                operationMode = journal.operationMode,
-                totalFiles = journal.totalFiles,
-                changedFiles = journal.changedFiles,
-                undone = journal.undone
-            )
-        } catch (e: Exception) {
-            null
-        }
+      try {
+        val journal = json.decodeFromString<ReorganizeJournal>(file.readText())
+        ReorganizeJournalSummary(
+            id = journal.id,
+            timestamp = journal.timestamp,
+            timestampString = ReorganizeJournal.createTimestampString(journal.timestamp),
+            rootFolder = journal.rootFolder,
+            operationMode = journal.operationMode,
+            totalFiles = journal.totalFiles,
+            changedFiles = journal.changedFiles,
+            undone = journal.undone)
+      } catch (e: Exception) {
+        null
+      }
     }
   }
 
@@ -437,9 +447,9 @@ class ReorganizeService(
     val file = File(journalPath)
     if (!file.exists()) return null
     return try {
-        json.decodeFromString<ReorganizeJournal>(file.readText())
+      json.decodeFromString<ReorganizeJournal>(file.readText())
     } catch (e: Exception) {
-        null
+      null
     }
   }
 

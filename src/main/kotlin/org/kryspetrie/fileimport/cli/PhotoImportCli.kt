@@ -6,10 +6,14 @@ import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.*
 import kotlinx.coroutines.runBlocking
 import org.kryspetrie.fileimport.application.ImportService
+import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.domain.model.*
 import org.kryspetrie.fileimport.infrastructure.adapter.*
 
-class PhotoImportCli(private val importService: ImportService) :
+class PhotoImportCli(
+    private val importService: ImportService,
+    private val reorganizeService: ReorganizeService
+) :
     CliktCommand(
         name = "photo-import",
         help = "Petrie File Importer - Command line photo organizer",
@@ -19,6 +23,7 @@ class PhotoImportCli(private val importService: ImportService) :
               photo-import import /source /destination
               photo-import import /source /destination --dry-run
               photo-import check-duplicates /source
+              photo-import reorganize /library/path
             """
                 .trimIndent()) {
   private val verbose by
@@ -163,7 +168,11 @@ class CheckDuplicatesCommand(private val importService: ImportService) :
 fun main(args: Array<String>) {
   val imageRepo = ImageRepositoryAdapter()
   val importService = ImportService(imageRepo, DeduplicationAdapter(imageRepo), NamingAdapter())
-  PhotoImportCli(importService)
-      .subcommands(ImportCommand(importService), CheckDuplicatesCommand(importService))
+  val reorganizeService = ReorganizeService(imageRepo, NamingAdapter())
+  val cli = PhotoImportCli(importService, reorganizeService)
+  cli.subcommands(
+          ImportCommand(importService),
+          CheckDuplicatesCommand(importService),
+          *getReorganizeCommands(reorganizeService).toTypedArray())
       .main(args)
 }
