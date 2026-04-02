@@ -72,6 +72,7 @@ dependencies {
   implementation("commons-codec:commons-codec:1.17.1")
   implementation("org.xerial:sqlite-jdbc:3.49.0.0")
   implementation("org.boofcv:boofcv-feature:1.2.2")
+  implementation("com.microsoft.onnxruntime:onnxruntime:1.17.3")
   implementation("org.apache.commons:commons-imaging:1.0-alpha3")
   implementation("javax.inject:javax.inject:1")
   implementation("org.slf4j:slf4j-simple:2.0.16")
@@ -92,7 +93,10 @@ dependencies {
   testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.6.11")
 }
 
-tasks.test { useJUnitPlatform() }
+tasks.test {
+  useJUnitPlatform()
+  testLogging { showStandardStreams = true }
+}
 
 tasks.register<JavaExec>("generateIcons") {
   description = "Generates application icon files for native packaging"

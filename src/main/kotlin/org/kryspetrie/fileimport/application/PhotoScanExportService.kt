@@ -93,20 +93,22 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
     for ((index, photo) in detectedPhotos.withIndex()) {
       try {
         // Crop and correct the image based on photo settings
-        val correctedImage = if (photo.applyPerspectiveCorrection) {
-          // Apply perspective correction
-          perspectiveService.correctPerspective(image, photo)
-        } else {
-          // Simple axis-aligned crop
-          cropAxisAligned(image, photo)
-        }
+        val correctedImage =
+            if (photo.applyPerspectiveCorrection) {
+              // Apply perspective correction
+              perspectiveService.correctPerspective(image, photo)
+            } else {
+              // Simple axis-aligned crop
+              cropAxisAligned(image, photo)
+            }
 
         // Apply rotation if needed
-        val finalImage = if (photo.rotation != RotationAngle.NONE) {
-          rotateImage(correctedImage, photo.rotation)
-        } else {
-          correctedImage
-        }
+        val finalImage =
+            if (photo.rotation != RotationAngle.NONE) {
+              rotateImage(correctedImage, photo.rotation)
+            } else {
+              correctedImage
+            }
 
         // Generate filename with index if multiple photos
         val fileName =
@@ -266,9 +268,7 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
     return candidate
   }
 
-  /**
-   * Crops an image using axis-aligned bounding box (when perspective correction is disabled).
-   */
+  /** Crops an image using axis-aligned bounding box (when perspective correction is disabled). */
   private fun cropAxisAligned(sourceImage: BufferedImage, photo: DetectedPhoto): BufferedImage {
     val bounds = photo.getBounds()
     val cropX = bounds.minX.coerceIn(0, (sourceImage.width - 1).coerceAtLeast(0))
@@ -282,20 +282,21 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
       // Fallback to manual copy if getSubimage fails
       val cropped = BufferedImage(cropWidth, cropHeight, BufferedImage.TYPE_INT_RGB)
       val g = cropped.createGraphics()
-      g.drawImage(sourceImage.getSubimage(
-        cropX.coerceAtLeast(0),
-        cropY.coerceAtLeast(0),
-        cropWidth.coerceAtMost(sourceImage.width - cropX),
-        cropHeight.coerceAtMost(sourceImage.height - cropY)
-      ), 0, 0, null)
+      g.drawImage(
+          sourceImage.getSubimage(
+              cropX.coerceAtLeast(0),
+              cropY.coerceAtLeast(0),
+              cropWidth.coerceAtMost(sourceImage.width - cropX),
+              cropHeight.coerceAtMost(sourceImage.height - cropY)),
+          0,
+          0,
+          null)
       g.dispose()
       cropped
     }
   }
 
-  /**
-   * Rotates an image by the specified rotation angle.
-   */
+  /** Rotates an image by the specified rotation angle. */
   private fun rotateImage(image: BufferedImage, rotation: RotationAngle): BufferedImage {
     val radians = rotation.radians
 
@@ -306,7 +307,8 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
     val newHeight: Int
 
     when (rotation) {
-      RotationAngle.CW_90, RotationAngle.CCW_90 -> {
+      RotationAngle.CW_90,
+      RotationAngle.CCW_90 -> {
         newWidth = image.height
         newHeight = image.width
       }
@@ -316,11 +318,9 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
       }
     }
 
-    val rotated = BufferedImage(
-        newWidth.coerceAtLeast(1),
-        newHeight.coerceAtLeast(1),
-        BufferedImage.TYPE_INT_RGB
-    )
+    val rotated =
+        BufferedImage(
+            newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), BufferedImage.TYPE_INT_RGB)
 
     val graphics = rotated.createGraphics()
     graphics.background = java.awt.Color.BLACK

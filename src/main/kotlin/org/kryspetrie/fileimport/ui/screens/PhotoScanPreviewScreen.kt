@@ -33,10 +33,9 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.window.Dialog
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.model.CornerType
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
@@ -76,16 +75,18 @@ fun PhotoScanPreviewScreen(
   val imageHeight = image.height.toFloat()
 
   // Calculate display parameters
-  val displayParams = remember(imageSize, zoomLevel, imageWidth, imageHeight) {
-    calculateDisplayParams(imageSize, imageWidth, imageHeight, zoomLevel)
-  }
+  val displayParams =
+      remember(imageSize, zoomLevel, imageWidth, imageHeight) {
+        calculateDisplayParams(imageSize, imageWidth, imageHeight, zoomLevel)
+      }
 
   // Pre-render cropped photos for the table
-  val croppedPhotos by remember(photos, image) {
-    derivedStateOf {
-      photos.associate { photo -> photo.id to cropAndRotateImage(image, photo) }
-    }
-  }
+  val croppedPhotos by
+      remember(photos, image) {
+        derivedStateOf {
+          photos.associate { photo -> photo.id to cropAndRotateImage(image, photo) }
+        }
+      }
 
   Column(modifier = Modifier.fillMaxSize()) {
     TopAppBar(
@@ -98,130 +99,121 @@ fun PhotoScanPreviewScreen(
         })
 
     Column(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-      // Image preview
-      Box(
-          modifier =
-              Modifier
-                  .weight(0.55f)
-                  .fillMaxWidth()
-                  .background(Color.DarkGray)
-                  .onSizeChanged { imageSize = it }
-      ) {
-        PhotoCanvas(
-            image = image,
-            photos = photos,
-            selectedPhotoId = selectedPhotoId,
-            displayParams = displayParams,
-            modifier = Modifier.fillMaxSize()
-        )
+        modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+          // Image preview
+          Box(
+              modifier =
+                  Modifier.weight(0.55f).fillMaxWidth().background(Color.DarkGray).onSizeChanged {
+                    imageSize = it
+                  }) {
+                PhotoCanvas(
+                    image = image,
+                    photos = photos,
+                    selectedPhotoId = selectedPhotoId,
+                    displayParams = displayParams,
+                    modifier = Modifier.fillMaxSize())
 
-        GestureLayer(
-            photos = photos,
-            selectedPhotoId = selectedPhotoId,
-            selectedCorner = selectedCorner,
-            displayParams = displayParams,
-            imageWidth = imageWidth,
-            imageHeight = imageHeight,
-            onCornerMove = onCornerMove,
-            onMovePhoto = onMovePhoto,
-            onAddPhoto = onAddPhoto,
-            onSelectPhoto = onSelectPhoto,
-            onSelectCorner = { scanState.selectCorner(it) },
-            onClearCorner = { scanState.selectCorner(null) }
-        )
+                GestureLayer(
+                    photos = photos,
+                    selectedPhotoId = selectedPhotoId,
+                    selectedCorner = selectedCorner,
+                    displayParams = displayParams,
+                    imageWidth = imageWidth,
+                    imageHeight = imageHeight,
+                    onCornerMove = onCornerMove,
+                    onMovePhoto = onMovePhoto,
+                    onAddPhoto = onAddPhoto,
+                    onSelectPhoto = onSelectPhoto,
+                    onSelectCorner = { scanState.selectCorner(it) },
+                    onClearCorner = { scanState.selectCorner(null) })
 
-        Row(
-            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-              IconButton(onClick = { zoomLevel = (zoomLevel * 0.8f).coerceAtLeast(0.25f) }) {
-                Icon(Icons.Default.ZoomOut, "Zoom out")
-              }
-              IconButton(onClick = { zoomLevel = (zoomLevel * 1.25f).coerceAtMost(4f) }) {
-                Icon(Icons.Default.ZoomIn, "Zoom in")
-              }
-              IconButton(onClick = { zoomLevel = 1f }) {
-                Icon(Icons.Default.FitScreen, "Fit to screen")
-              }
-              // Full-screen editor button
-              if (selectedPhotoId != null) {
-                IconButton(onClick = { showFullScreenEditor = true }) {
-                  Icon(Icons.Default.OpenInFull, "Full screen editor")
-                }
-              }
-            }
+                Row(
+                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                      IconButton(
+                          onClick = { zoomLevel = (zoomLevel * 0.8f).coerceAtLeast(0.25f) }) {
+                            Icon(Icons.Default.ZoomOut, "Zoom out")
+                          }
+                      IconButton(onClick = { zoomLevel = (zoomLevel * 1.25f).coerceAtMost(4f) }) {
+                        Icon(Icons.Default.ZoomIn, "Zoom in")
+                      }
+                      IconButton(onClick = { zoomLevel = 1f }) {
+                        Icon(Icons.Default.FitScreen, "Fit to screen")
+                      }
+                      // Full-screen editor button
+                      if (selectedPhotoId != null) {
+                        IconButton(onClick = { showFullScreenEditor = true }) {
+                          Icon(Icons.Default.OpenInFull, "Full screen editor")
+                        }
+                      }
+                    }
 
-        // Photo count controls
-        Row(
-            modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-          Surface(
-              shape = MaterialTheme.shapes.small,
-              color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)
-          ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-              Text(
-                  "Photos:",
-                  style = MaterialTheme.typography.labelMedium
-              )
-              IconButton(
-                  onClick = { scanState.decrementTargetPhotoCount() },
-                  modifier = Modifier.size(28.dp)
-              ) {
-                Icon(Icons.Default.Remove, "Decrease photo count", modifier = Modifier.size(16.dp))
+                // Photo count controls
+                Row(
+                    modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                      Surface(
+                          shape = MaterialTheme.shapes.small,
+                          color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                  Text("Photos:", style = MaterialTheme.typography.labelMedium)
+                                  IconButton(
+                                      onClick = { scanState.decrementTargetPhotoCount() },
+                                      modifier = Modifier.size(28.dp)) {
+                                        Icon(
+                                            Icons.Default.Remove,
+                                            "Decrease photo count",
+                                            modifier = Modifier.size(16.dp))
+                                      }
+                                  // Show editable field - "Auto" if null, otherwise number 1-20
+                                  val targetDisplay =
+                                      scanState.targetPhotoCount.value?.toString() ?: "Auto"
+                                  OutlinedTextField(
+                                      value = targetDisplay,
+                                      onValueChange = { newValue ->
+                                        val count = newValue.toIntOrNull()
+                                        scanState.setTargetPhotoCount(count)
+                                      },
+                                      modifier = Modifier.width(70.dp),
+                                      textStyle =
+                                          MaterialTheme.typography.labelLarge.copy(
+                                              textAlign = TextAlign.Center),
+                                      singleLine = true)
+                                  IconButton(
+                                      onClick = { scanState.incrementTargetPhotoCount() },
+                                      modifier = Modifier.size(28.dp)) {
+                                        Icon(
+                                            Icons.Default.Add,
+                                            "Increase photo count",
+                                            modifier = Modifier.size(16.dp))
+                                      }
+                                  IconButton(onClick = onRescan, modifier = Modifier.size(28.dp)) {
+                                    Icon(
+                                        Icons.Default.Refresh,
+                                        "Rescan",
+                                        modifier = Modifier.size(16.dp))
+                                  }
+                                }
+                          }
+                    }
               }
-              // Show editable field - "Auto" if null, otherwise number 1-20
-              val targetDisplay = scanState.targetPhotoCount.value?.toString() ?: "Auto"
-              OutlinedTextField(
-                  value = targetDisplay,
-                  onValueChange = { newValue ->
-                    val count = newValue.toIntOrNull()
-                    scanState.setTargetPhotoCount(count)
-                  },
-                  modifier = Modifier.width(70.dp),
-                  textStyle = MaterialTheme.typography.labelLarge.copy(textAlign = TextAlign.Center),
-                  singleLine = true
-              )
-              IconButton(
-                  onClick = { scanState.incrementTargetPhotoCount() },
-                  modifier = Modifier.size(28.dp)
-              ) {
-                Icon(Icons.Default.Add, "Increase photo count", modifier = Modifier.size(16.dp))
-              }
-              IconButton(
-                  onClick = onRescan,
-                  modifier = Modifier.size(28.dp)
-              ) {
-                Icon(Icons.Default.Refresh, "Rescan", modifier = Modifier.size(16.dp))
-              }
-            }
-          }
+
+          PhotoTable(
+              photos = photos,
+              croppedPhotos = croppedPhotos,
+              selectedPhotoId = selectedPhotoId,
+              onSelectPhoto = onSelectPhoto,
+              onRemovePhoto = onRemovePhoto,
+              onTogglePerspectiveCorrection = onTogglePerspectiveCorrection,
+              onRotateCW = onRotateCW,
+              onRotateCCW = onRotateCCW,
+              modifier = Modifier.weight(0.45f))
         }
-      }
-
-      PhotoTable(
-          photos = photos,
-          croppedPhotos = croppedPhotos,
-          selectedPhotoId = selectedPhotoId,
-          onSelectPhoto = onSelectPhoto,
-          onRemovePhoto = onRemovePhoto,
-          onTogglePerspectiveCorrection = onTogglePerspectiveCorrection,
-          onRotateCW = onRotateCW,
-          onRotateCCW = onRotateCCW,
-          modifier = Modifier.weight(0.45f)
-      )
-    }
 
     BottomControls(
         photos = photos,
@@ -235,8 +227,7 @@ fun PhotoScanPreviewScreen(
         onBack = onBack,
         onSkip = onSkip,
         onNext = onNext,
-        currentImageName = scanState.currentImage?.file?.name ?: ""
-    )
+        currentImageName = scanState.currentImage?.file?.name ?: "")
 
     // Full-screen editor dialog
     if (showFullScreenEditor && selectedPhotoId != null) {
@@ -247,18 +238,13 @@ fun PhotoScanPreviewScreen(
             photo = selectedPhoto,
             onDismiss = { showFullScreenEditor = false },
             onCornerMove = { corner, x, y -> onCornerMove(selectedPhotoId!!, corner, x, y) },
-            onMovePhoto = { deltaX, deltaY -> onMovePhoto(selectedPhotoId!!, deltaX, deltaY) }
-        )
+            onMovePhoto = { deltaX, deltaY -> onMovePhoto(selectedPhotoId!!, deltaX, deltaY) })
       }
     }
   }
 }
 
-private data class DisplayParams(
-    val scale: Float,
-    val offsetX: Float,
-    val offsetY: Float
-)
+private data class DisplayParams(val scale: Float, val offsetX: Float, val offsetY: Float)
 
 private fun calculateDisplayParams(
     imageSize: IntSize,
@@ -291,38 +277,46 @@ private fun PhotoTable(
 ) {
   if (photos.isEmpty()) {
     Box(modifier = modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-      Text("No photos detected. Double-click on the image to add a photo.",
-          style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+      Text(
+          "No photos detected. Double-click on the image to add a photo.",
+          style = MaterialTheme.typography.bodyMedium,
+          color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     return
   }
 
   Card(modifier = modifier.fillMaxWidth()) {
     Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text("Detected Photos", style = MaterialTheme.typography.titleSmall)
-        Text("${photos.size} photo(s)", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-      }
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.SpaceBetween,
+          verticalAlignment = Alignment.CenterVertically) {
+            Text("Detected Photos", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "${photos.size} photo(s)",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+          }
       Spacer(Modifier.height(8.dp))
       HorizontalDivider()
       Spacer(Modifier.height(8.dp))
       Row(
           modifier = Modifier.fillMaxWidth().weight(1f).horizontalScroll(rememberScrollState()),
-          horizontalArrangement = Arrangement.spacedBy(12.dp)
-      ) {
-        photos.forEach { photo ->
-          PhotoTableRow(
-              photo = photo,
-              croppedImage = croppedPhotos[photo.id],
-              isSelected = photo.id == selectedPhotoId,
-              onSelect = { onSelectPhoto(photo.id) },
-              onRemove = { onRemovePhoto(photo.id) },
-              onTogglePerspective = { enabled -> onTogglePerspectiveCorrection(photo.id, enabled) },
-              onRotateCW = { onRotateCW(photo.id) },
-              onRotateCCW = { onRotateCCW(photo.id) }
-          )
-        }
-      }
+          horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            photos.forEach { photo ->
+              PhotoTableRow(
+                  photo = photo,
+                  croppedImage = croppedPhotos[photo.id],
+                  isSelected = photo.id == selectedPhotoId,
+                  onSelect = { onSelectPhoto(photo.id) },
+                  onRemove = { onRemovePhoto(photo.id) },
+                  onTogglePerspective = { enabled ->
+                    onTogglePerspectiveCorrection(photo.id, enabled)
+                  },
+                  onRotateCW = { onRotateCW(photo.id) },
+                  onRotateCCW = { onRotateCCW(photo.id) })
+            }
+          }
     }
   }
 }
@@ -338,77 +332,122 @@ private fun PhotoTableRow(
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit
 ) {
-  val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+  val borderColor =
+      if (isSelected) MaterialTheme.colorScheme.primary
+      else MaterialTheme.colorScheme.outlineVariant
   val borderWidth = if (isSelected) 2.dp else 1.dp
 
   Card(
       modifier = Modifier.width(180.dp).fillMaxHeight().clickable(onClick = onSelect),
       border = androidx.compose.foundation.BorderStroke(borderWidth, borderColor),
-      colors = CardDefaults.cardColors(
-          containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-          else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-  ) {
-    Column(modifier = Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-      Box(
-          modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(4.dp)).background(Color.LightGray)
-      ) {
-        if (croppedImage != null) {
-          val rotationDegrees = when (photo.rotation) {
-            RotationAngle.NONE -> 0f
-            RotationAngle.CW_90 -> 90f
-            RotationAngle.CW_180 -> 180f
-            RotationAngle.CCW_90 -> -90f
-          }
-          Image(
-              bitmap = croppedImage.toComposeImageBitmap(),
-              contentDescription = "Cropped photo preview",
-              modifier = Modifier.fillMaxSize().graphicsLayer { this.rotationZ = rotationDegrees },
-              contentScale = ContentScale.Fit
-          )
-        } else {
-          Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-          }
-        }
+      colors =
+          CardDefaults.cardColors(
+              containerColor =
+                  if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                  else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)) {
+              Box(
+                  modifier =
+                      Modifier.weight(1f)
+                          .fillMaxWidth()
+                          .clip(RoundedCornerShape(4.dp))
+                          .background(Color.LightGray)) {
+                    if (croppedImage != null) {
+                      val rotationDegrees =
+                          when (photo.rotation) {
+                            RotationAngle.NONE -> 0f
+                            RotationAngle.CW_90 -> 90f
+                            RotationAngle.CW_180 -> 180f
+                            RotationAngle.CCW_90 -> -90f
+                          }
+                      Image(
+                          bitmap = croppedImage.toComposeImageBitmap(),
+                          contentDescription = "Cropped photo preview",
+                          modifier =
+                              Modifier.fillMaxSize().graphicsLayer {
+                                this.rotationZ = rotationDegrees
+                              },
+                          contentScale = ContentScale.Fit)
+                    } else {
+                      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                      }
+                    }
 
-        if (photo.rotation != RotationAngle.NONE) {
-          Surface(modifier = Modifier.align(Alignment.TopEnd).padding(4.dp), shape = RoundedCornerShape(4.dp),
-              color = MaterialTheme.colorScheme.tertiaryContainer) {
-            Text("${photo.rotation.degrees}°", modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
-          }
-        }
-        if (!photo.applyPerspectiveCorrection) {
-          Surface(modifier = Modifier.align(Alignment.TopStart).padding(4.dp), shape = RoundedCornerShape(4.dp),
-              color = MaterialTheme.colorScheme.secondaryContainer) {
-            Text("Crop", modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSecondaryContainer)
-          }
-        }
+                    if (photo.rotation != RotationAngle.NONE) {
+                      Surface(
+                          modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
+                          shape = RoundedCornerShape(4.dp),
+                          color = MaterialTheme.colorScheme.tertiaryContainer) {
+                            Text(
+                                "${photo.rotation.degrees}°",
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer)
+                          }
+                    }
+                    if (!photo.applyPerspectiveCorrection) {
+                      Surface(
+                          modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                          shape = RoundedCornerShape(4.dp),
+                          color = MaterialTheme.colorScheme.secondaryContainer) {
+                            Text(
+                                "Crop",
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer)
+                          }
+                    }
+                  }
+
+              Text(
+                  "${photo.getWidth()}×${photo.getHeight()} px",
+                  style = MaterialTheme.typography.labelSmall,
+                  color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+              Row(
+                  modifier = Modifier.fillMaxWidth(),
+                  horizontalArrangement = Arrangement.spacedBy(4.dp),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { onTogglePerspective(!photo.applyPerspectiveCorrection) },
+                        modifier = Modifier.size(32.dp)) {
+                          Icon(
+                              if (photo.applyPerspectiveCorrection) Icons.Default.CropFree
+                              else Icons.Default.Crop,
+                              contentDescription = "Toggle perspective",
+                              modifier = Modifier.size(18.dp),
+                              tint =
+                                  if (photo.applyPerspectiveCorrection)
+                                      MaterialTheme.colorScheme.primary
+                                  else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    IconButton(onClick = onRotateCCW, modifier = Modifier.size(32.dp)) {
+                      Icon(
+                          Icons.Default.RotateLeft,
+                          contentDescription = "Rotate CCW",
+                          modifier = Modifier.size(18.dp))
+                    }
+                    IconButton(onClick = onRotateCW, modifier = Modifier.size(32.dp)) {
+                      Icon(
+                          Icons.Default.RotateRight,
+                          contentDescription = "Rotate CW",
+                          modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
+                      Icon(
+                          Icons.Default.Delete,
+                          contentDescription = "Remove",
+                          modifier = Modifier.size(18.dp),
+                          tint = MaterialTheme.colorScheme.error)
+                    }
+                  }
+            }
       }
-
-      Text("${photo.getWidth()}×${photo.getHeight()} px", style = MaterialTheme.typography.labelSmall,
-          color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = { onTogglePerspective(!photo.applyPerspectiveCorrection) }, modifier = Modifier.size(32.dp)) {
-          Icon(if (photo.applyPerspectiveCorrection) Icons.Default.CropFree else Icons.Default.Crop,
-              contentDescription = "Toggle perspective", modifier = Modifier.size(18.dp),
-              tint = if (photo.applyPerspectiveCorrection) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        IconButton(onClick = onRotateCCW, modifier = Modifier.size(32.dp)) {
-          Icon(Icons.Default.RotateLeft, contentDescription = "Rotate CCW", modifier = Modifier.size(18.dp))
-        }
-        IconButton(onClick = onRotateCW, modifier = Modifier.size(32.dp)) {
-          Icon(Icons.Default.RotateRight, contentDescription = "Rotate CW", modifier = Modifier.size(18.dp))
-        }
-        Spacer(Modifier.weight(1f))
-        IconButton(onClick = onRemove, modifier = Modifier.size(32.dp)) {
-          Icon(Icons.Default.Delete, contentDescription = "Remove", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.error)
-        }
-      }
-    }
-  }
 }
 
 @Composable
@@ -420,14 +459,17 @@ private fun PhotoCanvas(
     modifier: Modifier = Modifier
 ) {
   // Create a sampled display image for performance
-  val displayImage = remember(image, displayParams.scale) {
-    createSampledImage(image, displayParams.scale)
-  }
+  val displayImage =
+      remember(image, displayParams.scale) { createSampledImage(image, displayParams.scale) }
 
   Canvas(modifier = modifier) {
     // Draw background
-    drawRect(color = Color.LightGray, topLeft = Offset(displayParams.offsetX, displayParams.offsetY),
-        size = androidx.compose.ui.geometry.Size(image.width * displayParams.scale, image.height * displayParams.scale))
+    drawRect(
+        color = Color.LightGray,
+        topLeft = Offset(displayParams.offsetX, displayParams.offsetY),
+        size =
+            androidx.compose.ui.geometry.Size(
+                image.width * displayParams.scale, image.height * displayParams.scale))
 
     // Draw sampled image
     if (displayImage != null) {
@@ -436,9 +478,7 @@ private fun PhotoCanvas(
     }
 
     // Draw photo overlays
-    photos.forEach { photo ->
-      drawPhotoOverlay(photo, photo.id == selectedPhotoId, displayParams)
-    }
+    photos.forEach { photo -> drawPhotoOverlay(photo, photo.id == selectedPhotoId, displayParams) }
   }
 }
 
@@ -458,18 +498,35 @@ private fun createSampledImage(image: BufferedImage, scale: Float): BufferedImag
   }
 }
 
-private fun DrawScope.drawPhotoOverlay(photo: DetectedPhoto, isSelected: Boolean, params: DisplayParams) {
-  val outlineColor = when {
-    photo.rotation != RotationAngle.NONE -> Color(0xFFFF9800)
-    isSelected -> Color.Blue
-    else -> Color.Green
-  }
+private fun DrawScope.drawPhotoOverlay(
+    photo: DetectedPhoto,
+    isSelected: Boolean,
+    params: DisplayParams
+) {
+  val outlineColor =
+      when {
+        photo.rotation != RotationAngle.NONE -> Color(0xFFFF9800)
+        isSelected -> Color.Blue
+        else -> Color.Green
+      }
   val fillColor = outlineColor.copy(alpha = 0.2f)
 
-  val tl = Offset(params.offsetX + photo.topLeft.x * params.scale, params.offsetY + photo.topLeft.y * params.scale)
-  val tr = Offset(params.offsetX + photo.topRight.x * params.scale, params.offsetY + photo.topRight.y * params.scale)
-  val bl = Offset(params.offsetX + photo.bottomLeft.x * params.scale, params.offsetY + photo.bottomLeft.y * params.scale)
-  val br = Offset(params.offsetX + photo.bottomRight.x * params.scale, params.offsetY + photo.bottomRight.y * params.scale)
+  val tl =
+      Offset(
+          params.offsetX + photo.topLeft.x * params.scale,
+          params.offsetY + photo.topLeft.y * params.scale)
+  val tr =
+      Offset(
+          params.offsetX + photo.topRight.x * params.scale,
+          params.offsetY + photo.topRight.y * params.scale)
+  val bl =
+      Offset(
+          params.offsetX + photo.bottomLeft.x * params.scale,
+          params.offsetY + photo.bottomLeft.y * params.scale)
+  val br =
+      Offset(
+          params.offsetX + photo.bottomRight.x * params.scale,
+          params.offsetY + photo.bottomRight.y * params.scale)
 
   drawPhotoOverlayShapes(photo, isSelected, outlineColor, fillColor, tl, tr, bl, br, params.scale)
 }
@@ -485,13 +542,14 @@ private fun DrawScope.drawPhotoOverlayShapes(
     br: Offset,
     scale: Float
 ) {
-  val path = Path().apply {
-    moveTo(tl.x, tl.y)
-    lineTo(tr.x, tr.y)
-    lineTo(br.x, br.y)
-    lineTo(bl.x, bl.y)
-    close()
-  }
+  val path =
+      Path().apply {
+        moveTo(tl.x, tl.y)
+        lineTo(tr.x, tr.y)
+        lineTo(br.x, br.y)
+        lineTo(bl.x, bl.y)
+        close()
+      }
   drawPath(path, fillColor, style = Fill)
   drawPath(path, outlineColor, style = Stroke(width = if (isSelected) 3f else 2f))
 
@@ -499,7 +557,8 @@ private fun DrawScope.drawPhotoOverlayShapes(
   if (isSelected) {
     val centerX = (tl.x + tr.x + bl.x + br.x) / 4
     val centerY = (tl.y + tr.y + bl.y + br.y) / 4
-    drawCircle(color = outlineColor.copy(alpha = 0.5f), radius = 8f, center = Offset(centerX, centerY))
+    drawCircle(
+        color = outlineColor.copy(alpha = 0.5f), radius = 8f, center = Offset(centerX, centerY))
     drawCircle(color = Color.White, radius = 4f, center = Offset(centerX, centerY))
   }
 
@@ -532,99 +591,132 @@ private fun GestureLayer(
   Box(modifier = Modifier.fillMaxSize()) {
     // Tap layer for selection and double-tap for adding
     Box(
-        modifier = Modifier.fillMaxSize().pointerInput(Unit) {
-          detectTapGestures(
-              onTap = { offset ->
-                val clickedCorner = cornerFinder.findClosestCorner(offset, photos, displayParams)
-                if (clickedCorner != null) {
-                  onSelectPhoto(clickedCorner.first)
-                  onSelectCorner(clickedCorner.second)
-                } else {
-                  val tappedPhoto = cornerFinder.findTappedPhoto(offset, photos, displayParams)
-                  onSelectPhoto(tappedPhoto?.id)
-                }
-              },
-              onDoubleTap = { offset ->
-                val x = ((offset.x - displayParams.offsetX) / displayParams.scale).coerceIn(0f, imageWidth)
-                val y = ((offset.y - displayParams.offsetY) / displayParams.scale).coerceIn(0f, imageHeight)
-                onAddPhoto(createPhotoAtPosition(x, y, imageWidth, imageHeight))
-              }
-          )
-        }
-    )
+        modifier =
+            Modifier.fillMaxSize().pointerInput(Unit) {
+              detectTapGestures(
+                  onTap = { offset ->
+                    val clickedCorner =
+                        cornerFinder.findClosestCorner(offset, photos, displayParams)
+                    if (clickedCorner != null) {
+                      onSelectPhoto(clickedCorner.first)
+                      onSelectCorner(clickedCorner.second)
+                    } else {
+                      val tappedPhoto = cornerFinder.findTappedPhoto(offset, photos, displayParams)
+                      onSelectPhoto(tappedPhoto?.id)
+                    }
+                  },
+                  onDoubleTap = { offset ->
+                    val x =
+                        ((offset.x - displayParams.offsetX) / displayParams.scale).coerceIn(
+                            0f, imageWidth)
+                    val y =
+                        ((offset.y - displayParams.offsetY) / displayParams.scale).coerceIn(
+                            0f, imageHeight)
+                    onAddPhoto(createPhotoAtPosition(x, y, imageWidth, imageHeight))
+                  })
+            })
 
     // Drag layer for corner manipulation and center-drag
     Box(
-        modifier = Modifier.fillMaxSize().pointerInput(photos) {
-          detectDragGestures(
-              onDragStart = { offset ->
-                // Check if clicking on a corner first
-                val clickedCorner = cornerFinder.findClosestCorner(offset, photos, displayParams)
-                if (clickedCorner != null) {
-                  onSelectPhoto(clickedCorner.first)
-                  onSelectCorner(clickedCorner.second)
-                  draggedPhotoId = null  // Corner dragging
-                } else {
-                  // Check if clicking inside a photo (for center-drag)
-                  val tappedPhoto = cornerFinder.findTappedPhoto(offset, photos, displayParams)
-                  if (tappedPhoto != null) {
-                    onSelectPhoto(tappedPhoto.id)
-                    draggedPhotoId = tappedPhoto.id
-                    lastDragPosition = offset
-                  }
-                }
-              },
-              onDrag = { change, _ ->
-                if (selectedCorner != null && selectedPhotoId != null && draggedPhotoId == null) {
-                  // Corner dragging
-                  val x = ((change.position.x - displayParams.offsetX) / displayParams.scale).coerceIn(0f, imageWidth)
-                  val y = ((change.position.y - displayParams.offsetY) / displayParams.scale).coerceIn(0f, imageHeight)
-                  onCornerMove(selectedPhotoId, selectedCorner, x, y)
-                } else if (draggedPhotoId != null) {
-                  // Center dragging - move the entire photo
-                  val id = draggedPhotoId!!
-                  val deltaX = (change.position.x - lastDragPosition.x) / displayParams.scale
-                  val deltaY = (change.position.y - lastDragPosition.y) / displayParams.scale
-                  onMovePhoto(id, deltaX, deltaY)
-                  lastDragPosition = change.position
-                }
-              },
-              onDragEnd = {
-                onClearCorner()
-                draggedPhotoId = null
-              }
-          )
-        }
-    )
+        modifier =
+            Modifier.fillMaxSize().pointerInput(photos) {
+              detectDragGestures(
+                  onDragStart = { offset ->
+                    // Check if clicking on a corner first
+                    val clickedCorner =
+                        cornerFinder.findClosestCorner(offset, photos, displayParams)
+                    if (clickedCorner != null) {
+                      onSelectPhoto(clickedCorner.first)
+                      onSelectCorner(clickedCorner.second)
+                      draggedPhotoId = null // Corner dragging
+                    } else {
+                      // Check if clicking inside a photo (for center-drag)
+                      val tappedPhoto = cornerFinder.findTappedPhoto(offset, photos, displayParams)
+                      if (tappedPhoto != null) {
+                        onSelectPhoto(tappedPhoto.id)
+                        draggedPhotoId = tappedPhoto.id
+                        lastDragPosition = offset
+                      }
+                    }
+                  },
+                  onDrag = { change, _ ->
+                    if (selectedCorner != null &&
+                        selectedPhotoId != null &&
+                        draggedPhotoId == null) {
+                      // Corner dragging
+                      val x =
+                          ((change.position.x - displayParams.offsetX) / displayParams.scale)
+                              .coerceIn(0f, imageWidth)
+                      val y =
+                          ((change.position.y - displayParams.offsetY) / displayParams.scale)
+                              .coerceIn(0f, imageHeight)
+                      onCornerMove(selectedPhotoId, selectedCorner, x, y)
+                    } else if (draggedPhotoId != null) {
+                      // Center dragging - move the entire photo
+                      val id = draggedPhotoId!!
+                      val deltaX = (change.position.x - lastDragPosition.x) / displayParams.scale
+                      val deltaY = (change.position.y - lastDragPosition.y) / displayParams.scale
+                      onMovePhoto(id, deltaX, deltaY)
+                      lastDragPosition = change.position
+                    }
+                  },
+                  onDragEnd = {
+                    onClearCorner()
+                    draggedPhotoId = null
+                  })
+            })
   }
 }
 
 private class CornerFinder {
-  fun findClosestCorner(position: Offset, photos: List<DetectedPhoto>, params: DisplayParams): Pair<String, CornerType>? {
+  fun findClosestCorner(
+      position: Offset,
+      photos: List<DetectedPhoto>,
+      params: DisplayParams
+  ): Pair<String, CornerType>? {
     var closest: Pair<String, CornerType>? = null
     var minDist = Float.MAX_VALUE
     photos.forEach { photo ->
-      listOf(CornerType.TOP_LEFT to photo.topLeft, CornerType.TOP_RIGHT to photo.topRight,
-          CornerType.BOTTOM_LEFT to photo.bottomLeft, CornerType.BOTTOM_RIGHT to photo.bottomRight).forEach { (cornerType, coord) ->
-        val cornerScreenPos = Offset(params.offsetX + coord.x * params.scale, params.offsetY + coord.y * params.scale)
-        val dist = (position - cornerScreenPos).getDistance()
-        if (dist < minDist && dist < 30f * params.scale) {
-          minDist = dist
-          closest = photo.id to cornerType
-        }
-      }
+      listOf(
+              CornerType.TOP_LEFT to photo.topLeft,
+              CornerType.TOP_RIGHT to photo.topRight,
+              CornerType.BOTTOM_LEFT to photo.bottomLeft,
+              CornerType.BOTTOM_RIGHT to photo.bottomRight)
+          .forEach { (cornerType, coord) ->
+            val cornerScreenPos =
+                Offset(
+                    params.offsetX + coord.x * params.scale,
+                    params.offsetY + coord.y * params.scale)
+            val dist = (position - cornerScreenPos).getDistance()
+            if (dist < minDist && dist < 30f * params.scale) {
+              minDist = dist
+              closest = photo.id to cornerType
+            }
+          }
     }
     return closest
   }
 
-  fun findTappedPhoto(position: Offset, photos: List<DetectedPhoto>, params: DisplayParams): DetectedPhoto? {
+  fun findTappedPhoto(
+      position: Offset,
+      photos: List<DetectedPhoto>,
+      params: DisplayParams
+  ): DetectedPhoto? {
     return photos.find { photo ->
-      val corners = listOf(
-          Offset(params.offsetX + photo.topLeft.x * params.scale, params.offsetY + photo.topLeft.y * params.scale),
-          Offset(params.offsetX + photo.topRight.x * params.scale, params.offsetY + photo.topRight.y * params.scale),
-          Offset(params.offsetX + photo.bottomLeft.x * params.scale, params.offsetY + photo.bottomLeft.y * params.scale),
-          Offset(params.offsetX + photo.bottomRight.x * params.scale, params.offsetY + photo.bottomRight.y * params.scale)
-      )
+      val corners =
+          listOf(
+              Offset(
+                  params.offsetX + photo.topLeft.x * params.scale,
+                  params.offsetY + photo.topLeft.y * params.scale),
+              Offset(
+                  params.offsetX + photo.topRight.x * params.scale,
+                  params.offsetY + photo.topRight.y * params.scale),
+              Offset(
+                  params.offsetX + photo.bottomLeft.x * params.scale,
+                  params.offsetY + photo.bottomLeft.y * params.scale),
+              Offset(
+                  params.offsetX + photo.bottomRight.x * params.scale,
+                  params.offsetY + photo.bottomRight.y * params.scale))
       val minX = corners.minOf { it.x }
       val maxX = corners.maxOf { it.x }
       val minY = corners.minOf { it.y }
@@ -654,30 +746,40 @@ private fun BottomControls(
           Text("Add Photo")
         }
         OutlinedButton(
-            onClick = onRemovePhoto, enabled = selectedPhotoId != null, modifier = Modifier.weight(1f),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-          Icon(Icons.Default.Delete, null, Modifier.size(18.dp))
-          Spacer(Modifier.width(4.dp))
-          Text("Remove Selected")
-        }
+            onClick = onRemovePhoto,
+            enabled = selectedPhotoId != null,
+            modifier = Modifier.weight(1f),
+            colors =
+                ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error)) {
+              Icon(Icons.Default.Delete, null, Modifier.size(18.dp))
+              Spacer(Modifier.width(4.dp))
+              Text("Remove Selected")
+            }
       }
       HorizontalDivider()
-      Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        TextButton(onClick = onBack) {
-          Icon(Icons.Default.ArrowBack, null, Modifier.size(18.dp))
-          Spacer(Modifier.width(4.dp))
-          Text("Back")
-        }
-        Spacer(Modifier.weight(1f))
-        Text(currentImageName, style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-        OutlinedButton(onClick = onSkip) { Text("Skip") }
-        Button(onClick = onNext, enabled = photos.isNotEmpty()) {
-          Text("Next")
-          Spacer(Modifier.width(4.dp))
-          Icon(Icons.Default.ArrowForward, null, Modifier.size(18.dp))
-        }
-      }
+      Row(
+          modifier = Modifier.fillMaxWidth(),
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack) {
+              Icon(Icons.Default.ArrowBack, null, Modifier.size(18.dp))
+              Spacer(Modifier.width(4.dp))
+              Text("Back")
+            }
+            Spacer(Modifier.weight(1f))
+            Text(
+                currentImageName,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f))
+            OutlinedButton(onClick = onSkip) { Text("Skip") }
+            Button(onClick = onNext, enabled = photos.isNotEmpty()) {
+              Text("Next")
+              Spacer(Modifier.width(4.dp))
+              Icon(Icons.Default.ArrowForward, null, Modifier.size(18.dp))
+            }
+          }
     }
   }
 }
@@ -689,9 +791,10 @@ private fun cropAndRotateImage(sourceImage: BufferedImage, photo: DetectedPhoto)
   val cropWidth = (bounds.maxX - bounds.minX).coerceIn(1, sourceImage.width - cropX)
   val cropHeight = (bounds.maxY - bounds.minY).coerceIn(1, sourceImage.height - cropY)
 
-  val cropped = if (cropX + cropWidth <= sourceImage.width && cropY + cropHeight <= sourceImage.height) {
-    sourceImage.getSubimage(cropX, cropY, cropWidth, cropHeight)
-  } else sourceImage
+  val cropped =
+      if (cropX + cropWidth <= sourceImage.width && cropY + cropHeight <= sourceImage.height) {
+        sourceImage.getSubimage(cropX, cropY, cropWidth, cropHeight)
+      } else sourceImage
 
   return if (photo.rotation != RotationAngle.NONE) {
     rotateImage(cropped, photo.rotation)
@@ -713,7 +816,9 @@ private fun rotateImage(image: BufferedImage, rotation: RotationAngle): Buffered
     newHeight = (image.width * sin + image.height * cos).toInt()
   }
 
-  val rotated = BufferedImage(newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), BufferedImage.TYPE_INT_RGB)
+  val rotated =
+      BufferedImage(
+          newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), BufferedImage.TYPE_INT_RGB)
   val graphics = rotated.createGraphics()
   graphics.background = java.awt.Color.BLACK
 
@@ -744,20 +849,28 @@ private fun createDefaultPhoto(imageWidth: Int, imageHeight: Int): DetectedPhoto
       bottomRight = PhotoCorner(centerX + size, centerY + size))
 }
 
-private fun createPhotoAtPosition(x: Float, y: Float, imageWidth: Float, imageHeight: Float): DetectedPhoto {
+private fun createPhotoAtPosition(
+    x: Float,
+    y: Float,
+    imageWidth: Float,
+    imageHeight: Float
+): DetectedPhoto {
   val size = minOf(imageWidth, imageHeight) / 4f
   val halfSize = size / 2
   return DetectedPhoto(
       topLeft = PhotoCorner((x - halfSize).coerceAtLeast(0f), (y - halfSize).coerceAtLeast(0f)),
-      topRight = PhotoCorner((x + halfSize).coerceAtMost(imageWidth), (y - halfSize).coerceAtLeast(0f)),
-      bottomLeft = PhotoCorner((x - halfSize).coerceAtLeast(0f), (y + halfSize).coerceAtMost(imageHeight)),
-      bottomRight = PhotoCorner((x + halfSize).coerceAtMost(imageWidth), (y + halfSize).coerceAtMost(imageHeight))
-  )
+      topRight =
+          PhotoCorner((x + halfSize).coerceAtMost(imageWidth), (y - halfSize).coerceAtLeast(0f)),
+      bottomLeft =
+          PhotoCorner((x - halfSize).coerceAtLeast(0f), (y + halfSize).coerceAtMost(imageHeight)),
+      bottomRight =
+          PhotoCorner(
+              (x + halfSize).coerceAtMost(imageWidth), (y + halfSize).coerceAtMost(imageHeight)))
 }
 
 /**
- * Full-screen overlay for precise corner adjustment of a detected photo.
- * Uses a Box overlay to ensure it appears on top of other UI.
+ * Full-screen overlay for precise corner adjustment of a detected photo. Uses a Box overlay to
+ * ensure it appears on top of other UI.
  */
 @Composable
 fun FullScreenPhotoEditor(
@@ -771,91 +884,76 @@ fun FullScreenPhotoEditor(
   var containerSize by remember { mutableStateOf(IntSize.Zero) }
 
   // Use a Box with fillMaxSize to overlay on top of everything
-  Box(
-      modifier = Modifier.fillMaxSize()
-          .background(Color.Black.copy(alpha = 0.95f))
-  ) {
+  Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f))) {
     Column(modifier = Modifier.fillMaxSize()) {
       // Top bar with controls
-      Surface(
-          modifier = Modifier.fillMaxWidth(),
-          color = Color.Black.copy(alpha = 0.8f)
-      ) {
+      Surface(modifier = Modifier.fillMaxWidth(), color = Color.Black.copy(alpha = 0.8f)) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-              "Edit Photo Corners",
-              style = MaterialTheme.typography.titleMedium,
-              color = Color.White
-          )
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                  "Edit Photo Corners",
+                  style = MaterialTheme.typography.titleMedium,
+                  color = Color.White)
 
-          Row(
-              horizontalArrangement = Arrangement.spacedBy(4.dp),
-              verticalAlignment = Alignment.CenterVertically
-          ) {
-            IconButton(onClick = { zoomLevel = (zoomLevel * 0.8f).coerceAtLeast(0.5f) }) {
-              Icon(Icons.Default.ZoomOut, "Zoom out", tint = Color.White)
+              Row(
+                  horizontalArrangement = Arrangement.spacedBy(4.dp),
+                  verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { zoomLevel = (zoomLevel * 0.8f).coerceAtLeast(0.5f) }) {
+                      Icon(Icons.Default.ZoomOut, "Zoom out", tint = Color.White)
+                    }
+                    Text(
+                        "${(zoomLevel * 100).toInt()}%",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White)
+                    IconButton(onClick = { zoomLevel = (zoomLevel * 1.25f).coerceAtMost(10f) }) {
+                      Icon(Icons.Default.ZoomIn, "Zoom in", tint = Color.White)
+                    }
+                    IconButton(onClick = { zoomLevel = 2f }) {
+                      Icon(Icons.Default.CenterFocusWeak, "Reset view", tint = Color.White)
+                    }
+                    Divider(
+                        modifier = Modifier.height(24.dp).padding(horizontal = 8.dp),
+                        color = Color.White.copy(alpha = 0.3f))
+                    IconButton(onClick = onDismiss) {
+                      Icon(Icons.Default.Close, "Close", tint = Color.White)
+                    }
+                  }
             }
-            Text("${(zoomLevel * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = Color.White)
-            IconButton(onClick = { zoomLevel = (zoomLevel * 1.25f).coerceAtMost(10f) }) {
-              Icon(Icons.Default.ZoomIn, "Zoom in", tint = Color.White)
-            }
-            IconButton(onClick = { zoomLevel = 2f }) {
-              Icon(Icons.Default.CenterFocusWeak, "Reset view", tint = Color.White)
-            }
-            Divider(
-                modifier = Modifier.height(24.dp).padding(horizontal = 8.dp),
-                color = Color.White.copy(alpha = 0.3f)
-            )
-            IconButton(onClick = onDismiss) {
-              Icon(Icons.Default.Close, "Close", tint = Color.White)
-            }
-          }
-        }
       }
 
       // Instructions
-      Surface(
-          modifier = Modifier.fillMaxWidth(),
-          color = Color.Black.copy(alpha = 0.6f)
-      ) {
+      Surface(modifier = Modifier.fillMaxWidth(), color = Color.Black.copy(alpha = 0.6f)) {
         Text(
             "Drag corners to adjust • Drag inside box to move • Use zoom for precision",
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.8f)
-        )
+            color = Color.White.copy(alpha = 0.8f))
       }
 
       // Image canvas with zoom
       Box(
-          modifier = Modifier.fillMaxSize().background(Color.Black)
-              .onSizeChanged { containerSize = it }
-      ) {
-        val fullScreenParams = remember(containerSize, zoomLevel, image.width, image.height) {
-          calculateFullScreenParams(containerSize, image.width.toFloat(), image.height.toFloat(), zoomLevel)
-        }
+          modifier =
+              Modifier.fillMaxSize().background(Color.Black).onSizeChanged { containerSize = it }) {
+            val fullScreenParams =
+                remember(containerSize, zoomLevel, image.width, image.height) {
+                  calculateFullScreenParams(
+                      containerSize, image.width.toFloat(), image.height.toFloat(), zoomLevel)
+                }
 
-        FullScreenCanvas(
-            image = image,
-            photo = photo,
-            params = fullScreenParams,
-            onCornerMove = onCornerMove,
-            onMovePhoto = onMovePhoto
-        )
-      }
+            FullScreenCanvas(
+                image = image,
+                photo = photo,
+                params = fullScreenParams,
+                onCornerMove = onCornerMove,
+                onMovePhoto = onMovePhoto)
+          }
     }
   }
 }
 
-private data class FullScreenParams(
-    val scale: Float,
-    val offsetX: Float,
-    val offsetY: Float
-)
+private data class FullScreenParams(val scale: Float, val offsetX: Float, val offsetY: Float)
 
 private fun calculateFullScreenParams(
     containerSize: IntSize,
@@ -894,8 +992,8 @@ private fun FullScreenCanvas(
   var lastPosition by remember { mutableStateOf(Offset.Zero) }
 
   Canvas(
-      modifier = Modifier.fillMaxSize()
-          .pointerInput(photo) {
+      modifier =
+          Modifier.fillMaxSize().pointerInput(photo) {
             detectDragGestures(
                 onDragStart = { offset ->
                   lastPosition = offset
@@ -909,8 +1007,12 @@ private fun FullScreenCanvas(
                 },
                 onDrag = { change, _ ->
                   if (draggedCorner != null) {
-                    val x = ((change.position.x - params.offsetX) / params.scale).coerceIn(0f, image.width.toFloat())
-                    val y = ((change.position.y - params.offsetY) / params.scale).coerceIn(0f, image.height.toFloat())
+                    val x =
+                        ((change.position.x - params.offsetX) / params.scale).coerceIn(
+                            0f, image.width.toFloat())
+                    val y =
+                        ((change.position.y - params.offsetY) / params.scale).coerceIn(
+                            0f, image.height.toFloat())
                     onCornerMove(draggedCorner!!, x, y)
                   } else if (isDraggingPhoto) {
                     val deltaX = (change.position.x - lastPosition.x) / params.scale
@@ -922,53 +1024,74 @@ private fun FullScreenCanvas(
                 onDragEnd = {
                   draggedCorner = null
                   isDraggingPhoto = false
-                }
-            )
-          }
-  ) {
-    // Draw background
-    drawRect(
-        color = Color.DarkGray,
-        topLeft = Offset(params.offsetX, params.offsetY),
-        size = androidx.compose.ui.geometry.Size(image.width * params.scale, image.height * params.scale)
-    )
+                })
+          }) {
+        // Draw background
+        drawRect(
+            color = Color.DarkGray,
+            topLeft = Offset(params.offsetX, params.offsetY),
+            size =
+                androidx.compose.ui.geometry.Size(
+                    image.width * params.scale, image.height * params.scale))
 
-    // Draw image
-    val imageBitmap = image.toComposeImageBitmap()
-    drawImage(imageBitmap, topLeft = Offset(params.offsetX, params.offsetY))
+        // Draw image
+        val imageBitmap = image.toComposeImageBitmap()
+        drawImage(imageBitmap, topLeft = Offset(params.offsetX, params.offsetY))
 
-    // Draw photo overlay with handles
-    drawFullScreenPhotoOverlay(photo, true, params)
-  }
+        // Draw photo overlay with handles
+        drawFullScreenPhotoOverlay(photo, true, params)
+      }
 }
 
-private fun DrawScope.drawFullScreenPhotoOverlay(photo: DetectedPhoto, isSelected: Boolean, params: FullScreenParams) {
-  val outlineColor = when {
-    photo.rotation != RotationAngle.NONE -> Color(0xFFFF9800)
-    isSelected -> Color.Blue
-    else -> Color.Green
-  }
+private fun DrawScope.drawFullScreenPhotoOverlay(
+    photo: DetectedPhoto,
+    isSelected: Boolean,
+    params: FullScreenParams
+) {
+  val outlineColor =
+      when {
+        photo.rotation != RotationAngle.NONE -> Color(0xFFFF9800)
+        isSelected -> Color.Blue
+        else -> Color.Green
+      }
   val fillColor = outlineColor.copy(alpha = 0.2f)
 
-  val tl = Offset(params.offsetX + photo.topLeft.x * params.scale, params.offsetY + photo.topLeft.y * params.scale)
-  val tr = Offset(params.offsetX + photo.topRight.x * params.scale, params.offsetY + photo.topRight.y * params.scale)
-  val bl = Offset(params.offsetX + photo.bottomLeft.x * params.scale, params.offsetY + photo.bottomLeft.y * params.scale)
-  val br = Offset(params.offsetX + photo.bottomRight.x * params.scale, params.offsetY + photo.bottomRight.y * params.scale)
+  val tl =
+      Offset(
+          params.offsetX + photo.topLeft.x * params.scale,
+          params.offsetY + photo.topLeft.y * params.scale)
+  val tr =
+      Offset(
+          params.offsetX + photo.topRight.x * params.scale,
+          params.offsetY + photo.topRight.y * params.scale)
+  val bl =
+      Offset(
+          params.offsetX + photo.bottomLeft.x * params.scale,
+          params.offsetY + photo.bottomLeft.y * params.scale)
+  val br =
+      Offset(
+          params.offsetX + photo.bottomRight.x * params.scale,
+          params.offsetY + photo.bottomRight.y * params.scale)
 
   drawPhotoOverlayShapes(photo, isSelected, outlineColor, fillColor, tl, tr, bl, br, params.scale)
 }
 
-private fun findCornerAtPosition(position: Offset, photo: DetectedPhoto, params: FullScreenParams): CornerType? {
-  val corners = listOf(
-      CornerType.TOP_LEFT to photo.topLeft,
-      CornerType.TOP_RIGHT to photo.topRight,
-      CornerType.BOTTOM_LEFT to photo.bottomLeft,
-      CornerType.BOTTOM_RIGHT to photo.bottomRight
-  )
+private fun findCornerAtPosition(
+    position: Offset,
+    photo: DetectedPhoto,
+    params: FullScreenParams
+): CornerType? {
+  val corners =
+      listOf(
+          CornerType.TOP_LEFT to photo.topLeft,
+          CornerType.TOP_RIGHT to photo.topRight,
+          CornerType.BOTTOM_LEFT to photo.bottomLeft,
+          CornerType.BOTTOM_RIGHT to photo.bottomRight)
 
   val hitRadius = 25f
   for ((cornerType, corner) in corners) {
-    val screenPos = Offset(params.offsetX + corner.x * params.scale, params.offsetY + corner.y * params.scale)
+    val screenPos =
+        Offset(params.offsetX + corner.x * params.scale, params.offsetY + corner.y * params.scale)
     if ((position - screenPos).getDistance() < hitRadius) {
       return cornerType
     }
@@ -976,13 +1099,25 @@ private fun findCornerAtPosition(position: Offset, photo: DetectedPhoto, params:
   return null
 }
 
-private fun isInsidePhoto(position: Offset, photo: DetectedPhoto, params: FullScreenParams): Boolean {
-  val corners = listOf(
-      Offset(params.offsetX + photo.topLeft.x * params.scale, params.offsetY + photo.topLeft.y * params.scale),
-      Offset(params.offsetX + photo.topRight.x * params.scale, params.offsetY + photo.topRight.y * params.scale),
-      Offset(params.offsetX + photo.bottomLeft.x * params.scale, params.offsetY + photo.bottomLeft.y * params.scale),
-      Offset(params.offsetX + photo.bottomRight.x * params.scale, params.offsetY + photo.bottomRight.y * params.scale)
-  )
+private fun isInsidePhoto(
+    position: Offset,
+    photo: DetectedPhoto,
+    params: FullScreenParams
+): Boolean {
+  val corners =
+      listOf(
+          Offset(
+              params.offsetX + photo.topLeft.x * params.scale,
+              params.offsetY + photo.topLeft.y * params.scale),
+          Offset(
+              params.offsetX + photo.topRight.x * params.scale,
+              params.offsetY + photo.topRight.y * params.scale),
+          Offset(
+              params.offsetX + photo.bottomLeft.x * params.scale,
+              params.offsetY + photo.bottomLeft.y * params.scale),
+          Offset(
+              params.offsetX + photo.bottomRight.x * params.scale,
+              params.offsetY + photo.bottomRight.y * params.scale))
 
   val minX = corners.minOf { it.x }
   val maxX = corners.maxOf { it.x }

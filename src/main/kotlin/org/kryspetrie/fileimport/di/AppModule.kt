@@ -3,14 +3,14 @@ package org.kryspetrie.fileimport.di
 import org.koin.dsl.module
 import org.kryspetrie.fileimport.application.DuplicateScannerService
 import org.kryspetrie.fileimport.application.ImportService
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
-import org.kryspetrie.fileimport.application.PhotoScanDetectorService
-import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.port.*
 import org.kryspetrie.fileimport.infrastructure.adapter.*
+import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
+import org.kryspetrie.fileimport.infrastructure.photoscan.YoloKeypointDetector
+import org.kryspetrie.fileimport.infrastructure.photoscan.YoloOutputParser
 
 /**
  * Koin dependency injection module for the Petrie File Importer application.
@@ -296,55 +296,34 @@ val appModule = module {
   single { WatchFolderService(get()) }
 
   /**
+   * YOLOv8-Pose based keypoint detector for photo corners.
+   *
+   * Replaces the old BoofCV/OpenCV manual edge detection.
+   */
+  single { YoloKeypointDetector("ml_models/yolov8n-pose.onnx", get()) }
+
+  /** Classical CV-based rectangle detector — works without ML models. */
+  single { RectangleDetector() }
+
+  /** Parser for YOLOv8-Pose model output. */
+  single { YoloOutputParser() }
+
+  /**
    * Scan service - orchestrates photo scan operations.
    *
    * Handles scanning photos from images that contain multiple photos on a solid background:
-   * 1. Detect photo corners using edge detection
+   * 1. Detect photo corners using a YOLOv8-Pose ML model
    * 2. Allow manual corner adjustment via UI
    * 3. Export multiple photos with filename incrementing
    * 4. Support metadata override for each photo
    *
    * Dependencies:
    * - [ImageRepositoryPort]: Store/retrieve image metadata
-   * - [NamingPort]: Generate folder/filename patterns
+   * - [YoloKeypointDetector]: ML model for corner detection
    *
    * @see ScanService Photo scan logic
    */
-  single { ScanService(get(), get()) }
-
-  /**
-   * Photo scan detector service - detects corners of photos in scanned images.
-   *
-   * Uses BoofCV edge detection to find rectangular shapes that likely represent photographs on a
-   * solid background.
-   *
-   * @see PhotoScanDetectorService Corner detection using BoofCV
-   */
-  single { PhotoScanDetectorService() }
-
-  /**
-   * Perspective correction service - corrects perspective distortion in photos.
-   *
-   * Applies projective transformation to extract a quadrilateral region from a scanned image and
-   * warp it to a rectangle.
-   *
-   * @see PerspectiveCorrectionService Perspective correction using Java3D math
-   */
-  single { PerspectiveCorrectionService() }
-
-  /**
-   * Photo scan export service - exports extracted photos with metadata.
-   *
-   * Handles the complete export pipeline:
-   * 1. Perspective correction of extracted photos
-   * 2. EXIF metadata preservation and modification
-   * 3. Incremental filename generation
-   * 4. Writing images with Apache Imaging
-   *
-   * Dependencies:
-   * - [PerspectiveCorrectionService]: For correcting perspective distortion
-   *
-   * @see PhotoScanExportService Export with EXIF metadata
-   */
-  single { PhotoScanExportService(get()) }
+  single {
+    ScanService(imageRepository = get(), yoloKeypointDetector = get(), rectangleDetector = get())
+  }
 }

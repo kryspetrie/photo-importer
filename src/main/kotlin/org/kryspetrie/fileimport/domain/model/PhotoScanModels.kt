@@ -35,20 +35,22 @@ enum class RotationAngle(val degrees: Int, val radians: Double) {
   CCW_90(-90, -Math.PI / 2);
 
   /** Returns the next clockwise rotation. */
-  fun rotateCW(): RotationAngle = when (this) {
-    NONE -> CW_90
-    CW_90 -> CW_180
-    CW_180 -> CCW_90
-    CCW_90 -> NONE
-  }
+  fun rotateCW(): RotationAngle =
+      when (this) {
+        NONE -> CW_90
+        CW_90 -> CW_180
+        CW_180 -> CCW_90
+        CCW_90 -> NONE
+      }
 
   /** Returns the next counter-clockwise rotation. */
-  fun rotateCCW(): RotationAngle = when (this) {
-    NONE -> CCW_90
-    CCW_90 -> CW_180
-    CW_180 -> CW_90
-    CW_90 -> NONE
-  }
+  fun rotateCCW(): RotationAngle =
+      when (this) {
+        NONE -> CCW_90
+        CCW_90 -> CW_180
+        CW_180 -> CW_90
+        CW_90 -> NONE
+      }
 }
 
 /**
@@ -63,7 +65,8 @@ enum class RotationAngle(val degrees: Int, val radians: Double) {
  * @property bottomLeft Coordinates of the bottom-left corner of the photo bounding box
  * @property bottomRight Coordinates of the bottom-right corner of the photo bounding box
  * @property configuration Metadata configuration for this photo
- * @property applyPerspectiveCorrection Whether to apply perspective correction (true) or just crop (false)
+ * @property applyPerspectiveCorrection Whether to apply perspective correction (true) or just crop
+ *   (false)
  * @property rotation Rotation angle for the output image
  */
 @Serializable
@@ -86,7 +89,10 @@ data class DetectedPhoto(
     /** Metadata configuration for this photo */
     val configuration: PhotoScanConfiguration = PhotoScanConfiguration(),
 
-    /** Whether to apply perspective correction (true) or just crop with axis-aligned rectangle (false) */
+    /**
+     * Whether to apply perspective correction (true) or just crop with axis-aligned rectangle
+     * (false)
+     */
     val applyPerspectiveCorrection: Boolean = true,
 
     /** Rotation angle for the output image */

@@ -521,20 +521,17 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
                     sourcePath = sourcePath,
                     destinationPath = destinationPath,
                     configuration = customConfig,
-                    onComplete = { result ->
-                      if (result.success) {
-                        flowStep = FlowStep.COMPLETE
-                        importResult =
-                            ImportResult(
-                                totalFiles = result.exportedFiles.size,
-                                successCount = result.exportedFiles.size,
-                                errorCount = result.errors.size,
-                                duplicateCount = 0,
-                                skippedCount = 0,
-                                deletedSourceCount = 0)
-                      } else {
-                        flowStep = FlowStep.SETUP
-                      }
+                    onComplete = {
+                      // Photo scan completed — show import summary with photo scan results
+                      flowStep = FlowStep.COMPLETE
+                      importResult =
+                          ImportResult(
+                              totalFiles = 0,
+                              successCount = 0,
+                              errorCount = 0,
+                              duplicateCount = 0,
+                              skippedCount = 0,
+                              deletedSourceCount = 0)
                     },
                     onCancel = { resetFlow() },
                     selectedFiles = filteredImages.takeIf { it.isNotEmpty() })

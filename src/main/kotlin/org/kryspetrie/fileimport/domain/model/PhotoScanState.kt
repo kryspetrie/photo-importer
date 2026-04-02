@@ -10,7 +10,7 @@ enum class CornerType {
   TOP_RIGHT,
   BOTTOM_LEFT,
   BOTTOM_RIGHT,
-  CENTER  // For dragging entire bounding box
+  CENTER // For dragging entire bounding box
 }
 
 /**
@@ -22,8 +22,8 @@ enum class CornerType {
  * - UI state (corner selection, metadata editing)
  * - Export progress
  *
- * Performance optimization: Uses mutable internal state for efficient updates during
- * dragging operations, and only creates immutable snapshots for observers.
+ * Performance optimization: Uses mutable internal state for efficient updates during dragging
+ * operations, and only creates immutable snapshots for observers.
  */
 class PhotoScanState {
 
@@ -77,41 +77,52 @@ class PhotoScanState {
   // ========== Public Immutable Accessors ==========
 
   /** List of scanned images to process */
-  val images: MutableStateFlow<List<ScannedImage>> get() = _images
+  val images: MutableStateFlow<List<ScannedImage>>
+    get() = _images
 
   /** Current image index */
-  val currentIndex: MutableStateFlow<Int> get() = _currentIndex
+  val currentIndex: MutableStateFlow<Int>
+    get() = _currentIndex
 
   /** Current workflow step */
-  val step: MutableStateFlow<Step> get() = _step
+  val step: MutableStateFlow<Step>
+    get() = _step
 
   /** Currently selected photo ID for editing */
-  val selectedPhotoId: MutableStateFlow<String?> get() = _selectedPhotoId
+  val selectedPhotoId: MutableStateFlow<String?>
+    get() = _selectedPhotoId
 
   /** Currently selected corner for dragging */
-  val selectedCorner: MutableStateFlow<CornerType?> get() = _selectedCorner
+  val selectedCorner: MutableStateFlow<CornerType?>
+    get() = _selectedCorner
 
   /** Export progress */
-  val exportProgress: MutableStateFlow<ExportProgress> get() = _exportProgress
+  val exportProgress: MutableStateFlow<ExportProgress>
+    get() = _exportProgress
 
   /** Total images processed count */
-  val processedCount: MutableStateFlow<Int> get() = _processedCount
+  val processedCount: MutableStateFlow<Int>
+    get() = _processedCount
 
   /** Total photos extracted count */
-  val extractedCount: MutableStateFlow<Int> get() = _extractedCount
+  val extractedCount: MutableStateFlow<Int>
+    get() = _extractedCount
 
   /** Errors encountered during processing */
-  val errors: MutableStateFlow<List<String>> get() = _errors
+  val errors: MutableStateFlow<List<String>>
+    get() = _errors
 
   /** Target number of photos to detect (1-4, null for auto) */
-  val targetPhotoCount: MutableStateFlow<Int?> get() = _targetPhotoCount
+  val targetPhotoCount: MutableStateFlow<Int?>
+    get() = _targetPhotoCount
 
   /** Current scanned image being processed. */
   val currentImage: ScannedImage?
     get() = _images.value.getOrNull(_currentIndex.value)
 
   /** Detected photos for the current image - as StateFlow for Compose. */
-  val currentPhotos: MutableStateFlow<List<DetectedPhoto>> get() = _currentPhotos
+  val currentPhotos: MutableStateFlow<List<DetectedPhoto>>
+    get() = _currentPhotos
 
   /** Number of images remaining. */
   val remainingCount: Int
@@ -119,7 +130,8 @@ class PhotoScanState {
 
   /** Progress percentage through the image queue. */
   val progressPercent: Float
-    get() = if (_images.value.isEmpty()) 0f else (_currentIndex.value.toFloat() / _images.value.size)
+    get() =
+        if (_images.value.isEmpty()) 0f else (_currentIndex.value.toFloat() / _images.value.size)
 
   /** Initializes the state with a list of image files to scan. */
   fun initialize(imageFiles: List<File>) {
@@ -137,9 +149,10 @@ class PhotoScanState {
   /** Updates the current image with detected photos and loaded image. */
   fun setCurrentImageDetected(image: BufferedImage, photos: List<DetectedPhoto>) {
     val current = currentImage ?: return
-    val newImages = _images.value.toMutableList().apply {
-      this[_currentIndex.value] = current.copy(image = image, detectedPhotos = photos)
-    }
+    val newImages =
+        _images.value.toMutableList().apply {
+          this[_currentIndex.value] = current.copy(image = image, detectedPhotos = photos)
+        }
     _images.value = newImages
     _currentPhotos.value = photos
     _step.value = Step.CORNER_EDITING
@@ -171,7 +184,7 @@ class PhotoScanState {
               CornerType.TOP_RIGHT -> photo.copy(topRight = PhotoCorner(x, y))
               CornerType.BOTTOM_LEFT -> photo.copy(bottomLeft = PhotoCorner(x, y))
               CornerType.BOTTOM_RIGHT -> photo.copy(bottomRight = PhotoCorner(x, y))
-              CornerType.CENTER -> photo  // Handled separately
+              CornerType.CENTER -> photo // Handled separately
             }
           } else photo
         }
@@ -189,12 +202,12 @@ class PhotoScanState {
     val newBottomLeft = PhotoCorner(photo.bottomLeft.x + deltaX, photo.bottomLeft.y + deltaY)
     val newBottomRight = PhotoCorner(photo.bottomRight.x + deltaX, photo.bottomRight.y + deltaY)
 
-    val movedPhoto = photo.copy(
-        topLeft = newTopLeft,
-        topRight = newTopRight,
-        bottomLeft = newBottomLeft,
-        bottomRight = newBottomRight
-    )
+    val movedPhoto =
+        photo.copy(
+            topLeft = newTopLeft,
+            topRight = newTopRight,
+            bottomLeft = newBottomLeft,
+            bottomRight = newBottomRight)
 
     val updatedPhotos = currentPhotos.map { if (it.id == photoId) movedPhoto else it }
     updateCurrentPhotos(updatedPhotos)
@@ -202,25 +215,24 @@ class PhotoScanState {
 
   /** Toggles perspective correction for a detected photo. */
   fun togglePerspectiveCorrection(photoId: String, enabled: Boolean) {
-    val currentPhotos = _currentPhotos.value.map { photo ->
-      if (photo.id == photoId) photo.withPerspectiveCorrection(enabled) else photo
-    }
+    val currentPhotos =
+        _currentPhotos.value.map { photo ->
+          if (photo.id == photoId) photo.withPerspectiveCorrection(enabled) else photo
+        }
     updateCurrentPhotos(currentPhotos)
   }
 
   /** Rotates a detected photo clockwise. */
   fun rotatePhotoCW(photoId: String) {
-    val currentPhotos = _currentPhotos.value.map { photo ->
-      if (photo.id == photoId) photo.rotateCW() else photo
-    }
+    val currentPhotos =
+        _currentPhotos.value.map { photo -> if (photo.id == photoId) photo.rotateCW() else photo }
     updateCurrentPhotos(currentPhotos)
   }
 
   /** Rotates a detected photo counter-clockwise. */
   fun rotatePhotoCCW(photoId: String) {
-    val currentPhotos = _currentPhotos.value.map { photo ->
-      if (photo.id == photoId) photo.rotateCCW() else photo
-    }
+    val currentPhotos =
+        _currentPhotos.value.map { photo -> if (photo.id == photoId) photo.rotateCCW() else photo }
     updateCurrentPhotos(currentPhotos)
   }
 
@@ -229,9 +241,10 @@ class PhotoScanState {
     val currentIdx = _currentIndex.value
     val current = _images.value.getOrNull(currentIdx) ?: return
 
-    val newImages = _images.value.toMutableList().apply {
-      this[currentIdx] = current.copy(detectedPhotos = photos)
-    }
+    val newImages =
+        _images.value.toMutableList().apply {
+          this[currentIdx] = current.copy(detectedPhotos = photos)
+        }
     _images.value = newImages
     _currentPhotos.value = photos
   }

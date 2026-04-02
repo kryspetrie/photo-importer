@@ -10,14 +10,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.io.File
 import javax.imageio.ImageIO
-import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
-import org.kryspetrie.fileimport.application.PhotoScanDetectorService
-import org.kryspetrie.fileimport.application.PhotoScanExportService
+import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.domain.model.ExportProgress
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
@@ -53,13 +50,11 @@ fun PhotoScanScreen(
     sourcePath: String,
     destinationPath: String,
     configuration: ImportConfiguration,
-    onComplete: (PhotoScanExportService.ExportResult) -> Unit,
+    onComplete: () -> Unit,
     onCancel: () -> Unit,
     selectedFiles: List<ImageFile>? = null
 ) {
-  val detectorService: PhotoScanDetectorService = koinInject()
-  val exportService: PhotoScanExportService = koinInject()
-  val perspectiveService: PerspectiveCorrectionService = koinInject()
+  val scanService: ScanService = koinInject()
 
   // Scan state
   val scanState = remember { PhotoScanState() }
@@ -95,7 +90,7 @@ fun PhotoScanScreen(
     CoroutineScope(Dispatchers.Main).launch {
       loadCurrentImage(
           scanState,
-          detectorService,
+          scanService,
           onStatus = { loadingMessage = it },
           onError = { msg -> loadingMessage = msg ?: "Unknown error" })
     }
@@ -166,7 +161,7 @@ fun PhotoScanScreen(
                   },
                   onBack = { scanState.step.value = Step.CORNER_EDITING },
                   onExport = {
-                    exportCurrentImage(scanState, exportService, destinationPath, configuration, onComplete)
+                    exportCurrentImage(scanState, scanService, destinationPath, onComplete)
                   })
             }
 
@@ -204,17 +199,16 @@ fun PhotoScanScreen(
                       }
                     },
                     onRescan = {
-                      // Re-launch detection with updated target count
+                      // Re-launch detection
                       CoroutineScope(Dispatchers.Main).launch {
-                        rescanCurrentImage(scanState, detectorService)
+                        rescanCurrentImage(scanState, scanService)
                       }
                     },
                     onTogglePerspectiveCorrection = { photoId, enabled ->
                       scanState.togglePerspectiveCorrection(photoId, enabled)
                     },
                     onRotateCW = { photoId -> scanState.rotatePhotoCW(photoId) },
-                    onRotateCCW = { photoId -> scanState.rotatePhotoCCW(photoId) }
-                )
+                    onRotateCCW = { photoId -> scanState.rotatePhotoCCW(photoId) })
               } else {
                 Column(
                     modifier = Modifier.fillMaxSize(),
@@ -367,7 +361,7 @@ private fun PhotoScanCompleteScreen(
 /** Loads the current image and runs detection. */
 private suspend fun loadCurrentImage(
     scanState: PhotoScanState,
-    detectorService: PhotoScanDetectorService,
+    scanService: ScanService,
     onStatus: (String) -> Unit = {},
     onError: (String?) -> Unit = {}
 ) {
@@ -378,11 +372,8 @@ private suspend fun loadCurrentImage(
     onStatus("Reading ${file.name}...")
     val image = ImageIO.read(file)
     if (image != null) {
-      // Set target photo count on detector
-      detectorService.targetPhotoCount = scanState.targetPhotoCount.value
-      
       onStatus("Detecting photos...")
-      val detectedPhotos = detectorService.detectPhotos(image)
+      val detectedPhotos = scanService.detectPhotos(file.absolutePath)
       scanState.setCurrentImageDetected(image, detectedPhotos)
     } else {
       onError("Failed to load image: ${file.name}")
@@ -394,10 +385,10 @@ private suspend fun loadCurrentImage(
   }
 }
 
-/** Re-runs detection on the current image with updated target count. */
+/** Re-runs detection on the current image. */
 private suspend fun rescanCurrentImage(
     scanState: PhotoScanState,
-    detectorService: PhotoScanDetectorService,
+    scanService: ScanService,
     onStatus: (String) -> Unit = {},
     onError: (String?) -> Unit = {}
 ) {
@@ -407,16 +398,13 @@ private suspend fun rescanCurrentImage(
 
   if (currentImageData == null) {
     // Need to reload the image
-    loadCurrentImage(scanState, detectorService, onStatus, onError)
+    loadCurrentImage(scanState, scanService, onStatus, onError)
     return
   }
 
   try {
-    // Set target photo count on detector
-    detectorService.targetPhotoCount = scanState.targetPhotoCount.value
-    
-    onStatus("Re-scanning for ${scanState.targetPhotoCount.value ?: "auto"} photos...")
-    val detectedPhotos = detectorService.detectPhotos(currentImageData)
+    onStatus("Re-scanning for photos...")
+    val detectedPhotos = scanService.detectPhotos(file.absolutePath)
     scanState.setCurrentImageDetected(currentImageData, detectedPhotos)
   } catch (e: Exception) {
     onError("Error: ${e.message}")
@@ -426,10 +414,9 @@ private suspend fun rescanCurrentImage(
 /** Exports photos from the current image. */
 private fun exportCurrentImage(
     scanState: PhotoScanState,
-    exportService: PhotoScanExportService,
+    scanService: ScanService,
     destinationPath: String,
-    configuration: ImportConfiguration,
-    onComplete: (PhotoScanExportService.ExportResult) -> Unit
+    onComplete: () -> Unit
 ) {
   val currentImage = scanState.currentImage ?: return
   val image = currentImage.image ?: return
@@ -451,13 +438,15 @@ private fun exportCurrentImage(
           currentFile = currentImage.file.name,
           status = "Exporting..."))
 
-  val result =
-      exportService.exportPhotos(
-          sourceFile = currentImage.file,
-          image = image,
-          detectedPhotos = photos,
-          destinationPath = destinationPath,
-          baseFileName = baseName)
+  photos.forEachIndexed { index, photo ->
+    val extractedImage = scanService.extractPhoto(image, photo)
+    scanService.exportPhoto(
+        photoImage = extractedImage,
+        destinationPath = destinationPath,
+        originalFile = currentImage.file,
+        photoIndex = index,
+        configuration = photo.configuration)
+  }
 
   scanState.updateExportProgress(
       ExportProgress(
@@ -466,6 +455,5 @@ private fun exportCurrentImage(
           currentFile = currentImage.file.name,
           status = "Complete"))
 
-  result.errors.forEach { error -> scanState.addError(error) }
   scanState.nextImage()
 }
