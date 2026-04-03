@@ -8,6 +8,7 @@ import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.port.*
 import org.kryspetrie.fileimport.infrastructure.adapter.*
+import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.YoloKeypointDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.YoloOutputParser
@@ -302,8 +303,16 @@ val appModule = module {
    */
   single { YoloKeypointDetector("ml_models/yolov8n-pose.onnx", get()) }
 
-  /** Classical CV-based rectangle detector — works without ML models. */
+  /** Classical CV detector: edge-based rectangle detection via contour tracing + Douglas-Peucker. */
   single { RectangleDetector() }
+
+  /**
+   * Hybrid detector: classical CV region proposals refined with ML keypoint detection.
+   *
+   * CV alone produces axis-aligned corners; ML alone produces false positives. Combining both gives
+   * robust region separation with precise corners.
+   */
+  single { HybridCornerDetector(rectangleDetector = get(), mlDetector = get()) }
 
   /** Parser for YOLOv8-Pose model output. */
   single { YoloOutputParser() }
@@ -312,18 +321,16 @@ val appModule = module {
    * Scan service - orchestrates photo scan operations.
    *
    * Handles scanning photos from images that contain multiple photos on a solid background:
-   * 1. Detect photo corners using a YOLOv8-Pose ML model
+   * 1. Detect photo regions using a hybrid approach (classical CV + ML refinement)
    * 2. Allow manual corner adjustment via UI
    * 3. Export multiple photos with filename incrementing
    * 4. Support metadata override for each photo
    *
    * Dependencies:
    * - [ImageRepositoryPort]: Store/retrieve image metadata
-   * - [YoloKeypointDetector]: ML model for corner detection
+   * - [HybridCornerDetector]: Hybrid classical CV + ML corner detection
    *
    * @see ScanService Photo scan logic
    */
-  single {
-    ScanService(imageRepository = get(), yoloKeypointDetector = get(), rectangleDetector = get())
-  }
+  single { ScanService(imageRepository = get(), hybridCornerDetector = get()) }
 }

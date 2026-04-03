@@ -8,51 +8,58 @@ import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
-import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
-import org.kryspetrie.fileimport.infrastructure.photoscan.YoloKeypointDetector
+import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 
+/**
+ * Orchestrates photo scan operations.
+ *
+ * Detects photos within a scanned image, extracts individual photos via perspective correction, and
+ * exports them to a destination folder. Detection uses a hybrid approach combining edge-based classical
+ * CV (contour tracing + Douglas-Peucker simplification) with ML-based keypoint refinement for
+ * precise corners. Domain constraints (max 4 photos, similar dimensions, near-rectangular corners) are
+ * applied to filter false positives.
+ *
+ * @param imageRepository Repository for image metadata storage
+ * @param hybridCornerDetector Hybrid detector combining CV region proposals with ML corner
+ *   refinement
+ */
 class ScanService(
     private val imageRepository: ImageRepositoryPort,
-    private val yoloKeypointDetector: YoloKeypointDetector,
-    private val rectangleDetector: RectangleDetector,
+    private val hybridCornerDetector: HybridCornerDetector,
 ) {
 
-  fun detectPhotos(filePath: String): List<DetectedPhoto> {
+  /**
+   * Detects photos within a scanned image.
+   *
+   * @param filePath Path to the scanned image file
+   * @param expectedCount Optional hint for the expected number of photos. Used by the classical CV
+   *   detector to tune sensitivity (splitting/merging regions if count doesn't match).
+   * @return List of detected photos with corner coordinates, ordered TL→TR→BR→BL.
+   */
+  fun detectPhotos(filePath: String, expectedCount: Int? = null): List<DetectedPhoto> {
     val imageFile = File(filePath)
     if (!imageFile.exists()) {
       return emptyList()
     }
-
     return try {
       val bufferedImage = ImageIO.read(imageFile) ?: return emptyList()
-
-      // Try ML-based corner detection first; fall back to classical CV if unavailable or no results
-      val cornerSets =
-          yoloKeypointDetector.detectCorners(bufferedImage).ifEmpty {
-            rectangleDetector.detectRectangles(bufferedImage).map { quad ->
-              // Convert RectangleDetector.Point corners to PhotoCorner
-              listOf(
-                  PhotoCorner(quad.corners[0].x.toFloat(), quad.corners[0].y.toFloat()),
-                  PhotoCorner(quad.corners[1].x.toFloat(), quad.corners[1].y.toFloat()),
-                  PhotoCorner(quad.corners[2].x.toFloat(), quad.corners[2].y.toFloat()),
-                  PhotoCorner(quad.corners[3].x.toFloat(), quad.corners[3].y.toFloat()),
-              )
-            }
-          }
-
-      cornerSets.map { corners ->
-        DetectedPhoto(
-            topLeft = corners[0],
-            topRight = corners[1],
-            bottomRight = corners[2],
-            bottomLeft = corners[3])
-      }
+      hybridCornerDetector.targetPhotoCount = expectedCount
+      hybridCornerDetector.detectPhotos(bufferedImage)
     } catch (e: Exception) {
-      // Log the exception
       emptyList()
     }
   }
 
+  /**
+   * Extracts a detected photo from a scanned image via perspective correction.
+   *
+   * Applies a perspective warp so the quadrilateral region defined by [detectedPhoto]'s corners
+   * becomes a flat rectangle.
+   *
+   * @param scannedImage The full scanned image containing the photo
+   * @param detectedPhoto The detected photo region with corner coordinates
+   * @return The perspective-corrected photo as a new image
+   */
   fun extractPhoto(scannedImage: BufferedImage, detectedPhoto: DetectedPhoto): BufferedImage {
     val bounds = detectedPhoto.getBounds()
     val width = bounds.getWidth()
@@ -88,9 +95,8 @@ class ScanService(
 
   private fun calculatePerspectiveTransform(
       srcQuad: List<PhotoCorner>,
-      dstRect: List<Corner>
+      dstRect: List<Corner>,
   ): AffineTransform {
-    // Calculate scaling factors
     val srcTopWidth = distance(srcQuad[0], srcQuad[1])
     val srcLeftHeight = distance(srcQuad[0], srcQuad[2])
     val dstWidth = dstRect[1].x - dstRect[0].x
@@ -99,7 +105,6 @@ class ScanService(
     val scaleX = dstWidth / srcTopWidth
     val scaleY = dstHeight / srcLeftHeight
 
-    // Create transform with translation and scaling
     val transform = AffineTransform()
     transform.translate(dstRect[0].x.toDouble(), dstRect[0].y.toDouble())
     transform.scale(scaleX.toDouble(), scaleY.toDouble())
@@ -113,24 +118,30 @@ class ScanService(
     return kotlin.math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
   }
 
+  /**
+   * Exports a photo image to the destination path with automatic filename incrementing.
+   *
+   * @param photoImage The extracted photo image
+   * @param destinationPath Destination folder
+   * @param originalFile Original scanned image file (used for base name and extension)
+   * @param photoIndex Index of this photo within the scan (for filename suffix)
+   * @param configuration Export configuration
+   * @return Absolute path to the exported file
+   */
   fun exportPhoto(
       photoImage: BufferedImage,
       destinationPath: String,
       originalFile: File,
       photoIndex: Int,
-      configuration: PhotoScanConfiguration
+      configuration: PhotoScanConfiguration,
   ): String {
-    // Determine output filename with incrementing
     val outputFile =
         getUniqueOutputFile(
             destinationPath, originalFile.nameWithoutExtension, originalFile.extension, photoIndex)
 
-    // Write the image
     ImageIO.write(photoImage, originalFile.extension, outputFile)
 
     // TODO: EXIF metadata writing would go here with Apache Commons Imaging
-    // For now, skip EXIF modification - image written by ImageIO
-
     return outputFile.absolutePath
   }
 
@@ -138,13 +149,12 @@ class ScanService(
       destinationPath: String,
       baseName: String,
       extension: String,
-      photoIndex: Int
+      photoIndex: Int,
   ): File {
     val destDir = File(destinationPath)
     destDir.mkdirs()
 
     var counter = if (photoIndex > 0) photoIndex else 1
-
     while (true) {
       val filename =
           if (counter > 1) {
@@ -152,12 +162,10 @@ class ScanService(
           } else {
             "$baseName.$extension"
           }
-
       val outputFile = File(destDir, filename)
       if (!outputFile.exists()) {
         return outputFile
       }
-
       counter++
     }
   }
