@@ -10,8 +10,6 @@ import org.kryspetrie.fileimport.domain.port.*
 import org.kryspetrie.fileimport.infrastructure.adapter.*
 import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
-import org.kryspetrie.fileimport.infrastructure.photoscan.YoloKeypointDetector
-import org.kryspetrie.fileimport.infrastructure.photoscan.YoloOutputParser
 
 /**
  * Koin dependency injection module for the Petrie File Importer application.
@@ -301,21 +299,13 @@ val appModule = module {
    *
    * Replaces the old BoofCV/OpenCV manual edge detection.
    */
-  single { YoloKeypointDetector("ml_models/yolov8n-pose.onnx", get()) }
-
-  /** Classical CV detector: edge-based rectangle detection via contour tracing + Douglas-Peucker. */
+  /**
+   * Classical CV detector: edge-based rectangle detection via contour tracing + Douglas-Peucker.
+   */
   single { RectangleDetector() }
 
-  /**
-   * Hybrid detector: classical CV region proposals refined with ML keypoint detection.
-   *
-   * CV alone produces axis-aligned corners; ML alone produces false positives. Combining both gives
-   * robust region separation with precise corners.
-   */
-  single { HybridCornerDetector(rectangleDetector = get(), mlDetector = get()) }
-
-  /** Parser for YOLOv8-Pose model output. */
-  single { YoloOutputParser() }
+  /** Corner detector using edge-based classical computer vision. */
+  single { HybridCornerDetector(rectangleDetector = get()) }
 
   /**
    * Scan service - orchestrates photo scan operations.

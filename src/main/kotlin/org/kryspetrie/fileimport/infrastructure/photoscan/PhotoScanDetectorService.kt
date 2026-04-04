@@ -1,9 +1,7 @@
 package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import java.awt.image.BufferedImage
-import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 
@@ -17,18 +15,19 @@ import org.kryspetrie.fileimport.domain.model.PhotoCorner
  * This handles both light-photos-on-dark-desk and dark-photos-on-light-desk scenarios.
  *
  * ## Algorithm
- *
- * 1. **Estimate background** — median luminance of image border pixels (assumes desk surrounds photos)
+ * 1. **Estimate background** — median luminance of image border pixels (assumes desk surrounds
+ *    photos)
  * 2. **Content mask** — pixels more than [contentThreshold] luminance units from background
  * 3. **Morphological closing** — fills gaps within photo regions
  * 4. **Connected components** — groups adjacent content pixels into regions
  * 5. **Aspect-ratio + angle filtering** — removes non-rectangular/noisy components
  * 6. **Merge adjacent** — merges components separated by thin gaps
- * 7. **Aspect-ratio grouping** — keeps only components whose dimensions are within [dimensionTolerance] of each other (photos are similar size)
- * 8. **NMS + count adjustment** — removes overlapping detections, splits/merges to reach target count
+ * 7. **Aspect-ratio grouping** — keeps only components whose dimensions are within
+ *    [dimensionTolerance] of each other (photos are similar size)
+ * 8. **NMS + count adjustment** — removes overlapping detections, splits/merges to reach target
+ *    count
  *
  * ## Domain assumptions (all configurable)
- *
  * - [maxPhotos] = 4 (unlikely to see more than 4 photos per scan without explicit override)
  * - [dimensionTolerance] = 0.3 (all photos in a frame are within ~30% of each other in size)
  * - [minCornerAngle] = 70°, [maxCornerAngle] = 110° (photos are near-rectangular with perspective)
@@ -38,8 +37,8 @@ import org.kryspetrie.fileimport.domain.model.PhotoCorner
  *   scaled down for detection, coordinates scaled back to original space.
  * @param contentThreshold Minimum luminance distance from background to count as content (default
  *   15). Photos differ from desk by at least this much.
- * @param morphCloseRadius Morphological closing radius in working-image pixels (default 3).
- *   Fills small gaps within photo regions.
+ * @param morphCloseRadius Morphological closing radius in working-image pixels (default 3). Fills
+ *   small gaps within photo regions.
  * @param minAreaRatio Minimum region area as fraction of image area (default 0.01 = 1%).
  * @param maxAreaRatio Maximum region area as fraction (default 0.85). Regions covering the whole
  *   image are the "no photos" false positive.
@@ -79,25 +78,29 @@ class PhotoScanDetectorService(
     val (working, scale) = downsample(image)
     val detections = detectInWorking(working)
 
-    return detections.map { rect ->
-      DetectedPhoto(
-          topLeft = PhotoCorner(rect.left / scale, rect.top / scale),
-          topRight = PhotoCorner(rect.right / scale, rect.top / scale),
-          bottomLeft = PhotoCorner(rect.left / scale, rect.bottom / scale),
-          bottomRight = PhotoCorner(rect.right / scale, rect.bottom / scale),
-      )
-    }.let { photos ->
-      val target = targetPhotoCount ?: photos.size
-      if (photos.size != target) adjustCount(photos, target, image.width, image.height) else photos
-    }
+    return detections
+        .map { rect ->
+          DetectedPhoto(
+              topLeft = PhotoCorner(rect.left / scale, rect.top / scale),
+              topRight = PhotoCorner(rect.right / scale, rect.top / scale),
+              bottomLeft = PhotoCorner(rect.left / scale, rect.bottom / scale),
+              bottomRight = PhotoCorner(rect.right / scale, rect.bottom / scale),
+          )
+        }
+        .let { photos ->
+          val target = targetPhotoCount ?: photos.size
+          if (photos.size != target) adjustCount(photos, target, image.width, image.height)
+          else photos
+        }
   }
 
   private fun downsample(image: BufferedImage): Pair<BufferedImage, Float> {
-    val scale = if (image.width > targetDetectionWidth) {
-      targetDetectionWidth.toFloat() / image.width
-    } else {
-      1.0f
-    }
+    val scale =
+        if (image.width > targetDetectionWidth) {
+          targetDetectionWidth.toFloat() / image.width
+        } else {
+          1.0f
+        }
     val w = (image.width * scale).toInt()
     val h = (image.height * scale).toInt()
     val out = BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
@@ -277,9 +280,14 @@ class PhotoScanDetectorService(
       val bottom: Int,
       val size: Int,
   ) {
-    val width get() = right - left
-    val height get() = bottom - top
-    val area get() = width * height
+    val width
+      get() = right - left
+
+    val height
+      get() = bottom - top
+
+    val area
+      get() = width * height
   }
 
   private fun connectedComponents(mask: BooleanArray, w: Int, h: Int): List<AaRect> {
@@ -291,7 +299,10 @@ class PhotoScanDetectorService(
         val idx = y * w + x
         if (!mask[idx] || visited[idx]) continue
 
-        var minX = w; var maxX = 0; var minY = h; var maxY = 0
+        var minX = w
+        var maxX = 0
+        var minY = h
+        var maxY = 0
         var count = 0
         val stack = ArrayDeque<Pair<Int, Int>>()
         stack.add(x to y)
@@ -326,8 +337,8 @@ class PhotoScanDetectorService(
   /**
    * Scores how well a rectangular region matches the "content" pixels.
    *
-   * Computes the fill ratio: what fraction of the bounding box is marked as content. Also
-   * considers whether the region has sharp corners (vs. diffuse transitions from desk to photo).
+   * Computes the fill ratio: what fraction of the bounding box is marked as content. Also considers
+   * whether the region has sharp corners (vs. diffuse transitions from desk to photo).
    */
   private fun rectangularQuality(
       gray: Array<FloatArray>,
@@ -375,13 +386,14 @@ class PhotoScanDetectorService(
         while (it.hasNext()) {
           val other = it.next()
           if (overlaps(cur, other) || isAdjacent(cur, other)) {
-            cur = AaRect(
-                minOf(cur.left, other.left),
-                minOf(cur.top, other.top),
-                maxOf(cur.right, other.right),
-                maxOf(cur.bottom, other.bottom),
-                cur.size + other.size,
-            )
+            cur =
+                AaRect(
+                    minOf(cur.left, other.left),
+                    minOf(cur.top, other.top),
+                    maxOf(cur.right, other.right),
+                    maxOf(cur.bottom, other.bottom),
+                    cur.size + other.size,
+                )
             it.remove()
             changed = true
           }
@@ -422,9 +434,10 @@ class PhotoScanDetectorService(
     if (photos.size == target) return photos
     if (photos.size < target) {
       val result = photos.toMutableList()
-      val sorted = photos.sortedByDescending {
-        it.getBounds().getWidth().toLong() * it.getBounds().getHeight()
-      }
+      val sorted =
+          photos.sortedByDescending {
+            it.getBounds().getWidth().toLong() * it.getBounds().getHeight()
+          }
       for (photo in sorted) {
         if (result.size >= target) break
         val split = splitPhoto(photo, width, height)
@@ -438,9 +451,8 @@ class PhotoScanDetectorService(
     // photos.size > target
     val result = photos.toMutableList()
     while (result.size > target) {
-      val sorted = result.sortedBy {
-        it.getBounds().getWidth().toLong() * it.getBounds().getHeight()
-      }
+      val sorted =
+          result.sortedBy { it.getBounds().getWidth().toLong() * it.getBounds().getHeight() }
       if (sorted.size >= 2) {
         result.remove(sorted[0])
         result.remove(sorted[1])
@@ -515,12 +527,16 @@ class PhotoScanDetectorService(
   }
 
   private fun mergePhotos(a: DetectedPhoto, b: DetectedPhoto): DetectedPhoto {
-    val ab = a.getBounds(); val bb = b.getBounds()
+    val ab = a.getBounds()
+    val bb = b.getBounds()
     return DetectedPhoto(
         topLeft = PhotoCorner(minOf(ab.minX, bb.minX).toFloat(), minOf(ab.minY, bb.minY).toFloat()),
-        topRight = PhotoCorner(maxOf(ab.maxX, bb.maxX).toFloat(), minOf(ab.minY, bb.minY).toFloat()),
-        bottomRight = PhotoCorner(maxOf(ab.maxX, bb.maxX).toFloat(), maxOf(ab.maxY, bb.maxY).toFloat()),
-        bottomLeft = PhotoCorner(minOf(ab.minX, bb.minX).toFloat(), maxOf(ab.maxY, bb.maxY).toFloat()),
+        topRight =
+            PhotoCorner(maxOf(ab.maxX, bb.maxX).toFloat(), minOf(ab.minY, bb.minY).toFloat()),
+        bottomRight =
+            PhotoCorner(maxOf(ab.maxX, bb.maxX).toFloat(), maxOf(ab.maxY, bb.maxY).toFloat()),
+        bottomLeft =
+            PhotoCorner(minOf(ab.minX, bb.minX).toFloat(), maxOf(ab.maxY, bb.maxY).toFloat()),
     )
   }
 }

@@ -19,8 +19,8 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
  * - photo-scan-01: 2 photos at [365,386]-[1388,1030] and [1037,1520]-[1967,2128]
  * - photo-scan-02: 3 photos
  *
- * Classical CV alone may not find all photos. These tests verify that the pipeline
- * finds the primary photos and doesn't crash. ML refinement fills in the rest.
+ * Classical CV alone may not find all photos. These tests verify that the pipeline finds the
+ * primary photos and doesn't crash. ML refinement fills in the rest.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class HybridCornerDetectorTest {
@@ -33,7 +33,7 @@ class HybridCornerDetectorTest {
   fun setup() {
     img01 = loadImage("org/kryspetrie/fileimport/application/photo-scan-01.jpg")
     img02 = loadImage("org/kryspetrie/fileimport/application/photo-scan-02.jpg")
-    hybrid = HybridCornerDetector(RectangleDetector(), null)
+    hybrid = HybridCornerDetector(RectangleDetector())
   }
 
   @Test
@@ -46,9 +46,8 @@ class HybridCornerDetectorTest {
     // The primary (larger) photo should be clearly detected (IoU > 50%)
     val gtPrimary = groundTruth01()[0]
     val gtPrimaryBounds = truthBounds(gtPrimary)
-    val primaryMatched = detected.any { det ->
-      computeIou(det.getBounds(), gtPrimaryBounds) > 0.50f
-    }
+    val primaryMatched =
+        detected.any { det -> computeIou(det.getBounds(), gtPrimaryBounds) > 0.50f }
     assert(primaryMatched) {
       "Primary photo [365,386]-[1388,1030] not clearly detected (IoU < 50%)"
     }
@@ -65,9 +64,7 @@ class HybridCornerDetectorTest {
     val gt = groundTruth02()
     for ((i, truth) in gt.withIndex()) {
       val gtBounds = truthBounds(truth)
-      val covered = detected.any { det ->
-        computeIou(det.getBounds(), gtBounds) > 0.50f
-      }
+      val covered = detected.any { det -> computeIou(det.getBounds(), gtBounds) > 0.50f }
       assert(covered) {
         val b = gtBounds
         "GT[$i] [${b.minX},${b.minY}]-[${b.maxX},${b.maxY}] not covered (IoU < 50%)"
@@ -100,32 +97,34 @@ class HybridCornerDetectorTest {
   private fun loadImage(path: String): BufferedImage =
       ImageIO.read(javaClass.classLoader.getResourceAsStream(path))!!
 
-  private fun groundTruth01() = listOf(
+  private fun groundTruth01() =
       listOf(
-          PhotoCorner(365f, 386f),
-          PhotoCorner(1388f, 386f),
-          PhotoCorner(1388f, 1030f),
-          PhotoCorner(365f, 1030f)),
-      listOf(
-          PhotoCorner(1037f, 1520f),
-          PhotoCorner(1967f, 1520f),
-          PhotoCorner(2394f, 2128f),
-          PhotoCorner(1037f, 2128f)))
+          listOf(
+              PhotoCorner(365f, 386f),
+              PhotoCorner(1388f, 386f),
+              PhotoCorner(1388f, 1030f),
+              PhotoCorner(365f, 1030f)),
+          listOf(
+              PhotoCorner(1037f, 1520f),
+              PhotoCorner(1967f, 1520f),
+              PhotoCorner(2394f, 2128f),
+              PhotoCorner(1037f, 2128f)))
 
-  private fun groundTruth02() = listOf(
+  private fun groundTruth02() =
       listOf(
-          PhotoCorner(270f, 358f),
-          PhotoCorner(1864f, 358f),
-          PhotoCorner(1864f, 1452f),
-          PhotoCorner(270f, 1452f)),
-      listOf(
-          PhotoCorner(256f, 1560f),
-          PhotoCorner(2104f, 1560f),
-          PhotoCorner(2104f, 3814f),
-          PhotoCorner(256f, 3814f)),
-      listOf(
-          PhotoCorner(2226f, 634f),
-          PhotoCorner(3700f, 634f),
-          PhotoCorner(3700f, 2510f),
-          PhotoCorner(2226f, 2510f)))
+          listOf(
+              PhotoCorner(270f, 358f),
+              PhotoCorner(1864f, 358f),
+              PhotoCorner(1864f, 1452f),
+              PhotoCorner(270f, 1452f)),
+          listOf(
+              PhotoCorner(256f, 1560f),
+              PhotoCorner(2104f, 1560f),
+              PhotoCorner(2104f, 3814f),
+              PhotoCorner(256f, 3814f)),
+          listOf(
+              PhotoCorner(2226f, 634f),
+              PhotoCorner(3700f, 634f),
+              PhotoCorner(3700f, 2510f),
+              PhotoCorner(2226f, 2510f)))
 }

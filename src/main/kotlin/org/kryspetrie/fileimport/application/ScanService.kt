@@ -14,10 +14,10 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
  * Orchestrates photo scan operations.
  *
  * Detects photos within a scanned image, extracts individual photos via perspective correction, and
- * exports them to a destination folder. Detection uses a hybrid approach combining edge-based classical
- * CV (contour tracing + Douglas-Peucker simplification) with ML-based keypoint refinement for
- * precise corners. Domain constraints (max 4 photos, similar dimensions, near-rectangular corners) are
- * applied to filter false positives.
+ * exports them to a destination folder. Detection uses a hybrid approach combining edge-based
+ * classical CV (contour tracing + Douglas-Peucker simplification) with ML-based keypoint refinement
+ * for precise corners. Domain constraints (max 4 photos, similar dimensions, near-rectangular
+ * corners) are applied to filter false positives.
  *
  * @param imageRepository Repository for image metadata storage
  * @param hybridCornerDetector Hybrid detector combining CV region proposals with ML corner

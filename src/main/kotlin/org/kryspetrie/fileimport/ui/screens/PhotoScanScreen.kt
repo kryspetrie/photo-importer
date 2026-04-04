@@ -1,5 +1,7 @@
 package org.kryspetrie.fileimport.ui.screens
 
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -7,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.io.File
 import javax.imageio.ImageIO
@@ -20,6 +24,102 @@ import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.PhotoScanState
 import org.kryspetrie.fileimport.domain.model.PhotoScanState.Step
+
+/**
+ * Animated corner detection loading indicator.
+ *
+ * Creates a fun animation showing corners expanding and contracting, simulating the computer vision
+ * detecting photo boundaries.
+ */
+@Composable
+fun CornerDetectionAnimation(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+  val infiniteTransition = rememberInfiniteTransition(label = "cornerAnimation")
+
+  // Phase 1: Corners expand from center
+  val cornerOffset by
+      infiniteTransition.animateFloat(
+          initialValue = 0f,
+          targetValue = 1f,
+          animationSpec =
+              infiniteRepeatable(
+                  animation = tween(1500, easing = FastOutSlowInEasing),
+                  repeatMode = RepeatMode.Reverse),
+          label = "cornerOffset")
+
+  // Rotation for subtle movement
+  val rotation by
+      infiniteTransition.animateFloat(
+          initialValue = 0f,
+          targetValue = 360f,
+          animationSpec =
+              infiniteRepeatable(
+                  animation = tween(8000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+          label = "rotation")
+
+  // Pulse opacity
+  val opacity by
+      infiniteTransition.animateFloat(
+          initialValue = 0.6f,
+          targetValue = 1f,
+          animationSpec =
+              infiniteRepeatable(
+                  animation = tween(500, easing = FastOutSlowInEasing),
+                  repeatMode = RepeatMode.Reverse),
+          label = "opacity")
+
+  Canvas(modifier = modifier.size(80.dp)) {
+    val centerX = size.width / 2
+    val centerY = size.height / 2
+    val maxOffset = size.minDimension / 2.5f
+    val offset = maxOffset * cornerOffset
+    val cornerSize = 12.dp.toPx()
+
+    // Draw four corners animating outward
+    val corners =
+        listOf(
+            Offset(centerX - offset, centerY - offset), // Top-left
+            Offset(centerX + offset, centerY - offset), // Top-right
+            Offset(centerX + offset, centerY + offset), // Bottom-right
+            Offset(centerX - offset, centerY + offset), // Bottom-left
+        )
+
+    // Draw connecting lines (showing detected boundary)
+    if (cornerOffset > 0.3f) {
+      val lineAlpha = ((cornerOffset - 0.3f) / 0.7f).coerceIn(0f, 1f) * opacity
+      val lineColor = color.copy(alpha = lineAlpha)
+      for (i in corners.indices) {
+        val next = corners[(i + 1) % corners.size]
+        drawLine(
+            color = lineColor,
+            start = corners[i],
+            end = next,
+            strokeWidth = 2.dp.toPx(),
+        )
+      }
+    }
+
+    // Draw corner markers
+    for (corner in corners) {
+      drawCircle(
+          color = color.copy(alpha = opacity),
+          radius = cornerSize / 2,
+          center = corner,
+      )
+    }
+
+    // Center scanning indicator
+    val scanRadius = 6.dp.toPx() + (4.dp.toPx() * cornerOffset)
+    drawCircle(
+        color = color.copy(alpha = opacity * 0.5f),
+        radius = scanRadius,
+        center = Offset(centerX, centerY),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
+    )
+  }
+}
 
 /**
  * Photo Scan Screen.
@@ -124,9 +224,18 @@ fun PhotoScanScreen(
                   modifier = Modifier.fillMaxSize(),
                   verticalArrangement = Arrangement.Center,
                   horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator()
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(loadingMessage)
+                    CornerDetectionAnimation(
+                        modifier = Modifier.size(80.dp), color = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.height(32.dp))
+                    Text(
+                        loadingMessage,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "Detecting photo corners...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }
             }
 
@@ -369,11 +478,12 @@ private suspend fun loadCurrentImage(
   val file = currentImage.file
 
   try {
-    onStatus("Reading ${file.name}...")
+    onStatus("Loading image...")
     val image = ImageIO.read(file)
     if (image != null) {
-      onStatus("Detecting photos...")
+      onStatus("Analyzing image with Computer Vision...")
       val detectedPhotos = scanService.detectPhotos(file.absolutePath)
+      onStatus("Found ${detectedPhotos.size} photo(s)")
       scanState.setCurrentImageDetected(image, detectedPhotos)
     } else {
       onError("Failed to load image: ${file.name}")
@@ -403,8 +513,9 @@ private suspend fun rescanCurrentImage(
   }
 
   try {
-    onStatus("Re-scanning for photos...")
+    onStatus("Re-analyzing with Computer Vision...")
     val detectedPhotos = scanService.detectPhotos(file.absolutePath)
+    onStatus("Found ${detectedPhotos.size} photo(s)")
     scanState.setCurrentImageDetected(currentImageData, detectedPhotos)
   } catch (e: Exception) {
     onError("Error: ${e.message}")

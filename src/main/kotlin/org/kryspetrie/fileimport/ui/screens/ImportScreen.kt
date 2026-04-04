@@ -347,9 +347,16 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
                 }
             images = scanned.map { it.copy(isSelected = true) }
 
-            // For photo scan mode, always show selection dialog first
-            if (scanMode == ScanMode.PHOTO_SCAN) {
+            // For photo scan mode with SELECT mode, show selection dialog
+            if (scanMode == ScanMode.PHOTO_SCAN && mode == ImportMode.SELECT) {
               flowStep = FlowStep.SELECTING
+              return@launch
+            }
+
+            // For photo scan mode with ALL or NEW mode, skip selection and process all
+            if (scanMode == ScanMode.PHOTO_SCAN) {
+              filteredImages = images.toList()
+              flowStep = FlowStep.PHOTO_SCAN
               return@launch
             }
 
@@ -955,42 +962,62 @@ fun ImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit)
           modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
           horizontalArrangement = Arrangement.spacedBy(8.dp),
           verticalAlignment = Alignment.CenterVertically) {
-            Button(
-                onClick = { startFlow(withReview = false, mode = ImportMode.ALL) },
-                enabled = canStart) {
-                  Icon(Icons.Default.PhotoLibrary, null, Modifier.size(16.dp))
-                  Spacer(Modifier.width(6.dp))
-                  Text("Import All")
-                }
-            Button(
-                onClick = { startFlow(withReview = false, mode = ImportMode.NEW) },
-                enabled = canStart,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.secondary,
-                        contentColor = MaterialTheme.colorScheme.onSecondary)) {
-                  Icon(Icons.Default.NewReleases, null, Modifier.size(16.dp))
-                  Spacer(Modifier.width(6.dp))
-                  Text("Import New")
-                }
-            Button(
-                onClick = { startFlow(withReview = false, mode = ImportMode.SELECT) },
-                enabled = canStart,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.tertiary,
-                        contentColor = MaterialTheme.colorScheme.onTertiary)) {
-                  Icon(Icons.Default.CheckCircle, null, Modifier.size(16.dp))
-                  Spacer(Modifier.width(6.dp))
-                  Text("Select & Import")
-                }
-            Spacer(Modifier.weight(1f))
-            OutlinedButton(
-                onClick = { startFlow(withReview = true, mode = importMode) }, enabled = canStart) {
-                  Icon(Icons.Default.Preview, null, Modifier.size(16.dp))
-                  Spacer(Modifier.width(6.dp))
-                  Text("Preview First \u25B8")
-                }
+            // In photo scan mode, show scan buttons
+            if (scanMode == ScanMode.PHOTO_SCAN) {
+              OutlinedButton(
+                  onClick = { startFlow(withReview = false, mode = ImportMode.SELECT) },
+                  enabled = canStart) {
+                    Icon(Icons.Default.CheckBox, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Select Photos")
+                  }
+              Button(
+                  onClick = { startFlow(withReview = false, mode = ImportMode.ALL) },
+                  enabled = canStart) {
+                    Icon(Icons.Default.Scanner, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Scan All")
+                  }
+            } else {
+              // Standard import mode buttons
+              Button(
+                  onClick = { startFlow(withReview = false, mode = ImportMode.ALL) },
+                  enabled = canStart) {
+                    Icon(Icons.Default.PhotoLibrary, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Import All")
+                  }
+              Button(
+                  onClick = { startFlow(withReview = false, mode = ImportMode.NEW) },
+                  enabled = canStart,
+                  colors =
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.secondary,
+                          contentColor = MaterialTheme.colorScheme.onSecondary)) {
+                    Icon(Icons.Default.NewReleases, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Import New")
+                  }
+              Button(
+                  onClick = { startFlow(withReview = false, mode = ImportMode.SELECT) },
+                  enabled = canStart,
+                  colors =
+                      ButtonDefaults.buttonColors(
+                          containerColor = MaterialTheme.colorScheme.tertiary,
+                          contentColor = MaterialTheme.colorScheme.onTertiary)) {
+                    Icon(Icons.Default.CheckCircle, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Select & Import")
+                  }
+              Spacer(Modifier.weight(1f))
+              OutlinedButton(
+                  onClick = { startFlow(withReview = true, mode = importMode) },
+                  enabled = canStart) {
+                    Icon(Icons.Default.Preview, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Preview First \u25B8")
+                  }
+            }
           }
     }
   }

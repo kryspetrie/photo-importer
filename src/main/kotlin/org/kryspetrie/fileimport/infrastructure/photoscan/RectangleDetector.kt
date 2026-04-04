@@ -22,9 +22,6 @@ import kotlin.math.min
  *
  * This approach works best when photos are placed on a solid, contrasting background (e.g., photos
  * scanned on a desk, not embedded in books).
- *
- * For ML-based detection (YOLOv8-Pose), see [YoloKeypointDetector] and [YoloOutputParser]. The ML
- * approach is more robust but requires a model trained on document corners.
  */
 class RectangleDetector(
     private val cannyLow: Int = 50,
