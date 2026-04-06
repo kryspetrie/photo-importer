@@ -10,8 +10,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
 import java.io.File
 import javax.imageio.ImageIO
 import kotlinx.coroutines.CoroutineScope
@@ -32,92 +34,78 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanState.Step
  * detecting photo boundaries.
  */
 @Composable
-fun CornerDetectionAnimation(
-    modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.primary
-) {
-  val infiniteTransition = rememberInfiniteTransition(label = "cornerAnimation")
+fun Loader(modifier: Modifier = Modifier, color: Color = Color(90, 164, 169)) {
+  val infiniteTransition = rememberInfiniteTransition(label = "LoaderTransition")
 
-  // Phase 1: Corners expand from center
-  val cornerOffset by
+  // Master timeline: 0.0f to 1.0f over 1000ms (1 second)
+  val time by
       infiniteTransition.animateFloat(
           initialValue = 0f,
           targetValue = 1f,
           animationSpec =
               infiniteRepeatable(
-                  animation = tween(1500, easing = FastOutSlowInEasing),
-                  repeatMode = RepeatMode.Reverse),
-          label = "cornerOffset")
+                  animation = tween(1000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
+          label = "TimeProgress")
 
-  // Rotation for subtle movement
-  val rotation by
-      infiniteTransition.animateFloat(
-          initialValue = 0f,
-          targetValue = 360f,
-          animationSpec =
-              infiniteRepeatable(
-                  animation = tween(8000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
-          label = "rotation")
+  // l32-1: Controls the expansion of the entire loader
+  val currentSize =
+      when {
+        time <= 0.35f -> lerp(135f, 195f, time / 0.35f) // 0% to 35%: Expand
+        time <= 0.65f -> 195f // 35% to 65%: Hold
+        else -> lerp(195f, 135f, (time - 0.65f) / 0.35f) // 65% to 100%: Contract
+      }
 
-  // Pulse opacity
-  val opacity by
-      infiniteTransition.animateFloat(
-          initialValue = 0.6f,
-          targetValue = 1f,
-          animationSpec =
-              infiniteRepeatable(
-                  animation = tween(500, easing = FastOutSlowInEasing),
-                  repeatMode = RepeatMode.Reverse),
-          label = "opacity")
+  // l32-2: Controls the square shifting. They shift only between 40% and 60% of the loop.
+  val shiftProgress =
+      when {
+        time <= 0.40f -> 0f
+        time <= 0.60f -> (time - 0.40f) / 0.20f
+        else -> 1f
+      }
 
-  Canvas(modifier = modifier.size(80.dp)) {
-    val centerX = size.width / 2
-    val centerY = size.height / 2
-    val maxOffset = size.minDimension / 2.5f
-    val offset = maxOffset * cornerOffset
-    val cornerSize = 12.dp.toPx()
+  // The 8 perimeter positions mapped from the CSS percentages
+  val outerPositions =
+      listOf(
+          Offset(0f, 0f), // Top Left
+          Offset(0f, 0.5f), // Center Left
+          Offset(0f, 1f), // Bottom Left
+          Offset(0.5f, 1f), // Bottom Center
+          Offset(1f, 1f), // Bottom Right
+          Offset(1f, 0.5f), // Center Right
+          Offset(1f, 0f), // Top Right
+          Offset(0.5f, 0f) // Top Center
+          )
 
-    // Draw four corners animating outward
-    val corners =
-        listOf(
-            Offset(centerX - offset, centerY - offset), // Top-left
-            Offset(centerX + offset, centerY - offset), // Top-right
-            Offset(centerX + offset, centerY + offset), // Bottom-right
-            Offset(centerX - offset, centerY + offset), // Bottom-left
-        )
+  Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    Canvas(modifier = Modifier.size(currentSize.dp)) {
+      val dotSize = 48.dp.toPx()
 
-    // Draw connecting lines (showing detected boundary)
-    if (cornerOffset > 0.3f) {
-      val lineAlpha = ((cornerOffset - 0.3f) / 0.7f).coerceIn(0f, 1f) * opacity
-      val lineColor = color.copy(alpha = lineAlpha)
-      for (i in corners.indices) {
-        val next = corners[(i + 1) % corners.size]
-        drawLine(
-            color = lineColor,
-            start = corners[i],
-            end = next,
-            strokeWidth = 2.dp.toPx(),
-        )
+      // CSS background-position calculates percentages based on (Container Size - Item Size)
+      val availableWidth = size.width - dotSize
+      val availableHeight = size.height - dotSize
+
+      // 1. Draw the static center dot (50% 50%)
+      drawRect(
+          color = color,
+          topLeft = Offset(availableWidth * 0.5f, availableHeight * 0.5f),
+          size = Size(dotSize, dotSize))
+
+      // 2. Draw the 8 animated outer dots
+      for (i in 0 until 8) {
+        val start = outerPositions[i]
+        val end = outerPositions[(i + 1) % 8]
+
+        val currentXProgress = lerp(start.x, end.x, shiftProgress)
+        val currentYProgress = lerp(start.y, end.y, shiftProgress)
+
+        drawRect(
+            color = color,
+            topLeft =
+                Offset(
+                    x = currentXProgress * availableWidth, y = currentYProgress * availableHeight),
+            size = Size(dotSize, dotSize))
       }
     }
-
-    // Draw corner markers
-    for (corner in corners) {
-      drawCircle(
-          color = color.copy(alpha = opacity),
-          radius = cornerSize / 2,
-          center = corner,
-      )
-    }
-
-    // Center scanning indicator
-    val scanRadius = 6.dp.toPx() + (4.dp.toPx() * cornerOffset)
-    drawCircle(
-        color = color.copy(alpha = opacity * 0.5f),
-        radius = scanRadius,
-        center = Offset(centerX, centerY),
-        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx()),
-    )
   }
 }
 
@@ -224,7 +212,7 @@ fun PhotoScanScreen(
                   modifier = Modifier.fillMaxSize(),
                   verticalArrangement = Arrangement.Center,
                   horizontalAlignment = Alignment.CenterHorizontally) {
-                    CornerDetectionAnimation(
+                    Loader(
                         modifier = Modifier.size(80.dp), color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(32.dp))
                     Text(
@@ -233,7 +221,7 @@ fun PhotoScanScreen(
                         color = MaterialTheme.colorScheme.onSurface)
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Detecting photo corners...",
+                        "Analyzing with Computer Vision...",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                   }

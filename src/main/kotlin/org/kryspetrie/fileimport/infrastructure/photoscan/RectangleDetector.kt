@@ -28,8 +28,8 @@ class RectangleDetector(
     private val cannyHigh: Int = 150,
     private val minArea: Int = 2000,
     private val maxAspectRatio: Float = 5.0f,
-    private val minAngleDiff: Float = 70f,
-    private val maxAngleDiff: Float = 110f,
+    private val minAngleDiff: Float = 60f,
+    private val maxAngleDiff: Float = 120f,
     private val minQuadRatio: Float = 0.3f,
     /**
      * Maximum image dimension (width or height) to process. Large images are downsampled for memory
@@ -504,6 +504,28 @@ class RectangleDetector(
     return max(0.0, 1.0 - avgDev / 90.0).toFloat()
   }
 
+  /**
+   * Validates that all four corners of a quadrilateral have angles between 60° and 120°.
+   *
+   * Photos on a flat surface should have corners very close to 90°. Allowing 60-120° range accounts
+   * for significant perspective distortion, camera angle, and edge detection imprecision while
+   * still filtering out obviously non-rectangular shapes (e.g., triangles, pentagons, highly skewed
+   * quads).
+   */
+  private fun hasValidAngles(corners: List<Point>): Boolean {
+    if (corners.size != 4) return false
+    for (i in corners.indices) {
+      val prev = corners[(i - 1 + 4) % 4]
+      val curr = corners[i]
+      val next = corners[(i + 1) % 4]
+      val angle = abs(angleBetween(prev, curr, next))
+      if (angle < minAngleDiff || angle > maxAngleDiff) {
+        return false
+      }
+    }
+    return true
+  }
+
   // ===== Step 6: Filtering =====
 
   private fun filterQuadrilateral(quad: DetectedQuadrilateral, expectedCount: Int?): Boolean {
@@ -514,6 +536,9 @@ class RectangleDetector(
 
     // Area bounds
     if (quad.area < minArea) return false
+
+    // Angle validation: all corners must be between 70° and 110°
+    if (!hasValidAngles(quad.corners)) return false
 
     // Quadrilateral quality (angles close to 90°)
     if (quadrilateralQuality(quad.corners) < minQuadRatio) return false
