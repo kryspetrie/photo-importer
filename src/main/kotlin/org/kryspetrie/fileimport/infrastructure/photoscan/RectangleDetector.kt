@@ -17,8 +17,17 @@ import kotlin.math.min
  * 3. **Morphological closing** — fills small gaps in detected edges
  * 4. **Contour extraction** — finds boundary chains using a march-based algorithm
  * 5. **Polygon approximation** — simplifies contours to 4-vertex quadrilaterals
- * 6. **Filtering** — removes non-rectangular shapes based on angle, aspect ratio, area
+ * 6. **Filtering** — removes non-rectangular shapes based on angle, aspect ratio, area, and
+ *    color-edge validation
  * 7. **Non-maximum suppression** — removes overlapping detections
+ *
+ * ## Color-Edge Filtering
+ *
+ * The detector uses a two-stage filtering approach:
+ * 1. **Geometric filtering** — removes quads based on aspect ratio, area, and corner angles
+ * 2. **Color-edge validation** — verifies that quad edges have significant color differences from
+ *    the background. This catches photos that have similar luminance to the background but
+ *    different colors (e.g., a blue photo on a gray desk).
  *
  * This approach works best when photos are placed on a solid, contrasting background (e.g., photos
  * scanned on a desk, not embedded in books).
@@ -78,6 +87,10 @@ class RectangleDetector(
             }
             .filter { quad -> filterQuadrilateral(quad, workExpectedCount) }
             .toMutableList()
+
+    // Step 5b: Post-filter quads using color-distance edge detection
+    // This catches photos with similar luminance to background but different colors
+    val filteredQuads = filterByColorEdge(workImage, quads)
 
     // Step 6: Sort by area (largest first) and remove overlapping ones
     quads.sortByDescending { it.area }
@@ -550,6 +563,90 @@ class RectangleDetector(
     }
 
     return true
+  }
+
+  // ===== Step 5b: Color-edge post-filtering =====
+
+  /**
+   * Post-filters detected quadrilaterals using color-distance edge detection.
+   *
+   * For each detected quad, checks if the edges of the region have significant color differences
+   * from the background. This catches photos that have similar luminance to the background but
+   * different colors.
+   */
+  private fun filterByColorEdge(
+      image: BufferedImage,
+      quads: List<DetectedQuadrilateral>
+  ): List<DetectedQuadrilateral> {
+    val width = image.width
+    val height = image.height
+
+    // Estimate background color from border pixels
+    val border = 15.coerceAtMost(min(width, height) / 4)
+    val samplesR = mutableListOf<Float>()
+    val samplesG = mutableListOf<Float>()
+    val samplesB = mutableListOf<Float>()
+
+    for (y in 0 until height) {
+      for (x in 0 until width) {
+        if (y < border || y >= height - border || x < border || x >= width - border) {
+          val rgb = image.getRGB(x, y)
+          samplesR.add(((rgb shr 16) and 255).toFloat())
+          samplesG.add(((rgb shr 8) and 255).toFloat())
+          samplesB.add((rgb and 255).toFloat())
+        }
+      }
+    }
+
+    val bgR = samplesR.sorted()[samplesR.size / 2]
+    val bgG = samplesG.sorted()[samplesG.size / 2]
+    val bgB = samplesB.sorted()[samplesB.size / 2]
+
+    // Count edge pixels along each quad's perimeter that have significant color difference
+    val threshold = 35f
+    val minEdgePixelRatio = 0.3f // At least 30% of edge pixels should show color difference
+
+    return quads.filter { quad ->
+      val corners = quad.corners
+      if (corners.size != 4) return@filter false
+
+      // Check each edge of the quadrilateral
+      var totalEdgePixels = 0
+      var colorEdgePixels = 0
+
+      for (i in corners.indices) {
+        val start = corners[i]
+        val end = corners[(i + 1) % 4]
+
+        // Sample pixels along the edge
+        val dx = end.x - start.x
+        val dy = end.y - start.y
+        val edgeLength = kotlin.math.sqrt((dx * dx + dy * dy).toDouble()).toInt().coerceAtLeast(1)
+
+        for (step in 0 until edgeLength) {
+          val t = step.toFloat() / edgeLength
+          val x = (start.x + t * dx).toInt().coerceIn(0, width - 1)
+          val y = (start.y + t * dy).toInt().coerceIn(0, height - 1)
+
+          totalEdgePixels++
+
+          val rgb = image.getRGB(x, y)
+          val r = ((rgb shr 16) and 255).toFloat()
+          val g = ((rgb shr 8) and 255).toFloat()
+          val b = (rgb and 255).toFloat()
+
+          // Check if this edge pixel differs significantly from background in any channel
+          if (kotlin.math.abs(r - bgR) > threshold ||
+              kotlin.math.abs(g - bgG) > threshold ||
+              kotlin.math.abs(b - bgB) > threshold) {
+            colorEdgePixels++
+          }
+        }
+      }
+
+      // Keep quad if enough edge pixels show color difference (it's a real photo)
+      totalEdgePixels > 0 && colorEdgePixels.toFloat() / totalEdgePixels >= minEdgePixelRatio
+    }
   }
 
   // ===== Step 7: Non-maximum suppression =====
