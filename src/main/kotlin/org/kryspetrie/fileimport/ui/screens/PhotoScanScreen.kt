@@ -13,7 +13,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import java.io.File
 import javax.imageio.ImageIO
 import kotlinx.coroutines.CoroutineScope
@@ -82,8 +81,7 @@ fun Loader(modifier: Modifier = Modifier, color: Color = Color(90, 164, 169)) {
     drawRect(
         color = color,
         topLeft =
-            Offset(
-                x = offsetX + (availableWidth * 0.5f), y = offsetY + (availableHeight * 0.5f)),
+            Offset(x = offsetX + (availableWidth * 0.5f), y = offsetY + (availableHeight * 0.5f)),
         size = Size(dotSize, dotSize))
 
     // The 8 perimeter positions mapped from the CSS
