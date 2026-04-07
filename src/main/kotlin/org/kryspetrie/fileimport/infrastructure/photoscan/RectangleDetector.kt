@@ -44,7 +44,15 @@ class RectangleDetector(
      * Maximum image dimension (width or height) to process. Large images are downsampled for memory
      * efficiency.
      */
-    private val maxImageDimension: Int = 1000
+    private val maxImageDimension: Int = 1000,
+    /** Gamma correction (1.0 = no change, <1 brightens, >1 darkens). */
+    private val gamma: Double = 1.4,
+    /** Block size for adaptive thresholding (must be odd, >= 3). */
+    private val adaptiveBlockSize: Int = 31,
+    /** Constant subtracted from mean in adaptive thresholding. */
+    private val adaptiveC: Int = 10,
+    /** Kernel size for morphological closing (>= 3). */
+    private val morphKernelSize: Int = 5
 ) {
 
   /**
@@ -70,11 +78,14 @@ class RectangleDetector(
     // Step 1: Grayscale
     val gray = toGrayscale(workImage)
 
+    // Step 1b: Apply gamma correction if needed
+    val adjusted = if (gamma != 1.0) applyGamma(gray) else gray
+
     // Step 2: Adaptive threshold
-    val binary = adaptiveThreshold(gray)
+    val binary = adaptiveThreshold(adjusted, adaptiveBlockSize, adaptiveC)
 
     // Step 3: Morphological closing to bridge small gaps
-    val closed = morphologicalClose(binary)
+    val closed = morphologicalClose(binary, morphKernelSize)
 
     // Step 4: Find contours
     val contours = findContours(closed)
@@ -137,6 +148,29 @@ class RectangleDetector(
     g.drawImage(image, 0, 0, null)
     g.dispose()
     return gray
+  }
+
+  // ===== Step 1b: Gamma correction =====
+
+  private fun applyGamma(gray: BufferedImage): BufferedImage {
+    if (gamma == 1.0) return gray
+    val w = gray.width
+    val h = gray.height
+    val result = BufferedImage(w, h, BufferedImage.TYPE_BYTE_GRAY)
+    val src = gray.getRaster()
+    val dst = result.getRaster()
+    // Precompute lookup table
+    val lut = IntArray(256)
+    val invGamma = 1.0 / gamma
+    for (i in 0..255) {
+      lut[i] = (255 * Math.pow(i / 255.0, invGamma)).coerceIn(0.0, 255.0).toInt()
+    }
+    for (y in 0 until h) {
+      for (x in 0 until w) {
+        dst.setSample(x, y, 0, lut[src.getSample(x, y, 0)])
+      }
+    }
+    return result
   }
 
   // ===== Step 2: Adaptive threshold (mean-based) =====
@@ -332,29 +366,41 @@ class RectangleDetector(
   ): DetectedQuadrilateral? {
     if (contour.size < 4) return null
 
-    // Douglas-Peucker simplification
-    val simplified = douglasPeucker(contour, 3.0)
-    if (simplified.size < 4) return null
+    // Try multiple epsilon values for Douglas-Peucker
+    var bestQuad: List<Point>? = null
+    var bestQuality = 0f
 
-    // If we have more than 4 points, try to merge and extract best 4
-    val quadPoints = extractBestQuad(simplified)
-    if (quadPoints.size != 4) return null
+    for (epsilon in listOf(1.0, 2.0, 3.0, 4.0, 5.0, 7.0)) {
+      val simplified = douglasPeucker(contour, epsilon)
+      if (simplified.size < 4) continue
 
-    // Sort corners: top-left, top-right, bottom-right, bottom-left
-    val sorted = sortCorners(quadPoints)
+      // If we have more than 4 points, try to merge and extract best 4
+      val quadPoints = extractBestQuad(simplified)
+      if (quadPoints.size != 4) continue
 
-    val area = polygonArea(sorted)
-    if (area < minArea) return null
+      // Sort corners: top-left, top-right, bottom-right, bottom-left
+      val sorted = sortCorners(quadPoints)
 
-    // Check quadrilateral quality
-    val quality = quadrilateralQuality(sorted)
-    if (quality < minQuadRatio) return null
+      val area = polygonArea(sorted)
+      if (area < minArea) continue
 
+      // Check quadrilateral quality
+      val quality = quadrilateralQuality(sorted)
+      if (quality > bestQuality) {
+        bestQuality = quality
+        bestQuad = sorted
+      }
+    }
+
+    if (bestQuad == null) return null
+    if (bestQuality < minQuadRatio) return null
+
+    val area = polygonArea(bestQuad)
     return DetectedQuadrilateral(
-        corners = sorted,
+        corners = bestQuad,
         area = area,
-        centroid = centroid(sorted),
-        aspectRatio = aspectRatio(sorted))
+        centroid = centroid(bestQuad),
+        aspectRatio = aspectRatio(bestQuad))
   }
 
   private fun douglasPeucker(points: List<Point>, epsilon: Double): List<Point> {
