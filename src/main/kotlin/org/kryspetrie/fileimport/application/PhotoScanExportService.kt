@@ -57,6 +57,15 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
       val errors: List<String> = emptyList()
   )
 
+  /** Result of exporting a single photo. */
+  data class SingleExportResult(
+      val success: Boolean,
+      val destinationPath: String,
+      val width: Int,
+      val height: Int,
+      val error: String? = null
+  )
+
   /** Information about an exported file. */
   data class ExportedFile(
       val sourceFile: File,
@@ -139,6 +148,60 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
     }
 
     return ExportResult(success = errors.isEmpty(), exportedFiles = exportedFiles, errors = errors)
+  }
+
+  /**
+   * Exports a single photo with the given configuration.
+   *
+   * @param sourceImage The source scanned image
+   * @param detectedPhoto The photo to export with corner positions and configuration
+   * @param destinationPath Destination folder for the exported image
+   * @param baseFileName Base filename (without extension)
+   * @return SingleExportResult with the result of the export
+   */
+  fun exportSinglePhoto(
+      sourceImage: BufferedImage,
+      detectedPhoto: DetectedPhoto,
+      destinationPath: String,
+      baseFileName: String
+  ): SingleExportResult {
+    return try {
+      // Crop and correct the image based on photo settings
+      val correctedImage =
+          if (detectedPhoto.applyPerspectiveCorrection) {
+            perspectiveService.correctPerspective(sourceImage, detectedPhoto)
+          } else {
+            cropAxisAligned(sourceImage, detectedPhoto)
+          }
+
+      // Apply rotation if needed
+      val finalImage =
+          if (detectedPhoto.rotation != RotationAngle.NONE) {
+            rotateImage(correctedImage, detectedPhoto.rotation)
+          } else {
+            correctedImage
+          }
+
+      // Resolve filename conflicts
+      val resolvedPath = resolveFilenameConflict(File(destinationPath), "$baseFileName.jpg")
+      val outputFile = File(resolvedPath)
+
+      // Write the image with metadata
+      writeImageWithMetadata(finalImage, outputFile, detectedPhoto.configuration)
+
+      SingleExportResult(
+          success = true,
+          destinationPath = resolvedPath,
+          width = finalImage.width,
+          height = finalImage.height)
+    } catch (e: Exception) {
+      SingleExportResult(
+          success = false,
+          destinationPath = "",
+          width = 0,
+          height = 0,
+          error = e.message)
+    }
   }
 
   /**

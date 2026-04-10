@@ -6,17 +6,14 @@ import kotlin.math.hypot
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 
 /**
  * Debug test to understand what's happening with GT[1] detection.
  *
- * The original detector finds:
- *   Photo[0]: (240,1816), (1748,1544), (2028,3100), (584,3804)
+ * The original detector finds: Photo[0]: (240,1816), (1748,1544), (2028,3100), (584,3804)
  *
- * But GT[1] ground truth is:
- *   TL(256,1560), TR(2104,1560), BR(2104,3814), BL(256,3814)
+ * But GT[1] ground truth is: TL(256,1560), TR(2104,1560), BR(2104,3814), BL(256,3814)
  *
  * These corners are completely different! The detector is finding wrong contours entirely.
  */
@@ -64,25 +61,25 @@ class DebugGT1DetectionTest {
     val gt1CentroidX = 1180.0
     val gt1CentroidY = 2687.0
 
-    val sortedResults = results.sortedBy {
-      hypot(it.centroid.x - gt1CentroidX, it.centroid.y - gt1CentroidY)
-    }
+    val sortedResults =
+        results.sortedBy { hypot(it.centroid.x - gt1CentroidX, it.centroid.y - gt1CentroidY) }
 
     if (sortedResults.isNotEmpty()) {
       val best = sortedResults[0]
       println("\nClosest to GT[1]:")
       println("  Detected centroid: (${best.centroid.x}, ${best.centroid.y})")
-      println("  Distance: ${"%.0f".format(hypot(best.centroid.x - gt1CentroidX, best.centroid.y - gt1CentroidY))}px")
+      println(
+          "  Distance: ${"%.0f".format(hypot(best.centroid.x - gt1CentroidX, best.centroid.y - gt1CentroidY))}px")
 
       val sorted = sortCorners(best.corners)
       println("  Sorted corners: ${sorted.map { "(${it.x},${it.y})" }}")
 
-      val gt1 = listOf(
-        PhotoCorner(256f, 1560f),
-        PhotoCorner(2104f, 1560f),
-        PhotoCorner(2104f, 3814f),
-        PhotoCorner(256f, 3814f)
-      )
+      val gt1 =
+          listOf(
+              PhotoCorner(256f, 1560f),
+              PhotoCorner(2104f, 1560f),
+              PhotoCorner(2104f, 3814f),
+              PhotoCorner(256f, 3814f))
       val sortedGT = sortCornersGT(gt1)
 
       println("\n  Corner-by-corner error analysis:")
@@ -90,17 +87,19 @@ class DebugGT1DetectionTest {
         val det = sorted[i]
         val gt = sortedGT[i]
         val err = hypot((det.x - gt.x).toDouble(), (det.y - gt.y).toDouble())
-        val label = when(i) {
-          0 -> "TL"
-          1 -> "TR"
-          2 -> "BR"
-          else -> "BL"
-        }
-        println("    $label: detected (${det.x}, ${det.y}), GT (${gt.x.toInt()}, ${gt.y.toInt()}), error: ${"%.1f".format(err)}px")
+        val label =
+            when (i) {
+              0 -> "TL"
+              1 -> "TR"
+              2 -> "BR"
+              else -> "BL"
+            }
+        println(
+            "    $label: detected (${det.x}, ${det.y}), GT (${gt.x.toInt()}, ${gt.y.toInt()}), error: ${"%.1f".format(err)}px")
 
         // Is the detected corner inside or outside GT?
-        val isInside = det.x >= gt.x - 100 && det.x <= gt.x + 100 &&
-            det.y >= gt.y - 100 && det.y <= gt.y + 100
+        val isInside =
+            det.x >= gt.x - 100 && det.x <= gt.x + 100 && det.y >= gt.y - 100 && det.y <= gt.y + 100
         println("      -> ${if (isInside) "WITHIN 100px of GT" else "WRONG LOCATION"}")
       }
     }
@@ -112,12 +111,12 @@ class DebugGT1DetectionTest {
 
     val gammas = listOf(0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0)
 
-    val gt1 = listOf(
-        PhotoCorner(256f, 1560f),
-        PhotoCorner(2104f, 1560f),
-        PhotoCorner(2104f, 3814f),
-        PhotoCorner(256f, 3814f)
-    )
+    val gt1 =
+        listOf(
+            PhotoCorner(256f, 1560f),
+            PhotoCorner(2104f, 1560f),
+            PhotoCorner(2104f, 3814f),
+            PhotoCorner(256f, 3814f))
     val sortedGT = sortCornersGT(gt1)
 
     for (gamma in gammas) {
@@ -128,19 +127,20 @@ class DebugGT1DetectionTest {
       val gt1CentroidX = 1180.0
       val gt1CentroidY = 2687.0
 
-      val best = results.minByOrNull {
-        hypot(it.centroid.x - gt1CentroidX, it.centroid.y - gt1CentroidY)
-      }
+      val best =
+          results.minByOrNull { hypot(it.centroid.x - gt1CentroidX, it.centroid.y - gt1CentroidY) }
 
       if (best != null) {
         val sorted = sortCorners(best.corners)
-        val errors = sorted.mapIndexed { i, p ->
-          hypot((p.x - sortedGT[i].x).toDouble(), (p.y - sortedGT[i].y).toDouble())
-        }
+        val errors =
+            sorted.mapIndexed { i, p ->
+              hypot((p.x - sortedGT[i].x).toDouble(), (p.y - sortedGT[i].y).toDouble())
+            }
         val avgErr = errors.average()
         val maxErr = errors.maxOrNull() ?: 0.0
 
-        println("Gamma=$gamma: avgErr=${"%.1f".format(avgErr)}px, maxErr=${"%.1f".format(maxErr)}px")
+        println(
+            "Gamma=$gamma: avgErr=${"%.1f".format(avgErr)}px, maxErr=${"%.1f".format(maxErr)}px")
         println("  Detected: ${sorted.map { "(${it.x},${it.y})" }}")
       } else {
         println("Gamma=$gamma: NO MATCH")

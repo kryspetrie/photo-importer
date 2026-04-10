@@ -3,11 +3,9 @@ package org.kryspetrie.fileimport.infrastructure.photoscan
 import java.awt.image.BufferedImage
 import kotlin.math.abs
 import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 import kotlin.math.sqrt
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
@@ -31,9 +29,7 @@ class ImprovedEdgeLineCornerDetector(
   /** Mutable target count. */
   var targetPhotoCount: Int? = null
 
-  /**
-   * Detects photo regions and corners using improved edge-line intersection.
-   */
+  /** Detects photo regions and corners using improved edge-line intersection. */
   fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
     val imageArea = image.width.toFloat() * image.height.toFloat()
 
@@ -52,9 +48,10 @@ class ImprovedEdgeLineCornerDetector(
     val candidates =
         if (notWholeImage.isEmpty()) {
           raw.filter { quad ->
-            val b = quadBounds(quad)
-            b.width > 50 && b.height > 50
-          }.take(4)
+                val b = quadBounds(quad)
+                b.width > 50 && b.height > 50
+              }
+              .take(4)
         } else {
           notWholeImage
         }
@@ -81,10 +78,11 @@ class ImprovedEdgeLineCornerDetector(
     }
   }
 
-  /**
-   * Finds corners by analyzing edge patterns around expected positions.
-   */
-  private fun findCornersByEdgeAnalysis(image: BufferedImage, quad: DetectedQuadrilateral): List<Point> {
+  /** Finds corners by analyzing edge patterns around expected positions. */
+  private fun findCornersByEdgeAnalysis(
+      image: BufferedImage,
+      quad: DetectedQuadrilateral
+  ): List<Point> {
     val cx = quad.centroid.x
     val cy = quad.centroid.y
 
@@ -102,10 +100,18 @@ class ImprovedEdgeLineCornerDetector(
     val searchRadius = max(estimatedWidth, estimatedHeight) / 2
 
     // Find corners by edge analysis
-    val topLeft = findCornerByGradientAnalysis(image, Point(cx - estimatedWidth / 2, cy - estimatedHeight / 2), searchRadius, "TL")
-    val topRight = findCornerByGradientAnalysis(image, Point(cx + estimatedWidth / 2, cy - estimatedHeight / 2), searchRadius, "TR")
-    val bottomRight = findCornerByGradientAnalysis(image, Point(cx + estimatedWidth / 2, cy + estimatedHeight / 2), searchRadius, "BR")
-    val bottomLeft = findCornerByGradientAnalysis(image, Point(cx - estimatedWidth / 2, cy + estimatedHeight / 2), searchRadius, "BL")
+    val topLeft =
+        findCornerByGradientAnalysis(
+            image, Point(cx - estimatedWidth / 2, cy - estimatedHeight / 2), searchRadius, "TL")
+    val topRight =
+        findCornerByGradientAnalysis(
+            image, Point(cx + estimatedWidth / 2, cy - estimatedHeight / 2), searchRadius, "TR")
+    val bottomRight =
+        findCornerByGradientAnalysis(
+            image, Point(cx + estimatedWidth / 2, cy + estimatedHeight / 2), searchRadius, "BR")
+    val bottomLeft =
+        findCornerByGradientAnalysis(
+            image, Point(cx - estimatedWidth / 2, cy + estimatedHeight / 2), searchRadius, "BL")
 
     // Compute actual detected corners centroid
     val detCenterX = (topLeft.x + topRight.x + bottomRight.x + bottomLeft.x) / 4.0
@@ -115,19 +121,17 @@ class ImprovedEdgeLineCornerDetector(
     val shiftX = cx - detCenterX
     val shiftY = cy - detCenterY
 
-    val shifted = listOf(
-        Point(topLeft.x + (shiftX * 0.3).toInt(), topLeft.y + (shiftY * 0.3).toInt()),
-        Point(topRight.x + (shiftX * 0.3).toInt(), topRight.y + (shiftY * 0.3).toInt()),
-        Point(bottomRight.x + (shiftX * 0.3).toInt(), bottomRight.y + (shiftY * 0.3).toInt()),
-        Point(bottomLeft.x + (shiftX * 0.3).toInt(), bottomLeft.y + (shiftY * 0.3).toInt())
-    )
+    val shifted =
+        listOf(
+            Point(topLeft.x + (shiftX * 0.3).toInt(), topLeft.y + (shiftY * 0.3).toInt()),
+            Point(topRight.x + (shiftX * 0.3).toInt(), topRight.y + (shiftY * 0.3).toInt()),
+            Point(bottomRight.x + (shiftX * 0.3).toInt(), bottomRight.y + (shiftY * 0.3).toInt()),
+            Point(bottomLeft.x + (shiftX * 0.3).toInt(), bottomLeft.y + (shiftY * 0.3).toInt()))
 
     return validateAndOrderCorners(shifted)
   }
 
-  /**
-   * Finds a corner by analyzing local gradient patterns.
-   */
+  /** Finds a corner by analyzing local gradient patterns. */
   private fun findCornerByGradientAnalysis(
       image: BufferedImage,
       expected: Point,
@@ -146,16 +150,18 @@ class ImprovedEdgeLineCornerDetector(
     var sumW = 0.0
 
     // Also track edge direction histogram
-    val hVotes = IntArray(360)  // 1-degree bins for edge direction
+    val hVotes = IntArray(360) // 1-degree bins for edge direction
     val vVotes = IntArray(360)
 
     for (y in y1 until y2) {
       for (x in x1 until x2) {
         // Sobel gradient
-        val gx = luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
-            luminance(image.getRGB(max(0, x - 1), y))
-        val gy = luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
-            luminance(image.getRGB(x, max(0, y - 1)))
+        val gx =
+            luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
+                luminance(image.getRGB(max(0, x - 1), y))
+        val gy =
+            luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
+                luminance(image.getRGB(x, max(0, y - 1)))
         val mag = sqrt(gx * gx + gy * gy)
 
         if (mag > 30) {
@@ -176,7 +182,7 @@ class ImprovedEdgeLineCornerDetector(
 
           // Weight by distance to expected corner (prefer closer points)
           val dist = hypot((x - expected.x).toDouble(), (y - expected.y).toDouble())
-          val weight = mag / (dist + 5)  // +5 to prevent division issues
+          val weight = mag / (dist + 5) // +5 to prevent division issues
 
           sumX += x * weight
           sumY += y * weight
@@ -218,9 +224,7 @@ class ImprovedEdgeLineCornerDetector(
     return Point(cornerX, cornerY)
   }
 
-  /**
-   * Finds the peak in a vote array.
-   */
+  /** Finds the peak in a vote array. */
   private fun findPeak(votes: IntArray): Int {
     var maxVotes = 0
     var maxIdx = 0
@@ -233,9 +237,7 @@ class ImprovedEdgeLineCornerDetector(
     return maxIdx
   }
 
-  /**
-   * Validates and orders corners to TL, TR, BR, BL.
-   */
+  /** Validates and orders corners to TL, TR, BR, BL. */
   private fun validateAndOrderCorners(corners: List<Point>): List<Point> {
     if (corners.size != 4) return corners
 
@@ -325,8 +327,11 @@ class ImprovedEdgeLineCornerDetector(
       val maxX: Int,
       val maxY: Int,
   ) {
-    val width get() = maxX - minX
-    val height get() = maxY - minY
+    val width
+      get() = maxX - minX
+
+    val height
+      get() = maxY - minY
   }
 
   data class Point(val x: Int, val y: Int)

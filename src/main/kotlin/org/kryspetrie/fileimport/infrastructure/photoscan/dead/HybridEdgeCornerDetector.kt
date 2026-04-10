@@ -119,9 +119,7 @@ class HybridEdgeCornerDetector(
     }
   }
 
-  /**
-   * Detects interest points using BoofCV Shi-Tomasi detector on a downsampled image.
-   */
+  /** Detects interest points using BoofCV Shi-Tomasi detector on a downsampled image. */
   private fun detectInterestPoints(image: BufferedImage): List<InterestPoint> {
     val (workImage, scale) = downsampleForDetection(image)
     val width = workImage.width
@@ -141,7 +139,13 @@ class HybridEdgeCornerDetector(
     }
 
     // Detect corners
-    featureDetector.process(gray, GrayS16(width, height), GrayS16(width, height), GrayS16(width, height), GrayS16(width, height), GrayS16(width, height))
+    featureDetector.process(
+        gray,
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height))
 
     val points = mutableListOf<InterestPoint>()
     val maximums = featureDetector.getMaximums()
@@ -150,16 +154,15 @@ class HybridEdgeCornerDetector(
       val pt = maximums.get(i)
       // Scale is not directly available, use a default
       // Convert back to original scale
-      points.add(InterestPoint((pt.x.toInt() / scale).toInt(), (pt.y.toInt() / scale).toInt(), 5f / scale))
+      points.add(
+          InterestPoint((pt.x.toInt() / scale).toInt(), (pt.y.toInt() / scale).toInt(), 5f / scale))
     }
 
     // Sort by scale (stronger corners have larger scale)
     return points.sortedByDescending { it.scale }
   }
 
-  /**
-   * Downsamples image for corner detection to reduce memory usage.
-   */
+  /** Downsamples image for corner detection to reduce memory usage. */
   private fun downsampleForDetection(image: BufferedImage): Pair<BufferedImage, Float> {
     if (image.width <= maxImageDimension && image.height <= maxImageDimension) {
       return image to 1.0f
@@ -173,9 +176,7 @@ class HybridEdgeCornerDetector(
     return resized to (1.0f / scale)
   }
 
-  /**
-   * Refines corner positions using detected interest points and local edge analysis.
-   */
+  /** Refines corner positions using detected interest points and local edge analysis. */
   private fun refineCornersWithInterestPoints(
       image: BufferedImage,
       quad: DetectedQuadrilateral,
@@ -198,19 +199,20 @@ class HybridEdgeCornerDetector(
     return validateAndOrderCorners(refined)
   }
 
-  /**
-   * Refines a corner using nearby interest points and edge analysis.
-   */
+  /** Refines a corner using nearby interest points and edge analysis. */
   private fun refineCornerWithInterestPoints(
       roughCorner: Point,
       interestPoints: List<InterestPoint>,
       image: BufferedImage
   ): Point {
     // Find interest points within the search radius
-    val nearby = interestPoints.filter {
-      val dist = hypot((it.x - roughCorner.x).toDouble(), (it.y - roughCorner.y).toDouble())
-      dist <= roiSearchRadius
-    }.take(maxFeaturesPerCorner)
+    val nearby =
+        interestPoints
+            .filter {
+              val dist = hypot((it.x - roughCorner.x).toDouble(), (it.y - roughCorner.y).toDouble())
+              dist <= roiSearchRadius
+            }
+            .take(maxFeaturesPerCorner)
 
     if (nearby.isNotEmpty()) {
       // Weight by scale and compute weighted average
@@ -220,7 +222,7 @@ class HybridEdgeCornerDetector(
 
       for (point in nearby) {
         val dist = hypot((point.x - roughCorner.x).toDouble(), (point.y - roughCorner.y).toDouble())
-        val weight = point.scale / (dist + 1.0)  // Scale weighted by inverse distance
+        val weight = point.scale / (dist + 1.0) // Scale weighted by inverse distance
         sumX += point.x * weight
         sumY += point.y * weight
         sumW += weight
@@ -236,8 +238,7 @@ class HybridEdgeCornerDetector(
 
         return Point(
             (roughCorner.x + offsetX).coerceIn(0, image.width - 1),
-            (roughCorner.y + offsetY).coerceIn(0, image.height - 1)
-        )
+            (roughCorner.y + offsetY).coerceIn(0, image.height - 1))
       }
     }
 
@@ -245,9 +246,7 @@ class HybridEdgeCornerDetector(
     return refineSingleCornerEdges(image, roughCorner)
   }
 
-  /**
-   * Refines a single corner using local edge analysis.
-   */
+  /** Refines a single corner using local edge analysis. */
   private fun refineSingleCornerEdges(image: BufferedImage, roughCorner: Point): Point {
     val imgWidth = image.width
     val imgHeight = image.height
@@ -323,13 +322,10 @@ class HybridEdgeCornerDetector(
 
     return Point(
         (roughCorner.x + offsetX).coerceIn(0, imgWidth - 1),
-        (roughCorner.y + offsetY).coerceIn(0, imgHeight - 1)
-    )
+        (roughCorner.y + offsetY).coerceIn(0, imgHeight - 1))
   }
 
-  /**
-   * Finds the peak position in a vote array, starting from the center.
-   */
+  /** Finds the peak position in a vote array, starting from the center. */
   private fun findPeak(votes: IntArray, center: Int): Int {
     if (votes.isEmpty()) return center
 
@@ -358,9 +354,7 @@ class HybridEdgeCornerDetector(
     return 0.299f * r + 0.587f * g + 0.114f * b
   }
 
-  /**
-   * Validates and reorders corners to ensure TL, TR, BR, BL order.
-   */
+  /** Validates and reorders corners to ensure TL, TR, BR, BL order. */
   private fun validateAndOrderCorners(corners: List<Point>): List<Point> {
     if (corners.size != 4) return corners
 
@@ -376,9 +370,7 @@ class HybridEdgeCornerDetector(
     return listOf(topLeft, topRight, bottomRight, bottomLeft)
   }
 
-  /**
-   * Sorts corners into TL, TR, BR, BL order.
-   */
+  /** Sorts corners into TL, TR, BR, BL order. */
   private fun sortCorners(corners: List<RectangleDetector.Point>): List<Point> {
     if (corners.size != 4) return corners.map { Point(it.x, it.y) }
     val sortedList = corners.sortedBy { it.x + it.y }
@@ -389,8 +381,7 @@ class HybridEdgeCornerDetector(
         Point(topLeft.x, topLeft.y),
         Point(remaining[0].x, remaining[0].y),
         Point(bottomRight.x, bottomRight.y),
-        Point(remaining[1].x, remaining[1].y)
-    )
+        Point(remaining[1].x, remaining[1].y))
   }
 
   private fun quadBounds(quad: DetectedQuadrilateral): AaBounds {

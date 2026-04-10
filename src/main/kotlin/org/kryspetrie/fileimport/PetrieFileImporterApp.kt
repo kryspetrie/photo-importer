@@ -13,6 +13,7 @@ import org.koin.core.context.startKoin
 import org.kryspetrie.fileimport.di.appModule
 import org.kryspetrie.fileimport.domain.model.AppTheme
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
+import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.ui.PetrieFileImporterApp
 import org.kryspetrie.fileimport.ui.createAppIcon
 
@@ -117,6 +118,9 @@ fun main(args: Array<String>) {
     // Changes to this state trigger recomposition of dependent UI
     val currentSettings = mutableStateOf(settings)
 
+    // Get the application logger
+    val appLogger: AppLogger = org.koin.core.context.GlobalContext.get().get()
+
     // Callback to persist settings changes
     // Called when user changes theme or other persisted settings
     // Runs coroutine to save settings asynchronously, then updates state
@@ -157,7 +161,12 @@ fun main(args: Array<String>) {
                     onSettingsChange(currentSettings.value.copy(theme = AppTheme.SYSTEM))
                   })
             }
-            Menu("Help") { Item("About $APP_TITLE", onClick = {}) }
+            Menu("Help") {
+              Item("View Log File") {
+                appLogger.openLogFileWithSystemViewer()
+              }
+              Item("About $APP_TITLE", onClick = {})
+            }
           }
 
           // Render the main application UI

@@ -4,7 +4,6 @@ import java.awt.image.BufferedImage
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -32,9 +31,7 @@ class EdgeLineIntersectionCornerDetector(
   /** Mutable target count. */
   var targetPhotoCount: Int? = null
 
-  /**
-   * Detects photo regions and corners using edge-line intersection.
-   */
+  /** Detects photo regions and corners using edge-line intersection. */
   fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
     val imageArea = image.width.toFloat() * image.height.toFloat()
 
@@ -53,9 +50,10 @@ class EdgeLineIntersectionCornerDetector(
     val candidates =
         if (notWholeImage.isEmpty()) {
           raw.filter { quad ->
-            val b = quadBounds(quad)
-            b.width > 50 && b.height > 50
-          }.take(4)
+                val b = quadBounds(quad)
+                b.width > 50 && b.height > 50
+              }
+              .take(4)
         } else {
           notWholeImage
         }
@@ -82,10 +80,11 @@ class EdgeLineIntersectionCornerDetector(
     }
   }
 
-  /**
-   * Finds corners by detecting edge lines and computing their intersections.
-   */
-  private fun findCornersByLineIntersection(image: BufferedImage, quad: DetectedQuadrilateral): List<Point> {
+  /** Finds corners by detecting edge lines and computing their intersections. */
+  private fun findCornersByLineIntersection(
+      image: BufferedImage,
+      quad: DetectedQuadrilateral
+  ): List<Point> {
     val cx = quad.centroid.x
     val cy = quad.centroid.y
 
@@ -106,19 +105,21 @@ class EdgeLineIntersectionCornerDetector(
     val searchRadius = max(photoWidth, photoHeight) / 3
 
     // Find corners
-    val topLeft = findCornerByEdgeSearch(image, Point(cx - halfW, cy - halfH), searchRadius, "top-left")
-    val topRight = findCornerByEdgeSearch(image, Point(cx + halfW, cy - halfH), searchRadius, "top-right")
-    val bottomRight = findCornerByEdgeSearch(image, Point(cx + halfW, cy + halfH), searchRadius, "bottom-right")
-    val bottomLeft = findCornerByEdgeSearch(image, Point(cx - halfW, cy + halfH), searchRadius, "bottom-left")
+    val topLeft =
+        findCornerByEdgeSearch(image, Point(cx - halfW, cy - halfH), searchRadius, "top-left")
+    val topRight =
+        findCornerByEdgeSearch(image, Point(cx + halfW, cy - halfH), searchRadius, "top-right")
+    val bottomRight =
+        findCornerByEdgeSearch(image, Point(cx + halfW, cy + halfH), searchRadius, "bottom-right")
+    val bottomLeft =
+        findCornerByEdgeSearch(image, Point(cx - halfW, cy + halfH), searchRadius, "bottom-left")
 
     // Verify corners form a valid shape
     val corners = listOf(topLeft, topRight, bottomRight, bottomLeft)
     return refineCornersByShape(corners, cx, cy, photoWidth, photoHeight)
   }
 
-  /**
-   * Finds a corner by searching for edge line intersections.
-   */
+  /** Finds a corner by searching for edge line intersections. */
   private fun findCornerByEdgeSearch(
       image: BufferedImage,
       expected: Point,
@@ -126,7 +127,7 @@ class EdgeLineIntersectionCornerDetector(
       cornerType: String
   ): Point {
     // Sample edge directions in the search region
-    val houghVotes = Array(180) { FloatArray(600) }  // theta (-90 to 90) x rho (0 to 600)
+    val houghVotes = Array(180) { FloatArray(600) } // theta (-90 to 90) x rho (0 to 600)
     val maxRho = 600
 
     val x1 = (expected.x - searchRadius).coerceIn(0, image.width - 1)
@@ -137,10 +138,12 @@ class EdgeLineIntersectionCornerDetector(
     // Compute gradients and vote in Hough space
     for (y in y1 until y2) {
       for (x in x1 until x2) {
-        val gx = luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
-            luminance(image.getRGB(max(0, x - 1), y))
-        val gy = luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
-            luminance(image.getRGB(x, max(0, y - 1)))
+        val gx =
+            luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
+                luminance(image.getRGB(max(0, x - 1), y))
+        val gy =
+            luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
+                luminance(image.getRGB(x, max(0, y - 1)))
         val mag = sqrt(gx * gx + gy * gy)
 
         if (mag > 40) {
@@ -159,13 +162,13 @@ class EdgeLineIntersectionCornerDetector(
     }
 
     // Find dominant lines
-    val lines = mutableListOf<Pair<Int, Int>>()  // (thetaIdx, rhoIdx)
+    val lines = mutableListOf<Pair<Int, Int>>() // (thetaIdx, rhoIdx)
     var maxVotes = 0f
 
-    for (thetaIdx in 0 until 180 step 3) {  // Skip for speed
+    for (thetaIdx in 0 until 180 step 3) { // Skip for speed
       for (rhoIdx in 0 until maxRho step 3) {
         val votes = houghVotes[thetaIdx][rhoIdx]
-        if (votes > maxVotes * 0.3) {  // Keep lines with significant votes
+        if (votes > maxVotes * 0.3) { // Keep lines with significant votes
           lines.add(Pair(thetaIdx, rhoIdx))
           if (votes > maxVotes) maxVotes = votes
         }
@@ -173,15 +176,21 @@ class EdgeLineIntersectionCornerDetector(
     }
 
     // Find horizontal and vertical lines
-    val horizontalLines = lines.filter { (thetaIdx, _) ->
-      val theta = thetaIdx * 1.0 - 90
-      abs(theta) < 30 || abs(theta) > 150  // Near 0 or 180 degrees
-    }.sortedByDescending { (t, r) -> houghVotes[t][r] }
+    val horizontalLines =
+        lines
+            .filter { (thetaIdx, _) ->
+              val theta = thetaIdx * 1.0 - 90
+              abs(theta) < 30 || abs(theta) > 150 // Near 0 or 180 degrees
+            }
+            .sortedByDescending { (t, r) -> houghVotes[t][r] }
 
-    val verticalLines = lines.filter { (thetaIdx, _) ->
-      val theta = thetaIdx * 1.0 - 90
-      abs(theta - 90) < 30  // Near 90 degrees
-    }.sortedByDescending { (t, r) -> houghVotes[t][r] }
+    val verticalLines =
+        lines
+            .filter { (thetaIdx, _) ->
+              val theta = thetaIdx * 1.0 - 90
+              abs(theta - 90) < 30 // Near 90 degrees
+            }
+            .sortedByDescending { (t, r) -> houghVotes[t][r] }
 
     // Compute corner position from line intersections
     var cornerX = expected.x
@@ -237,9 +246,7 @@ class EdgeLineIntersectionCornerDetector(
     return Point(cornerX.coerceIn(0, image.width - 1), cornerY.coerceIn(0, image.height - 1))
   }
 
-  /**
-   * Refines corners by enforcing a reasonable quadrilateral shape.
-   */
+  /** Refines corners by enforcing a reasonable quadrilateral shape. */
   private fun refineCornersByShape(
       corners: List<Point>,
       cx: Int,
@@ -250,11 +257,14 @@ class EdgeLineIntersectionCornerDetector(
     if (corners.size != 4) return corners
 
     // Sort corners by their angle around the centroid
-    val sorted = corners.mapIndexed { idx, p ->
-      val angle = atan2((p.y - cy).toDouble(), (p.x - cx).toDouble())
-      Pair(idx, Pair(p, angle))
-    }.sortedBy { it.second.second }
-    .map { it.second.first }
+    val sorted =
+        corners
+            .mapIndexed { idx, p ->
+              val angle = atan2((p.y - cy).toDouble(), (p.x - cx).toDouble())
+              Pair(idx, Pair(p, angle))
+            }
+            .sortedBy { it.second.second }
+            .map { it.second.first }
 
     // Compute the center of detected corners
     val detCenterX = sorted.map { it.x }.average()
@@ -264,27 +274,27 @@ class EdgeLineIntersectionCornerDetector(
     val halfW = expectedWidth / 2
     val halfH = expectedHeight / 2
 
-    val adjusted = sorted.map { corner ->
-      // Compute direction from detected center to corner
-      val dirX = corner.x - detCenterX
-      val dirY = corner.y - detCenterY
-      val dist = sqrt(dirX * dirX + dirY * dirY)
+    val adjusted =
+        sorted.map { corner ->
+          // Compute direction from detected center to corner
+          val dirX = corner.x - detCenterX
+          val dirY = corner.y - detCenterY
+          val dist = sqrt(dirX * dirX + dirY * dirY)
 
-      if (dist > 0) {
-        // Move corner toward expected position based on detected direction
-        val targetX = cx + (dirX / dist) * halfW
-        val targetY = cy + (dirY / dist) * halfH
+          if (dist > 0) {
+            // Move corner toward expected position based on detected direction
+            val targetX = cx + (dirX / dist) * halfW
+            val targetY = cy + (dirY / dist) * halfH
 
-        // Blend between detected and expected
-        val blend = 0.6
-        Point(
-            (corner.x * (1 - blend) + targetX * blend).toInt(),
-            (corner.y * (1 - blend) + targetY * blend).toInt()
-        )
-      } else {
-        corner
-      }
-    }
+            // Blend between detected and expected
+            val blend = 0.6
+            Point(
+                (corner.x * (1 - blend) + targetX * blend).toInt(),
+                (corner.y * (1 - blend) + targetY * blend).toInt())
+          } else {
+            corner
+          }
+        }
 
     // Reorder to TL, TR, BR, BL
     val sumSorted = adjusted.sortedBy { it.x + it.y }
@@ -373,8 +383,11 @@ class EdgeLineIntersectionCornerDetector(
       val maxX: Int,
       val maxY: Int,
   ) {
-    val width get() = maxX - minX
-    val height get() = maxY - minY
+    val width
+      get() = maxX - minX
+
+    val height
+      get() = maxY - minY
   }
 
   data class Point(val x: Int, val y: Int)

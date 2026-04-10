@@ -49,7 +49,13 @@ class SettingsAdapterTest {
 
       val settings = adapter.loadSettings()
 
-      assertThat(settings).isEqualTo(AppSettings())
+      // When loading corrupt file, should return defaults with empty profiles and default theme
+      assertThat(settings.profiles).isEmpty()
+      assertThat(settings.theme).isEqualTo(AppTheme.SYSTEM)
+      assertThat(settings.activeProfileId).isNull()
+      // PhotoScan profiles have defaults, so just verify one exists
+      assertThat(settings.photoScanProfiles).isNotEmpty()
+      assertThat(settings.photoScanProfiles[0].name).isEqualTo("Default")
     }
   }
 

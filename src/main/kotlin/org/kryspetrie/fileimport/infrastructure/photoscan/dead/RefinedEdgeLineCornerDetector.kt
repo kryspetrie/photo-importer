@@ -1,13 +1,9 @@
 package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import java.awt.image.BufferedImage
-import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 import kotlin.math.sqrt
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
@@ -37,9 +33,7 @@ class RefinedEdgeLineCornerDetector(
   /** Mutable target count. */
   var targetPhotoCount: Int? = null
 
-  /**
-   * Detects photo regions and corners with bias correction.
-   */
+  /** Detects photo regions and corners with bias correction. */
   fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
     val imageArea = image.width.toFloat() * image.height.toFloat()
 
@@ -58,9 +52,10 @@ class RefinedEdgeLineCornerDetector(
     val candidates =
         if (notWholeImage.isEmpty()) {
           raw.filter { quad ->
-            val b = quadBounds(quad)
-            b.width > 50 && b.height > 50
-          }.take(4)
+                val b = quadBounds(quad)
+                b.width > 50 && b.height > 50
+              }
+              .take(4)
         } else {
           notWholeImage
         }
@@ -87,10 +82,11 @@ class RefinedEdgeLineCornerDetector(
     }
   }
 
-  /**
-   * Finds corners with systematic bias correction.
-   */
-  private fun findCornersWithBiasCorrection(image: BufferedImage, quad: DetectedQuadrilateral): List<Point> {
+  /** Finds corners with systematic bias correction. */
+  private fun findCornersWithBiasCorrection(
+      image: BufferedImage,
+      quad: DetectedQuadrilateral
+  ): List<Point> {
     val cx = quad.centroid.x
     val cy = quad.centroid.y
 
@@ -107,10 +103,18 @@ class RefinedEdgeLineCornerDetector(
     val searchRadius = max(estimatedWidth, estimatedHeight) / 2
 
     // Find corners by edge analysis
-    val topLeft = findCornerWithCorrection(image, Point(cx - estimatedWidth / 2, cy - estimatedHeight / 2), searchRadius, "TL")
-    val topRight = findCornerWithCorrection(image, Point(cx + estimatedWidth / 2, cy - estimatedHeight / 2), searchRadius, "TR")
-    val bottomRight = findCornerWithCorrection(image, Point(cx + estimatedWidth / 2, cy + estimatedHeight / 2), searchRadius, "BR")
-    val bottomLeft = findCornerWithCorrection(image, Point(cx - estimatedWidth / 2, cy + estimatedHeight / 2), searchRadius, "BL")
+    val topLeft =
+        findCornerWithCorrection(
+            image, Point(cx - estimatedWidth / 2, cy - estimatedHeight / 2), searchRadius, "TL")
+    val topRight =
+        findCornerWithCorrection(
+            image, Point(cx + estimatedWidth / 2, cy - estimatedHeight / 2), searchRadius, "TR")
+    val bottomRight =
+        findCornerWithCorrection(
+            image, Point(cx + estimatedWidth / 2, cy + estimatedHeight / 2), searchRadius, "BR")
+    val bottomLeft =
+        findCornerWithCorrection(
+            image, Point(cx - estimatedWidth / 2, cy + estimatedHeight / 2), searchRadius, "BL")
 
     // Apply bias correction based on observed patterns
     val corners = listOf(topLeft, topRight, bottomRight, bottomLeft)
@@ -124,19 +128,17 @@ class RefinedEdgeLineCornerDetector(
     val shiftY = cy - detCenterY
 
     // Apply weighted shift (prefer to stay closer to detected position)
-    val shifted = corners.map { corner ->
-      Point(
-          (corner.x + shiftX * cornerBiasCorrection).toInt(),
-          (corner.y + shiftY * cornerBiasCorrection).toInt()
-      )
-    }
+    val shifted =
+        corners.map { corner ->
+          Point(
+              (corner.x + shiftX * cornerBiasCorrection).toInt(),
+              (corner.y + shiftY * cornerBiasCorrection).toInt())
+        }
 
     return validateAndOrderCorners(shifted)
   }
 
-  /**
-   * Finds a corner with systematic correction.
-   */
+  /** Finds a corner with systematic correction. */
   private fun findCornerWithCorrection(
       image: BufferedImage,
       expected: Point,
@@ -156,10 +158,12 @@ class RefinedEdgeLineCornerDetector(
 
     for (y in y1 until y2) {
       for (x in x1 until x2) {
-        val gx = luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
-            luminance(image.getRGB(max(0, x - 1), y))
-        val gy = luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
-            luminance(image.getRGB(x, max(0, y - 1)))
+        val gx =
+            luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
+                luminance(image.getRGB(max(0, x - 1), y))
+        val gy =
+            luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
+                luminance(image.getRGB(x, max(0, y - 1)))
         val mag = sqrt(gx * gx + gy * gy)
 
         if (mag > 40) {
@@ -296,8 +300,11 @@ class RefinedEdgeLineCornerDetector(
       val maxX: Int,
       val maxY: Int,
   ) {
-    val width get() = maxX - minX
-    val height get() = maxY - minY
+    val width
+      get() = maxX - minX
+
+    val height
+      get() = maxY - minY
   }
 
   data class Point(val x: Int, val y: Int)

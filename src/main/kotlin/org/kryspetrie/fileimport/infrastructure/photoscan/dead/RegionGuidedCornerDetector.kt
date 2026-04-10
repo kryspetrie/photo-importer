@@ -17,11 +17,11 @@ import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 
 /**
- * Region-guided corner detector that uses detected region centroid to search for
- * actual photo boundaries via edge line detection.
+ * Region-guided corner detector that uses detected region centroid to search for actual photo
+ * boundaries via edge line detection.
  *
- * The key insight is that the Douglas-Peucker contour detection finds the correct
- * region centroid but produces distorted corners. This detector:
+ * The key insight is that the Douglas-Peucker contour detection finds the correct region centroid
+ * but produces distorted corners. This detector:
  * 1. Uses the region proposal to find the approximate photo location
  * 2. Searches for edge lines near each expected corner position
  * 3. Computes corner positions as line intersections
@@ -51,9 +51,7 @@ class RegionGuidedCornerDetector(
   /** Mutable target count. */
   var targetPhotoCount: Int? = null
 
-  /**
-   * Detects photo regions and corners using region-guided edge detection.
-   */
+  /** Detects photo regions and corners using region-guided edge detection. */
   fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
     val imageArea = image.width.toFloat() * image.height.toFloat()
 
@@ -72,9 +70,10 @@ class RegionGuidedCornerDetector(
     val candidates =
         if (notWholeImage.isEmpty()) {
           raw.filter { quad ->
-            val b = quadBounds(quad)
-            b.width > 50 && b.height > 50
-          }.take(4)
+                val b = quadBounds(quad)
+                b.width > 50 && b.height > 50
+              }
+              .take(4)
         } else {
           notWholeImage
         }
@@ -104,9 +103,7 @@ class RegionGuidedCornerDetector(
     }
   }
 
-  /**
-   * Detects corner features using BoofCV Shi-Tomasi detector.
-   */
+  /** Detects corner features using BoofCV Shi-Tomasi detector. */
   private fun detectCornerFeatures(image: BufferedImage): List<CornerFeature> {
     val (workImage, scale) = downsampleForDetection(image)
     val width = workImage.width
@@ -126,8 +123,13 @@ class RegionGuidedCornerDetector(
     }
 
     // Detect corners
-    featureDetector.process(gray, GrayS16(width, height), GrayS16(width, height),
-        GrayS16(width, height), GrayS16(width, height), GrayS16(width, height))
+    featureDetector.process(
+        gray,
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height))
 
     val features = mutableListOf<CornerFeature>()
     val maximums = featureDetector.getMaximums()
@@ -139,12 +141,10 @@ class RegionGuidedCornerDetector(
       features.add(CornerFeature(origX, origY))
     }
 
-    return features.sortedByDescending { it.x + it.y }  // Sort by corner-ness
+    return features.sortedByDescending { it.x + it.y } // Sort by corner-ness
   }
 
-  /**
-   * Finds corners for a region by guided search near expected positions.
-   */
+  /** Finds corners for a region by guided search near expected positions. */
   private fun findCornersFromRegion(
       image: BufferedImage,
       quad: DetectedQuadrilateral,
@@ -160,17 +160,18 @@ class RegionGuidedCornerDetector(
     val roughHeight = bounds.height
 
     // Calculate expected corner positions based on region centroid
-    val scale = 0.8f  // Photo might be larger than detected region
+    val scale = 0.8f // Photo might be larger than detected region
     val halfW = (roughWidth * scale / 2).toInt()
     val halfH = (roughHeight * scale / 2).toInt()
 
     // Expected corner positions (relative to centroid)
-    val expectedCorners = listOf(
-        Point(cx - halfW, cy - halfH),  // TL
-        Point(cx + halfW, cy - halfH),  // TR
-        Point(cx + halfW, cy + halfH),  // BR
-        Point(cx - halfW, cy + halfH)   // BL
-    )
+    val expectedCorners =
+        listOf(
+            Point(cx - halfW, cy - halfH), // TL
+            Point(cx + halfW, cy - halfH), // TR
+            Point(cx + halfW, cy + halfH), // BR
+            Point(cx - halfW, cy + halfH) // BL
+            )
 
     // For each expected corner, find the nearest strong corner feature
     val searchRadius = max(halfW, halfH)
@@ -185,9 +186,7 @@ class RegionGuidedCornerDetector(
     return refineCornersGeometry(foundCorners, image)
   }
 
-  /**
-   * Finds the nearest strong corner feature within search radius.
-   */
+  /** Finds the nearest strong corner feature within search radius. */
   private fun findNearestStrongCorner(
       expected: Point,
       cornerFeatures: List<CornerFeature>,
@@ -195,10 +194,11 @@ class RegionGuidedCornerDetector(
       image: BufferedImage
   ): Point {
     // Find corner features within search radius
-    val candidates = cornerFeatures.filter {
-      val dist = hypot((it.x - expected.x).toDouble(), (it.y - expected.y).toDouble())
-      dist <= searchRadius
-    }
+    val candidates =
+        cornerFeatures.filter {
+          val dist = hypot((it.x - expected.x).toDouble(), (it.y - expected.y).toDouble())
+          dist <= searchRadius
+        }
 
     if (candidates.isEmpty()) {
       // Fall back to edge-based corner finding
@@ -232,9 +232,7 @@ class RegionGuidedCornerDetector(
     return bestPoint
   }
 
-  /**
-   * Computes edge directions in a local region around a point.
-   */
+  /** Computes edge directions in a local region around a point. */
   private fun computeLocalEdges(image: BufferedImage, x: Int, y: Int, radius: Int): List<Double> {
     val directions = mutableListOf<Double>()
     val x1 = (x - radius).coerceIn(0, image.width - 1)
@@ -246,10 +244,12 @@ class RegionGuidedCornerDetector(
       for (dx in x1 until x2 step 5) {
         if (dx == x && dy == y) continue
 
-        val gx = luminance(image.getRGB(min(image.width - 1, dx + 1), dy)) -
-            luminance(image.getRGB(max(0, dx - 1), dy))
-        val gy = luminance(image.getRGB(dx, min(image.height - 1, dy + 1))) -
-            luminance(image.getRGB(dx, max(0, dy - 1)))
+        val gx =
+            luminance(image.getRGB(min(image.width - 1, dx + 1), dy)) -
+                luminance(image.getRGB(max(0, dx - 1), dy))
+        val gy =
+            luminance(image.getRGB(dx, min(image.height - 1, dy + 1))) -
+                luminance(image.getRGB(dx, max(0, dy - 1)))
         val mag = sqrt(gx * gx + gy * gy)
 
         if (mag > 50.0) {
@@ -262,9 +262,7 @@ class RegionGuidedCornerDetector(
     return directions
   }
 
-  /**
-   * Computes a corner score from edge directions (how perpendicular are the edges).
-   */
+  /** Computes a corner score from edge directions (how perpendicular are the edges). */
   private fun computeCornerScore(edgeDirections: List<Double>): Double {
     if (edgeDirections.size < 4) return 0.5
 
@@ -287,9 +285,7 @@ class RegionGuidedCornerDetector(
     return maxDiff
   }
 
-  /**
-   * Computes local contrast at a point.
-   */
+  /** Computes local contrast at a point. */
   private fun computeLocalContrast(image: BufferedImage, x: Int, y: Int): Double {
     val radius = 20
     val centerLum = luminance(image.getRGB(x, y))
@@ -310,10 +306,12 @@ class RegionGuidedCornerDetector(
     return if (count > 0) (sumDiff / count / 255.0).coerceIn(0.0, 1.0) else 0.0
   }
 
-  /**
-   * Finds corner position by scanning for edges in the expected direction.
-   */
-  private fun findCornerByEdgeScan(expected: Point, searchRadius: Int, image: BufferedImage): Point {
+  /** Finds corner position by scanning for edges in the expected direction. */
+  private fun findCornerByEdgeScan(
+      expected: Point,
+      searchRadius: Int,
+      image: BufferedImage
+  ): Point {
     val step = 5
 
     // Search for horizontal edge (search up/down from expected x position)
@@ -327,8 +325,9 @@ class RegionGuidedCornerDetector(
       var x = expected.x - searchRadius
       while (x < expected.x + searchRadius) {
         val xClamped = x.coerceIn(0, image.width - 1)
-        val gx = luminance(image.getRGB(min(image.width - 1, xClamped + 1), yClamped)) -
-            luminance(image.getRGB(max(0, xClamped - 1), yClamped))
+        val gx =
+            luminance(image.getRGB(min(image.width - 1, xClamped + 1), yClamped)) -
+                luminance(image.getRGB(max(0, xClamped - 1), yClamped))
         sumGrad += abs(gx)
         x += step
       }
@@ -350,8 +349,9 @@ class RegionGuidedCornerDetector(
       var y = expected.y - searchRadius
       while (y < expected.y + searchRadius) {
         val yClamped = y.coerceIn(0, image.height - 1)
-        val gy = luminance(image.getRGB(xClamped, min(image.height - 1, yClamped + 1))) -
-            luminance(image.getRGB(xClamped, max(0, yClamped - 1)))
+        val gy =
+            luminance(image.getRGB(xClamped, min(image.height - 1, yClamped + 1))) -
+                luminance(image.getRGB(xClamped, max(0, yClamped - 1)))
         sumGrad += abs(gy)
         y += step
       }
@@ -365,9 +365,7 @@ class RegionGuidedCornerDetector(
     return Point(bestX, bestY)
   }
 
-  /**
-   * Refines corners by enforcing geometric consistency.
-   */
+  /** Refines corners by enforcing geometric consistency. */
   private fun refineCornersGeometry(corners: List<Point>, image: BufferedImage): List<Point> {
     if (corners.size != 4) return corners
 
@@ -382,17 +380,13 @@ class RegionGuidedCornerDetector(
     val ordered = listOf(topLeft, topRight, bottomRight, bottomLeft)
 
     // Refine each corner using local edge gradient
-    val refined = ordered.map { corner ->
-      refineCornerByGradient(image, corner)
-    }
+    val refined = ordered.map { corner -> refineCornerByGradient(image, corner) }
 
     // Ensure geometric consistency (adjacent edges should be roughly perpendicular)
     return enforcePerpendicularEdges(refined)
   }
 
-  /**
-   * Refines corner position using local gradient analysis.
-   */
+  /** Refines corner position using local gradient analysis. */
   private fun refineCornerByGradient(image: BufferedImage, corner: Point): Point {
     val radius = 40
     val x1 = (corner.x - radius).coerceIn(0, image.width - 1)
@@ -407,10 +401,12 @@ class RegionGuidedCornerDetector(
 
     for (y in y1..y2) {
       for (x in x1..x2) {
-        val gx = luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
-            luminance(image.getRGB(max(0, x - 1), y))
-        val gy = luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
-            luminance(image.getRGB(x, max(0, y - 1)))
+        val gx =
+            luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
+                luminance(image.getRGB(max(0, x - 1), y))
+        val gy =
+            luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
+                luminance(image.getRGB(x, max(0, y - 1)))
         val mag = sqrt(gx * gx + gy * gy)
 
         if (mag > 30.0) {
@@ -434,26 +430,24 @@ class RegionGuidedCornerDetector(
 
       return Point(
           (corner.x + offsetX).coerceIn(0, image.width - 1),
-          (corner.y + offsetY).coerceIn(0, image.height - 1)
-      )
+          (corner.y + offsetY).coerceIn(0, image.height - 1))
     }
 
     return corner
   }
 
-  /**
-   * Enforces that adjacent edges are roughly perpendicular.
-   */
+  /** Enforces that adjacent edges are roughly perpendicular. */
   private fun enforcePerpendicularEdges(corners: List<Point>): List<Point> {
     if (corners.size != 4) return corners
 
     // Check if corners form a reasonable shape
     // Top edge should be roughly horizontal
-    val topEdgeAngle = atan2((corners[1].y - corners[0].y).toDouble(), (corners[1].x - corners[0].x).toDouble())
+    val topEdgeAngle =
+        atan2((corners[1].y - corners[0].y).toDouble(), (corners[1].x - corners[0].x).toDouble())
     val avgY = (corners[0].y + corners[1].y) / 2.0
 
     // If top edge is far from horizontal, adjust
-    if (abs(topEdgeAngle) > 0.2) {  // More than ~11 degrees from horizontal
+    if (abs(topEdgeAngle) > 0.2) { // More than ~11 degrees from horizontal
       val newTopLeft = Point(corners[0].x, corners[0].y + ((avgY - corners[0].y) * 0.5).toInt())
       val newTopRight = Point(corners[1].x, corners[1].y + ((avgY - corners[1].y) * 0.5).toInt())
       return listOf(newTopLeft, newTopRight, corners[2], corners[3])
@@ -551,8 +545,11 @@ class RegionGuidedCornerDetector(
       val maxX: Int,
       val maxY: Int,
   ) {
-    val width get() = maxX - minX
-    val height get() = maxY - minY
+    val width
+      get() = maxX - minX
+
+    val height
+      get() = maxY - minY
   }
 
   data class Point(val x: Int, val y: Int)

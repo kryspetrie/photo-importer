@@ -1,9 +1,10 @@
 plugins {
   kotlin("jvm") version "2.3.10"
   id("org.jetbrains.kotlin.plugin.compose") version "2.3.10"
-  id("org.jetbrains.compose") version "1.6.11"
+  id("org.jetbrains.compose") version "1.11.0-beta01"
   kotlin("plugin.serialization") version "2.3.10"
   id("com.ncorti.ktfmt.gradle") version "0.25.0"
+  id("org.jetbrains.kotlinx.kover") version "0.9.8"
 }
 
 group = "org.kryspetrie.fileimport"
@@ -84,17 +85,23 @@ dependencies {
 
   testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
   testImplementation("org.junit.platform:junit-platform-launcher:1.11.4")
+
   testImplementation("org.assertj:assertj-core:3.27.3")
   testImplementation("org.mockito:mockito-core:5.14.2")
   testImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
   testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
   testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
   testImplementation("com.lemonappdev:konsist:0.17.3")
-  testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.6.11")
+  testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.11.0-beta01")
+  testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.3.10")
+  testImplementation("org.junit.vintage:junit-vintage-engine:5.11.4") {
+    because("ComposeTestRule requires JUnit 4 rule support within JUnit 5")
 }
 
 tasks.test {
-  useJUnitPlatform()
+  useJUnitPlatform {
+    excludeTags("UiComponentTest")
+  }
   testLogging { showStandardStreams = true }
 }
 
@@ -112,3 +119,4 @@ tasks.register<JavaExec>("generateIcons") {
 tasks
     .matching { it.name.startsWith("package") || it.name.startsWith("createDistributable") }
     .configureEach { dependsOn("generateIcons") }
+}

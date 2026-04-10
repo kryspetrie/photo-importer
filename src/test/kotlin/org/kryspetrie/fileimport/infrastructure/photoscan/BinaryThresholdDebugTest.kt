@@ -2,14 +2,11 @@ package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
-import kotlin.math.hypot
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
-/**
- * Test to visualize the binary image and understand what contours are being detected.
- */
+/** Test to visualize the binary image and understand what contours are being detected. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BinaryThresholdDebugTest {
 
@@ -27,28 +24,28 @@ class BinaryThresholdDebugTest {
   fun `show binary threshold statistics for different regions`() {
     val gray = toGrayscale(img02)
     val binary = adaptiveThreshold(gray, 31, 10)
-    
+
     println("\n=== Binary Threshold Analysis ===")
     println("Image size: ${img02.width}x${img02.height}")
     println("Binary size: ${binary.width}x${binary.height}")
-    
+
     // Count white pixels in regions
     val gt0Region = countWhitePixelsInRegion(binary, 270, 358, 1594, 1094) // GT[0] bounding box
     val gt1Region = countWhitePixelsInRegion(binary, 256, 1560, 1848, 2254) // GT[1] bounding box
     val gt2Region = countWhitePixelsInRegion(binary, 2226, 634, 1474, 1876) // GT[2] bounding box
-    
+
     println("\nWhite pixel percentages in GT regions:")
     println("  GT[0] (small photo): ${"%.1f".format(gt0Region.first)}%")
     println("  GT[1] (large photo): ${"%.1f".format(gt1Region.first)}%")
     println("  GT[2] (medium photo): ${"%.1f".format(gt2Region.first)}%")
-    
+
     // Sample grayscale values at corners
     println("\nSample grayscale values at GT corners:")
-    for ((name, corners) in listOf(
-        "GT[0]" to listOf(270 to 358, 1864 to 358, 1864 to 1452, 270 to 1452),
-        "GT[1]" to listOf(256 to 1560, 2104 to 1560, 2104 to 3814, 256 to 3814),
-        "GT[2]" to listOf(2226 to 634, 3700 to 634, 3700 to 2510, 2226 to 2510)
-    )) {
+    for ((name, corners) in
+        listOf(
+            "GT[0]" to listOf(270 to 358, 1864 to 358, 1864 to 1452, 270 to 1452),
+            "GT[1]" to listOf(256 to 1560, 2104 to 1560, 2104 to 3814, 256 to 3814),
+            "GT[2]" to listOf(2226 to 634, 3700 to 634, 3700 to 2510, 2226 to 2510))) {
       for ((idx, corner) in corners.withIndex()) {
         val (x, y) = corner
         if (x < img02.width && y < img02.height) {
@@ -57,7 +54,7 @@ class BinaryThresholdDebugTest {
         }
       }
     }
-    
+
     // Save binary image for visualization
     val outputPath = "/tmp/binary_debug.png"
     ImageIO.write(binary, "PNG", java.io.File(outputPath))
@@ -129,7 +126,13 @@ class BinaryThresholdDebugTest {
     return sum to count
   }
 
-  private fun countWhitePixelsInRegion(binary: BufferedImage, x1: Int, y1: Int, width: Int, height: Int): Pair<Float, Int> {
+  private fun countWhitePixelsInRegion(
+      binary: BufferedImage,
+      x1: Int,
+      y1: Int,
+      width: Int,
+      height: Int
+  ): Pair<Float, Int> {
     val x2 = kotlin.math.min(x1 + width, binary.width - 1)
     val y2 = kotlin.math.min(y1 + height, binary.height - 1)
     var whiteCount = 0

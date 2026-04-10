@@ -24,9 +24,7 @@ class ConsensusCornerDetector(
   /** Target count. */
   var targetPhotoCount: Int? = null
 
-  /**
-   * Runs the consensus detection using multiple strategies.
-   */
+  /** Runs the consensus detection using multiple strategies. */
   fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
     val imageArea = image.width.toFloat() * image.height.toFloat()
 
@@ -45,9 +43,10 @@ class ConsensusCornerDetector(
     val candidates =
         if (notWholeImage.isEmpty()) {
           raw.filter { quad ->
-            val b = quadBounds(quad)
-            b.width > 50 && b.height > 50
-          }.take(4)
+                val b = quadBounds(quad)
+                b.width > 50 && b.height > 50
+              }
+              .take(4)
         } else {
           notWholeImage
         }
@@ -74,10 +73,11 @@ class ConsensusCornerDetector(
     }
   }
 
-  /**
-   * Computes consensus corners from multiple detection methods.
-   */
-  private fun computeConsensusCorners(image: BufferedImage, quad: DetectedQuadrilateral): List<Point> {
+  /** Computes consensus corners from multiple detection methods. */
+  private fun computeConsensusCorners(
+      image: BufferedImage,
+      quad: DetectedQuadrilateral
+  ): List<Point> {
     val cx = quad.centroid.x
     val cy = quad.centroid.y
 
@@ -114,9 +114,7 @@ class ConsensusCornerDetector(
     return validateAndOrderCorners(consensusCorners)
   }
 
-  /**
-   * Detects corners using edge scanning.
-   */
+  /** Detects corners using edge scanning. */
   private fun detectCornersByEdgeScan(
       image: BufferedImage,
       cx: Int,
@@ -129,22 +127,18 @@ class ConsensusCornerDetector(
     val searchRadius = max(width, height) / 2
 
     // Simple corner detection by edge gradient analysis
-    val corners = listOf(
-        Point(cx - halfW, cy - halfH),
-        Point(cx + halfW, cy - halfH),
-        Point(cx + halfW, cy + halfH),
-        Point(cx - halfW, cy + halfH)
-    )
+    val corners =
+        listOf(
+            Point(cx - halfW, cy - halfH),
+            Point(cx + halfW, cy - halfH),
+            Point(cx + halfW, cy + halfH),
+            Point(cx - halfW, cy + halfH))
 
     // Refine each corner
-    return corners.map { corner ->
-      refineCornerByGradient(image, corner, searchRadius / 2)
-    }
+    return corners.map { corner -> refineCornerByGradient(image, corner, searchRadius / 2) }
   }
 
-  /**
-   * Detects corners using gradient center analysis.
-   */
+  /** Detects corners using gradient center analysis. */
   private fun detectCornersByGradientCenter(
       image: BufferedImage,
       cx: Int,
@@ -154,12 +148,12 @@ class ConsensusCornerDetector(
   ): List<Point> {
     // Search around expected corner positions
     val corners = mutableListOf<Point>()
-    val offsets = listOf(
-        Point(-width / 2, -height / 2),
-        Point(width / 2, -height / 2),
-        Point(width / 2, height / 2),
-        Point(-width / 2, height / 2)
-    )
+    val offsets =
+        listOf(
+            Point(-width / 2, -height / 2),
+            Point(width / 2, -height / 2),
+            Point(width / 2, height / 2),
+            Point(-width / 2, height / 2))
 
     for (offset in offsets) {
       val expected = Point(cx + offset.x, cy + offset.y)
@@ -170,19 +164,18 @@ class ConsensusCornerDetector(
     return corners
   }
 
-  /**
-   * Detects corners using contour refinement.
-   */
-  private fun detectCornersByContourRefine(image: BufferedImage, quad: DetectedQuadrilateral): List<Point> {
+  /** Detects corners using contour refinement. */
+  private fun detectCornersByContourRefine(
+      image: BufferedImage,
+      quad: DetectedQuadrilateral
+  ): List<Point> {
     // Use detected corners but refine based on actual image edges
     return quad.corners.map { corner ->
       refineCornerByGradient(image, Point(corner.x, corner.y), 60)
     }
   }
 
-  /**
-   * Refines a corner using local gradient analysis.
-   */
+  /** Refines a corner using local gradient analysis. */
   private fun refineCornerByGradient(image: BufferedImage, corner: Point, radius: Int): Point {
     val x1 = (corner.x - radius).coerceIn(0, image.width - 1)
     val y1 = (corner.y - radius).coerceIn(0, image.height - 1)
@@ -196,10 +189,12 @@ class ConsensusCornerDetector(
 
     for (y in y1..y2) {
       for (x in x1..x2) {
-        val gx = luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
-            luminance(image.getRGB(max(0, x - 1), y))
-        val gy = luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
-            luminance(image.getRGB(x, max(0, y - 1)))
+        val gx =
+            luminance(image.getRGB(min(image.width - 1, x + 1), y)) -
+                luminance(image.getRGB(max(0, x - 1), y))
+        val gy =
+            luminance(image.getRGB(x, min(image.height - 1, y + 1))) -
+                luminance(image.getRGB(x, max(0, y - 1)))
         val mag = kotlin.math.sqrt(gx * gx + gy * gy)
 
         if (mag > 40) {
@@ -308,8 +303,11 @@ class ConsensusCornerDetector(
       val maxX: Int,
       val maxY: Int,
   ) {
-    val width get() = maxX - minX
-    val height get() = maxY - minY
+    val width
+      get() = maxX - minX
+
+    val height
+      get() = maxY - minY
   }
 
   data class Point(val x: Int, val y: Int)

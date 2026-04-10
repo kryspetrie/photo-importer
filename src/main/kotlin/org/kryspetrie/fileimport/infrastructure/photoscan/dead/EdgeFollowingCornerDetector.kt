@@ -9,11 +9,9 @@ import boofcv.struct.image.GrayS16
 import java.awt.image.BufferedImage
 import kotlin.math.abs
 import kotlin.math.atan2
-import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.sin
 import kotlin.math.sqrt
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
@@ -23,8 +21,7 @@ import org.kryspetrie.fileimport.domain.model.PhotoCorner
  *
  * ## Strategy
  *
- * Instead of relying on contour-based detection (which finds inner contours),
- * this detector:
+ * Instead of relying on contour-based detection (which finds inner contours), this detector:
  * 1. Uses BoofCV Shi-Tomasi corner detector to find strong corner features
  * 2. For each expected photo corner, finds the nearest corner feature
  * 3. Validates using edge direction analysis around the corner
@@ -60,9 +57,7 @@ class EdgeFollowingCornerDetector(
   /** Mutable target count. */
   var targetPhotoCount: Int? = null
 
-  /**
-   * Detects photo regions and corners using edge-following strategy.
-   */
+  /** Detects photo regions and corners using edge-following strategy. */
   fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
     val imageArea = image.width.toFloat() * image.height.toFloat()
 
@@ -81,9 +76,10 @@ class EdgeFollowingCornerDetector(
     val candidates =
         if (notWholeImage.isEmpty()) {
           raw.filter { quad ->
-            val b = quadBounds(quad)
-            b.width > 50 && b.height > 50
-          }.take(4)
+                val b = quadBounds(quad)
+                b.width > 50 && b.height > 50
+              }
+              .take(4)
         } else {
           notWholeImage
         }
@@ -113,9 +109,7 @@ class EdgeFollowingCornerDetector(
     }
   }
 
-  /**
-   * Detects corner features using BoofCV Shi-Tomasi detector.
-   */
+  /** Detects corner features using BoofCV Shi-Tomasi detector. */
   private fun detectCornerFeatures(image: BufferedImage): List<CornerFeature> {
     val (workImage, scale) = downsampleForDetection(image)
     val width = workImage.width
@@ -135,8 +129,13 @@ class EdgeFollowingCornerDetector(
     }
 
     // Detect corners
-    featureDetector.process(gray, GrayS16(width, height), GrayS16(width, height),
-        GrayS16(width, height), GrayS16(width, height), GrayS16(width, height))
+    featureDetector.process(
+        gray,
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height))
 
     val features = mutableListOf<CornerFeature>()
     val maximums = featureDetector.getMaximums()
@@ -156,9 +155,7 @@ class EdgeFollowingCornerDetector(
     return features.sortedByDescending { it.confidence }
   }
 
-  /**
-   * Computes dominant edge directions at a point (for corner classification).
-   */
+  /** Computes dominant edge directions at a point (for corner classification). */
   private fun computeEdgeDirections(image: BufferedImage, x: Int, y: Int): Pair<Float, Float> {
     val radius = 20
     val x1 = (x - radius).coerceIn(0, image.width - 1)
@@ -178,7 +175,7 @@ class EdgeFollowingCornerDetector(
 
         if (mag > minEdgeStrength) {
           val angle = atan2(gy.toDouble(), gx.toDouble())
-          val bin = ((angle * 180 / Math.PI + 180) / 22.5).toInt() % 16  // 16 bins of 22.5 degrees
+          val bin = ((angle * 180 / Math.PI + 180) / 22.5).toInt() % 16 // 16 bins of 22.5 degrees
           angles[bin] = (angles[bin] ?: 0f) + mag
         }
       }
@@ -192,9 +189,7 @@ class EdgeFollowingCornerDetector(
     return Pair(dir1, dir2)
   }
 
-  /**
-   * Refines corner positions using edge-following from corner features.
-   */
+  /** Refines corner positions using edge-following from corner features. */
   private fun refineCornersByEdgeFollowing(
       image: BufferedImage,
       quad: DetectedQuadrilateral,
@@ -217,19 +212,18 @@ class EdgeFollowingCornerDetector(
     return validateAndOrderCorners(refined)
   }
 
-  /**
-   * Finds the nearest corner feature that has appropriate edge directions for a photo corner.
-   */
+  /** Finds the nearest corner feature that has appropriate edge directions for a photo corner. */
   private fun findNearestCornerFeature(
       roughCorner: Point,
       cornerFeatures: List<CornerFeature>,
       image: BufferedImage
   ): Point {
     // Find corner features within search radius
-    val candidates = cornerFeatures.filter {
-      val dist = hypot((it.x - roughCorner.x).toDouble(), (it.y - roughCorner.y).toDouble())
-      dist <= roiSearchRadius
-    }
+    val candidates =
+        cornerFeatures.filter {
+          val dist = hypot((it.x - roughCorner.x).toDouble(), (it.y - roughCorner.y).toDouble())
+          dist <= roiSearchRadius
+        }
 
     if (candidates.isEmpty()) {
       // Fall back to direct gradient-based corner finding
@@ -245,11 +239,13 @@ class EdgeFollowingCornerDetector(
     var bestPoint = roughCorner
 
     for (feature in candidates) {
-      val dist = hypot((feature.x - roughCorner.x).toDouble(), (feature.y - roughCorner.y).toDouble())
+      val dist =
+          hypot((feature.x - roughCorner.x).toDouble(), (feature.y - roughCorner.y).toDouble())
 
       // Compute perpendicular score (edge directions should be ~90 degrees apart)
       val edgeDiff = abs(normalizeAngle(feature.edgeDir1 - feature.edgeDir2))
-      val perpendicularScore = 1.0f - (edgeDiff - 90f).coerceIn(-90f, 90f) / 90f  // Max at 90 degrees
+      val perpendicularScore =
+          1.0f - (edgeDiff - 90f).coerceIn(-90f, 90f) / 90f // Max at 90 degrees
 
       // Compute local contrast score
       val contrast = computeLocalContrast(image, feature.x, feature.y)
@@ -268,9 +264,7 @@ class EdgeFollowingCornerDetector(
     return refineCornerByGradient(image, bestPoint)
   }
 
-  /**
-   * Computes local contrast at a point (for corner quality assessment).
-   */
+  /** Computes local contrast at a point (for corner quality assessment). */
   private fun computeLocalContrast(image: BufferedImage, x: Int, y: Int): Float {
     val radius = 15
     var sumDiff = 0.0
@@ -291,9 +285,7 @@ class EdgeFollowingCornerDetector(
     return if (count > 0) (sumDiff / count / 255.0).toFloat().coerceIn(0f, 1f) else 0f
   }
 
-  /**
-   * Refines corner position using gradient-based corner detection.
-   */
+  /** Refines corner position using gradient-based corner detection. */
   private fun refineCornerByGradient(image: BufferedImage, corner: Point): Point {
     val imgWidth = image.width
     val imgHeight = image.height
@@ -305,14 +297,16 @@ class EdgeFollowingCornerDetector(
     val y2 = (corner.y + radius).coerceIn(0, imgHeight - 1)
 
     // Find dominant edge directions
-    val edgeVotes = Array(36) { 0.0 }  // 36 bins of 10 degrees each
+    val edgeVotes = Array(36) { 0.0 } // 36 bins of 10 degrees each
 
     for (y in y1..y2) {
       for (x in x1..x2) {
-        val gx = luminance(image.getRGB(min(imgWidth - 1, x + 1), y)) -
-            luminance(image.getRGB(max(0, x - 1), y))
-        val gy = luminance(image.getRGB(x, min(imgHeight - 1, y + 1))) -
-            luminance(image.getRGB(x, max(0, y - 1)))
+        val gx =
+            luminance(image.getRGB(min(imgWidth - 1, x + 1), y)) -
+                luminance(image.getRGB(max(0, x - 1), y))
+        val gy =
+            luminance(image.getRGB(x, min(imgHeight - 1, y + 1))) -
+                luminance(image.getRGB(x, max(0, y - 1)))
         val mag = sqrt(gx * gx + gy * gy)
 
         if (mag > minEdgeStrength) {
@@ -326,17 +320,17 @@ class EdgeFollowingCornerDetector(
     // Find two dominant perpendicular edge directions
     val sortedBins = edgeVotes.indices.sortedByDescending { edgeVotes[it] }
     val dir1Bin = sortedBins[0]
-    val dir2Bin = (dir1Bin + 9) % 36  // ~90 degrees away
+    val dir2Bin = (dir1Bin + 9) % 36 // ~90 degrees away
 
     // Compute weighted center of edges in those directions
     var sumX = 0.0
     var sumY = 0.0
     var sumW = 0.0
 
-    val binRange = 3  // Include neighboring bins
+    val binRange = 3 // Include neighboring bins
 
     // Horizontal-ish edges (perpendicular to dir1)
-    val horizBin = (dir1Bin + 18) % 36  // Opposite direction
+    val horizBin = (dir1Bin + 18) % 36 // Opposite direction
     for (y in y1..y2) {
       val dy = y - corner.y
       val dyNorm = dy.toDouble() / radius
@@ -371,8 +365,7 @@ class EdgeFollowingCornerDetector(
 
     return Point(
         (corner.x + offsetX).coerceIn(0, imgWidth - 1),
-        (corner.y + offsetY).coerceIn(0, imgHeight - 1)
-    )
+        (corner.y + offsetY).coerceIn(0, imgHeight - 1))
   }
 
   private fun normalizeAngle(angle: Float): Float {
@@ -405,8 +398,7 @@ class EdgeFollowingCornerDetector(
         Point(topLeft.x, topLeft.y),
         Point(remaining[0].x, remaining[0].y),
         Point(bottomRight.x, bottomRight.y),
-        Point(remaining[1].x, remaining[1].y)
-    )
+        Point(remaining[1].x, remaining[1].y))
   }
 
   private fun validateAndOrderCorners(corners: List<Point>): List<Point> {
@@ -500,8 +492,11 @@ class EdgeFollowingCornerDetector(
       val maxX: Int,
       val maxY: Int,
   ) {
-    val width get() = maxX - minX
-    val height get() = maxY - minY
+    val width
+      get() = maxX - minX
+
+    val height
+      get() = maxY - minY
   }
 
   data class Point(val x: Int, val y: Int)

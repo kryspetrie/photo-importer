@@ -279,8 +279,63 @@ data class AppSettings(
      * Similar to [savedFolderPresets] but for filename patterns. Allows users to save and reuse
      * custom naming conventions.
      */
-    val savedFilenamePresets: List<PatternPreset> = emptyList()
-)
+    val savedFilenamePresets: List<PatternPreset> = emptyList(),
+
+    /**
+     * All saved Photo Scan profiles.
+     *
+     * Photo Scan profiles store settings for the photo scan workflow:
+     * - Destination folders
+     * - Output format (JPEG quality, PNG, etc.)
+     * - Aspect ratio presets
+     * - Correction settings (perspective, rotation)
+     * - Naming patterns
+     *
+     * Users can create multiple profiles for different scan types:
+     * - Document scanning
+     * - Photo album digitization
+     * - Quick scans
+     *
+     * @see PhotoScanProfile Individual Photo Scan profile
+     */
+    val photoScanProfiles: List<PhotoScanProfile> = listOf(PhotoScanProfile.createDefault()),
+
+    /**
+     * ID of currently active Photo Scan profile.
+     *
+     * Used to:
+     * - Restore Photo Scan profile selection on app restart
+     * - Quickly access Photo Scan profile
+     *
+     * If null, uses the first profile in [photoScanProfiles].
+     */
+    val activePhotoScanProfileId: String? = null,
+
+    /**
+     * Recent destination folders for Photo Scan.
+     *
+     * Stores the last N destination folders used for Photo Scan exports.
+     * Shown as quick-select options in the destination selector.
+     *
+     * Maximum 5 entries stored.
+     */
+    val recentPhotoScanDestinations: List<String> = emptyList()
+) {
+  /**
+   * Returns the currently active Photo Scan profile, or the default if none is selected.
+   */
+  val activePhotoScanProfile: PhotoScanProfile
+    get() = photoScanProfiles.find { it.id == activePhotoScanProfileId } 
+        ?: photoScanProfiles.firstOrNull() 
+        ?: PhotoScanProfile.createDefault()
+
+  /**
+   * Returns the most recently used destination, or the default destination from the active profile.
+   */
+  val lastPhotoScanDestination: String
+    get() = recentPhotoScanDestinations.firstOrNull() 
+        ?: activePhotoScanProfile.resolveDestination()
+}
 
 /**
  * Window state information for persistence.

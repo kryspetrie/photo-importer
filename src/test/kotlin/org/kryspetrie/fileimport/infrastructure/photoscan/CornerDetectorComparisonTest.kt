@@ -9,9 +9,7 @@ import org.junit.jupiter.api.TestInstance
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 
-/**
- * Comprehensive accuracy test comparing ALL corner detection approaches.
- */
+/** Comprehensive accuracy test comparing ALL corner detection approaches. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CornerDetectorComparisonTest {
 
@@ -43,22 +41,23 @@ class CornerDetectorComparisonTest {
   private fun loadImage(path: String): BufferedImage =
       ImageIO.read(javaClass.classLoader.getResourceAsStream(path))!!
 
-  private fun groundTruth02(): List<List<PhotoCorner>> = listOf(
+  private fun groundTruth02(): List<List<PhotoCorner>> =
       listOf(
-          PhotoCorner(270f, 358f),
-          PhotoCorner(1864f, 358f),
-          PhotoCorner(1864f, 1452f),
-          PhotoCorner(270f, 1452f)),
-      listOf(
-          PhotoCorner(256f, 1560f),
-          PhotoCorner(2104f, 1560f),
-          PhotoCorner(2104f, 3814f),
-          PhotoCorner(256f, 3814f)),
-      listOf(
-          PhotoCorner(2226f, 634f),
-          PhotoCorner(3700f, 634f),
-          PhotoCorner(3700f, 2510f),
-          PhotoCorner(2226f, 2510f)))
+          listOf(
+              PhotoCorner(270f, 358f),
+              PhotoCorner(1864f, 358f),
+              PhotoCorner(1864f, 1452f),
+              PhotoCorner(270f, 1452f)),
+          listOf(
+              PhotoCorner(256f, 1560f),
+              PhotoCorner(2104f, 1560f),
+              PhotoCorner(2104f, 3814f),
+              PhotoCorner(256f, 3814f)),
+          listOf(
+              PhotoCorner(2226f, 634f),
+              PhotoCorner(3700f, 634f),
+              PhotoCorner(3700f, 2510f),
+              PhotoCorner(2226f, 2510f)))
 
   private fun getPhotoCorners(photo: DetectedPhoto): List<PhotoCorner> =
       listOf(photo.topLeft, photo.topRight, photo.bottomRight, photo.bottomLeft)
@@ -140,14 +139,14 @@ class CornerDetectorComparisonTest {
     val edgeLineResults = edgeLineDetector.detectPhotos(img02)
 
     println("\n--- Detected Corners ---")
-    for ((name, results) in listOf(
-        "Original" to originalResults,
-        "Edge" to edgeResults,
-        "Integrated" to integratedResults,
-        "EdgeFollowing" to edgeFollowingResults,
-        "RegionGuided" to regionGuidedResults,
-        "EdgeLine" to edgeLineResults
-    )) {
+    for ((name, results) in
+        listOf(
+            "Original" to originalResults,
+            "Edge" to edgeResults,
+            "Integrated" to integratedResults,
+            "EdgeFollowing" to edgeFollowingResults,
+            "RegionGuided" to regionGuidedResults,
+            "EdgeLine" to edgeLineResults)) {
       println("\n$name: ${results.size} photos")
       for ((i, photo) in results.withIndex()) {
         val corners = getPhotoCorners(photo)
@@ -192,17 +191,17 @@ class CornerDetectorComparisonTest {
     consensusDetector.targetPhotoCount = 3
     refinedDetector.targetPhotoCount = 3
 
-    val results = mapOf(
-        "Original" to originalDetector.detectPhotos(img02),
-        "Edge" to edgeDetector.detectPhotos(img02),
-        "Integrated" to integratedDetector.detectPhotos(img02),
-        "EdgeFollowing" to edgeFollowingDetector.detectPhotos(img02),
-        "RegionGuided" to regionGuidedDetector.detectPhotos(img02),
-        "EdgeLine" to edgeLineDetector.detectPhotos(img02),
-        "ImprovedEdgeLine" to improvedEdgeLineDetector.detectPhotos(img02),
-        "Consensus" to consensusDetector.detectPhotos(img02),
-        "Refined" to refinedDetector.detectPhotos(img02)
-    )
+    val results =
+        mapOf(
+            "Original" to originalDetector.detectPhotos(img02),
+            "Edge" to edgeDetector.detectPhotos(img02),
+            "Integrated" to integratedDetector.detectPhotos(img02),
+            "EdgeFollowing" to edgeFollowingDetector.detectPhotos(img02),
+            "RegionGuided" to regionGuidedDetector.detectPhotos(img02),
+            "EdgeLine" to edgeLineDetector.detectPhotos(img02),
+            "ImprovedEdgeLine" to improvedEdgeLineDetector.detectPhotos(img02),
+            "Consensus" to consensusDetector.detectPhotos(img02),
+            "Refined" to refinedDetector.detectPhotos(img02))
 
     for ((name, photos) in results) {
       val detections = photos.mapIndexed { i, p -> "$name[$i]" to p }
@@ -244,29 +243,30 @@ class CornerDetectorComparisonTest {
     consensusDetector.targetPhotoCount = 3
     refinedDetector.targetPhotoCount = 3
 
-    val results = mapOf(
-        "Original" to originalDetector.detectPhotos(img02),
-        "Edge" to edgeDetector.detectPhotos(img02),
-        "Integrated" to integratedDetector.detectPhotos(img02),
-        "EdgeFollowing" to edgeFollowingDetector.detectPhotos(img02),
-        "RegionGuided" to regionGuidedDetector.detectPhotos(img02),
-        "EdgeLine" to edgeLineDetector.detectPhotos(img02),
-        "ImprovedEdgeLine" to improvedEdgeLineDetector.detectPhotos(img02),
-        "Consensus" to consensusDetector.detectPhotos(img02),
-        "Refined" to refinedDetector.detectPhotos(img02)
-    )
+    val results =
+        mapOf(
+            "Original" to originalDetector.detectPhotos(img02),
+            "Edge" to edgeDetector.detectPhotos(img02),
+            "Integrated" to integratedDetector.detectPhotos(img02),
+            "EdgeFollowing" to edgeFollowingDetector.detectPhotos(img02),
+            "RegionGuided" to regionGuidedDetector.detectPhotos(img02),
+            "EdgeLine" to edgeLineDetector.detectPhotos(img02),
+            "ImprovedEdgeLine" to improvedEdgeLineDetector.detectPhotos(img02),
+            "Consensus" to consensusDetector.detectPhotos(img02),
+            "Refined" to refinedDetector.detectPhotos(img02))
 
     for ((name, photos) in results) {
       // Find closest to GT1 centroid
       val gt1CentroidX = 1180.0
       val gt1CentroidY = 2687.0
 
-      val best = photos.minByOrNull {
-        val corners = getPhotoCorners(it)
-        val cx = corners.map { c -> c.x }.average()
-        val cy = corners.map { c -> c.y }.average()
-        hypot(cx - gt1CentroidX, cy - gt1CentroidY)
-      }
+      val best =
+          photos.minByOrNull {
+            val corners = getPhotoCorners(it)
+            val cx = corners.map { c -> c.x }.average()
+            val cy = corners.map { c -> c.y }.average()
+            hypot(cx - gt1CentroidX, cy - gt1CentroidY)
+          }
 
       if (best != null) {
         val corners = getPhotoCorners(best)
@@ -275,8 +275,10 @@ class CornerDetectorComparisonTest {
 
         println("\n$name:")
         println("  Corners: ${sorted.map { "(${it.x.toInt()},${it.y.toInt()})" }.joinToString()}")
-        println("  Errors: TL=${"%.1f".format(errors[0])}px, TR=${"%.1f".format(errors[1])}px, BR=${"%.1f".format(errors[2])}px, BL=${"%.1f".format(errors[3])}px")
-        println("  Avg: ${"%.1f".format(errors.average())}px, Max: ${"%.1f".format(errors.maxOrNull()!!)}px")
+        println(
+            "  Errors: TL=${"%.1f".format(errors[0])}px, TR=${"%.1f".format(errors[1])}px, BR=${"%.1f".format(errors[2])}px, BL=${"%.1f".format(errors[3])}px")
+        println(
+            "  Avg: ${"%.1f".format(errors.average())}px, Max: ${"%.1f".format(errors.maxOrNull()!!)}px")
       }
     }
   }

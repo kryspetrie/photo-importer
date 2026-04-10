@@ -2,8 +2,6 @@ package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
-import kotlin.math.abs
-import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
@@ -11,9 +9,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
-/**
- * Test to understand what contours are being found and why GT[1] isn't detected.
- */
+/** Test to understand what contours are being found and why GT[1] isn't detected. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ContourDebugTest {
 
@@ -31,7 +27,7 @@ class ContourDebugTest {
   fun `show all detected contours with statistics`() {
     val detector = RectangleDetector()
     val quads = detector.detectRectangles(img02, expectedCount = 3)
-    
+
     println("\n=== All Detected Quads ===")
     for ((i, quad) in quads.withIndex()) {
       val corners = quad.corners
@@ -43,17 +39,20 @@ class ContourDebugTest {
       println("  Aspect ratio: ${"%.2f".format(quad.aspectRatio)}")
       println("  Corners: ${corners.map { "(${it.x},${it.y})" }.joinToString()}")
     }
-    
+
     // Show expected GT locations
     println("\n=== Ground Truth Locations ===")
-    println("GT[0]: centroid ~(1067, 905), corners: TL(270,358), TR(1864,358), BR(1864,1452), BL(270,1452)")
-    println("GT[1]: centroid ~(1180, 2687), corners: TL(256,1560), TR(2104,1560), BR(2104,3814), BL(256,3814)")
-    println("GT[2]: centroid ~(2963, 1572), corners: TL(2226,634), TR(3700,634), BR(3700,2510), BL(2226,2510)")
-    
+    println(
+        "GT[0]: centroid ~(1067, 905), corners: TL(270,358), TR(1864,358), BR(1864,1452), BL(270,1452)")
+    println(
+        "GT[1]: centroid ~(1180, 2687), corners: TL(256,1560), TR(2104,1560), BR(2104,3814), BL(256,3814)")
+    println(
+        "GT[2]: centroid ~(2963, 1572), corners: TL(2226,634), TR(3700,634), BR(3700,2510), BL(2226,2510)")
+
     // Check what's closest to GT[1]
     val gt1CenterX = 1180.0
     val gt1CenterY = 2687.0
-    
+
     println("\n=== Distance to GT[1] Centroid ===")
     for ((i, quad) in quads.withIndex()) {
       val cx = quad.corners.map { it.x }.average()
@@ -62,18 +61,18 @@ class ContourDebugTest {
       println("Quad[$i]: ${"%.0f".format(dist)}px away from GT[1]")
     }
   }
-  
+
   @Test
   fun `check what contours are found with different epsilon values`() {
     println("\n=== Douglas-Peucker Epsilon Comparison ===")
-    
+
     val gray = toGrayscale(img02)
     val binary = adaptiveThreshold(gray, 31, 10)
     val closed = morphologicalClose(binary, 5)
     val contours = findContours(closed)
-    
+
     println("Total contours found: ${contours.size}")
-    
+
     // Show contour statistics
     for ((i, contour) in contours.take(20).withIndex()) {
       val xs = contour.map { it.x }
@@ -85,11 +84,12 @@ class ContourDebugTest {
       val cx = xs.average()
       val cy = ys.average()
       val area = (maxX - minX) * (maxY - minY)
-      
+
       // Check distance to GT[1]
       val distToGT1 = hypot(cx - 1180, cy - 2687)
-      
-      println("Contour[$i]: size=${contour.size}, bbox=${maxX-minX}x${maxY-minY}, " +
+
+      println(
+          "Contour[$i]: size=${contour.size}, bbox=${maxX-minX}x${maxY-minY}, " +
               "centroid=(${cx.toInt()},${cy.toInt()}), area=$area, distToGT1=${"%.0f".format(distToGT1)}px")
     }
   }
@@ -137,7 +137,12 @@ class ContourDebugTest {
     return integral
   }
 
-  private fun getIntegralMean(integral: Array<IntArray>, cx: Int, cy: Int, blockSize: Int): Pair<Int, Int> {
+  private fun getIntegralMean(
+      integral: Array<IntArray>,
+      cx: Int,
+      cy: Int,
+      blockSize: Int
+  ): Pair<Int, Int> {
     val w = integral[0].size - 1
     val h = integral.size - 1
     val half = blockSize / 2
@@ -146,7 +151,8 @@ class ContourDebugTest {
     val x2 = min(w - 1, cx + half)
     val y2 = min(h - 1, cy + half)
     val count = (x2 - x1 + 1) * (y2 - y1 + 1)
-    val sum = integral[y2 + 1][x2 + 1] - integral[y1][x2 + 1] - integral[y2 + 1][x1] + integral[y1][x1]
+    val sum =
+        integral[y2 + 1][x2 + 1] - integral[y1][x2 + 1] - integral[y2 + 1][x1] + integral[y1][x1]
     return sum to count
   }
 
@@ -167,7 +173,10 @@ class ContourDebugTest {
             val nx = x + dx
             val ny = y + dy
             if (nx in 0 until binary.width && ny in 0 until binary.height) {
-              if (src.getSample(nx, ny, 0) > 0) { found = true; break@outer }
+              if (src.getSample(nx, ny, 0) > 0) {
+                found = true
+                break@outer
+              }
             }
           }
         }
@@ -190,7 +199,10 @@ class ContourDebugTest {
             val nx = x + dx
             val ny = y + dy
             if (nx in 0 until binary.width && ny in 0 until binary.height) {
-              if (src.getSample(nx, ny, 0) == 0) { allOn = false; break@outer }
+              if (src.getSample(nx, ny, 0) == 0) {
+                allOn = false
+                break@outer
+              }
             }
           }
         }
@@ -215,7 +227,12 @@ class ContourDebugTest {
     return contours
   }
 
-  private fun traceContour(data: java.awt.image.WritableRaster, visited: Array<BooleanArray>, startX: Int, startY: Int): List<RectangleDetector.Point> {
+  private fun traceContour(
+      data: java.awt.image.WritableRaster,
+      visited: Array<BooleanArray>,
+      startX: Int,
+      startY: Int
+  ): List<RectangleDetector.Point> {
     val contour = mutableListOf<RectangleDetector.Point>()
     var x = startX
     var y = startY
@@ -230,8 +247,14 @@ class ContourDebugTest {
         val ndir = (dir + i) % 8
         val nx = x + dx[ndir]
         val ny = y + dy[ndir]
-        if (nx in 0 until data.width && ny in 0 until data.height && data.getSample(nx, ny, 0) > 0) {
-          x = nx; y = ny; dir = (ndir + 5) % 8; found = true; break
+        if (nx in 0 until data.width &&
+            ny in 0 until data.height &&
+            data.getSample(nx, ny, 0) > 0) {
+          x = nx
+          y = ny
+          dir = (ndir + 5) % 8
+          found = true
+          break
         }
       }
       if (!found || contour.size > data.width * data.height) break

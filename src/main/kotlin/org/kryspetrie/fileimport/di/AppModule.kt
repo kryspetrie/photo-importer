@@ -8,6 +8,7 @@ import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.port.*
 import org.kryspetrie.fileimport.infrastructure.adapter.*
+import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
 
@@ -307,6 +308,15 @@ val appModule = module {
   /** Corner detector using edge-based classical computer vision. */
   single { HybridCornerDetector(rectangleDetector = get()) }
 
+  /** Photo scan detector service for auto-detecting photo boundaries. */
+  single { org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService() }
+
+  /** Perspective correction service for applying 4-point transforms. */
+  single { org.kryspetrie.fileimport.application.PerspectiveCorrectionService() }
+
+  /** Photo scan export service with EXIF metadata handling. */
+  single { org.kryspetrie.fileimport.application.PhotoScanExportService(get()) }
+
   /**
    * Scan service - orchestrates photo scan operations.
    *
@@ -323,4 +333,9 @@ val appModule = module {
    * @see ScanService Photo scan logic
    */
   single { ScanService(imageRepository = get(), hybridCornerDetector = get()) }
+
+  // ==================== INFRASTRUCTURE ====================
+
+  /** Centralized application logger with file output and ring buffer. */
+  single { AppLogger() }
 }

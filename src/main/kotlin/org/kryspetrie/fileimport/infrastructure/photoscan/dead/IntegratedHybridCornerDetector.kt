@@ -18,11 +18,10 @@ import org.kryspetrie.fileimport.domain.model.PhotoCorner
 /**
  * Integrated hybrid corner detector that combines multiple detection strategies.
  *
- * This detector runs both the contour-based [HybridCornerDetector] and
- * BoofCV-based corner detection, then uses consensus to select/refine the best corners.
+ * This detector runs both the contour-based [HybridCornerDetector] and BoofCV-based corner
+ * detection, then uses consensus to select/refine the best corners.
  *
  * ## Strategy
- *
  * 1. Run the contour-based detector (Douglas-Peucker with multiple epsilons)
  * 2. Run the BoofCV Shi-Tomasi corner detector on the full image
  * 3. For each detected photo region, find the best matching interest points
@@ -116,9 +115,7 @@ class IntegratedHybridCornerDetector(
     }
   }
 
-  /**
-   * Detects interest points using BoofCV Shi-Tomasi detector.
-   */
+  /** Detects interest points using BoofCV Shi-Tomasi detector. */
   private fun detectInterestPoints(image: BufferedImage): List<InterestPoint> {
     val (workImage, scale) = downsampleForDetection(image)
     val width = workImage.width
@@ -138,7 +135,13 @@ class IntegratedHybridCornerDetector(
     }
 
     // Detect corners
-    featureDetector.process(gray, GrayS16(width, height), GrayS16(width, height), GrayS16(width, height), GrayS16(width, height), GrayS16(width, height))
+    featureDetector.process(
+        gray,
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height),
+        GrayS16(width, height))
 
     val points = mutableListOf<InterestPoint>()
     val maximums = featureDetector.getMaximums()
@@ -154,9 +157,7 @@ class IntegratedHybridCornerDetector(
     return points.sortedByDescending { it.scale }
   }
 
-  /**
-   * Downsamples image for corner detection.
-   */
+  /** Downsamples image for corner detection. */
   private fun downsampleForDetection(image: BufferedImage): Pair<BufferedImage, Float> {
     if (image.width <= maxImageDimension && image.height <= maxImageDimension) {
       return image to 1.0f
@@ -170,9 +171,7 @@ class IntegratedHybridCornerDetector(
     return resized to (1.0f / scale)
   }
 
-  /**
-   * Integrates multiple detection strategies for corner refinement.
-   */
+  /** Integrates multiple detection strategies for corner refinement. */
   private fun refineCornersIntegrated(
       image: BufferedImage,
       quad: DetectedQuadrilateral,
@@ -195,9 +194,7 @@ class IntegratedHybridCornerDetector(
     return validateAndOrderCorners(refined)
   }
 
-  /**
-   * Refines a corner using integrated detection strategies.
-   */
+  /** Refines a corner using integrated detection strategies. */
   private fun refineCornerIntegrated(
       roughCorner: Point,
       interestPoints: List<InterestPoint>,
@@ -205,10 +202,13 @@ class IntegratedHybridCornerDetector(
       quad: DetectedQuadrilateral
   ): Point {
     // Method 1: Find nearest interest points
-    val nearby = interestPoints.filter {
-      val dist = hypot((it.x - roughCorner.x).toDouble(), (it.y - roughCorner.y).toDouble())
-      dist <= roiSearchRadius
-    }.take(maxFeaturesPerCorner)
+    val nearby =
+        interestPoints
+            .filter {
+              val dist = hypot((it.x - roughCorner.x).toDouble(), (it.y - roughCorner.y).toDouble())
+              dist <= roiSearchRadius
+            }
+            .take(maxFeaturesPerCorner)
 
     // Method 2: Edge-based corner refinement
     val edgeRefined = refineSingleCornerEdges(image, roughCorner)
@@ -240,26 +240,28 @@ class IntegratedHybridCornerDetector(
         val edgeWeight = 0.3
         val contourWeight = 0.1
 
-        val refinedX = (interestBasedX * interestWeight + edgeRefined.x * edgeWeight + contourRefined.x * contourWeight).toInt()
-        val refinedY = (interestBasedY * interestWeight + edgeRefined.y * edgeWeight + contourRefined.y * contourWeight).toInt()
+        val refinedX =
+            (interestBasedX * interestWeight +
+                    edgeRefined.x * edgeWeight +
+                    contourRefined.x * contourWeight)
+                .toInt()
+        val refinedY =
+            (interestBasedY * interestWeight +
+                    edgeRefined.y * edgeWeight +
+                    contourRefined.y * contourWeight)
+                .toInt()
 
-        return Point(
-            refinedX.coerceIn(0, image.width - 1),
-            refinedY.coerceIn(0, image.height - 1)
-        )
+        return Point(refinedX.coerceIn(0, image.width - 1), refinedY.coerceIn(0, image.height - 1))
       }
     }
 
     // Fall back to edge-based if interest points insufficient
     return Point(
         ((edgeRefined.x + contourRefined.x) / 2).coerceIn(0, image.width - 1),
-        ((edgeRefined.y + contourRefined.y) / 2).coerceIn(0, image.height - 1)
-    )
+        ((edgeRefined.y + contourRefined.y) / 2).coerceIn(0, image.height - 1))
   }
 
-  /**
-   * Refines corner based on proximity to detected contour edges.
-   */
+  /** Refines corner based on proximity to detected contour edges. */
   private fun refineByContourProximity(roughCorner: Point, quad: DetectedQuadrilateral): Point {
     // For each edge of the quadrilateral, find the closest point
     // and refine the corner towards that
@@ -292,10 +294,12 @@ class IntegratedHybridCornerDetector(
     return bestPoint
   }
 
-  /**
-   * Finds the closest point on a line segment to a given point.
-   */
-  private fun closestPointOnSegment(p: Point, a: RectangleDetector.Point, b: RectangleDetector.Point): Point {
+  /** Finds the closest point on a line segment to a given point. */
+  private fun closestPointOnSegment(
+      p: Point,
+      a: RectangleDetector.Point,
+      b: RectangleDetector.Point
+  ): Point {
     val ax = p.x - a.x.toFloat()
     val ay = p.y - a.y.toFloat()
     val bx = b.x.toFloat() - a.x.toFloat()
@@ -303,15 +307,10 @@ class IntegratedHybridCornerDetector(
 
     val t = ((ax * bx + ay * by) / (bx * bx + by * by + 0.0001f)).coerceIn(0f, 1f)
 
-    return Point(
-        (a.x + t * bx).toInt(),
-        (a.y + t * by).toInt()
-    )
+    return Point((a.x + t * bx).toInt(), (a.y + t * by).toInt())
   }
 
-  /**
-   * Refines a single corner using local edge analysis.
-   */
+  /** Refines a single corner using local edge analysis. */
   private fun refineSingleCornerEdges(image: BufferedImage, roughCorner: Point): Point {
     val imgWidth = image.width
     val imgHeight = image.height
@@ -384,9 +383,7 @@ class IntegratedHybridCornerDetector(
     return Point(refinedX.coerceIn(0, imgWidth - 1), refinedY.coerceIn(0, imgHeight - 1))
   }
 
-  /**
-   * Finds the peak position in a vote array.
-   */
+  /** Finds the peak position in a vote array. */
   private fun findPeak(votes: IntArray, center: Int): Int {
     if (votes.isEmpty()) return center
 
@@ -410,9 +407,7 @@ class IntegratedHybridCornerDetector(
     return 0.299f * r + 0.587f * g + 0.114f * b
   }
 
-  /**
-   * Validates and reorders corners to ensure TL, TR, BR, BL order.
-   */
+  /** Validates and reorders corners to ensure TL, TR, BR, BL order. */
   private fun validateAndOrderCorners(corners: List<Point>): List<Point> {
     if (corners.size != 4) return corners
 
@@ -428,9 +423,7 @@ class IntegratedHybridCornerDetector(
     return listOf(topLeft, topRight, bottomRight, bottomLeft)
   }
 
-  /**
-   * Sorts corners into TL, TR, BR, BL order.
-   */
+  /** Sorts corners into TL, TR, BR, BL order. */
   private fun sortCorners(corners: List<RectangleDetector.Point>): List<Point> {
     if (corners.size != 4) return corners.map { Point(it.x, it.y) }
     val sortedList = corners.sortedBy { it.x + it.y }
@@ -441,8 +434,7 @@ class IntegratedHybridCornerDetector(
         Point(topLeft.x, topLeft.y),
         Point(remaining[0].x, remaining[0].y),
         Point(bottomRight.x, bottomRight.y),
-        Point(remaining[1].x, remaining[1].y)
-    )
+        Point(remaining[1].x, remaining[1].y))
   }
 
   private fun quadBounds(quad: DetectedQuadrilateral): AaBounds {

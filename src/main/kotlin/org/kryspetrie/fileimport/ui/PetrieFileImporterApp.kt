@@ -14,6 +14,7 @@ import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.ui.screens.DuplicateScannerScreen
 import org.kryspetrie.fileimport.ui.screens.ImportScreen
 import org.kryspetrie.fileimport.ui.screens.ReorganizeScreen
+import org.kryspetrie.fileimport.ui.screens.wizard.WizardContainer
 import org.kryspetrie.fileimport.ui.theme.PetrieTheme
 
 /**
@@ -95,7 +96,24 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
    *
    * @see DuplicateScannerScreen The composable that implements this tab
    */
-  DUPLICATES("Library Duplicates", Icons.Default.ContentCopy)
+  DUPLICATES("Library Duplicates", Icons.Default.ContentCopy),
+
+  /**
+   * Photo Scan Wizard tab - scan printed photos from a single image.
+   *
+   * Enables users to:
+   * - Import an image containing multiple printed photos
+   * - Automatically detect photo boundaries using computer vision
+   * - Manually refine detection corners for accuracy
+   * - Apply perspective correction and rotation
+   * - Export individual photos with proper aspect ratios
+   *
+   * This is useful for digitizing physical photo prints that were photographed together, such as
+   * photos on a scanner bed or photos of a photo album page.
+   *
+   * @see WizardContainer The composable that implements this tab
+   */
+  PHOTO_SCAN("Photo Scan", Icons.Default.DocumentScanner)
 }
 
 /**
@@ -297,6 +315,21 @@ fun PetrieFileImporterApp(
             // Duplicates tab: Duplicate detection and resolution
             AppTab.DUPLICATES ->
                 DuplicateScannerScreen(settings = settings, onSettingsChange = onSettingsChange)
+
+            // Photo Scan tab: Multi-photo scan wizard
+            AppTab.PHOTO_SCAN ->
+                WizardContainer(
+                    onComplete = { processedPhotos ->
+                      // Log results for debugging
+                      println(
+                          "Photo Scan Complete: ${processedPhotos.size} photos exported")
+                      processedPhotos.forEach { photo ->
+                        println("  - ${photo.outputPath} (${photo.dimensions.first}x${photo.dimensions.second})")
+                      }
+                      // Switch back to Import tab after completion
+                      currentTab = AppTab.IMPORT
+                    },
+                    onCancel = { currentTab = AppTab.IMPORT })
           }
         }
       }
