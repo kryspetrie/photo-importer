@@ -3,9 +3,7 @@ package org.kryspetrie.fileimport.domain.model
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 
-/**
- * Unit tests for CorrectionSettings, PhotoOutputFormat, and AspectRatioPreset.
- */
+/** Unit tests for CorrectionSettings, PhotoOutputFormat, and AspectRatioPreset. */
 class PhotoScanSettingsTest {
 
   // ==================== CorrectionSettings Tests ====================
@@ -21,10 +19,8 @@ class PhotoScanSettingsTest {
 
   @Test
   fun `correction settings can disable both`() {
-    val settings = CorrectionSettings(
-        enablePerspectiveCorrection = false,
-        enableRotationCorrection = false
-    )
+    val settings =
+        CorrectionSettings(enablePerspectiveCorrection = false, enableRotationCorrection = false)
 
     assertFalse(settings.enablePerspectiveCorrection)
     assertFalse(settings.enableRotationCorrection)
@@ -32,10 +28,8 @@ class PhotoScanSettingsTest {
 
   @Test
   fun `correction settings can enable both`() {
-    val settings = CorrectionSettings(
-        enablePerspectiveCorrection = true,
-        enableRotationCorrection = true
-    )
+    val settings =
+        CorrectionSettings(enablePerspectiveCorrection = true, enableRotationCorrection = true)
 
     assertTrue(settings.enablePerspectiveCorrection)
     assertTrue(settings.enableRotationCorrection)
@@ -66,9 +60,7 @@ class PhotoScanSettingsTest {
   fun `JPEG formats have quality below 100`() {
     PhotoOutputFormat.entries
         .filter { it.name.contains("JPEG") }
-        .forEach { format ->
-          assertTrue(format.quality < 100)
-        }
+        .forEach { format -> assertTrue(format.quality < 100) }
   }
 
   @Test
@@ -92,16 +84,12 @@ class PhotoScanSettingsTest {
 
   @Test
   fun `all formats have descriptions`() {
-    PhotoOutputFormat.entries.forEach { format ->
-      assertTrue(format.description.isNotBlank())
-    }
+    PhotoOutputFormat.entries.forEach { format -> assertTrue(format.description.isNotBlank()) }
   }
 
   @Test
   fun `format quality values are valid`() {
-    PhotoOutputFormat.entries.forEach { format ->
-      assertTrue(format.quality in 0..100)
-    }
+    PhotoOutputFormat.entries.forEach { format -> assertTrue(format.quality in 0..100) }
   }
 
   // ==================== AspectRatioPreset Tests ====================
@@ -148,26 +136,22 @@ class PhotoScanSettingsTest {
 
   @Test
   fun `all presets have display names`() {
-    AspectRatioPreset.entries.forEach { preset ->
-      assertTrue(preset.displayName.isNotBlank())
-    }
+    AspectRatioPreset.entries.forEach { preset -> assertTrue(preset.displayName.isNotBlank()) }
   }
 
   @Test
   fun `all presets have print size descriptions`() {
-    AspectRatioPreset.entries.forEach { preset ->
-      assertTrue(preset.printSize.isNotBlank())
-    }
+    AspectRatioPreset.entries.forEach { preset -> assertTrue(preset.printSize.isNotBlank()) }
   }
 
   @Test
   fun `portrait presets have value less than 1`() {
-    val portraitPresets = listOf(
-        AspectRatioPreset.PORTRAIT_4_3,
-        AspectRatioPreset.PORTRAIT_2_3,
-        AspectRatioPreset.PORTRAIT_5_7,
-        AspectRatioPreset.PORTRAIT_4_5
-    )
+    val portraitPresets =
+        listOf(
+            AspectRatioPreset.PORTRAIT_4_3,
+            AspectRatioPreset.PORTRAIT_2_3,
+            AspectRatioPreset.PORTRAIT_5_7,
+            AspectRatioPreset.PORTRAIT_4_5)
 
     portraitPresets.forEach { preset ->
       assertTrue(preset.value < 1.0, "${preset.name} should have value < 1")
@@ -176,12 +160,12 @@ class PhotoScanSettingsTest {
 
   @Test
   fun `landscape presets have value greater than 1`() {
-    val landscapePresets = listOf(
-        AspectRatioPreset.LANDSCAPE_3_2,
-        AspectRatioPreset.LANDSCAPE_3_4,
-        AspectRatioPreset.WIDE_16_9,
-        AspectRatioPreset.PANORAMA_3_1
-    )
+    val landscapePresets =
+        listOf(
+            AspectRatioPreset.LANDSCAPE_3_2,
+            AspectRatioPreset.LANDSCAPE_3_4,
+            AspectRatioPreset.WIDE_16_9,
+            AspectRatioPreset.PANORAMA_3_1)
 
     landscapePresets.forEach { preset ->
       assertTrue(preset.value > 1.0, "${preset.name} should have value > 1")
@@ -210,15 +194,14 @@ class PhotoScanSettingsTest {
 
   @Test
   fun `PhotoScanProfile uses all settings correctly`() {
-    val profile = PhotoScanProfile(
-        name = "Test Profile",
-        outputFormat = PhotoOutputFormat.JPEG_QUALITY_95,
-        aspectRatioPreset = AspectRatioPreset.LANDSCAPE_3_2,
-        correctionSettings = CorrectionSettings(
-            enablePerspectiveCorrection = true,
-            enableRotationCorrection = true
-        )
-    )
+    val profile =
+        PhotoScanProfile(
+            name = "Test Profile",
+            outputFormat = PhotoOutputFormat.JPEG_QUALITY_95,
+            aspectRatioPreset = AspectRatioPreset.LANDSCAPE_3_2,
+            correctionSettings =
+                CorrectionSettings(
+                    enablePerspectiveCorrection = true, enableRotationCorrection = true))
 
     assertEquals(PhotoOutputFormat.JPEG_QUALITY_95, profile.outputFormat)
     assertEquals(AspectRatioPreset.LANDSCAPE_3_2, profile.aspectRatioPreset)

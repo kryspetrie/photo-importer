@@ -33,7 +33,6 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
@@ -43,6 +42,18 @@ import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanState
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 
+/**
+ * Photo Scan Preview Screen for editing detected photo corners.
+ *
+ * Provides a high-performance canvas for:
+ * - Viewing detected photos with bounding boxes
+ * - Dragging corners to adjust photo boundaries
+ * - Dragging photos to reposition them
+ * - Adding/removing detected photos
+ * - Rotation and perspective correction toggles
+ *
+ * Uses pixel-based coordinates internally (as per PhotoScanState requirements).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhotoScanPreviewScreen(
@@ -62,8 +73,6 @@ fun PhotoScanPreviewScreen(
     onRotateCCW: (photoId: String) -> Unit = {}
 ) {
   var imageSize by remember { mutableStateOf(IntSize.Zero) }
-  var zoomLevel by remember { mutableFloatStateOf(1f) }
-  var showFullScreenEditor by remember { mutableStateOf(false) }
 
   // Collect state flows
   val selectedPhotoId by scanState.selectedPhotoId.collectAsState()
@@ -76,8 +85,8 @@ fun PhotoScanPreviewScreen(
 
   // Calculate display parameters
   val displayParams =
-      remember(imageSize, zoomLevel, imageWidth, imageHeight) {
-        calculateDisplayParams(imageSize, imageWidth, imageHeight, zoomLevel)
+      remember(imageSize, imageWidth, imageHeight) {
+        calculateDisplayParams(imageSize, imageWidth, imageHeight)
       }
 
   // Pre-render cropped photos for the table
@@ -128,79 +137,14 @@ fun PhotoScanPreviewScreen(
                     onSelectCorner = { scanState.selectCorner(it) },
                     onClearCorner = { scanState.selectCorner(null) })
 
-                Row(
-                    modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                      IconButton(
-                          onClick = { zoomLevel = (zoomLevel * 0.8f).coerceAtLeast(0.25f) }) {
-                            Icon(Icons.Default.ZoomOut, "Zoom out")
-                          }
-                      IconButton(onClick = { zoomLevel = (zoomLevel * 1.25f).coerceAtMost(4f) }) {
-                        Icon(Icons.Default.ZoomIn, "Zoom in")
+                // Full-screen editor button
+                if (selectedPhotoId != null) {
+                  IconButton(
+                      onClick = { /* Full screen not needed for now */ },
+                      modifier = Modifier.align(Alignment.TopEnd).padding(8.dp)) {
+                        Icon(Icons.Default.OpenInFull, "Full screen editor")
                       }
-                      IconButton(onClick = { zoomLevel = 1f }) {
-                        Icon(Icons.Default.FitScreen, "Fit to screen")
-                      }
-                      // Full-screen editor button
-                      if (selectedPhotoId != null) {
-                        IconButton(onClick = { showFullScreenEditor = true }) {
-                          Icon(Icons.Default.OpenInFull, "Full screen editor")
-                        }
-                      }
-                    }
-
-                // Photo count controls
-                Row(
-                    modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
-                      Surface(
-                          shape = MaterialTheme.shapes.small,
-                          color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f)) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                  Text("Photos:", style = MaterialTheme.typography.labelMedium)
-                                  IconButton(
-                                      onClick = { scanState.decrementTargetPhotoCount() },
-                                      modifier = Modifier.size(28.dp)) {
-                                        Icon(
-                                            Icons.Default.Remove,
-                                            "Decrease photo count",
-                                            modifier = Modifier.size(16.dp))
-                                      }
-                                  // Show editable field - "Auto" if null, otherwise number 1-20
-                                  val targetDisplay =
-                                      scanState.targetPhotoCount.value?.toString() ?: "Auto"
-                                  OutlinedTextField(
-                                      value = targetDisplay,
-                                      onValueChange = { newValue ->
-                                        val count = newValue.toIntOrNull()
-                                        scanState.setTargetPhotoCount(count)
-                                      },
-                                      modifier = Modifier.width(70.dp),
-                                      textStyle =
-                                          MaterialTheme.typography.labelLarge.copy(
-                                              textAlign = TextAlign.Center),
-                                      singleLine = true)
-                                  IconButton(
-                                      onClick = { scanState.incrementTargetPhotoCount() },
-                                      modifier = Modifier.size(28.dp)) {
-                                        Icon(
-                                            Icons.Default.Add,
-                                            "Increase photo count",
-                                            modifier = Modifier.size(16.dp))
-                                      }
-                                  IconButton(onClick = onRescan, modifier = Modifier.size(28.dp)) {
-                                    Icon(
-                                        Icons.Default.Refresh,
-                                        "Rescan",
-                                        modifier = Modifier.size(16.dp))
-                                  }
-                                }
-                          }
-                    }
+                }
               }
 
           PhotoTable(
@@ -228,39 +172,25 @@ fun PhotoScanPreviewScreen(
         onSkip = onSkip,
         onNext = onNext,
         currentImageName = scanState.currentImage?.file?.name ?: "")
-
-    // Full-screen editor dialog
-    if (showFullScreenEditor && selectedPhotoId != null) {
-      val selectedPhoto = photos.find { it.id == selectedPhotoId }
-      if (selectedPhoto != null) {
-        FullScreenPhotoEditor(
-            image = image,
-            photo = selectedPhoto,
-            onDismiss = { showFullScreenEditor = false },
-            onCornerMove = { corner, x, y -> onCornerMove(selectedPhotoId!!, corner, x, y) },
-            onMovePhoto = { deltaX, deltaY -> onMovePhoto(selectedPhotoId!!, deltaX, deltaY) })
-      }
-    }
   }
 }
 
-private data class DisplayParams(val scale: Float, val offsetX: Float, val offsetY: Float)
+private data class PreviewDisplayParams(val scale: Float, val offsetX: Float, val offsetY: Float)
 
 private fun calculateDisplayParams(
     imageSize: IntSize,
     imageWidth: Float,
-    imageHeight: Float,
-    zoomLevel: Float
-): DisplayParams {
+    imageHeight: Float
+): PreviewDisplayParams {
   if (imageSize.width <= 0 || imageSize.height <= 0) {
-    return DisplayParams(1f, 0f, 0f)
+    return PreviewDisplayParams(1f, 0f, 0f)
   }
   val scaleX = imageSize.width / imageWidth
   val scaleY = imageSize.height / imageHeight
-  val fitScale = minOf(scaleX, scaleY) * zoomLevel
+  val fitScale = minOf(scaleX, scaleY)
   val offsetX = (imageSize.width - imageWidth * fitScale) / 2
   val offsetY = (imageSize.height - imageHeight * fitScale) / 2
-  return DisplayParams(fitScale, offsetX, offsetY)
+  return PreviewDisplayParams(fitScale, offsetX, offsetY)
 }
 
 @Composable
@@ -455,7 +385,7 @@ private fun PhotoCanvas(
     image: BufferedImage,
     photos: List<DetectedPhoto>,
     selectedPhotoId: String?,
-    displayParams: DisplayParams,
+    displayParams: PreviewDisplayParams,
     modifier: Modifier = Modifier
 ) {
   // Create a sampled display image for performance
@@ -467,9 +397,7 @@ private fun PhotoCanvas(
     drawRect(
         color = Color.LightGray,
         topLeft = Offset(displayParams.offsetX, displayParams.offsetY),
-        size =
-            androidx.compose.ui.geometry.Size(
-                image.width * displayParams.scale, image.height * displayParams.scale))
+        size = Size(image.width * displayParams.scale, image.height * displayParams.scale))
 
     // Draw sampled image
     if (displayImage != null) {
@@ -501,7 +429,7 @@ private fun createSampledImage(image: BufferedImage, scale: Float): BufferedImag
 private fun DrawScope.drawPhotoOverlay(
     photo: DetectedPhoto,
     isSelected: Boolean,
-    params: DisplayParams
+    params: PreviewDisplayParams
 ) {
   val outlineColor =
       when {
@@ -574,7 +502,7 @@ private fun GestureLayer(
     photos: List<DetectedPhoto>,
     selectedPhotoId: String?,
     selectedCorner: CornerType?,
-    displayParams: DisplayParams,
+    displayParams: PreviewDisplayParams,
     imageWidth: Float,
     imageHeight: Float,
     onCornerMove: (photoId: String, corner: CornerType, x: Float, y: Float) -> Unit,
@@ -672,8 +600,11 @@ private class CornerFinder {
   fun findClosestCorner(
       position: Offset,
       photos: List<DetectedPhoto>,
-      params: DisplayParams
+      params: PreviewDisplayParams
   ): Pair<String, CornerType>? {
+    // Use tolerance-based hit detection (20% of corner radius for easier selection)
+    val hitRadius = 30f * params.scale
+
     var closest: Pair<String, CornerType>? = null
     var minDist = Float.MAX_VALUE
     photos.forEach { photo ->
@@ -688,7 +619,7 @@ private class CornerFinder {
                     params.offsetX + coord.x * params.scale,
                     params.offsetY + coord.y * params.scale)
             val dist = (position - cornerScreenPos).getDistance()
-            if (dist < minDist && dist < 30f * params.scale) {
+            if (dist < minDist && dist < hitRadius) {
               minDist = dist
               closest = photo.id to cornerType
             }
@@ -700,7 +631,7 @@ private class CornerFinder {
   fun findTappedPhoto(
       position: Offset,
       photos: List<DetectedPhoto>,
-      params: DisplayParams
+      params: PreviewDisplayParams
   ): DetectedPhoto? {
     return photos.find { photo ->
       val corners =
@@ -866,263 +797,4 @@ private fun createPhotoAtPosition(
       bottomRight =
           PhotoCorner(
               (x + halfSize).coerceAtMost(imageWidth), (y + halfSize).coerceAtMost(imageHeight)))
-}
-
-/**
- * Full-screen overlay for precise corner adjustment of a detected photo. Uses a Box overlay to
- * ensure it appears on top of other UI.
- */
-@Composable
-fun FullScreenPhotoEditor(
-    image: BufferedImage,
-    photo: DetectedPhoto,
-    onDismiss: () -> Unit,
-    onCornerMove: (CornerType, Float, Float) -> Unit,
-    onMovePhoto: (Float, Float) -> Unit
-) {
-  var zoomLevel by remember { mutableFloatStateOf(2f) }
-  var containerSize by remember { mutableStateOf(IntSize.Zero) }
-
-  // Use a Box with fillMaxSize to overlay on top of everything
-  Box(modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f))) {
-    Column(modifier = Modifier.fillMaxSize()) {
-      // Top bar with controls
-      Surface(modifier = Modifier.fillMaxWidth(), color = Color.Black.copy(alpha = 0.8f)) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                  "Edit Photo Corners",
-                  style = MaterialTheme.typography.titleMedium,
-                  color = Color.White)
-
-              Row(
-                  horizontalArrangement = Arrangement.spacedBy(4.dp),
-                  verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { zoomLevel = (zoomLevel * 0.8f).coerceAtLeast(0.5f) }) {
-                      Icon(Icons.Default.ZoomOut, "Zoom out", tint = Color.White)
-                    }
-                    Text(
-                        "${(zoomLevel * 100).toInt()}%",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White)
-                    IconButton(onClick = { zoomLevel = (zoomLevel * 1.25f).coerceAtMost(10f) }) {
-                      Icon(Icons.Default.ZoomIn, "Zoom in", tint = Color.White)
-                    }
-                    IconButton(onClick = { zoomLevel = 2f }) {
-                      Icon(Icons.Default.CenterFocusWeak, "Reset view", tint = Color.White)
-                    }
-                    Divider(
-                        modifier = Modifier.height(24.dp).padding(horizontal = 8.dp),
-                        color = Color.White.copy(alpha = 0.3f))
-                    IconButton(onClick = onDismiss) {
-                      Icon(Icons.Default.Close, "Close", tint = Color.White)
-                    }
-                  }
-            }
-      }
-
-      // Instructions
-      Surface(modifier = Modifier.fillMaxWidth(), color = Color.Black.copy(alpha = 0.6f)) {
-        Text(
-            "Drag corners to adjust • Drag inside box to move • Use zoom for precision",
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.labelSmall,
-            color = Color.White.copy(alpha = 0.8f))
-      }
-
-      // Image canvas with zoom
-      Box(
-          modifier =
-              Modifier.fillMaxSize().background(Color.Black).onSizeChanged { containerSize = it }) {
-            val fullScreenParams =
-                remember(containerSize, zoomLevel, image.width, image.height) {
-                  calculateFullScreenParams(
-                      containerSize, image.width.toFloat(), image.height.toFloat(), zoomLevel)
-                }
-
-            FullScreenCanvas(
-                image = image,
-                photo = photo,
-                params = fullScreenParams,
-                onCornerMove = onCornerMove,
-                onMovePhoto = onMovePhoto)
-          }
-    }
-  }
-}
-
-private data class FullScreenParams(val scale: Float, val offsetX: Float, val offsetY: Float)
-
-private fun calculateFullScreenParams(
-    containerSize: IntSize,
-    imageWidth: Float,
-    imageHeight: Float,
-    zoomLevel: Float
-): FullScreenParams {
-  if (containerSize.width <= 0 || containerSize.height <= 0) {
-    return FullScreenParams(1f, 0f, 0f)
-  }
-
-  val baseScaleX = containerSize.width / imageWidth
-  val baseScaleY = containerSize.height / imageHeight
-  val fitScale = minOf(baseScaleX, baseScaleY)
-  val scale = fitScale * zoomLevel
-
-  val imageDisplayWidth = imageWidth * scale
-  val imageDisplayHeight = imageHeight * scale
-
-  val offsetX = (containerSize.width - imageDisplayWidth) / 2
-  val offsetY = (containerSize.height - imageDisplayHeight) / 2
-
-  return FullScreenParams(scale, offsetX, offsetY)
-}
-
-@Composable
-private fun FullScreenCanvas(
-    image: BufferedImage,
-    photo: DetectedPhoto,
-    params: FullScreenParams,
-    onCornerMove: (CornerType, Float, Float) -> Unit,
-    onMovePhoto: (Float, Float) -> Unit
-) {
-  var draggedCorner by remember { mutableStateOf<CornerType?>(null) }
-  var isDraggingPhoto by remember { mutableStateOf(false) }
-  var lastPosition by remember { mutableStateOf(Offset.Zero) }
-
-  Canvas(
-      modifier =
-          Modifier.fillMaxSize().pointerInput(photo) {
-            detectDragGestures(
-                onDragStart = { offset ->
-                  lastPosition = offset
-                  // Check for corner hit first
-                  val corner = findCornerAtPosition(offset, photo, params)
-                  if (corner != null) {
-                    draggedCorner = corner
-                  } else if (isInsidePhoto(offset, photo, params)) {
-                    isDraggingPhoto = true
-                  }
-                },
-                onDrag = { change, _ ->
-                  if (draggedCorner != null) {
-                    val x =
-                        ((change.position.x - params.offsetX) / params.scale).coerceIn(
-                            0f, image.width.toFloat())
-                    val y =
-                        ((change.position.y - params.offsetY) / params.scale).coerceIn(
-                            0f, image.height.toFloat())
-                    onCornerMove(draggedCorner!!, x, y)
-                  } else if (isDraggingPhoto) {
-                    val deltaX = (change.position.x - lastPosition.x) / params.scale
-                    val deltaY = (change.position.y - lastPosition.y) / params.scale
-                    onMovePhoto(deltaX, deltaY)
-                    lastPosition = change.position
-                  }
-                },
-                onDragEnd = {
-                  draggedCorner = null
-                  isDraggingPhoto = false
-                })
-          }) {
-        // Draw background
-        drawRect(
-            color = Color.DarkGray,
-            topLeft = Offset(params.offsetX, params.offsetY),
-            size =
-                androidx.compose.ui.geometry.Size(
-                    image.width * params.scale, image.height * params.scale))
-
-        // Draw image
-        val imageBitmap = image.toComposeImageBitmap()
-        drawImage(imageBitmap, topLeft = Offset(params.offsetX, params.offsetY))
-
-        // Draw photo overlay with handles
-        drawFullScreenPhotoOverlay(photo, true, params)
-      }
-}
-
-private fun DrawScope.drawFullScreenPhotoOverlay(
-    photo: DetectedPhoto,
-    isSelected: Boolean,
-    params: FullScreenParams
-) {
-  val outlineColor =
-      when {
-        photo.rotation != RotationAngle.NONE -> Color(0xFFFF9800)
-        isSelected -> Color.Blue
-        else -> Color.Green
-      }
-  val fillColor = outlineColor.copy(alpha = 0.2f)
-
-  val tl =
-      Offset(
-          params.offsetX + photo.topLeft.x * params.scale,
-          params.offsetY + photo.topLeft.y * params.scale)
-  val tr =
-      Offset(
-          params.offsetX + photo.topRight.x * params.scale,
-          params.offsetY + photo.topRight.y * params.scale)
-  val bl =
-      Offset(
-          params.offsetX + photo.bottomLeft.x * params.scale,
-          params.offsetY + photo.bottomLeft.y * params.scale)
-  val br =
-      Offset(
-          params.offsetX + photo.bottomRight.x * params.scale,
-          params.offsetY + photo.bottomRight.y * params.scale)
-
-  drawPhotoOverlayShapes(photo, isSelected, outlineColor, fillColor, tl, tr, bl, br, params.scale)
-}
-
-private fun findCornerAtPosition(
-    position: Offset,
-    photo: DetectedPhoto,
-    params: FullScreenParams
-): CornerType? {
-  val corners =
-      listOf(
-          CornerType.TOP_LEFT to photo.topLeft,
-          CornerType.TOP_RIGHT to photo.topRight,
-          CornerType.BOTTOM_LEFT to photo.bottomLeft,
-          CornerType.BOTTOM_RIGHT to photo.bottomRight)
-
-  val hitRadius = 25f
-  for ((cornerType, corner) in corners) {
-    val screenPos =
-        Offset(params.offsetX + corner.x * params.scale, params.offsetY + corner.y * params.scale)
-    if ((position - screenPos).getDistance() < hitRadius) {
-      return cornerType
-    }
-  }
-  return null
-}
-
-private fun isInsidePhoto(
-    position: Offset,
-    photo: DetectedPhoto,
-    params: FullScreenParams
-): Boolean {
-  val corners =
-      listOf(
-          Offset(
-              params.offsetX + photo.topLeft.x * params.scale,
-              params.offsetY + photo.topLeft.y * params.scale),
-          Offset(
-              params.offsetX + photo.topRight.x * params.scale,
-              params.offsetY + photo.topRight.y * params.scale),
-          Offset(
-              params.offsetX + photo.bottomLeft.x * params.scale,
-              params.offsetY + photo.bottomLeft.y * params.scale),
-          Offset(
-              params.offsetX + photo.bottomRight.x * params.scale,
-              params.offsetY + photo.bottomRight.y * params.scale))
-
-  val minX = corners.minOf { it.x }
-  val maxX = corners.maxOf { it.x }
-  val minY = corners.minOf { it.y }
-  val maxY = corners.maxOf { it.y }
-
-  return position.x >= minX && position.x <= maxX && position.y >= minY && position.y <= maxY
 }

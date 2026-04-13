@@ -162,9 +162,7 @@ fun main(args: Array<String>) {
                   })
             }
             Menu("Help") {
-              Item("View Log File") {
-                appLogger.openLogFileWithSystemViewer()
-              }
+              Item("View Log File") { appLogger.openLogFileWithSystemViewer() }
               Item("About $APP_TITLE", onClick = {})
             }
           }

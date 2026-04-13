@@ -96,27 +96,28 @@ dependencies {
   testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.3.10")
   testImplementation("org.junit.vintage:junit-vintage-engine:5.11.4") {
     because("ComposeTestRule requires JUnit 4 rule support within JUnit 5")
-}
-
-tasks.test {
-  useJUnitPlatform {
-    excludeTags("UiComponentTest")
   }
-  testLogging { showStandardStreams = true }
-}
+  implementation("com.github.OCNYang.Compose-SpinKit:library:1.0.5") {
+    because("Modern loading animations for Compose Desktop")
+  }
 
-tasks.register<JavaExec>("generateIcons") {
-  description = "Generates application icon files for native packaging"
-  group = "build setup"
-  classpath = sourceSets.main.get().runtimeClasspath
-  mainClass.set("org.kryspetrie.fileimport.GenerateIconsKt")
-  dependsOn("classes")
-  val iconFile = project.file("src/main/resources/icon.png")
-  outputs.file(iconFile)
-  onlyIf { !iconFile.exists() }
-}
+  tasks.test {
+    useJUnitPlatform { excludeTags("UiComponentTest") }
+    testLogging { showStandardStreams = true }
+  }
 
-tasks
-    .matching { it.name.startsWith("package") || it.name.startsWith("createDistributable") }
-    .configureEach { dependsOn("generateIcons") }
+  tasks.register<JavaExec>("generateIcons") {
+    description = "Generates application icon files for native packaging"
+    group = "build setup"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("org.kryspetrie.fileimport.GenerateIconsKt")
+    dependsOn("classes")
+    val iconFile = project.file("src/main/resources/icon.png")
+    outputs.file(iconFile)
+    onlyIf { !iconFile.exists() }
+  }
+
+  tasks
+      .matching { it.name.startsWith("package") || it.name.startsWith("createDistributable") }
+      .configureEach { dependsOn("generateIcons") }
 }

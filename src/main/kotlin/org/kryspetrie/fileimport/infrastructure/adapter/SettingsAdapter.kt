@@ -9,9 +9,67 @@ import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.ImportProfile
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 
-class SettingsAdapter(
-    private val settingsDir: File = File(System.getProperty("user.home"), ".petriefi")
-) : SettingsPort {
+/**
+ * OS-specific settings directory for Petrie File Importer.
+ *
+ * Uses platform-appropriate conventions:
+ * - Linux: ~/.config/petrie-file-importer/ (XDG spec)
+ * - macOS: ~/Library/Application Support/PetrieFileImporter/
+ * - Windows: %APPDATA%\PetrieFileImporter\
+ */
+object AppPaths {
+  private const val APP_NAME = "petrie-file-importer"
+  private const val CONFIG_DIR = ".config"
+  private const val APP_SUPPORT = "Library/Application Support"
+
+  val settingsDir: File
+    get() =
+        when {
+          isLinux -> {
+            File(System.getProperty("user.home"), "$CONFIG_DIR/$APP_NAME")
+          }
+          isMac -> {
+            File(System.getProperty("user.home"), "$APP_SUPPORT/$APP_NAME")
+          }
+          isWindows -> {
+            File(System.getenv("APPDATA") ?: System.getProperty("user.home"), APP_NAME)
+          }
+          else -> {
+            // Fallback to ~/.petrie-file-importer for unknown platforms
+            File(System.getProperty("user.home"), ".$APP_NAME")
+          }
+        }
+
+  private val isLinux: Boolean
+    get() =
+        System.getProperty("os.name").lowercase().contains("linux") ||
+            File("/proc/version").exists() && !isMac && !isWindows
+
+  private val isMac: Boolean
+    get() =
+        System.getProperty("os.name").lowercase().contains("mac") ||
+            System.getProperty("os.name").lowercase().contains("darwin")
+
+  private val isWindows: Boolean
+    get() = System.getProperty("os.name").lowercase().contains("windows")
+
+  /**
+   * Default destination folder suggestion for new users.
+   *
+   * Returns user's Pictures folder if available, otherwise home directory.
+   */
+  val defaultDestination: File
+    get() {
+      val pictures = File(System.getProperty("user.home"), "Pictures")
+      return if (pictures.exists() && pictures.isDirectory) {
+        File(pictures, "Imports")
+      } else {
+        File(System.getProperty("user.home"), "Imports")
+      }
+    }
+}
+
+class SettingsAdapter(private val settingsDir: File = AppPaths.settingsDir) : SettingsPort {
   private val json = Json {
     prettyPrint = true
     ignoreUnknownKeys = true

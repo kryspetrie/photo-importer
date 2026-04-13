@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.ui.screens.DuplicateScannerScreen
-import org.kryspetrie.fileimport.ui.screens.ImportScreen
+import org.kryspetrie.fileimport.ui.screens.MediaImportScreen
 import org.kryspetrie.fileimport.ui.screens.ReorganizeScreen
 import org.kryspetrie.fileimport.ui.screens.wizard.WizardContainer
 import org.kryspetrie.fileimport.ui.theme.PetrieTheme
@@ -52,7 +52,7 @@ import org.kryspetrie.fileimport.ui.theme.PetrieTheme
  */
 private enum class AppTab(val label: String, val icon: ImageVector) {
   /**
-   * Import tab - primary photo import workflow.
+   * Media Import tab - standard file import workflow.
    *
    * Provides UI for:
    * - Selecting source (camera, folder, SD card)
@@ -63,7 +63,24 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
    *
    * @see ImportScreen The composable that implements this tab
    */
-  IMPORT("Import", Icons.Default.Download),
+  MEDIA_IMPORT("Media Import", Icons.Default.Download),
+
+  /**
+   * Photo Scan Import tab - scan printed photos from a single image.
+   *
+   * Enables users to:
+   * - Import an image containing multiple printed photos
+   * - Automatically detect photo boundaries using computer vision
+   * - Manually refine detection corners for accuracy
+   * - Apply perspective correction and rotation
+   * - Export individual photos with proper aspect ratios
+   *
+   * This is useful for digitizing physical photo prints that were photographed together, such as
+   * photos on a scanner bed or photos of a photo album page.
+   *
+   * @see WizardContainer The composable that implements this tab
+   */
+  PHOTO_SCAN("Photo Scan Import", Icons.Default.DocumentScanner),
 
   /**
    * Reorganize tab - library reorganization workflow.
@@ -96,24 +113,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
    *
    * @see DuplicateScannerScreen The composable that implements this tab
    */
-  DUPLICATES("Library Duplicates", Icons.Default.ContentCopy),
-
-  /**
-   * Photo Scan Wizard tab - scan printed photos from a single image.
-   *
-   * Enables users to:
-   * - Import an image containing multiple printed photos
-   * - Automatically detect photo boundaries using computer vision
-   * - Manually refine detection corners for accuracy
-   * - Apply perspective correction and rotation
-   * - Export individual photos with proper aspect ratios
-   *
-   * This is useful for digitizing physical photo prints that were photographed together, such as
-   * photos on a scanner bed or photos of a photo album page.
-   *
-   * @see WizardContainer The composable that implements this tab
-   */
-  PHOTO_SCAN("Photo Scan", Icons.Default.DocumentScanner)
+  DUPLICATES("Library Duplicates", Icons.Default.ContentCopy)
 }
 
 /**
@@ -265,7 +265,7 @@ fun PetrieFileImporterApp(
     // State: Currently selected navigation tab
     // remember{} ensures state survives recomposition
     // mutableStateOf{} makes it observable - changes trigger recomposition
-    var currentTab by remember { mutableStateOf(AppTab.IMPORT) }
+    var currentTab by remember { mutableStateOf(AppTab.MEDIA_IMPORT) }
 
     // Surface: Material Design container with background color
     // Provides consistent background across the application
@@ -306,7 +306,8 @@ fun PetrieFileImporterApp(
           // Each screen receives settings and callback for consistency
           when (currentTab) {
             // Import tab: Main photo import workflow
-            AppTab.IMPORT -> ImportScreen(settings = settings, onSettingsChange = onSettingsChange)
+            AppTab.MEDIA_IMPORT ->
+                MediaImportScreen(settings = settings, onSettingsChange = onSettingsChange)
 
             // Reorganize tab: Library reorganization workflow
             AppTab.REORGANIZE ->
@@ -321,15 +322,15 @@ fun PetrieFileImporterApp(
                 WizardContainer(
                     onComplete = { processedPhotos ->
                       // Log results for debugging
-                      println(
-                          "Photo Scan Complete: ${processedPhotos.size} photos exported")
+                      println("Photo Scan Complete: ${processedPhotos.size} photos exported")
                       processedPhotos.forEach { photo ->
-                        println("  - ${photo.outputPath} (${photo.dimensions.first}x${photo.dimensions.second})")
+                        println(
+                            "  - ${photo.outputPath} (${photo.dimensions.first}x${photo.dimensions.second})")
                       }
                       // Switch back to Import tab after completion
-                      currentTab = AppTab.IMPORT
+                      currentTab = AppTab.MEDIA_IMPORT
                     },
-                    onCancel = { currentTab = AppTab.IMPORT })
+                    onCancel = { currentTab = AppTab.MEDIA_IMPORT })
           }
         }
       }

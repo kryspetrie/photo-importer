@@ -26,9 +26,9 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.infrastructure.wizard.*
 
@@ -56,14 +56,13 @@ fun OverviewScreen(
   var showHelpDialog by remember { mutableStateOf(false) }
   var showBoxRejectedMessage by remember { mutableStateOf(false) }
   val snackbarHostState = remember { SnackbarHostState() }
-  
+
   // Launch snackbar when box is rejected
   LaunchedEffect(showBoxRejectedMessage) {
     if (showBoxRejectedMessage) {
       snackbarHostState.showSnackbar(
           message = "Box too small - image must be at least 100x67 pixels for a box",
-          duration = SnackbarDuration.Short
-      )
+          duration = SnackbarDuration.Short)
       showBoxRejectedMessage = false
     }
   }
@@ -72,7 +71,9 @@ fun OverviewScreen(
       snackbarHost = { SnackbarHost(snackbarHostState) },
       topBar = {
         TopAppBar(
-            title = { Text("Bounding Box Overview") },
+            title = {
+              Text("Bounding Box Overview", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            },
             navigationIcon = {
               IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
             },
@@ -545,7 +546,7 @@ private fun DrawScope.drawFourPointPreview(
 }
 
 @Composable
-private fun FourPointStatusBar(
+internal fun FourPointStatusBar(
     state: FourPointState,
     onRemoveLast: () -> Unit,
     onConfirm: () -> Unit,

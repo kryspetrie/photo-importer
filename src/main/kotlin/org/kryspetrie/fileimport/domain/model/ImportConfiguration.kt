@@ -219,6 +219,21 @@ data class ImportConfiguration(
      */
     val conflictResolution: ConflictResolution = ConflictResolution.RENAME,
 
+    // ==================== DESTINATION (PERSISTED) ====================
+
+    /**
+     * Last used destination folder path.
+     *
+     * Persisted to remember user's preferred output location across sessions. Reduces friction for
+     * repeated imports to the same destination (e.g., "Photos/Imports").
+     *
+     * Not part of the saved configuration/profile - stored separately in AppSettings to survive
+     * profile changes.
+     *
+     * Default: Empty string (user must select destination each session)
+     */
+    val lastDestinationPath: String = "",
+
     // ==================== DUPLICATE DETECTION ====================
 
     /**
@@ -844,5 +859,156 @@ object NamePlaceholders {
           "{duration}" to "Video duration (e.g. 1m30s)",
           "{fps}" to "Video frame rate",
           "{codec}" to "Video codec",
+          // ── EXIF Metadata Placeholders ──
+          "{date}" to "Date taken (YYYYMMDD)",
+          "{time}" to "Time taken (HHMMSS)",
+          "{datetime}" to "Date & time (YYYYMMDD_HHMMSS)",
+          "{date_orig}" to "Date original (YYYYMMDD)",
+          "{make_raw}" to "Camera make (raw tag)",
+          "{model_raw}" to "Camera model (raw tag)",
+          "{lens_model}" to "Lens model (raw tag)",
+          "{iso_speed}" to "ISO speed (raw tag)",
+          "{f_number}" to "F-number (aperture raw)",
+          "{exposure}" to "Exposure time (raw)",
+          "{focal_length}" to "Focal length (raw mm)",
+          "{gps_lat}" to "GPS latitude",
+          "{gps_lon}" to "GPS longitude",
+          "{gps_alt}" to "GPS altitude",
+          "{orientation}" to "Orientation (1-8)",
+          "{flash}" to "Flash (fired/not fired)",
+          "{white_balance}" to "White balance (AWB/custom)",
+          "{exposure_program}" to "Exposure program",
+          "{metering_mode}" to "Metering mode",
+          "{color_space}" to "Color space (sRGB/Adobe)",
+          "{software}" to "Software",
+          "{artist}" to "Artist/author",
+          "{copyright}" to "Copyright",
+          "{rating}" to "Rating (1-5 stars)",
+          "{label}" to "Label/tag",
+          "{comment}" to "Comment/description",
       )
+
+  /**
+   * Standard EXIF metadata fields (Extensible IFD Tag definitions).
+   *
+   * These represent common EXIF tags that can be embedded in image files. Values are extracted from
+   * the EXIF data block and can be used in filename/folder patterns.
+   *
+   * @see ExifConstants Standard tag IDs (IFD0, ExifIFD, GPS IFD, InteropIFD)
+   */
+  object ExifFields {
+    /** DateTimeOriginal - Date/Time of original image data was generated. */
+    const val DATE_ORIGINAL = "DateTimeOriginal"
+
+    /** DateTimeDigitized - Date/Time image data was stored. */
+    const val DATE_DIGITIZED = "DateTimeDigitized"
+
+    /** DateTime - Date/Time of last modification. */
+    const val DATE_MODIFIED = "DateTime"
+
+    /** Make - Manufacturer of camera. */
+    const val MAKE = "Make"
+
+    /** Model - Model name/number of camera. */
+    const val MODEL = "Model"
+
+    /** LensModel - Model of lens. */
+    const val LENS_MODEL = "LensModel"
+
+    /** LensMake - Manufacturer of lens. */
+    const val LENS_MAKE = "LensMake"
+
+    /** Software - Name and version of software. */
+    const val SOFTWARE = "Software"
+
+    /** Artist - Name of camera owner. */
+    const val ARTIST = "Artist"
+
+    /** Copyright - Copyright notice. */
+    const val COPYRIGHT = "Copyright"
+
+    /** ImageDescription - Description of image. */
+    const val IMAGE_DESCRIPTION = "ImageDescription"
+
+    /** UserComment - User comments. */
+    const val USER_COMMENT = "UserComment"
+
+    /** Orientation - Image orientation. */
+    const val ORIENTATION = "Orientation"
+
+    /** XResolution - Horizontal resolution. */
+    const val X_RESOLUTION = "XResolution"
+
+    /** YResolution - Vertical resolution. */
+    const val Y_RESOLUTION = "YResolution"
+
+    /** ResolutionUnit - Resolution unit (1=none, 2=inch, 3=cm). */
+    const val RESOLUTION_UNIT = "ResolutionUnit"
+
+    /** ExposureTime - Exposure time in seconds. */
+    const val EXPOSURE_TIME = "ExposureTime"
+
+    /** FNumber - F-number (aperture). */
+    const val F_NUMBER = "FNumber"
+
+    /** ISOSpeedRatings - ISO speed rating. */
+    const val ISO_SPEED_RATINGS = "ISOSpeedRatings"
+
+    /** FocalLength - Focal length of lens in mm. */
+    const val FOCAL_LENGTH = "FocalLength"
+
+    /** FocalLengthIn35mmFilm - 35mm equivalent focal length. */
+    const val FOCAL_LENGTH_35MM = "FocalLengthIn35mmFilm"
+
+    /** ExposureProgram - Program used for exposure. */
+    const val EXPOSURE_PROGRAM = "ExposureProgram"
+
+    /** MeteringMode - Metering mode. */
+    const val METING_MODE = "MeteringMode"
+
+    /** Flash - Flash status. */
+    const val FLASH = "Flash"
+
+    /** WhiteBalance - White balance mode. */
+    const val WHITE_BALANCE = "WhiteBalance"
+
+    /** ColorSpace - Color space. */
+    const val COLOR_SPACE = "ColorSpace"
+
+    /** GPSLatitudeRef - GPS latitude ref (N/S). */
+    const val GPS_LAT_REF = "GPSLatitudeRef"
+
+    /** GPSLatitude - GPS latitude. */
+    const val GPS_LATITUDE = "GPSLatitude"
+
+    /** GPSLongitudeRef - GPS longitude ref (E/W). */
+    const val GPS_LON_REF = "GPSLongitudeRef"
+
+    /** GPSLongitude - GPS longitude. */
+    const val GPS_LONGITUDE = "GPSLongitude"
+
+    /** GPSAltitudeRef - GPS altitude ref (above/below sea). */
+    const val GPS_ALT_REF = "GPSAltitudeRef"
+
+    /** GPSAltitude - GPS altitude. */
+    const val GPS_ALTITUDE = "GPSAltitude"
+
+    /** Rating - Rating (from 1 to 5, or 0 if not set). */
+    const val RATING = "Rating"
+
+    /** Label - User-defined label/tag. */
+    const val LABEL = "XPKeywords"
+
+    /** ImageWidth - Pixel image width. */
+    const val IMAGE_WIDTH = "PixelXDimension"
+
+    /** ImageHeight - Pixel image height. */
+    const val IMAGE_HEIGHT = "PixelYDimension"
+
+    /** FlashpixVersion - Flashpix version. */
+    const val FLASHPIX_VERSION = "FlashpixVersion"
+
+    /** ExifVersion - EXIF version. */
+    const val EXIF_VERSION = "ExifVersion"
+  }
 }

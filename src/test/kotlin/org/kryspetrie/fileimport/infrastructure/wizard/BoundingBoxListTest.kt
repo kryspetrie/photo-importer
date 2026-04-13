@@ -47,7 +47,7 @@ class BoundingBoxListTest {
     val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
     var list = BoundingBoxList(listOf(box))
     val originalX = box.corners.topLeft.x
-    
+
     val movedBox = box.move(50.0, 0.0)
     list = list.update(movedBox)
 

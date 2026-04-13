@@ -254,15 +254,13 @@ private fun BulkActionButtons(
           // Tooltip explaining the mutex behavior
           var showTooltip by remember { mutableStateOf(false) }
           Box {
-            IconButton(
-                onClick = { showTooltip = true },
-                modifier = Modifier.size(32.dp)) {
-                  Icon(
-                      Icons.Default.Info,
-                      "Correction info",
-                      modifier = Modifier.size(18.dp),
-                      tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            IconButton(onClick = { showTooltip = true }, modifier = Modifier.size(32.dp)) {
+              Icon(
+                  Icons.Default.Info,
+                  "Correction info",
+                  modifier = Modifier.size(18.dp),
+                  tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (showTooltip) {
               AlertDialog(
                   onDismissRequest = { showTooltip = false },
@@ -273,9 +271,7 @@ private fun BulkActionButtons(
                             "Enabling one will disable the other. Use Perspective to correct " +
                             "keystone distortion, or Rotation to fix scan orientation.")
                   },
-                  confirmButton = {
-                    TextButton(onClick = { showTooltip = false }) { Text("OK") }
-                  })
+                  confirmButton = { TextButton(onClick = { showTooltip = false }) { Text("OK") } })
             }
           }
         }
@@ -290,37 +286,29 @@ private fun DestinationSelector(
 ) {
   var showFolderPicker by remember { mutableStateOf(false) }
 
-  Surface(
-      tonalElevation = 1.dp,
-      shape = RoundedCornerShape(8.dp),
-      modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-              Icon(
-                  Icons.Default.Folder,
-                  contentDescription = null,
-                  tint = MaterialTheme.colorScheme.onSurfaceVariant)
+  Surface(tonalElevation = 1.dp, shape = RoundedCornerShape(8.dp), modifier = modifier) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+          Icon(
+              Icons.Default.Folder,
+              contentDescription = null,
+              tint = MaterialTheme.colorScheme.onSurfaceVariant)
 
-              Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Export Destination",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(
-                    destination,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1)
-              }
+          Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "Export Destination",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(destination, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+          }
 
-              OutlinedButton(
-                  onClick = { showFolderPicker = true },
-                  modifier = Modifier.height(32.dp)) {
-                    Text("Change", style = MaterialTheme.typography.labelSmall)
-                  }
-            }
-      }
+          OutlinedButton(onClick = { showFolderPicker = true }, modifier = Modifier.height(32.dp)) {
+            Text("Change", style = MaterialTheme.typography.labelSmall)
+          }
+        }
+  }
 
   // Folder picker dialog
   if (showFolderPicker) {
@@ -368,7 +356,9 @@ private fun FolderPickerDialog(
                       Text("Pictures")
                     }
                 TextButton(
-                    onClick = { folderPath = System.getProperty("user.home") + "/Pictures/PhotoScan" }) {
+                    onClick = {
+                      folderPath = System.getProperty("user.home") + "/Pictures/PhotoScan"
+                    }) {
                       Text("PhotoScan")
                     }
                 TextButton(
@@ -457,9 +447,7 @@ private fun PhotoSummaryCard(
                                 config.copy(
                                     perspectiveCorrectionEnabled = enabled,
                                     rotationCorrectionEnabled =
-                                        if (enabled) false else config.rotationCorrectionEnabled
-                                )
-                            )
+                                        if (enabled) false else config.rotationCorrectionEnabled))
                           },
                           modifier = Modifier.height(32.dp))
                       Text("Perspective", style = MaterialTheme.typography.labelSmall)
@@ -475,9 +463,8 @@ private fun PhotoSummaryCard(
                                 config.copy(
                                     rotationCorrectionEnabled = enabled,
                                     perspectiveCorrectionEnabled =
-                                        if (enabled) false else config.perspectiveCorrectionEnabled
-                                )
-                            )
+                                        if (enabled) false
+                                        else config.perspectiveCorrectionEnabled))
                           },
                           modifier = Modifier.height(32.dp))
                       Text("Rotation", style = MaterialTheme.typography.labelSmall)

@@ -8,8 +8,8 @@ import org.kryspetrie.fileimport.domain.model.DetectedPhoto
  * Port interface for photo detection in scanned images.
  *
  * This port defines the contract for detecting individual photo boundaries within an image
- * containing multiple photos (e.g., scanned from a flatbed scanner or photographed from
- * a photo album page).
+ * containing multiple photos (e.g., scanned from a flatbed scanner or photographed from a photo
+ * album page).
  *
  * ## Implementation
  *
@@ -45,8 +45,8 @@ interface PhotoScanDetectorPort {
    * 4. Return corners ordered: top-left → top-right → bottom-right → bottom-left
    *
    * @param image The scanned image to analyze. Must be a valid, non-null BufferedImage.
-   * @return List of [DetectedPhoto] objects representing each photo found.
-   *         Returns empty list if no photos detected.
+   * @return List of [DetectedPhoto] objects representing each photo found. Returns empty list if no
+   *   photos detected.
    * @throws IllegalArgumentException If image is null or has invalid dimensions
    * @throws Exception If detection fails due to processing errors
    */
@@ -94,8 +94,7 @@ interface PhotoScanExportPort {
   /**
    * Exports a single photo with optional corrections.
    *
-   * This is the primary method for exporting individual photos from a scanned image.
-   * It handles:
+   * This is the primary method for exporting individual photos from a scanned image. It handles:
    * - Axis-aligned cropping or perspective correction
    * - Rotation (CW_90, CCW_90, CW_180)
    * - Filename conflict resolution
@@ -118,9 +117,8 @@ interface PhotoScanExportPort {
   /**
    * Exports multiple photos from a single source image.
    *
-   * This method is optimized for batch export of multiple photos with a single
-   * source image. It processes each photo sequentially and handles filename conflicts
-   * across the entire batch.
+   * This method is optimized for batch export of multiple photos with a single source image. It
+   * processes each photo sequentially and handles filename conflicts across the entire batch.
    *
    * @param sourceFile Original scanned image file (used for EXIF metadata extraction)
    * @param image The source scanned image

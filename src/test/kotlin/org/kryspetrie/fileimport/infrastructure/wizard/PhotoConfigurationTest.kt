@@ -24,12 +24,12 @@ class PhotoConfigurationTest {
 
   @Test
   fun `custom configuration overrides defaults`() {
-    val config = PhotoConfiguration(
-        perspectiveCorrectionEnabled = true,
-        rotationCorrectionEnabled = true,
-        rotationDegrees = 90,
-        aspectRatio = 1.5
-    )
+    val config =
+        PhotoConfiguration(
+            perspectiveCorrectionEnabled = true,
+            rotationCorrectionEnabled = true,
+            rotationDegrees = 90,
+            aspectRatio = 1.5)
 
     assertTrue(config.perspectiveCorrectionEnabled)
     assertTrue(config.rotationCorrectionEnabled)
@@ -41,12 +41,12 @@ class PhotoConfigurationTest {
 
   @Test
   fun `copy creates new instance with same values`() {
-    val original = PhotoConfiguration(
-        perspectiveCorrectionEnabled = true,
-        rotationCorrectionEnabled = true,
-        rotationDegrees = -90,
-        aspectRatio = 3.0 / 4.0
-    )
+    val original =
+        PhotoConfiguration(
+            perspectiveCorrectionEnabled = true,
+            rotationCorrectionEnabled = true,
+            rotationDegrees = -90,
+            aspectRatio = 3.0 / 4.0)
 
     val copy = original.copy()
 
@@ -58,10 +58,8 @@ class PhotoConfigurationTest {
 
   @Test
   fun `copy with modification changes only specified field`() {
-    val original = PhotoConfiguration(
-        perspectiveCorrectionEnabled = false,
-        rotationCorrectionEnabled = false
-    )
+    val original =
+        PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationCorrectionEnabled = false)
 
     val modified = original.copy(perspectiveCorrectionEnabled = true)
 
@@ -76,10 +74,8 @@ class PhotoConfigurationTest {
 
   @Test
   fun `perspective and rotation can both be false`() {
-    val config = PhotoConfiguration(
-        perspectiveCorrectionEnabled = false,
-        rotationCorrectionEnabled = false
-    )
+    val config =
+        PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationCorrectionEnabled = false)
 
     assertFalse(config.perspectiveCorrectionEnabled)
     assertFalse(config.rotationCorrectionEnabled)
@@ -87,10 +83,8 @@ class PhotoConfigurationTest {
 
   @Test
   fun `perspective can be true when rotation is false`() {
-    val config = PhotoConfiguration(
-        perspectiveCorrectionEnabled = true,
-        rotationCorrectionEnabled = false
-    )
+    val config =
+        PhotoConfiguration(perspectiveCorrectionEnabled = true, rotationCorrectionEnabled = false)
 
     assertTrue(config.perspectiveCorrectionEnabled)
     assertFalse(config.rotationCorrectionEnabled)
@@ -98,10 +92,8 @@ class PhotoConfigurationTest {
 
   @Test
   fun `rotation can be true when perspective is false`() {
-    val config = PhotoConfiguration(
-        perspectiveCorrectionEnabled = false,
-        rotationCorrectionEnabled = true
-    )
+    val config =
+        PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationCorrectionEnabled = true)
 
     assertFalse(config.perspectiveCorrectionEnabled)
     assertTrue(config.rotationCorrectionEnabled)

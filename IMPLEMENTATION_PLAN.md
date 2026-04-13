@@ -873,9 +873,72 @@ fun ExportCompleteScreen(
 
 ## Open Questions (Pending Clarification)
 
-1. **Should "Continue to Next Batch" reset all state or preserve configuration?**
-2. **For aspect ratio "default", how should portrait/landscape be determined?**
-3. **Should metadata fields be pre-filled from original EXIF?**
+1. ~~Should "Continue to Next Batch" reset all state or preserve configuration?~~ ✅ **FIXED: Reset state except metadata defaults**
+2. ~~For aspect ratio "default", how should portrait/landscape be determined?~~ ✅ **FIXED: By average edge lengths**
+3. ~~Should metadata fields be pre-filled from original EXIF?~~ ✅ **FIXED: "Set Default" button, applies to future batches, only fills blank values first time**
+
+### Configuration File (config.yaml)
+
+```yaml
+# Default configuration values
+photo_scan:
+  refinement_padding_percent: 20.0  # 20% padding around cropped boundary
+  
+metadata_defaults:
+  # Persisted default values for metadata fields
+  # Only applied to blank fields on first use, then preserved for future batches
+  notes: ""
+  photographer: ""
+  tags: ""
+  keywords: ""
+  subjects: ""
+
+naming_pattern:
+  default: "{original_name}_{date_time_original}_{number}"
+```
+
+### Metadata "Set Default" Behavior
+
+| Action | Result |
+|--------|--------|
+| Click "Set Default" on blank field | Clears the default for that field |
+| Click "Set Default" on filled field | Saves value as default for future batches |
+| New batch, field is blank | Pre-fill from default (if set) |
+| New batch, field has value | Keep existing value (don't override) |
+
+### Configuration Loading
+
+```kotlin
+data class AppConfig(
+    val photoScan: PhotoScanConfig = PhotoScanConfig(),
+    val metadataDefaults: MetadataDefaults = MetadataDefaults(),
+    val namingPattern: NamingPatternConfig = NamingPatternConfig()
+)
+
+data class PhotoScanConfig(
+    val refinementPaddingPercent: Double = 20.0
+)
+
+data class MetadataDefaults(
+    val notes: String? = null,
+    val photographer: String? = null,
+    val tags: String? = null,
+    val keywords: String? = null,
+    val subjects: String? = null
+)
+
+// Load from config.yaml on app start
+object ConfigLoader {
+    suspend fun loadConfig(): AppConfig {
+        val yaml = Yaml().load<Map<String, Any>>(configFile)
+        return parseConfig(yaml)
+    }
+    
+    suspend fun saveDefaults(metadataDefaults: MetadataDefaults) {
+        // Persist to config.yaml when user clicks "Set Default"
+    }
+}
+```
 
 ---
 
@@ -903,11 +966,13 @@ fun ExportCompleteScreen(
 
 ## Success Criteria
 
-1. ✅ CubeGrid loading animation works
-2. ✅ Coordinates stored as percentages
-3. ✅ Detection screen is performant (60fps drag)
-4. ✅ Corner tolerance allows easy grabbing
+1. ✅ CubeGrid loading animation works (replaces broken Loader)
+2. ✅ Coordinates stored as percentages (resolution independent)
+3. ✅ Detection screen is performant (60fps drag without jank)
+4. ✅ Corner tolerance allows easy grabbing (not exact hover required)
 5. ✅ All 6 screens implement plan requirements
-6. ✅ End-to-end workflow completes successfully
-7. ✅ All existing tests pass
-8. ✅ New tests cover critical paths
+6. ✅ Metadata "Set Default" persists across batches
+7. ✅ Configuration read from config.yaml
+8. ✅ End-to-end workflow completes successfully
+9. ✅ All existing tests pass
+10. ✅ New tests cover critical paths

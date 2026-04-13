@@ -797,10 +797,12 @@ src/main/kotlin/org/kryspetrie/fileimport/
 
 ---
 
-## Open Questions (Pending User Input)
+## Open Questions (Pending Clarification)
 
-1. Should the 20% padding around refined boundaries be configurable?
-2. For "rotate only" mode, should the auto-rotation angle be adjustable by the user?
-3. Should metadata fields be shared across all photos in a batch?
-4. Should the naming pattern be configurable per-batch or per-photo?
-5. What maximum number of photos should the wizard handle before performance degradation?
+1. ~~Should the 20% padding around refined boundaries be configurable?~~ ✅ **FIXED: Read from YAML config, default 20%**
+2. ~~For "rotate only" mode, should the auto-rotation angle be adjustable by the user?~~ ✅ **FIXED: Leave automatic only**
+3. ~~Should metadata fields be shared across all photos in a batch?~~ ✅ **FIXED: "Set Default" button per field, applies to future batches, only fills blank values first time**
+4. ~~Should the naming pattern be configurable per-batch or per-photo?~~ ✅ **FIXED: Per-batch only, configured at top-level import screen**
+5. ~~What maximum number of photos should the wizard handle before performance degradation?~~ ✅ **FIXED: 20 (from existing code)**
+6. ~~Should "Continue to Next Batch" reset all state/config or preserve configuration?~~ ✅ **FIXED: Reset state except metadata "set default" fields**
+7. ~~For aspect ratio "default", how should portrait/landscape be determined?~~ ✅ **FIXED: By average edge lengths**

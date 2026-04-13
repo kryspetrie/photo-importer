@@ -1,9 +1,9 @@
 package org.kryspetrie.fileimport.infrastructure.wizard
 
+import java.awt.image.BufferedImage
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import java.awt.image.BufferedImage
 
 /**
  * Unit tests for PhotoScanWizardState. Tests state transitions, box management, configuration, and
@@ -27,7 +27,6 @@ class PhotoScanWizardStateTest {
     assertNull(state.image.value)
     assertTrue(state.boundingBoxList.value.isEmpty())
     assertEquals(-1, state.selectedBoxIndex.value)
-    assertEquals(ImportMode.PHOTO_SCAN, state.importMode.value)
     assertTrue(state.cvAutoDetectEnabled.value)
   }
 
@@ -46,10 +45,10 @@ class PhotoScanWizardStateTest {
   // WS-03: Set detected boxes
   @Test
   fun `set detected boxes updates list`() {
-    val boxes = listOf(
-        BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0),
-        BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0)
-    )
+    val boxes =
+        listOf(
+            BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0),
+            BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0))
     state.setDetectedBoxes(boxes)
 
     assertEquals(2, state.boundingBoxList.value.size())
@@ -311,10 +310,7 @@ class PhotoScanWizardStateTest {
     val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
     state.addBox(box)
 
-    val config = PhotoConfiguration(
-        perspectiveCorrectionEnabled = true,
-        rotationDegrees = 90
-    )
+    val config = PhotoConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
     state.setPhotoConfiguration(box.id, config)
 
     val storedConfig = state.photoConfigurations.value[box.id]
@@ -405,16 +401,6 @@ class PhotoScanWizardStateTest {
     assertTrue(state.photoConfigurations.value.isEmpty())
   }
 
-  // WS-29: Import mode
-  @Test
-  fun `set import mode changes mode`() {
-    state.setImportMode(ImportMode.SINGLE_PHOTO)
-    assertEquals(ImportMode.SINGLE_PHOTO, state.importMode.value)
-
-    state.setImportMode(ImportMode.PHOTO_SCAN)
-    assertEquals(ImportMode.PHOTO_SCAN, state.importMode.value)
-  }
-
   // WS-30: CV auto-detect toggle
   @Test
   fun `set CV auto detect changes setting`() {
@@ -500,7 +486,7 @@ class PhotoScanWizardStateTest {
   fun `setLogger attaches logger to state`() {
     val mockLogger = org.kryspetrie.fileimport.infrastructure.logging.AppLogger()
     state.setLogger(mockLogger)
-    
+
     // Logger should be attached (no exception thrown)
     assertNotNull(state.appLogger)
   }
@@ -511,10 +497,10 @@ class PhotoScanWizardStateTest {
     state.initializeWithImage(sampleImage, java.io.File("/test/image.jpg"))
     val mockLogger = org.kryspetrie.fileimport.infrastructure.logging.AppLogger()
     state.setLogger(mockLogger)
-    
+
     val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
     state.addBox(box)
-    
+
     // Logger should have received the log
     val logs = mockLogger.getRecentLogs()
     assertTrue(logs.any { it.message.contains("Box") })
@@ -526,13 +512,13 @@ class PhotoScanWizardStateTest {
     state.initializeWithImage(sampleImage, java.io.File("/test/image.jpg"))
     val mockLogger = org.kryspetrie.fileimport.infrastructure.logging.AppLogger()
     state.setLogger(mockLogger)
-    
+
     val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
     state.addBox(box)
     mockLogger.getRecentLogs().drop(0) // Clear logs from addBox
-    
+
     state.removeBox(0)
-    
+
     val logs = mockLogger.getRecentLogs()
     assertTrue(logs.any { it.message.contains("Removed") || it.message.contains("Delete") })
   }
@@ -545,9 +531,9 @@ class PhotoScanWizardStateTest {
     state.enterAddBoxMode()
     val mockLogger = org.kryspetrie.fileimport.infrastructure.logging.AppLogger()
     state.setLogger(mockLogger)
-    
+
     val result = state.createBoxAtCenter(25.0, 25.0, minSize = 50.0)
-    
+
     assertFalse(result)
     val logs = mockLogger.getRecentLogs()
     assertTrue(logs.any { it.level == org.kryspetrie.fileimport.infrastructure.logging.Level.WARN })
@@ -560,9 +546,9 @@ class PhotoScanWizardStateTest {
     state.enterAddBoxMode()
     val mockLogger = org.kryspetrie.fileimport.infrastructure.logging.AppLogger()
     state.setLogger(mockLogger)
-    
+
     val result = state.createBoxAtCenter(500.0, 400.0)
-    
+
     assertTrue(result)
     val logs = mockLogger.getRecentLogs()
     assertTrue(logs.any { it.message.contains("Box") && it.message.contains("COMPLETE") })

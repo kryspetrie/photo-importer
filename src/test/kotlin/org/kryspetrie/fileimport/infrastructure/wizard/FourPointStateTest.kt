@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
 /**
- * Unit tests for FourPointState. Tests the 4-point bounding box creation workflow including
- * point placement, validation, cancellation, and box creation.
+ * Unit tests for FourPointState. Tests the 4-point bounding box creation workflow including point
+ * placement, validation, cancellation, and box creation.
  */
 @DisplayName("FourPointState")
 class FourPointStateTest {
@@ -78,10 +78,10 @@ class FourPointStateTest {
     @DisplayName("should allow points in any order")
     fun shouldAllowPointsInAnyOrder() {
       // Adding points out of order (e.g., bottom-left, bottom-right, top-right, top-left)
-      state = state.addPoint(Point(10.0, 100.0))   // bottom-left
-      state = state.addPoint(Point(100.0, 100.0))  // bottom-right
-      state = state.addPoint(Point(100.0, 10.0))   // top-right
-      state = state.addPoint(Point(10.0, 10.0))    // top-left
+      state = state.addPoint(Point(10.0, 100.0)) // bottom-left
+      state = state.addPoint(Point(100.0, 100.0)) // bottom-right
+      state = state.addPoint(Point(100.0, 10.0)) // top-right
+      state = state.addPoint(Point(10.0, 10.0)) // top-left
 
       assertEquals(4, state.points.size)
       assertTrue(state.isComplete())

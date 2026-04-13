@@ -2,6 +2,8 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,6 +21,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
@@ -29,6 +32,11 @@ import org.kryspetrie.fileimport.infrastructure.wizard.*
 /**
  * Refinement screen showing a zoomed view of a single bounding box for precise corner adjustment.
  * Features include corner dragging, arrow key movement, scroll expand/rotate, and undo/redo.
+ *
+ * Performance optimized with:
+ * - Pre-calculated display parameters
+ * - Efficient drag handling
+ * - Tolerance-based corner selection
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,8 +91,7 @@ fun RefinementScreen(
               Spacer(Modifier.weight(1f))
 
               // Undo button
-              @Suppress("DEPRECATION")
-              val canUndo = state.canUndo()
+              @Suppress("DEPRECATION") val canUndo = state.canUndo()
               IconButton(onClick = { state.undo() }, enabled = canUndo) {
                 Icon(
                     Icons.Default.Undo,
@@ -95,8 +102,7 @@ fun RefinementScreen(
               }
 
               // Redo button
-              @Suppress("DEPRECATION")
-              val canRedo = state.canRedo()
+              @Suppress("DEPRECATION") val canRedo = state.canRedo()
               IconButton(onClick = { state.redo() }, enabled = canRedo) {
                 Icon(
                     Icons.Default.Redo,
@@ -318,6 +324,15 @@ private fun RefinementToolbar(
   }
 }
 
+/**
+ * High-performance refinement canvas with optimized drag handling.
+ *
+ * Features:
+ * - Zoom/pan support for precise adjustment
+ * - Corner drag with tolerance
+ * - Box drag to move entire bounding box
+ * - Tap to select corner
+ */
 @Composable
 private fun RefinementCanvas(
     state: PhotoScanWizardState,
@@ -329,42 +344,164 @@ private fun RefinementCanvas(
   val zoomController by state.zoomController.collectAsState()
   val selectedCorner by state.selectedCorner.collectAsState()
 
+  // Pre-calculate display parameters
+  val scale = remember(zoomController) { zoomController.zoom.toFloat() }
+  val panX = remember(zoomController) { zoomController.panX.toFloat() }
+  val panY = remember(zoomController) { zoomController.panY.toFloat() }
+
+  // Drag state - mutable for performance
   var draggedCorner by remember { mutableStateOf<Corner?>(null) }
+  var isDraggingBox by remember { mutableStateOf(false) }
+  var lastDragPos by remember { mutableStateOf(Offset.Zero) }
 
-  Canvas(modifier = Modifier.fillMaxSize()) {
-    // Calculate display parameters
-    val scale = zoomController.zoom.toFloat()
-    val panX = zoomController.panX.toFloat()
-    val panY = zoomController.panY.toFloat()
+  // Pre-render sampled image
+  val sampledImage =
+      remember(image, scale) { createSampledImageRefinement(image, scale.toDouble()) }
 
-    // Draw background
-    drawRect(
-        color = Color.DarkGray,
-        topLeft = Offset(panX, panY),
-        size = androidx.compose.ui.geometry.Size(image.width * scale, image.height * scale))
+  // Calculate display params for hit testing
+  val displayParams = remember(panX, panY, scale) { RefinementDisplayParams(scale, panX, panY) }
 
-    // Draw image
-    val displayImage = createSampledImageRefinement(image, scale.toDouble())
-    if (displayImage != null) {
-      drawImage(displayImage.toComposeImageBitmap(), topLeft = Offset(panX, panY))
+  Canvas(
+      modifier =
+          Modifier.fillMaxSize()
+              .pointerInput(state, box) {
+                detectTapGestures(
+                    onTap = { offset: Offset ->
+                      // Check for corner hit
+                      val cornerHit = findCornerHit(offset, box, displayParams)
+                      if (cornerHit != null) {
+                        state.selectCorner(cornerHit)
+                      }
+                    })
+              }
+              .pointerInput(state, box, selectedCorner) {
+                detectDragGestures(
+                    onDragStart = { offset: Offset ->
+                      lastDragPos = offset
+
+                      // Check for corner hit first
+                      val cornerHit = findCornerHit(offset, box, displayParams)
+                      if (cornerHit != null) {
+                        state.selectCorner(cornerHit)
+                        draggedCorner = cornerHit
+                      } else if (isInsideBox(offset, box, displayParams)) {
+                        // Check if inside box (for box drag)
+                        isDraggingBox = true
+                      }
+                    },
+                    onDrag = { change: androidx.compose.ui.input.pointer.PointerInputChange, _ ->
+                      if (draggedCorner != null) {
+                        // Corner dragging - move to new position
+                        val pos = screenToImage(change.position, displayParams)
+                        state.moveCorner(boxIndex, draggedCorner!!, pos.x, pos.y)
+                      } else if (isDraggingBox) {
+                        // Box dragging - move entire box
+                        val deltaX =
+                            ((change.position.x - lastDragPos.x) / displayParams.scale).toDouble()
+                        val deltaY =
+                            ((change.position.y - lastDragPos.y) / displayParams.scale).toDouble()
+                        state.moveSelectedBox(deltaX, deltaY)
+                        lastDragPos = change.position
+                      }
+                    },
+                    onDragEnd = {
+                      draggedCorner = null
+                      isDraggingBox = false
+                    })
+              }) {
+        // Draw background
+        drawRect(
+            color = Color.DarkGray,
+            topLeft = Offset(displayParams.offsetX, displayParams.offsetY),
+            size =
+                androidx.compose.ui.geometry.Size(
+                    image.width * displayParams.scale, image.height * displayParams.scale))
+
+        // Draw image
+        if (sampledImage != null) {
+          drawImage(
+              sampledImage.toComposeImageBitmap(),
+              topLeft = Offset(displayParams.offsetX, displayParams.offsetY))
+        }
+
+        // Draw the bounding box
+        drawRefinementBox(box, selectedCorner, displayParams)
+
+        // Draw guides/grid
+        drawGuides(box, displayParams)
+      }
+}
+
+/** Display parameters for refinement canvas. */
+private data class RefinementDisplayParams(val scale: Float, val offsetX: Float, val offsetY: Float)
+
+/** Convert screen coordinates to image coordinates. */
+private fun screenToImage(screenPos: Offset, params: RefinementDisplayParams): Point {
+  return Point(
+      ((screenPos.x - params.offsetX) / params.scale).toDouble(),
+      ((screenPos.y - params.offsetY) / params.scale).toDouble())
+}
+
+/** Find corner hit with tolerance. */
+private fun findCornerHit(
+    offset: Offset,
+    box: BoundingBox,
+    params: RefinementDisplayParams
+): Corner? {
+  // Hit radius in screen pixels
+  val hitRadius = 25f
+
+  val corners =
+      listOf(
+          Corner.TOP_LEFT to box.corners.topLeft,
+          Corner.TOP_RIGHT to box.corners.topRight,
+          Corner.BOTTOM_LEFT to box.corners.bottomLeft,
+          Corner.BOTTOM_RIGHT to box.corners.bottomRight)
+
+  for ((corner, point) in corners) {
+    val screenPos = imageToScreen(point, params)
+    val distance = (offset - screenPos).getDistance()
+    if (distance < hitRadius) {
+      return corner
     }
-
-    // Draw the bounding box
-    drawRefinementBox(box, selectedCorner, scale, panX, panY)
-
-    // Draw guides/grid
-    drawGuides(box, scale, panX, panY)
   }
+  return null
+}
+
+/** Check if point is inside the box. */
+private fun isInsideBox(
+    offset: Offset,
+    box: BoundingBox,
+    params: RefinementDisplayParams
+): Boolean {
+  val corners =
+      listOf(
+          imageToScreen(box.corners.topLeft, params),
+          imageToScreen(box.corners.topRight, params),
+          imageToScreen(box.corners.bottomRight, params),
+          imageToScreen(box.corners.bottomLeft, params))
+
+  val minX = corners.minOf { it.x }
+  val maxX = corners.maxOf { it.x }
+  val minY = corners.minOf { it.y }
+  val maxY = corners.maxOf { it.y }
+
+  return offset.x >= minX && offset.x <= maxX && offset.y >= minY && offset.y <= maxY
+}
+
+/** Convert image coordinates to screen coordinates. */
+private fun imageToScreen(point: Point, params: RefinementDisplayParams): Offset {
+  return Offset(
+      (params.offsetX + point.x * params.scale).toFloat(),
+      (params.offsetY + point.y * params.scale).toFloat())
 }
 
 private fun DrawScope.drawRefinementBox(
     box: BoundingBox,
     selectedCorner: Corner?,
-    scale: Float,
-    panX: Float,
-    panY: Float
+    params: RefinementDisplayParams
 ) {
-  fun toScreen(p: Point) = Offset((panX + p.x * scale).toFloat(), (panY + p.y * scale).toFloat())
+  fun toScreen(p: Point) = imageToScreen(p, params)
 
   val tl = toScreen(box.corners.topLeft)
   val tr = toScreen(box.corners.topRight)
@@ -427,8 +564,8 @@ private fun DrawScope.drawRefinementBox(
   }
 }
 
-private fun DrawScope.drawGuides(box: BoundingBox, scale: Float, panX: Float, panY: Float) {
-  fun toScreen(p: Point) = Offset((panX + p.x * scale).toFloat(), (panY + p.y * scale).toFloat())
+private fun DrawScope.drawGuides(box: BoundingBox, params: RefinementDisplayParams) {
+  fun toScreen(p: Point) = imageToScreen(p, params)
 
   // Draw center lines extending to edges
   val center = toScreen(box.center())
@@ -437,14 +574,14 @@ private fun DrawScope.drawGuides(box: BoundingBox, scale: Float, panX: Float, pa
   // Horizontal center line
   drawLine(
       guideColor,
-      Offset(center.x, panY),
-      Offset(center.x, (panY + box.height() * scale).toFloat()),
+      Offset(center.x, params.offsetY),
+      Offset(center.x, (params.offsetY + box.height() * params.scale).toFloat()),
       strokeWidth = 1f)
   // Vertical center line
   drawLine(
       guideColor,
-      Offset(panX, center.y),
-      Offset((panX + box.width() * scale).toFloat(), center.y),
+      Offset(params.offsetX, center.y),
+      Offset((params.offsetX + box.width() * params.scale).toFloat(), center.y),
       strokeWidth = 1f)
 }
 

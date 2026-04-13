@@ -24,10 +24,9 @@ class AppSettingsPhotoScanTest {
   fun `activePhotoScanProfile returns selected profile by ID`() {
     val profile1 = PhotoScanProfile(id = "id1", name = "Profile 1")
     val profile2 = PhotoScanProfile(id = "id2", name = "Profile 2")
-    val settings = AppSettings(
-        photoScanProfiles = listOf(profile1, profile2),
-        activePhotoScanProfileId = "id2"
-    )
+    val settings =
+        AppSettings(
+            photoScanProfiles = listOf(profile1, profile2), activePhotoScanProfileId = "id2")
 
     assertEquals("Profile 2", settings.activePhotoScanProfile.name)
   }
@@ -36,10 +35,8 @@ class AppSettingsPhotoScanTest {
   fun `activePhotoScanProfile returns first profile when no ID set`() {
     val profile1 = PhotoScanProfile(id = "id1", name = "First")
     val profile2 = PhotoScanProfile(id = "id2", name = "Second")
-    val settings = AppSettings(
-        photoScanProfiles = listOf(profile1, profile2),
-        activePhotoScanProfileId = null
-    )
+    val settings =
+        AppSettings(photoScanProfiles = listOf(profile1, profile2), activePhotoScanProfileId = null)
 
     assertEquals("First", settings.activePhotoScanProfile.name)
   }
@@ -58,23 +55,16 @@ class AppSettingsPhotoScanTest {
 
   @Test
   fun `lastPhotoScanDestination returns recent destination when available`() {
-    val settings = AppSettings(
-        recentPhotoScanDestinations = listOf("/recent/path", "/older/path")
-    )
+    val settings = AppSettings(recentPhotoScanDestinations = listOf("/recent/path", "/older/path"))
 
     assertEquals("/recent/path", settings.lastPhotoScanDestination)
   }
 
   @Test
   fun `lastPhotoScanDestination returns profile destination when no recent`() {
-    val profile = PhotoScanProfile(
-        name = "Test",
-        defaultDestination = "~/Pictures/Scans"
-    )
-    val settings = AppSettings(
-        photoScanProfiles = listOf(profile),
-        recentPhotoScanDestinations = emptyList()
-    )
+    val profile = PhotoScanProfile(name = "Test", defaultDestination = "~/Pictures/Scans")
+    val settings =
+        AppSettings(photoScanProfiles = listOf(profile), recentPhotoScanDestinations = emptyList())
 
     val lastDest = settings.lastPhotoScanDestination
 
@@ -84,15 +74,10 @@ class AppSettingsPhotoScanTest {
 
   @Test
   fun `recent destinations are ordered by recency`() {
-    val settings = AppSettings(
-        recentPhotoScanDestinations = listOf(
-            "/path/1",
-            "/path/2",
-            "/path/3",
-            "/path/4",
-            "/path/5"
-        )
-    )
+    val settings =
+        AppSettings(
+            recentPhotoScanDestinations =
+                listOf("/path/1", "/path/2", "/path/3", "/path/4", "/path/5"))
 
     // Most recent should be first
     assertEquals("/path/1", settings.lastPhotoScanDestination)
@@ -105,9 +90,7 @@ class AppSettingsPhotoScanTest {
     val settings = AppSettings()
     val newProfile = PhotoScanProfile(name = "New Profile")
 
-    val updated = settings.copy(
-        photoScanProfiles = settings.photoScanProfiles + newProfile
-    )
+    val updated = settings.copy(photoScanProfiles = settings.photoScanProfiles + newProfile)
 
     assertEquals(2, updated.photoScanProfiles.size)
     assertTrue(updated.photoScanProfiles.any { it.name == "New Profile" })
@@ -117,13 +100,10 @@ class AppSettingsPhotoScanTest {
   fun `can remove photo scan profile`() {
     val profile1 = PhotoScanProfile(id = "id1", name = "Keep")
     val profile2 = PhotoScanProfile(id = "id2", name = "Remove")
-    val settings = AppSettings(
-        photoScanProfiles = listOf(profile1, profile2)
-    )
+    val settings = AppSettings(photoScanProfiles = listOf(profile1, profile2))
 
-    val updated = settings.copy(
-        photoScanProfiles = settings.photoScanProfiles.filter { it.id != "id2" }
-    )
+    val updated =
+        settings.copy(photoScanProfiles = settings.photoScanProfiles.filter { it.id != "id2" })
 
     assertEquals(1, updated.photoScanProfiles.size)
     assertTrue(updated.photoScanProfiles.all { it.name == "Keep" })
@@ -135,11 +115,10 @@ class AppSettingsPhotoScanTest {
     val settings = AppSettings(photoScanProfiles = listOf(profile1))
 
     val updatedProfile = profile1.copy(name = "Updated")
-    val updated = settings.copy(
-        photoScanProfiles = settings.photoScanProfiles.map {
-            if (it.id == "id1") updatedProfile else it
-        }
-    )
+    val updated =
+        settings.copy(
+            photoScanProfiles =
+                settings.photoScanProfiles.map { if (it.id == "id1") updatedProfile else it })
 
     assertEquals("Updated", updated.photoScanProfiles.first().name)
   }
@@ -148,10 +127,9 @@ class AppSettingsPhotoScanTest {
   fun `active profile ID can be changed`() {
     val profile1 = PhotoScanProfile(id = "id1", name = "Profile 1")
     val profile2 = PhotoScanProfile(id = "id2", name = "Profile 2")
-    val settings = AppSettings(
-        photoScanProfiles = listOf(profile1, profile2),
-        activePhotoScanProfileId = "id1"
-    )
+    val settings =
+        AppSettings(
+            photoScanProfiles = listOf(profile1, profile2), activePhotoScanProfileId = "id1")
 
     val updated = settings.copy(activePhotoScanProfileId = "id2")
 
@@ -163,28 +141,29 @@ class AppSettingsPhotoScanTest {
 
   @Test
   fun `settings can be serialized and deserialized`() {
-    val original = AppSettings(
-        photoScanProfiles = listOf(
-            PhotoScanProfile(id = "id1", name = "Profile 1"),
-            PhotoScanProfile.createDocumentProfile()
-        ),
-        activePhotoScanProfileId = "id1",
-        recentPhotoScanDestinations = listOf("/recent/path")
-    )
+    val original =
+        AppSettings(
+            photoScanProfiles =
+                listOf(
+                    PhotoScanProfile(id = "id1", name = "Profile 1"),
+                    PhotoScanProfile.createDocumentProfile()),
+            activePhotoScanProfileId = "id1",
+            recentPhotoScanDestinations = listOf("/recent/path"))
 
     // Serialize
-    val json = kotlinx.serialization.json.Json {
-        prettyPrint = true
-        ignoreUnknownKeys = true
-    }.encodeToString(
-        AppSettings.serializer(),
-        original
-    )
+    val json =
+        kotlinx.serialization.json
+            .Json {
+              prettyPrint = true
+              ignoreUnknownKeys = true
+            }
+            .encodeToString(AppSettings.serializer(), original)
 
     // Deserialize
-    val deserialized = kotlinx.serialization.json.Json {
-        ignoreUnknownKeys = true
-    }.decodeFromString(AppSettings.serializer(), json)
+    val deserialized =
+        kotlinx.serialization.json
+            .Json { ignoreUnknownKeys = true }
+            .decodeFromString(AppSettings.serializer(), json)
 
     assertEquals(2, deserialized.photoScanProfiles.size)
     assertEquals("id1", deserialized.activePhotoScanProfileId)

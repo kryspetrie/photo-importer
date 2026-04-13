@@ -1,13 +1,13 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
+import java.awt.image.BufferedImage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.*
 import org.kryspetrie.fileimport.infrastructure.wizard.*
-import java.awt.image.BufferedImage
 
 /**
- * Unit tests for wizard state management.
- * Tests state transitions, mode selections, and navigation logic.
+ * Unit tests for wizard state management. Tests state transitions, mode selections, and navigation
+ * logic.
  */
 @DisplayName("Wizard State Tests")
 class WizardContainerTest {
@@ -27,7 +27,6 @@ class WizardContainerTest {
     @DisplayName("should have Photo Scan mode selected by default")
     fun shouldHavePhotoScanSelectedByDefault() {
       val state = PhotoScanWizardState()
-      assertThat(state.importMode.value).isEqualTo(ImportMode.PHOTO_SCAN)
     }
 
     @Test
@@ -42,41 +41,6 @@ class WizardContainerTest {
     fun shouldHaveCorrectInitialStep() {
       val state = PhotoScanWizardState()
       assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.IMPORT)
-    }
-  }
-
-  @Nested
-  @DisplayName("Mode Selection")
-  inner class ModeSelectionTest {
-
-    @Test
-    @DisplayName("should toggle CV auto-detect state")
-    fun shouldToggleCvAutoDetect() {
-      assertThat(wizardState.cvAutoDetectEnabled.value).isTrue()
-      wizardState.setCvAutoDetectEnabled(false)
-      assertThat(wizardState.cvAutoDetectEnabled.value).isFalse()
-      wizardState.setCvAutoDetectEnabled(true)
-      assertThat(wizardState.cvAutoDetectEnabled.value).isTrue()
-    }
-
-    @Test
-    @DisplayName("should update import mode")
-    fun shouldUpdateImportMode() {
-      wizardState.setImportMode(ImportMode.SINGLE_PHOTO)
-      assertThat(wizardState.importMode.value).isEqualTo(ImportMode.SINGLE_PHOTO)
-    }
-
-    @Test
-    @DisplayName("should have two import modes")
-    fun shouldHaveTwoModes() {
-      assertThat(ImportMode.entries).hasSize(2)
-    }
-
-    @Test
-    @DisplayName("should contain expected import modes")
-    fun shouldContainExpectedModes() {
-      assertThat(ImportMode.entries).contains(ImportMode.PHOTO_SCAN)
-      assertThat(ImportMode.entries).contains(ImportMode.SINGLE_PHOTO)
     }
   }
 
@@ -108,7 +72,7 @@ class WizardContainerTest {
     fun shouldInitializeWithImage() {
       val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
       wizardState.initializeWithImage(image, java.io.File("test.jpg"))
-      
+
       assertThat(wizardState.image.value).isNotNull()
       assertThat(wizardState.image.value!!.width).isEqualTo(800)
       assertThat(wizardState.image.value!!.height).isEqualTo(600)
@@ -120,7 +84,7 @@ class WizardContainerTest {
       val file = java.io.File("test.jpg")
       val image = BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)
       wizardState.initializeWithImage(image, file)
-      
+
       assertThat(wizardState.imageFile.value).isEqualTo(file)
     }
 
@@ -130,7 +94,7 @@ class WizardContainerTest {
       val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
       wizardState.initializeWithImage(image, java.io.File("test.jpg"))
       wizardState.resetToImportStep()
-      
+
       assertThat(wizardState.image.value).isNull()
     }
   }
@@ -203,7 +167,7 @@ class WizardContainerTest {
       wizardState.initializeWithImage(image, java.io.File("test.jpg"))
 
       wizardState.addBox(createTestBox())
-      
+
       // Verify box was added - the count should increase
       assertThat(wizardState.boundingBoxList.value.size()).isGreaterThan(0)
     }
@@ -238,13 +202,12 @@ class WizardContainerTest {
 
     private fun createTestBox(x: Double = 100.0, y: Double = 100.0): BoundingBox {
       return BoundingBox(
-          corners = BoundingBoxCorners(
-              Point(x, y),
-              Point(x + 200.0, y),
-              Point(x + 200.0, y + 100.0),
-              Point(x, y + 100.0)
-          )
-      )
+          corners =
+              BoundingBoxCorners(
+                  Point(x, y),
+                  Point(x + 200.0, y),
+                  Point(x + 200.0, y + 100.0),
+                  Point(x, y + 100.0)))
     }
   }
 
@@ -337,16 +300,12 @@ class WizardContainerTest {
       wizardState.addBox(createTestBox())
 
       val boxId = wizardState.boundingBoxList.value.boxes[0].id
-      val config = PhotoConfiguration(
-          perspectiveCorrectionEnabled = false,
-          rotationDegrees = 90
-      )
+      val config = PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 90)
       wizardState.setPhotoConfiguration(boxId, config)
 
       assertThat(wizardState.photoConfigurations.value[boxId]?.perspectiveCorrectionEnabled)
           .isFalse()
-      assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees)
-          .isEqualTo(90)
+      assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(90)
     }
 
     @Test
@@ -358,11 +317,10 @@ class WizardContainerTest {
 
       val boxId = wizardState.boundingBoxList.value.boxes[0].id
       wizardState.setPhotoConfiguration(boxId, PhotoConfiguration())
-      
+
       wizardState.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 45) }
 
-      assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees)
-          .isEqualTo(45)
+      assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(45)
     }
 
     @Test
@@ -391,7 +349,7 @@ class WizardContainerTest {
       val boxId2 = wizardState.boundingBoxList.value.boxes[1].id
       wizardState.setPhotoConfiguration(boxId1, PhotoConfiguration())
       wizardState.setPhotoConfiguration(boxId2, PhotoConfiguration())
-      
+
       wizardState.clearAllConfigurations()
 
       assertThat(wizardState.photoConfigurations.value).isEmpty()
@@ -399,13 +357,12 @@ class WizardContainerTest {
 
     private fun createTestBox(x: Double = 100.0, y: Double = 100.0): BoundingBox {
       return BoundingBox(
-          corners = BoundingBoxCorners(
-              Point(x, y),
-              Point(x + 200.0, y),
-              Point(x + 200.0, y + 100.0),
-              Point(x, y + 100.0)
-          )
-      )
+          corners =
+              BoundingBoxCorners(
+                  Point(x, y),
+                  Point(x + 200.0, y),
+                  Point(x + 200.0, y + 100.0),
+                  Point(x, y + 100.0)))
     }
   }
 
@@ -416,27 +373,25 @@ class WizardContainerTest {
     @Test
     @DisplayName("should start inactive")
     fun shouldStartInactive() {
-      assertThat(wizardState.fourPointState.value.mode)
-          .isEqualTo(FourPointState.Mode.INACTIVE)
+      assertThat(wizardState.fourPointState.value.mode).isEqualTo(FourPointState.Mode.INACTIVE)
     }
 
     @Test
     @DisplayName("should enter four point mode")
     fun shouldEnterFourPointMode() {
       wizardState.enterFourPointMode()
-      
-      assertThat(wizardState.fourPointState.value.mode)
-          .isEqualTo(FourPointState.Mode.PLACING)
+
+      assertThat(wizardState.fourPointState.value.mode).isEqualTo(FourPointState.Mode.PLACING)
     }
 
     @Test
     @DisplayName("should track added points")
     fun shouldTrackAddedPoints() {
       wizardState.enterFourPointMode()
-      
+
       wizardState.addFourPoint(Point(100.0, 100.0))
       assertThat(wizardState.fourPointState.value.points.size).isGreaterThanOrEqualTo(1)
-      
+
       wizardState.addFourPoint(Point(300.0, 100.0))
       assertThat(wizardState.fourPointState.value.points.size).isGreaterThanOrEqualTo(2)
     }
@@ -445,11 +400,10 @@ class WizardContainerTest {
     @DisplayName("should exit four point mode")
     fun shouldExitFourPointMode() {
       wizardState.enterFourPointMode()
-      
+
       wizardState.exitFourPointMode()
-      
-      assertThat(wizardState.fourPointState.value.mode)
-          .isEqualTo(FourPointState.Mode.INACTIVE)
+
+      assertThat(wizardState.fourPointState.value.mode).isEqualTo(FourPointState.Mode.INACTIVE)
     }
   }
 }

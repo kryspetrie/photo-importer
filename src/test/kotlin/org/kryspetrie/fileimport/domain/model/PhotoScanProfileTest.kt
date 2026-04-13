@@ -50,20 +50,19 @@ class PhotoScanProfileTest {
 
   @Test
   fun `custom profile can be created with all fields`() {
-    val profile = PhotoScanProfile(
-        id = "test-id",
-        name = "Custom Profile",
-        description = "Test description",
-        defaultDestination = "/custom/path",
-        outputFormat = PhotoOutputFormat.PNG,
-        aspectRatioPreset = AspectRatioPreset.SQUARE,
-        correctionSettings = CorrectionSettings(
-            enablePerspectiveCorrection = false,
-            enableRotationCorrection = true
-        ),
-        namingPattern = "{date}_{original}",
-        autoDetectEnabled = false
-    )
+    val profile =
+        PhotoScanProfile(
+            id = "test-id",
+            name = "Custom Profile",
+            description = "Test description",
+            defaultDestination = "/custom/path",
+            outputFormat = PhotoOutputFormat.PNG,
+            aspectRatioPreset = AspectRatioPreset.SQUARE,
+            correctionSettings =
+                CorrectionSettings(
+                    enablePerspectiveCorrection = false, enableRotationCorrection = true),
+            namingPattern = "{date}_{original}",
+            autoDetectEnabled = false)
 
     assertEquals("test-id", profile.id)
     assertEquals("Custom Profile", profile.name)
@@ -81,20 +80,14 @@ class PhotoScanProfileTest {
 
   @Test
   fun `resolveDestination returns absolute paths unchanged`() {
-    val profile = PhotoScanProfile(
-        name = "Test",
-        defaultDestination = "/absolute/path/to/folder"
-    )
+    val profile = PhotoScanProfile(name = "Test", defaultDestination = "/absolute/path/to/folder")
 
     assertEquals("/absolute/path/to/folder", profile.resolveDestination())
   }
 
   @Test
   fun `resolveDestination resolves home-relative paths`() {
-    val profile = PhotoScanProfile(
-        name = "Test",
-        defaultDestination = "~/Pictures/Scans"
-    )
+    val profile = PhotoScanProfile(name = "Test", defaultDestination = "~/Pictures/Scans")
 
     val resolved = profile.resolveDestination()
     assertTrue(resolved.startsWith(System.getProperty("user.home")))
@@ -103,10 +96,7 @@ class PhotoScanProfileTest {
 
   @Test
   fun `resolveDestination handles simple relative paths`() {
-    val profile = PhotoScanProfile(
-        name = "Test",
-        defaultDestination = "Pictures/PhotoScan"
-    )
+    val profile = PhotoScanProfile(name = "Test", defaultDestination = "Pictures/PhotoScan")
 
     val resolved = profile.resolveDestination()
     assertTrue(resolved.startsWith(System.getProperty("user.home")))
@@ -127,11 +117,7 @@ class PhotoScanProfileTest {
   @Test
   fun `markAsUsed updates timestamps`() {
     val beforeTime = System.currentTimeMillis()
-    val profile = PhotoScanProfile(
-        name = "Test",
-        lastUsedAt = 0L,
-        updatedAt = 0L
-    )
+    val profile = PhotoScanProfile(name = "Test", lastUsedAt = 0L, updatedAt = 0L)
 
     val updated = profile.markAsUsed()
     val afterTime = System.currentTimeMillis()
@@ -144,13 +130,13 @@ class PhotoScanProfileTest {
 
   @Test
   fun `markAsUsed preserves other fields`() {
-    val profile = PhotoScanProfile(
-        id = "test-id",
-        name = "Test Profile",
-        description = "Test description",
-        defaultDestination = "/custom/path",
-        useCount = 10
-    )
+    val profile =
+        PhotoScanProfile(
+            id = "test-id",
+            name = "Test Profile",
+            description = "Test description",
+            defaultDestination = "/custom/path",
+            useCount = 10)
 
     val updated = profile.markAsUsed()
 
@@ -192,10 +178,7 @@ class PhotoScanProfileTest {
 
   @Test
   fun `validate returns error for description too long`() {
-    val profile = PhotoScanProfile(
-        name = "Valid",
-        description = "D".repeat(501)
-    )
+    val profile = PhotoScanProfile(name = "Valid", description = "D".repeat(501))
 
     val errors = profile.validate()
 
@@ -204,10 +187,7 @@ class PhotoScanProfileTest {
 
   @Test
   fun `validate returns error for blank destination`() {
-    val profile = PhotoScanProfile(
-        name = "Valid",
-        defaultDestination = ""
-    )
+    val profile = PhotoScanProfile(name = "Valid", defaultDestination = "")
 
     val errors = profile.validate()
 
@@ -216,10 +196,7 @@ class PhotoScanProfileTest {
 
   @Test
   fun `validate returns error for blank naming pattern`() {
-    val profile = PhotoScanProfile(
-        name = "Valid",
-        namingPattern = ""
-    )
+    val profile = PhotoScanProfile(name = "Valid", namingPattern = "")
 
     val errors = profile.validate()
 
@@ -228,22 +205,24 @@ class PhotoScanProfileTest {
 
   @Test
   fun `validate returns error for invalid naming pattern`() {
-    val profile = PhotoScanProfile(
-        name = "Valid",
-        namingPattern = "fixed_name_without_placeholders"
-    )
+    val profile =
+        PhotoScanProfile(name = "Valid", namingPattern = "fixed_name_without_placeholders")
 
     val errors = profile.validate()
 
-    assertTrue(errors.any { it.contains("pattern") && (it.contains("placeholder") || it.contains("original") || it.contains("counter") || it.contains("date")) })
+    assertTrue(
+        errors.any {
+          it.contains("pattern") &&
+              (it.contains("placeholder") ||
+                  it.contains("original") ||
+                  it.contains("counter") ||
+                  it.contains("date"))
+        })
   }
 
   @Test
   fun `validate accepts pattern with original placeholder`() {
-    val profile = PhotoScanProfile(
-        name = "Valid",
-        namingPattern = "{original}_scan"
-    )
+    val profile = PhotoScanProfile(name = "Valid", namingPattern = "{original}_scan")
 
     val errors = profile.validate()
 
@@ -252,10 +231,7 @@ class PhotoScanProfileTest {
 
   @Test
   fun `validate accepts pattern with counter placeholder`() {
-    val profile = PhotoScanProfile(
-        name = "Valid",
-        namingPattern = "photo_{counter}"
-    )
+    val profile = PhotoScanProfile(name = "Valid", namingPattern = "photo_{counter}")
 
     val errors = profile.validate()
 
@@ -264,10 +240,7 @@ class PhotoScanProfileTest {
 
   @Test
   fun `validate accepts pattern with date placeholder`() {
-    val profile = PhotoScanProfile(
-        name = "Valid",
-        namingPattern = "{date}_photo"
-    )
+    val profile = PhotoScanProfile(name = "Valid", namingPattern = "{date}_photo")
 
     val errors = profile.validate()
 
@@ -278,27 +251,23 @@ class PhotoScanProfileTest {
 
   @Test
   fun `profile can be serialized and deserialized`() {
-    val original = PhotoScanProfile(
-        id = "test-id",
-        name = "Serializable Profile",
-        description = "Test",
-        defaultDestination = "~/Scans",
-        outputFormat = PhotoOutputFormat.PNG,
-        aspectRatioPreset = AspectRatioPreset.SQUARE,
-        useCount = 42
-    )
+    val original =
+        PhotoScanProfile(
+            id = "test-id",
+            name = "Serializable Profile",
+            description = "Test",
+            defaultDestination = "~/Scans",
+            outputFormat = PhotoOutputFormat.PNG,
+            aspectRatioPreset = AspectRatioPreset.SQUARE,
+            useCount = 42)
 
     // Serialize to JSON
-    val json = kotlinx.serialization.json.Json.encodeToString(
-        PhotoScanProfile.serializer(),
-        original
-    )
+    val json =
+        kotlinx.serialization.json.Json.encodeToString(PhotoScanProfile.serializer(), original)
 
     // Deserialize from JSON
-    val deserialized = kotlinx.serialization.json.Json.decodeFromString(
-        PhotoScanProfile.serializer(),
-        json
-    )
+    val deserialized =
+        kotlinx.serialization.json.Json.decodeFromString(PhotoScanProfile.serializer(), json)
 
     assertEquals(original.id, deserialized.id)
     assertEquals(original.name, deserialized.name)

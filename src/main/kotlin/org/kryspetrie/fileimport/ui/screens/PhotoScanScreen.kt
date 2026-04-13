@@ -1,7 +1,6 @@
 package org.kryspetrie.fileimport.ui.screens
 
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -9,9 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.io.File
 import javax.imageio.ImageIO
@@ -25,6 +21,7 @@ import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.PhotoScanState
 import org.kryspetrie.fileimport.domain.model.PhotoScanState.Step
+import org.kryspetrie.fileimport.ui.components.CubeGridLoadingIndicator
 
 /**
  * Animated corner detection loading indicator.
@@ -32,90 +29,6 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanState.Step
  * Creates a fun animation showing corners expanding and contracting, simulating the computer vision
  * detecting photo boundaries.
  */
-@Composable
-fun Loader(modifier: Modifier = Modifier, color: Color = Color(90, 164, 169)) {
-  val infiniteTransition = rememberInfiniteTransition(label = "LoaderTransition")
-
-  // Master timeline: 0.0f to 1.0f over 1000ms (1 second)
-  val time by
-      infiniteTransition.animateFloat(
-          initialValue = 0f,
-          targetValue = 1f,
-          animationSpec =
-              infiniteRepeatable(
-                  animation = tween(1000, easing = LinearEasing), repeatMode = RepeatMode.Restart),
-          label = "TimeProgress")
-
-  // Keep the Canvas fixed at the maximum expanded size (195.dp).
-  // This prevents layout recalculation freezes.
-  Canvas(modifier = modifier.size(195.dp)) {
-    val t = time
-
-    // l32-1: Controls the expansion (135 to 195)
-    val currentSizeDp =
-        when {
-          t <= 0.35f -> 135f + (195f - 135f) * (t / 0.35f)
-          t <= 0.65f -> 195f
-          else -> 195f - (195f - 135f) * ((t - 0.65f) / 0.35f)
-        }
-
-    // l32-2: Controls the square shifting
-    val shiftProgress =
-        when {
-          t <= 0.40f -> 0f
-          t <= 0.60f -> (t - 0.40f) / 0.20f
-          else -> 1f
-        }
-
-    val dotSize = 48.dp.toPx()
-    val currentSizePx = currentSizeDp.dp.toPx()
-
-    val availableWidth = currentSizePx - dotSize
-    val availableHeight = currentSizePx - dotSize
-
-    // Calculate offset to keep the animation perfectly centered inside the 195.dp canvas
-    val offsetX = (size.width - currentSizePx) / 2f
-    val offsetY = (size.height - currentSizePx) / 2f
-
-    // 1. Draw the static center dot (50% 50%)
-    drawRect(
-        color = color,
-        topLeft =
-            Offset(x = offsetX + (availableWidth * 0.5f), y = offsetY + (availableHeight * 0.5f)),
-        size = Size(dotSize, dotSize))
-
-    // The 8 perimeter positions mapped from the CSS
-    val outerPositions =
-        listOf(
-            Offset(0f, 0f), // Top Left
-            Offset(0f, 0.5f), // Center Left
-            Offset(0f, 1f), // Bottom Left
-            Offset(0.5f, 1f), // Bottom Center
-            Offset(1f, 1f), // Bottom Right
-            Offset(1f, 0.5f), // Center Right
-            Offset(1f, 0f), // Top Right
-            Offset(0.5f, 0f) // Top Center
-            )
-
-    // 2. Draw the 8 animated outer dots
-    for (i in 0 until 8) {
-      val start = outerPositions[i]
-      val end = outerPositions[(i + 1) % 8]
-
-      val currentXProgress = start.x + (end.x - start.x) * shiftProgress
-      val currentYProgress = start.y + (end.y - start.y) * shiftProgress
-
-      drawRect(
-          color = color,
-          topLeft =
-              Offset(
-                  x = offsetX + (currentXProgress * availableWidth),
-                  y = offsetY + (currentYProgress * availableHeight)),
-          size = Size(dotSize, dotSize))
-    }
-  }
-}
-
 /**
  * Photo Scan Screen.
  *
@@ -219,7 +132,7 @@ fun PhotoScanScreen(
                   modifier = Modifier.fillMaxSize(),
                   verticalArrangement = Arrangement.Center,
                   horizontalAlignment = Alignment.CenterHorizontally) {
-                    Loader(
+                    CubeGridLoadingIndicator(
                         modifier = Modifier.size(80.dp), color = MaterialTheme.colorScheme.primary)
                     Spacer(modifier = Modifier.height(32.dp))
                     Text(

@@ -12,21 +12,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import java.awt.image.BufferedImage
+import java.io.File
+import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.RotationAngle
+import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 import org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService
 import org.kryspetrie.fileimport.infrastructure.wizard.*
-import java.awt.image.BufferedImage
-import java.io.File
-import javax.imageio.ImageIO
-import org.koin.compose.koinInject
 
 /**
  * Main container for the Photo Import Wizard. Manages the step-by-step workflow: Import → Overview
@@ -40,11 +41,12 @@ fun WizardContainer(
     modifier: Modifier = Modifier,
     detectorService: PhotoScanDetectorService = koinInject(),
     exportService: PhotoScanExportService = koinInject(),
-    appLogger: AppLogger = koinInject()
+    appLogger: AppLogger = koinInject(),
+    settingsPort: SettingsPort = koinInject()
 ) {
   // Create the wizard state
   val state = remember { PhotoScanWizardState() }
-  
+
   // Set logger for operation tracking
   state.setLogger(appLogger)
 
@@ -63,7 +65,9 @@ fun WizardContainer(
   var processingCurrentFile by remember { mutableStateOf("") }
 
   // Export destination
-  var exportDestination by remember { mutableStateOf(System.getProperty("user.home") + "/Pictures/PhotoScan") }
+  var exportDestination by remember {
+    mutableStateOf(System.getProperty("user.home") + "/Pictures/PhotoScan")
+  }
 
   // Coroutine scope for background operations
   val scope = rememberCoroutineScope()
@@ -102,8 +106,12 @@ fun WizardContainer(
           // Show content based on current step
           when (currentStep) {
             PhotoScanWizardState.WizardStep.IMPORT -> {
-              ImportScreen(
+              PhotoScanImportScreen(
                   state = state,
+                  settingsPort = settingsPort,
+                  onSettingsChange = { newSettings ->
+                    scope.launch { settingsPort.saveSettings(newSettings) }
+                  },
                   onImageSelected = { file ->
                     scope.launch {
                       loadImageAndDetect(
@@ -125,7 +133,12 @@ fun WizardContainer(
               val image = state.image.collectAsState().value
               if (image != null) {
                 OverviewScreen(
-                    state = state, onBack = { state.resetToImportStep(); onCancel() }, onToSummary = { state.goToSummary() })
+                    state = state,
+                    onBack = {
+                      state.resetToImportStep()
+                      onCancel()
+                    },
+                    onToSummary = { state.goToSummary() })
               } else {
                 LoadingContent(message = "Loading image...")
               }
@@ -164,12 +177,13 @@ fun WizardContainer(
                             onProgress = { progress, file ->
                               processingProgress = progress
                               processingCurrentFile = file
-                              appLogger.debug("Export progress: ${(progress * 100).toInt()}% - $file")
+                              appLogger.debug(
+                                  "Export progress: ${(progress * 100).toInt()}% - $file")
                             },
                             onComplete = { processedPhotos ->
                               processingProgress = 1f
                               appLogger.logOperationComplete(
-                                  OperationType.EXPORT_COMPLETE, 
+                                  OperationType.EXPORT_COMPLETE,
                                   "Exported ${processedPhotos.size} photo(s) to $exportDestination")
                               state.goToComplete()
                               onComplete(processedPhotos)
@@ -182,9 +196,7 @@ fun WizardContainer(
             }
 
             PhotoScanWizardState.WizardStep.PROCESSING -> {
-              ProcessingScreen(
-                  progress = processingProgress,
-                  currentFile = processingCurrentFile)
+              ProcessingScreen(progress = processingProgress, currentFile = processingCurrentFile)
             }
 
             PhotoScanWizardState.WizardStep.COMPLETE -> {
@@ -235,10 +247,10 @@ fun WizardContainer(
 
 private fun getStepTitle(step: PhotoScanWizardState.WizardStep): String {
   return when (step) {
-    PhotoScanWizardState.WizardStep.IMPORT -> "Import Photos"
+    PhotoScanWizardState.WizardStep.IMPORT -> "Photo Scan Import"
     PhotoScanWizardState.WizardStep.OVERVIEW -> "Bounding Box Overview"
     PhotoScanWizardState.WizardStep.REFINEMENT -> "Refine Bounding Box"
-    PhotoScanWizardState.WizardStep.SUMMARY -> "Photo Summary"
+    PhotoScanWizardState.WizardStep.SUMMARY -> "Export Photos"
     PhotoScanWizardState.WizardStep.PROCESSING -> "Processing"
     PhotoScanWizardState.WizardStep.COMPLETE -> "Complete"
   }
@@ -287,7 +299,8 @@ private suspend fun loadImageAndDetect(
           withContext(Dispatchers.Main) {
             if (boxes.isNotEmpty()) {
               state.setDetectedBoxes(boxes)
-              appLogger.logOperationComplete(OperationType.IMAGE_DETECTION, "Detected ${boxes.size} photo(s)")
+              appLogger.logOperationComplete(
+                  OperationType.IMAGE_DETECTION, "Detected ${boxes.size} photo(s)")
               onMessage("Detected ${boxes.size} photo(s)")
             } else {
               appLogger.info("No photos detected in ${file.name} - user can add manually")
@@ -302,7 +315,8 @@ private suspend fun loadImageAndDetect(
         onComplete()
       }
     } else {
-      appLogger.logOperationFailed(OperationType.IMAGE_LOAD, "Unsupported image format: ${file.name}")
+      appLogger.logOperationFailed(
+          OperationType.IMAGE_LOAD, "Unsupported image format: ${file.name}")
       withContext(Dispatchers.Main) { onError("Failed to load image: unsupported format") }
     }
   } catch (e: Exception) {
@@ -330,8 +344,9 @@ private suspend fun exportPhotos(
   try {
     val boxes = state.boxes
     val configurations = state.photoConfigurations.value
-    
-    appLogger.logOperationStart(OperationType.EXPORT_START, "Destination: $destinationPath, ${boxes.size} photo(s)")
+
+    appLogger.logOperationStart(
+        OperationType.EXPORT_START, "Destination: $destinationPath, ${boxes.size} photo(s)")
 
     if (boxes.isEmpty()) {
       appLogger.logOperationFailed(OperationType.EXPORT_FAILED, "No photos to export")
@@ -342,32 +357,32 @@ private suspend fun exportPhotos(
 
     // Validate and prepare output directory
     val outputDir = File(destinationPath)
-    
+
     // First, validate if we can write to the path
     // Check various scenarios that would prevent writing
-    val validationError = when {
-      outputDir.exists() && !outputDir.isDirectory -> 
-        "Path exists but is not a directory: $destinationPath"
-      outputDir.exists() && !outputDir.canWrite() -> 
-        "Cannot write to folder: $destinationPath"
-      outputDir.exists() && !outputDir.canExecute() -> 
-        "Cannot access folder: $destinationPath"
-      !outputDir.exists() && !File(destinationPath).parentFile?.canWrite()!! -> 
-        "Cannot create folder in: ${File(destinationPath).parentFile?.absolutePath}"
-      else -> null
-    }
-    
+    val validationError =
+        when {
+          outputDir.exists() && !outputDir.isDirectory ->
+              "Path exists but is not a directory: $destinationPath"
+          outputDir.exists() && !outputDir.canWrite() -> "Cannot write to folder: $destinationPath"
+          outputDir.exists() && !outputDir.canExecute() -> "Cannot access folder: $destinationPath"
+          !outputDir.exists() && !File(destinationPath).parentFile?.canWrite()!! ->
+              "Cannot create folder in: ${File(destinationPath).parentFile?.absolutePath}"
+          else -> null
+        }
+
     if (validationError != null) {
       appLogger.logOperationFailed(OperationType.VALIDATION_ERROR, validationError)
       onError(validationError)
       isLoading(false)
       return
     }
-    
+
     // Create directory if it doesn't exist
     if (!outputDir.exists()) {
       if (!outputDir.mkdirs()) {
-        appLogger.logOperationFailed(OperationType.EXPORT_FAILED, "Failed to create folder: $destinationPath")
+        appLogger.logOperationFailed(
+            OperationType.EXPORT_FAILED, "Failed to create folder: $destinationPath")
         onError("Failed to create folder: $destinationPath")
         isLoading(false)
         return
@@ -380,7 +395,8 @@ private suspend fun exportPhotos(
     val requiredSpace = minSpacePerPhoto * boxes.size
     val freeSpace = outputDir.freeSpace
     if (freeSpace < requiredSpace) {
-      val errorMsg = "Insufficient disk space. Need ${requiredSpace / (1024 * 1024)}MB, have ${freeSpace / (1024 * 1024)}MB"
+      val errorMsg =
+          "Insufficient disk space. Need ${requiredSpace / (1024 * 1024)}MB, have ${freeSpace / (1024 * 1024)}MB"
       appLogger.logOperationFailed(OperationType.VALIDATION_ERROR, errorMsg)
       onError(errorMsg)
       isLoading(false)
@@ -401,24 +417,34 @@ private suspend fun exportPhotos(
       val corrections = mutableListOf<String>()
       if (config.perspectiveCorrectionEnabled) corrections.add("Perspective")
       if (config.rotationDegrees != 0) corrections.add("Rotation ${config.rotationDegrees}°")
-      
-      appLogger.logOperationStart(OperationType.EXPORT_PHOTO, "Photo ${index + 1}/${boxes.size}: $fileName (${corrections.joinToString(", ").ifEmpty { "no corrections" }})")
+
+      appLogger.logOperationStart(
+          OperationType.EXPORT_PHOTO,
+          "Photo ${index + 1}/${boxes.size}: $fileName (${corrections.joinToString(", ").ifEmpty { "no corrections" }})")
 
       // Convert BoundingBox to DetectedPhoto format
       val detectedPhoto =
           DetectedPhoto(
-              topLeft = PhotoCorner(box.corners.topLeft.x.toFloat(), box.corners.topLeft.y.toFloat()),
-              topRight = PhotoCorner(box.corners.topRight.x.toFloat(), box.corners.topRight.y.toFloat()),
-              bottomLeft = PhotoCorner(box.corners.bottomLeft.x.toFloat(), box.corners.bottomLeft.y.toFloat()),
-              bottomRight = PhotoCorner(box.corners.bottomRight.x.toFloat(), box.corners.bottomRight.y.toFloat()),
+              topLeft =
+                  PhotoCorner(box.corners.topLeft.x.toFloat(), box.corners.topLeft.y.toFloat()),
+              topRight =
+                  PhotoCorner(box.corners.topRight.x.toFloat(), box.corners.topRight.y.toFloat()),
+              bottomLeft =
+                  PhotoCorner(
+                      box.corners.bottomLeft.x.toFloat(), box.corners.bottomLeft.y.toFloat()),
+              bottomRight =
+                  PhotoCorner(
+                      box.corners.bottomRight.x.toFloat(), box.corners.bottomRight.y.toFloat()),
               applyPerspectiveCorrection = config.perspectiveCorrectionEnabled,
               rotation = rotationFromDegrees(config.rotationDegrees))
 
       // Export using the service
       withContext(Dispatchers.Default) {
         try {
-          val result = exportService.exportSinglePhoto(image, detectedPhoto, outputDir.absolutePath, fileName)
-          
+          val result =
+              exportService.exportSinglePhoto(
+                  image, detectedPhoto, outputDir.absolutePath, fileName)
+
           withContext(Dispatchers.Main) {
             results.add(
                 ProcessedPhoto(
@@ -426,10 +452,13 @@ private suspend fun exportPhotos(
                     outputPath = result.destinationPath,
                     dimensions = result.width to result.height,
                     correctionsApplied = corrections))
-            appLogger.logOperationComplete(OperationType.EXPORT_PHOTO, "Exported: ${result.destinationPath} (${result.width}x${result.height})")
+            appLogger.logOperationComplete(
+                OperationType.EXPORT_PHOTO,
+                "Exported: ${result.destinationPath} (${result.width}x${result.height})")
           }
         } catch (e: Exception) {
-          appLogger.logOperationFailed(OperationType.EXPORT_FAILED, "Photo ${index + 1} failed: ${e.message}", e)
+          appLogger.logOperationFailed(
+              OperationType.EXPORT_FAILED, "Photo ${index + 1} failed: ${e.message}", e)
           withContext(Dispatchers.Main) {
             results.add(
                 ProcessedPhoto(
@@ -444,7 +473,9 @@ private suspend fun exportPhotos(
 
     onMessage("Export complete!")
     onProgress(1f, "")
-    appLogger.logOperationComplete(OperationType.EXPORT_COMPLETE, "Successfully exported ${results.size} of ${boxes.size} photos")
+    appLogger.logOperationComplete(
+        OperationType.EXPORT_COMPLETE,
+        "Successfully exported ${results.size} of ${boxes.size} photos")
     onComplete(results)
   } catch (e: Exception) {
     appLogger.logOperationFailed(OperationType.EXPORT_FAILED, "Unexpected error: ${e.message}", e)
@@ -454,14 +485,15 @@ private suspend fun exportPhotos(
   }
 }
 
-/**
- * Converts degrees (-90, 90, 180) to RotationAngle.
- */
+/** Converts degrees (-90, 90, 180) to RotationAngle. */
 private fun rotationFromDegrees(degrees: Int): RotationAngle {
   return when (degrees) {
-    -90, -1 -> RotationAngle.CCW_90
-    90, 1 -> RotationAngle.CW_90
-    180, -180 -> RotationAngle.CW_180
+    -90,
+    -1 -> RotationAngle.CCW_90
+    90,
+    1 -> RotationAngle.CW_90
+    180,
+    -180 -> RotationAngle.CW_180
     else -> RotationAngle.NONE
   }
 }
@@ -482,23 +514,18 @@ private fun LoadingContent(message: String) {
 @Composable
 private fun AnimatedLoadingIndicator() {
   val infiniteTransition = rememberInfiniteTransition(label = "loading")
-  val rotation by infiniteTransition.animateFloat(
-      initialValue = 0f,
-      targetValue = 360f,
-      animationSpec = infiniteRepeatable(
-          animation = tween(durationMillis = 1500, easing = LinearEasing),
-          repeatMode = RepeatMode.Restart
-      ),
-      label = "rotation"
-  )
+  val rotation by
+      infiniteTransition.animateFloat(
+          initialValue = 0f,
+          targetValue = 360f,
+          animationSpec =
+              infiniteRepeatable(
+                  animation = tween(durationMillis = 1500, easing = LinearEasing),
+                  repeatMode = RepeatMode.Restart),
+          label = "rotation")
 
-  Box(
-      modifier = Modifier.size(48.dp),
-      contentAlignment = Alignment.Center) {
-    CircularProgressIndicator(
-        modifier = Modifier.fillMaxSize(),
-        strokeWidth = 4.dp
-    )
+  Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+    CircularProgressIndicator(modifier = Modifier.fillMaxSize(), strokeWidth = 4.dp)
   }
 }
 
@@ -535,8 +562,7 @@ private fun ProcessingScreen(progress: Float, currentFile: String) {
           Text("Processing Photos", style = MaterialTheme.typography.headlineSmall)
 
           LinearProgressIndicator(
-              progress = { progress.coerceIn(0f, 1f) },
-              modifier = Modifier.fillMaxWidth(0.8f))
+              progress = { progress.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth(0.8f))
 
           Text(
               if (currentFile.isNotEmpty()) "Processing: $currentFile" else "Finalizing...",
@@ -559,7 +585,7 @@ private fun CompleteScreen(boxCount: Int, onFinish: () -> Unit, onCancel: () -> 
               modifier = Modifier.size(80.dp),
               tint = MaterialTheme.colorScheme.primary)
 
-          Text("Photo Import Complete", style = MaterialTheme.typography.headlineMedium)
+          Text("Photo Scan Import Complete", style = MaterialTheme.typography.headlineMedium)
 
           Card(modifier = Modifier.fillMaxWidth(0.6f)) {
             Column(

@@ -5,14 +5,9 @@ import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
-
-/** Import mode for the wizard. */
-enum class ImportMode {
-  PHOTO_SCAN, // Multi-box detection
-  SINGLE_PHOTO // Single photo import
-}
 
 /** Wizard mode for the overview/refinement screens. */
 enum class WizardMode {
@@ -31,21 +26,25 @@ enum class WizardMode {
  * boxes, zoom, and selection.
  */
 class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
-  
+
   /** Logger for operation tracking. Set externally via setLogger(). */
   var appLogger: AppLogger? = null
-  
+
   fun setLogger(logger: AppLogger) {
     this.appLogger = logger
   }
-  
-  // ========== Import Configuration ==========
 
-  private val _importMode = MutableStateFlow(ImportMode.PHOTO_SCAN)
-  val importMode: StateFlow<ImportMode> = _importMode.asStateFlow()
+  // ========== Import Configuration ==========
 
   private val _cvAutoDetectEnabled = MutableStateFlow(true)
   val cvAutoDetectEnabled: StateFlow<Boolean> = _cvAutoDetectEnabled.asStateFlow()
+
+  private val _configuration = MutableStateFlow(ImportConfiguration())
+  val configuration: StateFlow<ImportConfiguration> = _configuration.asStateFlow()
+
+  fun setConfiguration(config: ImportConfiguration) {
+    _configuration.value = config
+  }
 
   // ========== Image ==========
 
@@ -126,11 +125,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     _undoRedoManager.value.clearAll()
   }
 
-  /** Sets the import mode (Photo Scan or Single Photo). */
-  fun setImportMode(mode: ImportMode) {
-    _importMode.value = mode
-  }
-
   /** Sets whether CV auto-detection is enabled. */
   fun setCvAutoDetectEnabled(enabled: Boolean) {
     _cvAutoDetectEnabled.value = enabled
@@ -151,10 +145,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   /**
    * Sets the photo configuration for a specific box.
    *
-   * This method stores correction preferences (perspective, rotation, aspect ratio)
-   * that will be applied during export. Each box can have its own unique configuration.
+   * This method stores correction preferences (perspective, rotation, aspect ratio) that will be
+   * applied during export. Each box can have its own unique configuration.
    *
    * ## Example
+   *
    * ```kotlin
    * state.setPhotoConfiguration(box.id, PhotoConfiguration(
    *     perspectiveCorrectionEnabled = true,
@@ -182,11 +177,12 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   /**
    * Updates the photo configuration for a specific box, preserving existing values.
    *
-   * Unlike [setPhotoConfiguration] which replaces the entire config, this method
-   * applies a transformation function to the existing config. Useful for updating
-   * a single field while preserving others.
+   * Unlike [setPhotoConfiguration] which replaces the entire config, this method applies a
+   * transformation function to the existing config. Useful for updating a single field while
+   * preserving others.
    *
    * ## Example
+   *
    * ```kotlin
    * // Enable perspective without changing rotation
    * state.updatePhotoConfiguration(box.id) { config ->
@@ -212,8 +208,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   /**
    * Clears the photo configuration for a specific box.
    *
-   * Removes any correction settings for the specified box, reverting it to
-   * default configuration (no corrections enabled).
+   * Removes any correction settings for the specified box, reverting it to default configuration
+   * (no corrections enabled).
    *
    * @param boxId The ID of the box to clear configuration for
    * @see setPhotoConfiguration
@@ -231,14 +227,15 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   /**
    * Applies a rotation to all bounding boxes in the current state.
    *
-   * This bulk operation sets the rotation degrees for all existing boxes.
-   * Useful when you want to rotate all detected photos uniformly.
+   * This bulk operation sets the rotation degrees for all existing boxes. Useful when you want to
+   * rotate all detected photos uniformly.
    *
    * ## Common Use Cases
    * - Rotate all photos 90° clockwise for scanning orientation correction
    * - Rotate all photos 180° for upside-down scans
    *
    * ## Example
+   *
    * ```kotlin
    * // Rotate all boxes 90 degrees clockwise
    * state.rotateAllBoxes(90)
@@ -251,9 +248,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
    *     - 0: Clear rotation
    */
   fun rotateAllBoxes(degrees: Int) {
-    boxes.forEach { box ->
-      updatePhotoConfiguration(box.id) { it.copy(rotationDegrees = degrees) }
-    }
+    boxes.forEach { box -> updatePhotoConfiguration(box.id) { it.copy(rotationDegrees = degrees) } }
   }
 
   /**
@@ -264,14 +259,15 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   /**
    * Enables or disables perspective correction for all bounding boxes.
    *
-   * This bulk operation sets the perspective correction flag for all existing boxes.
-   * When enabled, photos will be transformed to correct trapezoidal distortion.
+   * This bulk operation sets the perspective correction flag for all existing boxes. When enabled,
+   * photos will be transformed to correct trapezoidal distortion.
    *
    * ## Common Use Cases
    * - Enable perspective on all photos after reviewing scan results
    * - Batch-apply perspective correction before export
    *
    * ## Example
+   *
    * ```kotlin
    * // Enable perspective correction for all boxes
    * state.setPerspectiveCorrectionAll(true)
@@ -287,21 +283,19 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     }
   }
 
-  /**
-   * Clears all photo configurations.
-   */
+  /** Clears all photo configurations. */
   /**
    * Clears all photo configurations, resetting every box to default settings.
    *
-   * This removes all correction settings (perspective, rotation, aspect ratio)
-   * for all bounding boxes. Each box will use default configuration with
-   * no corrections applied.
+   * This removes all correction settings (perspective, rotation, aspect ratio) for all bounding
+   * boxes. Each box will use default configuration with no corrections applied.
    *
    * ## Common Use Cases
    * - Reset all photos before re-configuring from scratch
    * - Clear user mistakes and start over
    *
    * ## Example
+   *
    * ```kotlin
    * // Clear all configurations and start fresh
    * state.clearAllConfigurations()
@@ -315,9 +309,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     _photoConfigurations.value = emptyMap()
   }
 
-  /**
-   * Returns all bounding boxes as a list.
-   */
+  /** Returns all bounding boxes as a list. */
   val boxes: List<BoundingBox>
     get() = _boundingBoxList.value.boxes
 
@@ -325,7 +317,9 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   fun addBox(box: BoundingBox) {
     val newList = _boundingBoxList.value.add(box)
     _boundingBoxList.value = newList
-    appLogger?.logOperationComplete(OperationType.BOX_CREATION, "Box ${newList.size()} at (${box.center().x.toInt()}, ${box.center().y.toInt()}), size: ${box.width().toInt()}x${box.height().toInt()}")
+    appLogger?.logOperationComplete(
+        OperationType.BOX_CREATION,
+        "Box ${newList.size()} at (${box.center().x.toInt()}, ${box.center().y.toInt()}), size: ${box.width().toInt()}x${box.height().toInt()}")
   }
 
   /** Removes a bounding box by index. */
@@ -462,22 +456,28 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
    * @param minSize Minimum dimension for the box (default 50 pixels)
    * @return True if the box was created, false if it was too small
    */
-  fun createBoxAtCenter(centerX: Double, centerY: Double, minSize: Double = PhotoScanConstants.MIN_BOX_SIZE_PIXELS): Boolean {
+  fun createBoxAtCenter(
+      centerX: Double,
+      centerY: Double,
+      minSize: Double = PhotoScanConstants.MIN_BOX_SIZE_PIXELS
+  ): Boolean {
     val imageWidth = _image.value?.width?.toDouble()
     val imageHeight = _image.value?.height?.toDouble()
-    
+
     // Calculate box dimensions based on image size using constants
     val width = imageWidth?.times(PhotoScanConstants.DEFAULT_BOX_WIDTH_RATIO) ?: 100.0
     val height = width / PhotoScanConstants.DEFAULT_BOX_ASPECT_RATIO
 
     // Validate minimum box size to prevent tiny boxes using constant
     if (width < minSize || height < minSize) {
-      val imageSizeInfo = if (imageWidth != null && imageHeight != null) {
-        " (image is ${imageWidth.toInt()}x${imageHeight.toInt()}px)"
-      } else {
-        ""
-      }
-      appLogger?.warn("Cannot create box: size $width x $height below minimum $minSize px$imageSizeInfo")
+      val imageSizeInfo =
+          if (imageWidth != null && imageHeight != null) {
+            " (image is ${imageWidth.toInt()}x${imageHeight.toInt()}px)"
+          } else {
+            ""
+          }
+      appLogger?.warn(
+          "Cannot create box: size $width x $height below minimum $minSize px$imageSizeInfo")
       return false
     }
 
@@ -727,8 +727,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   }
 
   /**
-   * Resets the wizard to the import step, clearing all state.
-   * Use this when user cancels or completes a scan session.
+   * Resets the wizard to the import step, clearing all state. Use this when user cancels or
+   * completes a scan session.
    */
   fun resetToImportStep() {
     _image.value = null

@@ -31,11 +31,7 @@ enum class PhotoOutputFormat(val extension: String, val quality: Int, val descri
  * @property printSize Common print size with this ratio
  */
 @Serializable
-enum class AspectRatioPreset(
-    val displayName: String,
-    val value: Double,
-    val printSize: String
-) {
+enum class AspectRatioPreset(val displayName: String, val value: Double, val printSize: String) {
   ORIGINAL("Original", 0.0, "Use photo's original aspect ratio"),
   SQUARE("Square (1:1)", 1.0, "4x4, 8x8, 12x12 inches"),
   PORTRAIT_4_3("Portrait (4:3)", 3.0 / 4.0, "4x3, 8x6, 12x9 inches"),
@@ -115,8 +111,8 @@ enum class PerspectiveMode {
  * @property id Unique identifier for this profile. Auto-generated UUID ensures uniqueness.
  * @property name Human-readable name shown in the profile selector. Should be descriptive.
  * @property description Optional detailed description of the profile's purpose.
- * @property defaultDestination Default destination folder for exports. Relative paths are relative to
- *   user home directory.
+ * @property defaultDestination Default destination folder for exports. Relative paths are relative
+ *   to user home directory.
  * @property outputFormat Output file format and quality setting.
  * @property aspectRatioPreset Aspect ratio for export (or ORIGINAL for no cropping).
  * @property correctionSettings Default correction settings (perspective, rotation).
@@ -166,8 +162,8 @@ data class PhotoScanProfile(
     /**
      * Default destination folder for exports.
      *
-     * This is the default output location when using this profile. Users can still change it
-     * during export. The path can be:
+     * This is the default output location when using this profile. Users can still change it during
+     * export. The path can be:
      * - Absolute: `/Users/name/Pictures/Scans`
      * - Relative to home: `~/Pictures/Scans`
      * - Just `Pictures` or `Desktop` (resolved relative to home)
@@ -191,8 +187,8 @@ data class PhotoScanProfile(
     /**
      * Aspect ratio preset for export cropping.
      *
-     * When set to a specific preset, photos will be cropped to that aspect ratio.
-     * When set to ORIGINAL, photos use their natural aspect ratio.
+     * When set to a specific preset, photos will be cropped to that aspect ratio. When set to
+     * ORIGINAL, photos use their natural aspect ratio.
      *
      * Default: ORIGINAL (no cropping)
      */
@@ -230,8 +226,8 @@ data class PhotoScanProfile(
     /**
      * Whether auto-detection is enabled by default.
      *
-     * When true, the system automatically detects photo boundaries using computer vision.
-     * When false, users must add bounding boxes manually.
+     * When true, the system automatically detects photo boundaries using computer vision. When
+     * false, users must add bounding boxes manually.
      *
      * Default: true
      */
@@ -290,8 +286,7 @@ data class PhotoScanProfile(
   fun resolveDestination(): String {
     val home = System.getProperty("user.home")
     return when {
-      defaultDestination.startsWith("~/") ->
-          defaultDestination.replace("~", home)
+      defaultDestination.startsWith("~/") -> defaultDestination.replace("~", home)
       defaultDestination.startsWith("/") -> defaultDestination
       else -> "$home/$defaultDestination"
     }
@@ -306,8 +301,7 @@ data class PhotoScanProfile(
     return copy(
         lastUsedAt = System.currentTimeMillis(),
         useCount = useCount + 1,
-        updatedAt = System.currentTimeMillis()
-    )
+        updatedAt = System.currentTimeMillis())
   }
 
   /**
@@ -317,33 +311,33 @@ data class PhotoScanProfile(
    */
   fun validate(): List<String> {
     val errors = mutableListOf<String>()
-    
+
     if (name.isBlank()) {
       errors.add("Profile name cannot be empty")
     }
-    
+
     if (name.length > 100) {
       errors.add("Profile name cannot exceed 100 characters")
     }
-    
+
     if (description.length > 500) {
       errors.add("Profile description cannot exceed 500 characters")
     }
-    
+
     if (defaultDestination.isBlank()) {
       errors.add("Default destination cannot be empty")
     }
-    
+
     if (namingPattern.isBlank()) {
       errors.add("Naming pattern cannot be empty")
     }
-    
-    if (!namingPattern.contains("{original}") && 
-        !namingPattern.contains("{counter") && 
+
+    if (!namingPattern.contains("{original}") &&
+        !namingPattern.contains("{counter") &&
         !namingPattern.contains("{date")) {
       errors.add("Naming pattern should contain at least one of: {original}, {counter}, {date}")
     }
-    
+
     return errors
   }
 
@@ -360,13 +354,11 @@ data class PhotoScanProfile(
           defaultDestination = "Pictures/PhotoScan",
           outputFormat = PhotoOutputFormat.JPEG_QUALITY_90,
           aspectRatioPreset = AspectRatioPreset.ORIGINAL,
-          correctionSettings = CorrectionSettings(
-              enablePerspectiveCorrection = true,
-              enableRotationCorrection = false
-          ),
+          correctionSettings =
+              CorrectionSettings(
+                  enablePerspectiveCorrection = true, enableRotationCorrection = false),
           namingPattern = "{original}",
-          autoDetectEnabled = true
-      )
+          autoDetectEnabled = true)
     }
 
     /**
@@ -381,14 +373,13 @@ data class PhotoScanProfile(
           defaultDestination = "Documents/Scans",
           outputFormat = PhotoOutputFormat.JPEG_QUALITY_85,
           aspectRatioPreset = AspectRatioPreset.PORTRAIT_4_3,
-          correctionSettings = CorrectionSettings(
-              enablePerspectiveCorrection = true,
-              enableRotationCorrection = true,
-              perspectiveMode = PerspectiveMode.AUTO
-          ),
+          correctionSettings =
+              CorrectionSettings(
+                  enablePerspectiveCorrection = true,
+                  enableRotationCorrection = true,
+                  perspectiveMode = PerspectiveMode.AUTO),
           namingPattern = "{date}_{original}",
-          autoDetectEnabled = true
-      )
+          autoDetectEnabled = true)
     }
 
     /**
@@ -403,13 +394,11 @@ data class PhotoScanProfile(
           defaultDestination = "Pictures/PhotoScan/Albums",
           outputFormat = PhotoOutputFormat.JPEG_QUALITY_95,
           aspectRatioPreset = AspectRatioPreset.LANDSCAPE_3_2,
-          correctionSettings = CorrectionSettings(
-              enablePerspectiveCorrection = true,
-              enableRotationCorrection = true
-          ),
+          correctionSettings =
+              CorrectionSettings(
+                  enablePerspectiveCorrection = true, enableRotationCorrection = true),
           namingPattern = "{original}_{counter4}",
-          autoDetectEnabled = true
-      )
+          autoDetectEnabled = true)
     }
   }
 }

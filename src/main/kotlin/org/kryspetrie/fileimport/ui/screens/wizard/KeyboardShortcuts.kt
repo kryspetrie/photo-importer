@@ -4,8 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Keyboard
@@ -19,14 +21,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import java.lang.reflect.Method
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
-import java.lang.reflect.Method
 
 /**
  * Modifier that adds keyboard shortcuts for the Photo Scan Wizard.
@@ -97,7 +99,8 @@ fun Modifier.withWizardKeyboardShortcuts(
           wizardState.moveSelectedCorner(1.0, 0.0)
           return@onKeyEvent true
         }
-        "Delete", "Backspace" -> {
+        "Delete",
+        "Backspace" -> {
           wizardState.removeSelectedBox()
           return@onKeyEvent true
         }
@@ -270,10 +273,7 @@ private fun cycleCorner(state: PhotoScanWizardState) {
  * - O: Redo
  */
 @Composable
-fun KeyboardShortcutHelpDialog(
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier
-) {
+fun KeyboardShortcutHelpDialog(onDismiss: () -> Unit, modifier: Modifier = Modifier) {
   AlertDialog(
       onDismissRequest = onDismiss,
       modifier = modifier,
@@ -287,8 +287,7 @@ fun KeyboardShortcutHelpDialog(
       },
       text = {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
               // Navigation section
               ShortcutSection(title = "Navigation") {
                 ShortcutRow("Enter", "Confirm / Proceed")
@@ -335,18 +334,21 @@ fun KeyboardShortcutHelpDialog(
                 ShortcutRow("U", "Undo")
                 ShortcutRow("O", "Redo")
               }
+
+              HorizontalDivider()
+
+              // Overview section
+              ShortcutSection(title = "Overview") {
+                ShortcutRow("O", "Open overview")
+                ShortcutRow("H", "Show help")
+              }
             }
       },
-      confirmButton = {
-        TextButton(onClick = onDismiss) { Text("Close") }
-      })
+      confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } })
 }
 
 @Composable
-private fun ShortcutSection(
-    title: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
+private fun ShortcutSection(title: String, content: @Composable ColumnScope.() -> Unit) {
   Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
     Text(
         text = title,
@@ -360,20 +362,19 @@ private fun ShortcutSection(
 private fun ShortcutRow(shortcutKey: String, description: String) {
   Row(
       modifier = Modifier.fillMaxWidth(),
-      horizontalArrangement = Arrangement.SpaceBetween) {
-    Surface(
-        shape = RoundedCornerShape(4.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        modifier = Modifier.padding(end = 8.dp)) {
-          Text(
-              text = shortcutKey,
-              modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-              style = MaterialTheme.typography.labelMedium,
-              fontWeight = FontWeight.Bold)
-        }
-    Text(
-        text = description,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.weight(1f))
-  }
+      horizontalArrangement = Arrangement.Start,
+      verticalAlignment = Alignment.CenterVertically) {
+        Surface(
+            shape = RoundedCornerShape(4.dp),
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            modifier = Modifier.padding(end = 8.dp)) {
+              Text(
+                  text = shortcutKey,
+                  modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                  style = MaterialTheme.typography.labelMedium,
+                  fontWeight = FontWeight.Bold)
+            }
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text = description, style = MaterialTheme.typography.bodySmall)
+      }
 }

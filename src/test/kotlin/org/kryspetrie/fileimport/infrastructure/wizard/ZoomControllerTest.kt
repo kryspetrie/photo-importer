@@ -48,9 +48,7 @@ class ZoomControllerTest {
 
     // Keep zooming in
     var current = controller
-    repeat(20) {
-      current = current.zoomIn()
-    }
+    repeat(20) { current = current.zoomIn() }
 
     assertTrue(current.zoom <= current.maxZoom)
   }
@@ -62,9 +60,7 @@ class ZoomControllerTest {
 
     // Keep zooming out
     var current = controller
-    repeat(20) {
-      current = current.zoomOut()
-    }
+    repeat(20) { current = current.zoomOut() }
 
     assertTrue(current.zoom >= current.minZoom)
   }
@@ -124,12 +120,12 @@ class ZoomControllerTest {
     val viewportWidth = 800.0
     val viewportHeight = 600.0
 
-    val corners = BoundingBoxCorners(
-        topLeft = Point(100.0, 100.0),
-        topRight = Point(300.0, 100.0),
-        bottomRight = Point(300.0, 200.0),
-        bottomLeft = Point(100.0, 200.0)
-    )
+    val corners =
+        BoundingBoxCorners(
+            topLeft = Point(100.0, 100.0),
+            topRight = Point(300.0, 100.0),
+            bottomRight = Point(300.0, 200.0),
+            bottomLeft = Point(100.0, 200.0))
 
     val controller = ZoomController()
     val fitted = controller.fitToBox(corners, viewportWidth, viewportHeight)
@@ -217,8 +213,8 @@ class ZoomControllerTest {
   @Test
   fun `fit portrait image in landscape viewport`() {
     val imageWidth = 800.0
-    val imageHeight = 1200.0  // Portrait
-    val viewportWidth = 1000.0  // Landscape
+    val imageHeight = 1200.0 // Portrait
+    val viewportWidth = 1000.0 // Landscape
     val viewportHeight = 600.0
 
     val controller = ZoomController.fit(imageWidth, imageHeight, viewportWidth, viewportHeight)
@@ -230,9 +226,9 @@ class ZoomControllerTest {
   // ZC-16: Fit landscape image in portrait viewport
   @Test
   fun `fit landscape image in portrait viewport`() {
-    val imageWidth = 1200.0  // Landscape
+    val imageWidth = 1200.0 // Landscape
     val imageHeight = 800.0
-    val viewportWidth = 600.0   // Portrait
+    val viewportWidth = 600.0 // Portrait
     val viewportHeight = 1000.0
 
     val controller = ZoomController.fit(imageWidth, imageHeight, viewportWidth, viewportHeight)
@@ -248,28 +244,29 @@ class ZoomControllerTest {
     val viewportHeight = 600.0
 
     // Very wide box
-    val wideCorners = BoundingBoxCorners(
-        topLeft = Point(0.0, 100.0),
-        topRight = Point(500.0, 100.0),
-        bottomRight = Point(500.0, 150.0),
-        bottomLeft = Point(0.0, 150.0)
-    )
+    val wideCorners =
+        BoundingBoxCorners(
+            topLeft = Point(0.0, 100.0),
+            topRight = Point(500.0, 100.0),
+            bottomRight = Point(500.0, 150.0),
+            bottomLeft = Point(0.0, 150.0))
 
     val controller = ZoomController()
     val fitted = controller.fitToBox(wideCorners, viewportWidth, viewportHeight)
 
-    // Should fit the wide box in the viewport - just verify it doesn't crash and has reasonable values
+    // Should fit the wide box in the viewport - just verify it doesn't crash and has reasonable
+    // values
     assertTrue(fitted.zoom > 0)
     assertFalse(fitted.zoom.isNaN())
     assertFalse(fitted.zoom.isInfinite())
 
     // Very tall box
-    val tallCorners = BoundingBoxCorners(
-        topLeft = Point(100.0, 0.0),
-        topRight = Point(150.0, 0.0),
-        bottomRight = Point(150.0, 500.0),
-        bottomLeft = Point(100.0, 500.0)
-    )
+    val tallCorners =
+        BoundingBoxCorners(
+            topLeft = Point(100.0, 0.0),
+            topRight = Point(150.0, 0.0),
+            bottomRight = Point(150.0, 500.0),
+            bottomLeft = Point(100.0, 500.0))
 
     val fittedTall = controller.fitToBox(tallCorners, viewportWidth, viewportHeight)
 

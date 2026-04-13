@@ -196,11 +196,7 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
           height = finalImage.height)
     } catch (e: Exception) {
       SingleExportResult(
-          success = false,
-          destinationPath = "",
-          width = 0,
-          height = 0,
-          error = e.message)
+          success = false, destinationPath = "", width = 0, height = 0, error = e.message)
     }
   }
 

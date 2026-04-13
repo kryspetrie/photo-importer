@@ -1,7 +1,5 @@
 package org.kryspetrie.fileimport.infrastructure.logging
 
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.awt.Desktop
 import java.io.File
 import java.io.IOException
@@ -10,6 +8,8 @@ import java.util.Date
 import java.util.concurrent.ConcurrentLinkedQueue
 import javax.inject.Inject
 import javax.inject.Singleton
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * Centralized logging manager for the application.
@@ -36,14 +36,17 @@ class AppLogger @Inject constructor() {
 
   // Log file configuration
   private val logDir: File by lazy {
-    val baseDir = when {
-      System.getProperty("os.name").startsWith("Mac") -> 
-        File(System.getProperty("user.home"), "Library/Logs/PetrieImageImporter")
-      System.getProperty("os.name").startsWith("Windows") ->
-        File(System.getenv("APPDATA") ?: System.getProperty("user.home"), "PetrieImageImporter/logs")
-      else -> // Linux and others
-        File(System.getProperty("user.home"), ".local/share/PetrieImageImporter/logs")
-    }
+    val baseDir =
+        when {
+          System.getProperty("os.name").startsWith("Mac") ->
+              File(System.getProperty("user.home"), "Library/Logs/PetrieImageImporter")
+          System.getProperty("os.name").startsWith("Windows") ->
+              File(
+                  System.getenv("APPDATA") ?: System.getProperty("user.home"),
+                  "PetrieImageImporter/logs")
+          else -> // Linux and others
+          File(System.getProperty("user.home"), ".local/share/PetrieImageImporter/logs")
+        }
     baseDir.apply { mkdirs() }
   }
 
@@ -58,27 +61,21 @@ class AppLogger @Inject constructor() {
     info("Log file location: ${logFile.absolutePath}")
   }
 
-  /**
-   * Logs an info message.
-   */
+  /** Logs an info message. */
   fun info(message: String, vararg args: Any?) {
     val entry = LogEntry(Level.INFO, message, System.currentTimeMillis())
     addToRingBuffer(entry)
     logger.info(message, *args)
   }
 
-  /**
-   * Logs a warning message.
-   */
+  /** Logs a warning message. */
   fun warn(message: String, vararg args: Any?) {
     val entry = LogEntry(Level.WARN, message, System.currentTimeMillis())
     addToRingBuffer(entry)
     logger.warn(message, *args)
   }
 
-  /**
-   * Logs an error message.
-   */
+  /** Logs an error message. */
   fun error(message: String, throwable: Throwable? = null) {
     val entry = LogEntry(Level.ERROR, message, System.currentTimeMillis())
     addToRingBuffer(entry)
@@ -89,18 +86,14 @@ class AppLogger @Inject constructor() {
     }
   }
 
-  /**
-   * Logs a debug message.
-   */
+  /** Logs a debug message. */
   fun debug(message: String, vararg args: Any?) {
     val entry = LogEntry(Level.DEBUG, message, System.currentTimeMillis())
     addToRingBuffer(entry)
     logger.debug(message, *args)
   }
 
-  /**
-   * Logs an operation start event.
-   */
+  /** Logs an operation start event. */
   fun logOperationStart(operation: OperationType, details: String = "") {
     val message = buildString {
       append("START: ${operation.displayName}")
@@ -109,9 +102,7 @@ class AppLogger @Inject constructor() {
     info(message)
   }
 
-  /**
-   * Logs an operation completion event.
-   */
+  /** Logs an operation completion event. */
   fun logOperationComplete(operation: OperationType, details: String = "") {
     val message = buildString {
       append("COMPLETE: ${operation.displayName}")
@@ -120,9 +111,7 @@ class AppLogger @Inject constructor() {
     info(message)
   }
 
-  /**
-   * Logs an operation failure event.
-   */
+  /** Logs an operation failure event. */
   fun logOperationFailed(operation: OperationType, reason: String, throwable: Throwable? = null) {
     val message = buildString {
       append("FAILED: ${operation.displayName}")
@@ -131,15 +120,14 @@ class AppLogger @Inject constructor() {
     error(message, throwable)
   }
 
-  /**
-   * Returns recent log entries for UI display.
-   */
+  /** Returns recent log entries for UI display. */
   fun getRecentLogs(count: Int = 100): List<LogEntry> {
     return recentLogs.toList().takeLast(count)
   }
 
   /**
    * Opens the log file with the system's default text viewer.
+   *
    * @return true if successful, false otherwise
    */
   fun openLogFileWithSystemViewer(): Boolean {
@@ -149,7 +137,7 @@ class AppLogger @Inject constructor() {
         logFile.parentFile?.mkdirs()
         logFile.createNewFile()
       }
-      
+
       if (Desktop.isDesktopSupported()) {
         Desktop.getDesktop().open(logFile)
         info("Opened log file: ${logFile.absolutePath}")
@@ -164,9 +152,7 @@ class AppLogger @Inject constructor() {
     }
   }
 
-  /**
-   * Returns the path to the current log file.
-   */
+  /** Returns the path to the current log file. */
   fun getLogFilePath(): String = logFile.absolutePath
 
   private fun addToRingBuffer(entry: LogEntry) {
@@ -177,14 +163,8 @@ class AppLogger @Inject constructor() {
   }
 }
 
-/**
- * Represents a single log entry.
- */
-data class LogEntry(
-    val level: Level,
-    val message: String,
-    val timestamp: Long
-) {
+/** Represents a single log entry. */
+data class LogEntry(val level: Level, val message: String, val timestamp: Long) {
   val formattedTime: String
     get() = SimpleDateFormat("HH:mm:ss.SSS").format(Date(timestamp))
 
@@ -192,16 +172,15 @@ data class LogEntry(
     get() = SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(Date(timestamp))
 }
 
-/**
- * Log levels compatible with SLF4J.
- */
+/** Log levels compatible with SLF4J. */
 enum class Level {
-  DEBUG, INFO, WARN, ERROR
+  DEBUG,
+  INFO,
+  WARN,
+  ERROR
 }
 
-/**
- * Types of operations that can be logged.
- */
+/** Types of operations that can be logged. */
 enum class OperationType(val displayName: String) {
   APPLICATION_START("Application Start"),
   IMAGE_LOAD("Image Load"),

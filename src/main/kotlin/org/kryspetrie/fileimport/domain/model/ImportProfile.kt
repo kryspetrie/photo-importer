@@ -3,6 +3,41 @@ package org.kryspetrie.fileimport.domain.model
 import kotlinx.serialization.Serializable
 
 /**
+ * Per-tab import settings. Encapsulates all persisted settings for a specific workflow tab.
+ *
+ * Each tab (Import, Photo Import Wizard, Photo Scan) has its own isolated settings so users can
+ * configure each workflow independently without affecting others.
+ */
+@Serializable
+data class TabSettings(
+    // Paths
+    val lastSourcePath: String = "",
+    val lastDestinationPath: String = "",
+    val recentSourcePaths: List<String> = emptyList(),
+    val recentDestinationPaths: List<String> = emptyList(),
+
+    // Import configuration
+    val configuration: ImportConfiguration = ImportConfiguration()
+) {
+  fun withRecentSourcePath(path: String): TabSettings =
+      if (path.isBlank()) this
+      else
+          copy(
+              lastSourcePath = path,
+              recentSourcePaths = listOf(path) + recentSourcePaths.filter { it != path }.take(4))
+
+  fun withRecentDestinationPath(path: String): TabSettings =
+      if (path.isBlank()) this
+      else
+          copy(
+              lastDestinationPath = path,
+              recentDestinationPaths =
+                  listOf(path) + recentDestinationPaths.filter { it != path }.take(4))
+
+  fun withConfiguration(config: ImportConfiguration): TabSettings = copy(configuration = config)
+}
+
+/**
  * Represents a saved import configuration profile.
  *
  * Import profiles allow users to save complete import configurations for different cameras,
@@ -314,27 +349,119 @@ data class AppSettings(
     /**
      * Recent destination folders for Photo Scan.
      *
-     * Stores the last N destination folders used for Photo Scan exports.
-     * Shown as quick-select options in the destination selector.
+     * Stores the last N destination folders used for Photo Scan exports. Shown as quick-select
+     * options in the destination selector.
      *
      * Maximum 5 entries stored.
      */
-    val recentPhotoScanDestinations: List<String> = emptyList()
+    val recentPhotoScanDestinations: List<String> = emptyList(),
+
+    /**
+     * Settings for the standard Import tab.
+     *
+     * Contains source/destination paths and import configuration specific to the Import workflow.
+     * These settings are isolated from Photo Import and Photo Scan tabs.
+     */
+    val importTabSettings: TabSettings = TabSettings(),
+
+    /**
+     * Settings for the Photo Scan Import tab.
+     *
+     * Contains source/destination paths and import configuration specific to the Photo Scan Import
+     * workflow. These settings are isolated from Media Import and Photo Scan tabs.
+     */
+    val photoScanImportTabSettings: TabSettings = TabSettings(),
+
+    /**
+     * Settings for the Photo Scan tab.
+     *
+     * Contains destination paths and scan configuration specific to the standalone Photo Scan
+     * workflow (when used directly without the wizard). These settings are isolated from Media
+     * Import and Photo Scan Import tabs.
+     */
+    val photoScanTabSettings: TabSettings = TabSettings()
 ) {
-  /**
-   * Returns the currently active Photo Scan profile, or the default if none is selected.
-   */
+  /** Returns the currently active Photo Scan profile, or the default if none is selected. */
   val activePhotoScanProfile: PhotoScanProfile
-    get() = photoScanProfiles.find { it.id == activePhotoScanProfileId } 
-        ?: photoScanProfiles.firstOrNull() 
-        ?: PhotoScanProfile.createDefault()
+    get() =
+        photoScanProfiles.find { it.id == activePhotoScanProfileId }
+            ?: photoScanProfiles.firstOrNull()
+            ?: PhotoScanProfile.createDefault()
 
   /**
    * Returns the most recently used destination, or the default destination from the active profile.
    */
   val lastPhotoScanDestination: String
-    get() = recentPhotoScanDestinations.firstOrNull() 
-        ?: activePhotoScanProfile.resolveDestination()
+    get() = recentPhotoScanDestinations.firstOrNull() ?: activePhotoScanProfile.resolveDestination()
+
+  /**
+   * Adds a path to the recent source paths list.
+   * - Moves to front if already exists
+   * - Keeps max 5 entries
+   * - Skips blank paths
+   *
+   * @param path The source path to add
+   * @return Updated settings with path added to recentSourcePaths
+   */
+  fun withRecentSourcePath(path: String): AppSettings =
+      if (path.isBlank()) this
+      else withImportTabSettings(importTabSettings.withRecentSourcePath(path))
+
+  /**
+   * Adds a path to the recent destination paths list.
+   * - Moves to front if already exists
+   * - Keeps max 5 entries
+   * - Skips blank paths
+   *
+   * @param path The destination path to add
+   * @return Updated settings with path added to recentDestinationPaths
+   */
+  fun withRecentDestinationPath(path: String): AppSettings =
+      if (path.isBlank()) this
+      else withImportTabSettings(importTabSettings.withRecentDestinationPath(path))
+
+  /**
+   * Adds a path to the recent Photo Scan destinations list.
+   * - Moves to front if already exists
+   * - Keeps max 5 entries
+   * - Skips blank paths
+   *
+   * @param path The Photo Scan destination path to add
+   * @return Updated settings with path added to recentPhotoScanDestinations
+   */
+  fun withRecentPhotoScanDestination(path: String): AppSettings =
+      if (path.isBlank()) this
+      else {
+        val updated = recentPhotoScanDestinations.filter { it != path }.take(4)
+        copy(recentPhotoScanDestinations = listOf(path) + updated)
+      }
+
+  /**
+   * Updates the Import tab settings.
+   *
+   * @param tabSettings New tab settings to persist
+   * @return Updated settings with new Import tab settings
+   */
+  fun withImportTabSettings(tabSettings: TabSettings): AppSettings =
+      copy(importTabSettings = tabSettings)
+
+  /**
+   * Updates the Photo Import tab settings.
+   *
+   * @param tabSettings New tab settings to persist
+   * @return Updated settings with new Photo Import tab settings
+   */
+  fun withPhotoScanImportTabSettings(tabSettings: TabSettings): AppSettings =
+      copy(photoScanImportTabSettings = tabSettings)
+
+  /**
+   * Updates the Photo Scan tab settings.
+   *
+   * @param tabSettings New tab settings to persist
+   * @return Updated settings with new Photo Scan tab settings
+   */
+  fun withPhotoScanTabSettings(tabSettings: TabSettings): AppSettings =
+      copy(photoScanTabSettings = tabSettings)
 }
 
 /**
