@@ -15,6 +15,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -37,6 +39,8 @@ fun PhotoScanImportScreen(
     modifier: Modifier = Modifier
 ) {
   val settings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
+  val scope = rememberCoroutineScope()
+
   val cvAutoDetectEnabled by state.cvAutoDetectEnabled.collectAsState()
   val configuration by state.configuration.collectAsState()
 
@@ -65,22 +69,24 @@ fun PhotoScanImportScreen(
         }
       }
 
-  // Persist paths immediately when changed
+  // Persist paths immediately when changed (using scope to avoid stale closure)
   LaunchedEffect(sourcePath) {
     if (sourcePath.isNotBlank()) {
+      val currentSettings = settingsPort.observeSettings().first()
       val newSettings =
-          settings.withPhotoScanImportTabSettings(
-              settings.photoScanImportTabSettings.withRecentSourcePath(sourcePath))
-      onSettingsChange(newSettings)
+          currentSettings.withPhotoScanImportTabSettings(
+              currentSettings.photoScanImportTabSettings.withRecentSourcePath(sourcePath))
+      scope.launch { settingsPort.saveSettings(newSettings) }
     }
   }
 
   LaunchedEffect(destinationPath) {
     if (destinationPath.isNotBlank()) {
+      val currentSettings = settingsPort.observeSettings().first()
       val newSettings =
-          settings.withPhotoScanImportTabSettings(
-              settings.photoScanImportTabSettings.withRecentDestinationPath(destinationPath))
-      onSettingsChange(newSettings)
+          currentSettings.withPhotoScanImportTabSettings(
+              currentSettings.photoScanImportTabSettings.withRecentDestinationPath(destinationPath))
+      scope.launch { settingsPort.saveSettings(newSettings) }
     }
   }
 
@@ -103,13 +109,6 @@ fun PhotoScanImportScreen(
   val canStart = sourceValid && destValid
 
   Scaffold(
-      topBar = {
-        TopAppBar(
-            title = { Text("Photo Scan Import") },
-            navigationIcon = {
-              IconButton(onClick = onCancel) { Icon(Icons.Default.Close, "Cancel") }
-            })
-      },
       content = { paddingValues ->
         Column(
             modifier =

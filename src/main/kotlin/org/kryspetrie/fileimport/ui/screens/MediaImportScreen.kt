@@ -24,6 +24,7 @@ import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.ImportService
@@ -33,6 +34,7 @@ import org.kryspetrie.fileimport.domain.model.ImportHistoryEntry
 import org.kryspetrie.fileimport.domain.port.DeviceEvent
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.NamingPort
+import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
 import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
 import org.kryspetrie.fileimport.ui.components.formatFileSize
@@ -110,6 +112,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
   val namingPort = koinInject<NamingPort>()
   val devicePort = koinInject<DevicePort>()
   val historyAdapter = koinInject<ImportHistoryAdapter>()
+  val settingsPort = koinInject<SettingsPort>()
   val watchFolderService = koinInject<WatchFolderService>()
   val watchStatus by watchFolderService.status.collectAsState()
   val scope = rememberCoroutineScope()
@@ -149,22 +152,24 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
         }
       }
 
-  // Persist paths immediately when changed
+  // Persist paths immediately when changed (using settingsPort to avoid stale closure)
   LaunchedEffect(sourcePath) {
     if (sourcePath.isNotBlank()) {
+      val currentSettings = settingsPort.observeSettings().first()
       val newSettings =
-          settings.withImportTabSettings(
-              settings.importTabSettings.withRecentSourcePath(sourcePath))
-      onSettingsChange(newSettings)
+          currentSettings.withImportTabSettings(
+              currentSettings.importTabSettings.withRecentSourcePath(sourcePath))
+      scope.launch { settingsPort.saveSettings(newSettings) }
     }
   }
 
   LaunchedEffect(destinationPath) {
     if (destinationPath.isNotBlank()) {
+      val currentSettings = settingsPort.observeSettings().first()
       val newSettings =
-          settings.withImportTabSettings(
-              settings.importTabSettings.withRecentDestinationPath(destinationPath))
-      onSettingsChange(newSettings)
+          currentSettings.withImportTabSettings(
+              currentSettings.importTabSettings.withRecentDestinationPath(destinationPath))
+      scope.launch { settingsPort.saveSettings(newSettings) }
     }
   }
   var customConfig by remember { mutableStateOf(ImportConfiguration()) }
