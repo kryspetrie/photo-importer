@@ -242,7 +242,20 @@ class RefinementScreenCoordTest {
 
     val sampled = createSampledImageForRefinement(image, scale)
 
+    assertThat(sampled).isNotNull()
     assertThat(sampled!!.width).isEqualTo(100)
-    assertThat(sampled!!.height).isEqualTo(100)
+    assertThat(sampled.height).isEqualTo(100)
+  }
+
+  @Test
+  @DisplayName("should create image at exact target size")
+  fun shouldCreateAtExactTargetSize() {
+    val image = java.awt.image.BufferedImage(800, 600, java.awt.image.BufferedImage.TYPE_INT_RGB)
+
+    val sampled = createSampledImageForRefinement(image, 1.0, 400, 300)
+
+    assertThat(sampled).isNotNull()
+    assertThat(sampled!!.width).isEqualTo(400)
+    assertThat(sampled.height).isEqualTo(300)
   }
 }

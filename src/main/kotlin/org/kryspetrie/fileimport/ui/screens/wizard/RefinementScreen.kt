@@ -262,10 +262,12 @@ private fun RefinementCanvas(
   val panX = zoomController.panX.toFloat()
   val panY = zoomController.panY.toFloat()
 
-  // Sampled image cache
-  val sampledImage = remember(zoom) {
+  // Sampled image cache - stores image at display resolution
+  val sampledImage = remember(zoom, image?.width, image?.height) {
     if (image != null && zoom > 0.1) {
-      createSampledImageForRefinement(image, zoom.toDouble())
+      val displayWidth = (image.width * zoom).toInt().coerceIn(100, 4000)
+      val displayHeight = (image.height * zoom).toInt().coerceIn(100, 4000)
+      createSampledImageForRefinement(image, displayWidth.toDouble() / image.width, displayWidth, displayHeight)
     } else null
   }
 
@@ -450,10 +452,15 @@ private fun DrawScope.drawRefinementBox(box: BoundingBox, selected: Corner?, zoo
   }
 }
 
-internal fun createSampledImageForRefinement(image: BufferedImage, scale: Double): BufferedImage? {
+internal fun createSampledImageForRefinement(
+    image: BufferedImage, 
+    scale: Double, 
+    targetWidth: Int = (image.width * scale).toInt(),
+    targetHeight: Int = (image.height * scale).toInt()
+): BufferedImage? {
   return try {
-    val w = (image.width * scale).toInt().coerceIn(100, 2000)
-    val h = (image.height * scale).toInt().coerceIn(100, 2000)
+    val w = targetWidth.coerceIn(100, 4000)
+    val h = targetHeight.coerceIn(100, 4000)
     if (w <= 0 || h <= 0) return null
     val result = BufferedImage(w, h, BufferedImage.TYPE_INT_RGB)
     val g = result.createGraphics()
