@@ -36,7 +36,8 @@ import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
  * ## Keyboard Shortcuts
  *
  * ### Arrow Keys
- * - **Arrow Keys**: Move selected corner by 1px
+ * - **Arrow Keys**: Move selected corner by 1px (or pan view if no corner selected)
+ * - **Shift+Arrow Keys**: Move selected corner by 10px (or pan view faster if no corner selected)
  *
  * ### Zoom
  * - **+**: Zoom in
@@ -78,25 +79,47 @@ fun Modifier.withWizardKeyboardShortcuts(
         return@onKeyEvent false
       }
 
+      // Check shift key using reflection (since the property access varies across platforms)
+      val isShiftPressed = checkShiftPressed(keyEvent)
+      
       // Use reflection to get the key since the property access is causing issues
       val keyName = getKeyName(keyEvent)
 
-      // Arrow keys - move selected corner
+      // Arrow keys handling - check if corner is selected
+      val cornerDelta = if (isShiftPressed) 10.0 else 1.0
+      val panDelta = if (isShiftPressed) 100.0 else 50.0
+      
       when (keyName) {
         "DirectionUp" -> {
-          wizardState.moveSelectedCorner(0.0, -1.0)
+          if (wizardState.selectedCorner.value != null) {
+            wizardState.moveSelectedCorner(0.0, -cornerDelta)
+          } else {
+            wizardState.pan(0.0, panDelta)
+          }
           return@onKeyEvent true
         }
         "DirectionDown" -> {
-          wizardState.moveSelectedCorner(0.0, 1.0)
+          if (wizardState.selectedCorner.value != null) {
+            wizardState.moveSelectedCorner(0.0, cornerDelta)
+          } else {
+            wizardState.pan(0.0, -panDelta)
+          }
           return@onKeyEvent true
         }
         "DirectionLeft" -> {
-          wizardState.moveSelectedCorner(-1.0, 0.0)
+          if (wizardState.selectedCorner.value != null) {
+            wizardState.moveSelectedCorner(-cornerDelta, 0.0)
+          } else {
+            wizardState.pan(panDelta, 0.0)
+          }
           return@onKeyEvent true
         }
         "DirectionRight" -> {
-          wizardState.moveSelectedCorner(1.0, 0.0)
+          if (wizardState.selectedCorner.value != null) {
+            wizardState.moveSelectedCorner(cornerDelta, 0.0)
+          } else {
+            wizardState.pan(-panDelta, 0.0)
+          }
           return@onKeyEvent true
         }
         "Delete",
@@ -222,6 +245,28 @@ private fun getKeyName(keyEvent: Any): String {
     return nameMethod.invoke(key) as String
   } catch (e: Exception) {
     return ""
+  }
+}
+
+/** Check if shift key is pressed using reflection. */
+private fun checkShiftPressed(keyEvent: Any): Boolean {
+  try {
+    // Try to get the modifiers property
+    val modifiersMethod: Method = keyEvent.javaClass.getMethod("getModifiers")
+    val modifiers = modifiersMethod.invoke(keyEvent) as Int
+    // Shift key flag is 1 << 16
+    val shiftMask = 1 shl 16
+    return (modifiers and shiftMask) != 0
+  } catch (e: Exception) {
+    // Fallback: try native key event
+    try {
+      val nativeMethod: Method = keyEvent.javaClass.getMethod("getNativeKeyEvent")
+      val native = nativeMethod.invoke(keyEvent)
+      val isShiftMethod: Method = native.javaClass.getMethod("isShiftDown")
+      return isShiftMethod.invoke(native) as Boolean
+    } catch (e2: Exception) {
+      return false
+    }
   }
 }
 

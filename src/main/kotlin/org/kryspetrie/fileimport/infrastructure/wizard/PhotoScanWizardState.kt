@@ -493,18 +493,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   fun enterRefinement(boxIndex: Int) {
     _refinementBoxIndex.value = boxIndex
     _currentStep.value = WizardStep.REFINEMENT
-
-    // Update zoom to fit the box
-    val list = _boundingBoxList.value
-    if (boxIndex >= 0 && boxIndex < list.size()) {
-      val box = list.boxes[boxIndex]
-      _zoomController.value =
-          _zoomController.value.fitToBox(
-              box.corners,
-              800.0, // Default viewport width
-              600.0 // Default viewport height
-              )
-    }
+    // Zoom/pan will be set by the UI once container size is known
   }
 
   /** Exits refinement mode and returns to overview. */
@@ -548,6 +537,30 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
       val moved = box.moveCorner(corner, Point(newX, newY))
       updateBox(boxIndex, moved)
     }
+  }
+
+  /**
+   * Moves a corner with validation to prevent invalid shapes (bowties, self-intersecting).
+   * Returns true if the move was applied, false if it was rejected.
+   */
+  fun moveCornerWithValidation(boxIndex: Int, corner: Corner, newX: Double, newY: Double): Boolean {
+    val list = _boundingBoxList.value
+    if (boxIndex < 0 || boxIndex >= list.size()) return false
+    
+    val box = list.boxes[boxIndex]
+    val moved = box.moveCorner(corner, Point(newX, newY))
+    
+    // Check if the resulting shape would be valid (no crossing edges)
+    if (moved.corners.wouldCreateInvalidShape()) {
+      return false
+    }
+    
+    // Save for undo
+    _undoRedoManager.value.push(box.id, box)
+    
+    // Apply the move
+    updateBox(boxIndex, moved)
+    return true
   }
 
   /** Moves the selected corner by the given delta (arrow key movement). */
@@ -686,6 +699,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   /** Zooms out the view. */
   fun zoomOut(cursorX: Double? = null, cursorY: Double? = null) {
     _zoomController.value = _zoomController.value.zoomOut(cursorX, cursorY)
+  }
+
+  /** Pans the view by the given delta. */
+  fun pan(deltaX: Double, deltaY: Double) {
+    _zoomController.value = _zoomController.value.pan(deltaX, deltaY)
   }
 
   /** Fits the view to the current image. */

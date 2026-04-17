@@ -80,6 +80,15 @@ class SettingsAdapter(private val settingsDir: File = AppPaths.settingsDir) : Se
 
   init {
     settingsDir.mkdirs()
+    // Load settings from disk on startup
+    try {
+      if (settingsFile.exists()) {
+        val loaded = json.decodeFromString<AppSettings>(settingsFile.readText())
+        _settings.value = loaded
+      }
+    } catch (e: Exception) {
+      // Failed to load, use defaults
+    }
   }
 
   override suspend fun loadSettings(): AppSettings =

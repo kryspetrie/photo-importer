@@ -126,76 +126,72 @@ fun OverviewScreen(
       },
       content = { paddingValues ->
         Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .background(MaterialTheme.colorScheme.surface)) {
-          
-          // TOP HALF: Image canvas takes all available space
-          Box(
-              modifier =
-                  Modifier
-                      .weight(1f)
-                      .fillMaxWidth()
-                      .background(Color.DarkGray)
-                      .onSizeChanged { containerSize = it }
-                      .withWizardKeyboardShortcuts(
-                          wizardState = state, onProceed = onToSummary, onCancel = onBack)) {
-                if (image != null && containerSize.width > 0) {
-                  OverviewCanvas(
-                      state = state,
-                      image = image!!,
-                      containerSize = containerSize,
-                      wizardMode = wizardMode,
-                      fourPointState = fourPointState,
-                      onBoxRejected = { showBoxRejectedMessage = true })
-                } else {
-                  Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                    Text(
-                        "Loading image...",
-                        color = Color.White,
-                        modifier = Modifier.padding(top = 60.dp))
+            modifier =
+                modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .background(MaterialTheme.colorScheme.surface)) {
+
+              // TOP HALF: Image canvas takes all available space
+              Box(
+                  modifier =
+                      Modifier.weight(1f)
+                          .fillMaxWidth()
+                          .background(Color.DarkGray)
+                          .onSizeChanged { containerSize = it }
+                          .withWizardKeyboardShortcuts(
+                              wizardState = state, onProceed = onToSummary, onCancel = onBack)) {
+                    if (image != null && containerSize.width > 0) {
+                      OverviewCanvas(
+                          state = state,
+                          image = image!!,
+                          containerSize = containerSize,
+                          wizardMode = wizardMode,
+                          fourPointState = fourPointState,
+                          onBoxRejected = { showBoxRejectedMessage = true })
+                    } else {
+                      Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                        Text(
+                            "Loading image...",
+                            color = Color.White,
+                            modifier = Modifier.padding(top = 60.dp))
+                      }
+                    }
+
+                    // Zoom controls (top-right corner)
+                    ZoomControls(
+                        zoomController = zoomController,
+                        onZoomIn = { state.zoomIn() },
+                        onZoomOut = { state.zoomOut() },
+                        onFitToView = {
+                          state.fitToView(
+                              containerSize.width.toDouble(), containerSize.height.toDouble())
+                        },
+                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp))
+
+                    // 4-Point status overlay (bottom center)
+                    if (wizardMode == WizardMode.FOUR_POINT) {
+                      FourPointStatusBar(
+                          state = fourPointState,
+                          onRemoveLast = { state.removeLastFourPoint() },
+                          onConfirm = { state.confirmFourPoint() },
+                          onCancel = { state.exitFourPointMode() },
+                          modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp))
+                    }
                   }
-                }
 
-                // Zoom controls (top-right corner)
-                ZoomControls(
-                    zoomController = zoomController,
-                    onZoomIn = { state.zoomIn() },
-                    onZoomOut = { state.zoomOut() },
-                    onFitToView = {
-                      state.fitToView(
-                          containerSize.width.toDouble(), containerSize.height.toDouble())
-                    },
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(12.dp))
-
-                // 4-Point status overlay (bottom center)
-                if (wizardMode == WizardMode.FOUR_POINT) {
-                  FourPointStatusBar(
-                      state = fourPointState,
-                      onRemoveLast = { state.removeLastFourPoint() },
-                      onConfirm = { state.confirmFourPoint() },
-                      onCancel = { state.exitFourPointMode() },
-                      modifier = Modifier
-                          .align(Alignment.BottomCenter)
-                          .padding(16.dp))
-                }
-              }
-
-          // BOTTOM HALF: All controls consolidated
-          OverviewControlsPanel(
-              state = state,
-              wizardMode = wizardMode,
-              fourPointState = fourPointState,
-              selectedBoxIndex = selectedBoxIndex,
-              boxCount = boundingBoxList.size(),
-              zoomLevel = zoomController.zoom,
-              onBack = onBack,
-              onToSummary = onToSummary)
-        }
+              // BOTTOM HALF: All controls consolidated
+              OverviewControlsPanel(
+                  state = state,
+                  wizardMode = wizardMode,
+                  fourPointState = fourPointState,
+                  selectedBoxIndex = selectedBoxIndex,
+                  boxCount = boundingBoxList.size(),
+                  zoomLevel = zoomController.zoom,
+                  onBack = onBack,
+                  onToSummary = onToSummary)
+            }
       })
 
   // Help dialog
@@ -205,8 +201,8 @@ fun OverviewScreen(
 }
 
 /**
- * Consolidated controls panel for the bottom half of the overview screen.
- * Contains all navigation, mode selection, and action buttons.
+ * Consolidated controls panel for the bottom half of the overview screen. Contains all navigation,
+ * mode selection, and action buttons.
  */
 @Composable
 private fun OverviewControlsPanel(
@@ -219,114 +215,90 @@ private fun OverviewControlsPanel(
     onBack: () -> Unit,
     onToSummary: () -> Unit
 ) {
-  Surface(
-      tonalElevation = 3.dp,
-      modifier = Modifier.fillMaxWidth()
-  ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
+  Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
       // Row 1: Mode controls and box info
       Row(
           modifier = Modifier.fillMaxWidth(),
-          horizontalArrangement = Arrangement.SpaceBetween,
-          verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Left side: Navigation and mode buttons
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-          // Back button
-          OutlinedButton(
-              onClick = { state.goToOverview() },
-              modifier = Modifier.height(40.dp)
-          ) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Back")
-          }
+          horizontalArrangement = Arrangement.spacedBy(8.dp),
+          verticalAlignment = Alignment.CenterVertically) {
+            // 4-Point mode toggle
+            when (wizardMode) {
+              WizardMode.FOUR_POINT -> {
+                Button(
+                    onClick = { state.exitFourPointMode() },
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.tertiary),
+                    modifier = Modifier.height(40.dp)) {
+                      Text("Cancel 4-Point")
+                    }
+              }
+              else -> {
+                OutlinedButton(
+                    onClick = { state.enterFourPointMode() },
+                    modifier = Modifier.height(40.dp)) {
+                      Icon(Icons.Default.GridOn, null, Modifier.size(18.dp))
+                      Spacer(Modifier.width(4.dp))
+                      Text("4-Point")
+                    }
+              }
+            }
 
-          // 4-Point mode toggle
-          when (wizardMode) {
-            WizardMode.FOUR_POINT -> {
-              Button(
-                  onClick = { state.exitFourPointMode() },
-                  colors = ButtonDefaults.buttonColors(
-                      containerColor = MaterialTheme.colorScheme.tertiary
-                  ),
-                  modifier = Modifier.height(40.dp)
-              ) {
-                Text("Cancel 4-Point")
+            // Add Box mode toggle
+            when (wizardMode) {
+              WizardMode.ADD_BOX -> {
+                Button(
+                    onClick = { state.exitAddBoxMode() },
+                    colors =
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.secondary),
+                    modifier = Modifier.height(40.dp)) {
+                      Text("Cancel")
+                    }
+              }
+              else -> {
+                OutlinedButton(
+                    onClick = { state.enterAddBoxMode() },
+                    modifier = Modifier.height(40.dp)) {
+                      Icon(Icons.Default.Add, null, Modifier.size(18.dp))
+                      Spacer(Modifier.width(4.dp))
+                      Text("Add Box")
+                    }
               }
             }
-            else -> {
-              OutlinedButton(
-                  onClick = { state.enterFourPointMode() },
-                  modifier = Modifier.height(40.dp)
-              ) {
-                Icon(Icons.Default.GridOn, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("4-Point")
-              }
-            }
-          }
 
-          // Add Box mode toggle
-          when (wizardMode) {
-            WizardMode.ADD_BOX -> {
-              Button(
-                  onClick = { state.exitAddBoxMode() },
-                  colors = ButtonDefaults.buttonColors(
-                      containerColor = MaterialTheme.colorScheme.secondary
-                  ),
-                  modifier = Modifier.height(40.dp)
-              ) {
-                Text("Cancel")
-              }
-            }
-            else -> {
-              OutlinedButton(
-                  onClick = { state.enterAddBoxMode() },
-                  modifier = Modifier.height(40.dp)
-              ) {
-                Icon(Icons.Default.Add, null, Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Add Box")
-              }
-            }
-          }
-        }
+            Spacer(Modifier.weight(1f))
 
-        // Right side: Box count info
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-          Text(
-              "$boxCount box${if (boxCount != 1) "es" else ""}",
-              style = MaterialTheme.typography.titleMedium,
-              color = MaterialTheme.colorScheme.onSurfaceVariant
-          )
-          
-          if (selectedBoxIndex >= 0) {
-            AssistChip(
-                onClick = { state.enterRefinement(selectedBoxIndex) },
-                label = { Text("Selected: ${selectedBoxIndex + 1}") },
-                leadingIcon = {
-                  Icon(
-                      Icons.Default.Edit,
-                      contentDescription = null,
-                      modifier = Modifier.size(16.dp)
-                  )
-                },
-                modifier = Modifier.height(32.dp)
-            )
+            // Zoom indicator
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.height(40.dp)) {
+                  Row(
+                      modifier = Modifier.padding(horizontal = 12.dp),
+                      verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.ZoomIn,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            "${(zoomLevel * 100).toInt()}%",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                      }
+                }
+
+            Spacer(Modifier.width(8.dp))
+
+            // Box count info
+            Text(
+                "$boxCount box${if (boxCount != 1) "es" else ""}",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
           }
-        }
-      }
 
       Spacer(Modifier.height(12.dp))
 
@@ -334,72 +306,47 @@ private fun OverviewControlsPanel(
       Row(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.spacedBy(8.dp),
-          verticalAlignment = Alignment.CenterVertically
-      ) {
-        // Zoom indicator
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-            modifier = Modifier.height(40.dp)
-        ) {
-          Row(
-              modifier = Modifier.padding(horizontal = 12.dp),
-              verticalAlignment = Alignment.CenterVertically
-          ) {
-            Icon(
-                Icons.Default.ZoomIn,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(
-                "${(zoomLevel * 100).toInt()}%",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+          verticalAlignment = Alignment.CenterVertically) {
+            // Refine selected box
+            if (selectedBoxIndex >= 0) {
+              AssistChip(
+                  onClick = { state.enterRefinement(selectedBoxIndex) },
+                  label = { Text("Box ${selectedBoxIndex + 1} selected") },
+                  leadingIcon = {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                  },
+                  modifier = Modifier.height(36.dp))
+              
+              OutlinedButton(
+                  onClick = { state.enterRefinement(selectedBoxIndex) },
+                  modifier = Modifier.height(40.dp)) {
+                    Icon(Icons.Default.Tune, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Refine")
+                  }
+
+              IconButton(onClick = { state.removeSelectedBox() }, modifier = Modifier.size(40.dp)) {
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = "Delete selected box",
+                    tint = MaterialTheme.colorScheme.error)
+              }
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // Cancel and Continue buttons
+            OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
+              Text("Cancel")
+            }
+
+            Button(
+                onClick = onToSummary, enabled = boxCount > 0, modifier = Modifier.height(40.dp)) {
+                  Text("Continue to Summary")
+                  Spacer(Modifier.width(4.dp))
+                  Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
+                }
           }
-        }
-
-        Spacer(Modifier.weight(1f))
-
-        // Refine selected box
-        if (selectedBoxIndex >= 0) {
-          OutlinedButton(
-              onClick = { state.enterRefinement(selectedBoxIndex) },
-              modifier = Modifier.height(40.dp)
-          ) {
-            Icon(Icons.Default.Tune, null, Modifier.size(18.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Refine Box")
-          }
-        }
-
-        // Delete selected box
-        if (selectedBoxIndex >= 0) {
-          IconButton(
-              onClick = { state.removeSelectedBox() },
-              modifier = Modifier.size(40.dp)
-          ) {
-            Icon(
-                Icons.Default.Delete,
-                contentDescription = "Delete selected box",
-                tint = MaterialTheme.colorScheme.error
-            )
-          }
-        }
-
-        // To Summary button
-        Button(
-            onClick = onToSummary,
-            enabled = boxCount > 0,
-            modifier = Modifier.height(40.dp)
-        ) {
-          Text("Continue to Summary")
-          Spacer(Modifier.width(4.dp))
-          Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
-        }
-      }
     }
   }
 }
@@ -720,35 +667,32 @@ internal fun FourPointStatusBar(
   Surface(
       modifier = modifier,
       shape = RoundedCornerShape(8.dp),
-      color = MaterialTheme.colorScheme.tertiaryContainer
-  ) {
-    Row(
-        modifier = Modifier.padding(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-      Text(
-          "Point ${state.points.size + 1} of 4",
-          style = MaterialTheme.typography.titleMedium
-      )
+      color = MaterialTheme.colorScheme.tertiaryContainer) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+              Text(
+                  "Point ${state.points.size + 1} of 4",
+                  style = MaterialTheme.typography.titleMedium)
 
-      if (state.points.isNotEmpty()) {
-        OutlinedButton(onClick = onRemoveLast, modifier = Modifier.height(32.dp)) {
-          Text("Undo", style = MaterialTheme.typography.labelSmall)
-        }
-      }
+              if (state.points.isNotEmpty()) {
+                OutlinedButton(onClick = onRemoveLast, modifier = Modifier.height(32.dp)) {
+                  Text("Undo", style = MaterialTheme.typography.labelSmall)
+                }
+              }
 
-      if (state.canConfirm()) {
-        Button(onClick = onConfirm, modifier = Modifier.height(32.dp)) {
-          Text("Confirm", style = MaterialTheme.typography.labelSmall)
-        }
-      }
+              if (state.canConfirm()) {
+                Button(onClick = onConfirm, modifier = Modifier.height(32.dp)) {
+                  Text("Confirm", style = MaterialTheme.typography.labelSmall)
+                }
+              }
 
-      OutlinedButton(onClick = onCancel, modifier = Modifier.height(32.dp)) {
-        Text("Cancel", style = MaterialTheme.typography.labelSmall)
+              OutlinedButton(onClick = onCancel, modifier = Modifier.height(32.dp)) {
+                Text("Cancel", style = MaterialTheme.typography.labelSmall)
+              }
+            }
       }
-    }
-  }
 }
 
 private fun createSampledImage(image: BufferedImage, scale: Double): BufferedImage? {

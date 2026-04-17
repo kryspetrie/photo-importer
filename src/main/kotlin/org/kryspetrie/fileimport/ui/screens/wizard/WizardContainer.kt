@@ -77,7 +77,8 @@ fun WizardContainer(
         // Only show top bar when not on IMPORT step
         if (currentStep != PhotoScanWizardState.WizardStep.IMPORT &&
             currentStep != PhotoScanWizardState.WizardStep.PROCESSING &&
-            currentStep != PhotoScanWizardState.WizardStep.COMPLETE) {
+            currentStep != PhotoScanWizardState.WizardStep.COMPLETE &&
+            currentStep != PhotoScanWizardState.WizardStep.REFINEMENT) {
           TopAppBar(
               title = { Text(getStepTitle(currentStep)) },
               navigationIcon = {

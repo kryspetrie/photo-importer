@@ -15,11 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.first
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.*
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
@@ -102,11 +102,22 @@ fun PhotoScanImportScreen(
             ?.let { File(it) }
             ?.takeIf { it.exists() && it.isDirectory }
       }
-  val sourceValid = sourceFile != null
+
   val destValid = destDir != null
 
-  // Can start when either source or destination has valid path
-  val canStart = sourceValid && destValid
+  // Get the first image file - either the selected file or first file from selected folder
+  val firstImageFile: File? =
+      remember(sourceFile) {
+        when {
+          sourceFile == null -> null
+          sourceFile.isFile -> sourceFile
+          sourceFile.isDirectory ->
+              sourceFile.listFiles { f -> f.isFile && isImageFile(f) }?.firstOrNull()
+          else -> null
+        }
+      }
+
+  val canStart = firstImageFile != null && destValid
 
   Scaffold(
       content = { paddingValues ->
@@ -157,15 +168,18 @@ fun PhotoScanImportScreen(
                   modifier = Modifier.fillMaxWidth(),
                   textStyle = MaterialTheme.typography.bodyMedium,
                   singleLine = true,
-                  isError = sourcePath.isNotBlank() && !sourceValid,
+                  isError = sourcePath.isNotBlank() && sourceFile == null,
                   supportingText = {
                     when {
                       sourcePath.isBlank() ->
                           Text("Select a scanned image file or folder of images")
-                      !sourceValid ->
+                      sourceFile == null ->
                           Text("Path not found", color = MaterialTheme.colorScheme.error)
-                      sourceFile.isDirectory ->
-                          Text("Folder: ${sourceFile.listFiles()?.size ?: 0} files")
+                      sourceFile.isDirectory -> {
+                        val imageCount =
+                            sourceFile.listFiles { f -> f.isFile && isImageFile(f) }?.size ?: 0
+                        Text("Folder: $imageCount image(s)")
+                      }
                       else -> Text("File: ${sourceFile.name}")
                     }
                   })
@@ -228,7 +242,7 @@ fun PhotoScanImportScreen(
 
               // ── Import Photo Scans Button ──
               Button(
-                  onClick = { sourceFile?.let { onImageSelected(it) } },
+                  onClick = { firstImageFile?.let { onImageSelected(it) } },
                   modifier = Modifier.fillMaxWidth().height(56.dp),
                   enabled = canStart) {
                     Icon(Icons.Default.Scanner, null, Modifier.size(20.dp))
@@ -532,4 +546,10 @@ private fun pickFolder(title: String): String? {
     }
   }
   return null
+}
+
+/** Check if a file is a supported image format */
+private fun isImageFile(file: File): Boolean {
+  val ext = file.extension.lowercase()
+  return ext in listOf("jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp")
 }
