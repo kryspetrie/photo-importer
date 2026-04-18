@@ -76,6 +76,67 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   private val _selectedCorner = MutableStateFlow<Corner?>(null)
   val selectedCorner: StateFlow<Corner?> = _selectedCorner.asStateFlow()
 
+  // ========== Throttled Drag State (4Hz for performance) ==========
+  
+  private val _displayRefinementBox = MutableStateFlow<BoundingBox?>(null)
+  val displayRefinementBox: StateFlow<BoundingBox?> = _displayRefinementBox.asStateFlow()
+
+  private val _pendingDragX = MutableStateFlow(0.0)
+  val pendingDragX: Double get() = _pendingDragX.value
+  
+  private val _pendingDragY = MutableStateFlow(0.0)
+  val pendingDragY: Double get() = _pendingDragY.value
+  
+  /** True when user is actively dragging a corner (used for 4Hz throttle loop) */
+  val isDragging: Boolean
+    get() = _selectedCorner.value != null && _refinementBoxIndex.value >= 0
+  
+  /** True when there's a pending drag position to sync */
+  val hasPendingDrag: Boolean
+    get() = _selectedCorner.value != null
+
+  /** Updates the pending drag position (called on every Move event) */
+  fun updatePendingDrag(newX: Double, newY: Double) {
+    _pendingDragX.value = newX
+    _pendingDragY.value = newY
+  }
+
+  /**
+   * Syncs the display state to show the actual box (called after drag ends).
+   */
+  fun syncDisplayBox() {
+    val index = _refinementBoxIndex.value
+    if (index >= 0 && index < _boundingBoxList.value.size()) {
+      _displayRefinementBox.value = _boundingBoxList.value.boxes[index]
+    } else {
+      _displayRefinementBox.value = null
+    }
+  }
+
+  /**
+   * Syncs the pending drag position to the display state at 4Hz.
+   * This is a visual preview only - actual box state updated on release.
+   * Called periodically from the LaunchedEffect throttle loop.
+   */
+  fun syncPendingDrag(boxIndex: Int) {
+    val corner = _selectedCorner.value ?: return
+    val imgX = _pendingDragX.value
+    val imgY = _pendingDragY.value
+    
+    val list = _boundingBoxList.value
+    if (boxIndex < 0 || boxIndex >= list.size()) return
+    
+    val box = list.boxes[boxIndex]
+    val moved = box.moveCorner(corner, Point(imgX, imgY))
+    
+    // Validate to prevent rendering invalid shapes
+    if (moved.corners.wouldCreateInvalidShape()) {
+      return
+    }
+    
+    _displayRefinementBox.value = moved
+  }
+
   // ========== Zoom ==========
 
   private val _zoomController = MutableStateFlow(ZoomController())

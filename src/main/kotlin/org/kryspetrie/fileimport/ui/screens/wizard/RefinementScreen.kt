@@ -3,7 +3,6 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,18 +20,21 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
+import kotlinx.coroutines.delay
 import org.kryspetrie.fileimport.infrastructure.wizard.*
 
 /**
@@ -66,6 +68,7 @@ fun RefinementScreen(
   LaunchedEffect(canvasSize, refinementBoxIndex) {
     if (canvasSize.width > 0 && canvasSize.height > 0) {
       state.fitToBox(canvasSize.width.toDouble(), canvasSize.height.toDouble())
+      state.syncDisplayBox()
     }
   }
 
@@ -239,6 +242,9 @@ private fun RefinementControls(
   }
 }
 
+/**
+ * High-performance refinement canvas using GraphicsLayer for zoom/pan and separate drawing layers.
+ */
 @Composable
 private fun RefinementCanvas(
     state: PhotoScanWizardState,
@@ -252,32 +258,107 @@ private fun RefinementCanvas(
   val zoomController by state.zoomController.collectAsState()
   val selectedCorner by state.selectedCorner.collectAsState()
 
-  // Drag state
-  var draggingCorner by remember { mutableStateOf<Corner?>(null) }
-  var draggingBackground by remember { mutableStateOf(false) }
-  var lastPosition by remember { mutableStateOf(Offset.Zero) }
-
-  // Get zoom/pan values - recalculated on every recomposition
+  // Get zoom/pan values
   val zoom = zoomController.zoom.toFloat()
   val panX = zoomController.panX.toFloat()
   val panY = zoomController.panY.toFloat()
 
-  // Sampled image cache - stores image at display resolution
-  val sampledImage = remember(zoom, image?.width, image?.height) {
-    if (image != null && zoom > 0.1) {
-      val displayWidth = (image.width * zoom).toInt().coerceIn(100, 4000)
-      val displayHeight = (image.height * zoom).toInt().coerceIn(100, 4000)
-      createSampledImageForRefinement(image, displayWidth.toDouble() / image.width, displayWidth, displayHeight)
-    } else null
+  // Throttled display state - only updates at 4Hz to minimize redraws
+  val displayBox by state.displayRefinementBox.collectAsState()
+
+  // Track whether we're dragging (for 4Hz throttle)
+  var isDragging by remember { mutableStateOf(false) }
+
+  // Precompute corner positions in screen space (for hit testing)
+  val cornerPositions = remember(box, zoom, panX, panY) {
+    if (box != null) {
+      listOf(
+        Corner.TOP_LEFT to imageToScreen(box.corners.topLeft, zoom, panX, panY),
+        Corner.TOP_RIGHT to imageToScreen(box.corners.topRight, zoom, panX, panY),
+        Corner.BOTTOM_LEFT to imageToScreen(box.corners.bottomLeft, zoom, panX, panY),
+        Corner.BOTTOM_RIGHT to imageToScreen(box.corners.bottomRight, zoom, panX, panY)
+      )
+    } else emptyList()
+  }
+
+  // 12Hz ticker to sync pending drag position to display state (more responsive than 4Hz)
+  LaunchedEffect(isDragging, boxIndex) {
+    while (isDragging) {
+      state.syncPendingDrag(boxIndex)
+      delay(83L) // 12Hz = every 83ms
+    }
   }
 
   Box(
       modifier = modifier
           .background(Color.DarkGray)
           .onSizeChanged { onCanvasSizeChanged(it) }
+          .pointerInput(state, box, zoom, panX, panY) {
+            // Single pointerInput for tap and drag
+            awaitPointerEventScope {
+              var dragging = false
+              var isCornerDrag = false
+              var lastDragX = 0.0
+              var lastDragY = 0.0
+              
+              while (true) {
+                val event = awaitPointerEvent()
+                val pos = event.changes.firstOrNull()?.position ?: continue
+                
+                when (event.type) {
+                  PointerEventType.Press -> {
+                    // Check for corner hit
+                    val hit = cornerPositions.find { (_, screenPos) ->
+                      (pos - screenPos).getDistance() < 25f
+                    }
+                    if (hit != null) {
+                      state.selectCorner(hit.first)
+                      isCornerDrag = true
+                      dragging = true
+                      isDragging = true
+                      // Initialize pending position
+                      lastDragX = ((pos.x - panX) / zoom).toDouble()
+                      lastDragY = ((pos.y - panY) / zoom).toDouble()
+                      state.updatePendingDrag(lastDragX, lastDragY)
+                    }
+                  }
+                  PointerEventType.Move -> {
+                    if (dragging && isCornerDrag) {
+                      // Convert to image coordinates
+                      val imgX = ((pos.x - panX) / zoom).toDouble()
+                      val imgY = ((pos.y - panY) / zoom).toDouble()
+                      // Skip if position hasn't changed meaningfully (reduces processing)
+                      val dx = imgX - lastDragX
+                      val dy = imgY - lastDragY
+                      if (dx * dx + dy * dy > 0.25) { // ~0.5 pixel threshold squared
+                        state.updatePendingDrag(imgX, imgY)
+                        lastDragX = imgX
+                        lastDragY = imgY
+                      }
+                    }
+                  }
+                  PointerEventType.Release -> {
+                    if (dragging && isCornerDrag) {
+                      // Commit final position to state (immediate, not throttled)
+                      val corner = state.selectedCorner.value
+                      if (corner != null) {
+                        state.moveCornerWithValidation(boxIndex, corner, state.pendingDragX, state.pendingDragY)
+                        state.syncDisplayBox()
+                      }
+                    }
+                    isDragging = false
+                    dragging = false
+                    isCornerDrag = false
+                  }
+                  else -> {}
+                }
+              }
+            }
+          }
           .onKeyEvent { event ->
+            // Arrow key handling
             if (event.type == KeyEventType.KeyDown) {
-              val delta = 10.0  // Use 10px for now
+              val delta = 10.0
               val panDelta = 50.0
               
               when (event.key) {
@@ -316,110 +397,64 @@ private fun RefinementCanvas(
                 else -> false
               }
             } else false
-          }
-          .pointerInput(state, box, selectedCorner) {
-            detectTapGestures { offset ->
-              if (box != null) {
-                val hit = findCornerHit(offset, box, zoom, panX, panY)
-                if (hit != null) {
-                  state.selectCorner(hit)
-                } else {
-                  state.deselectCorner()
-                }
-              }
-            }
-          }
-          .pointerInput(state, box, zoom) {
-            detectDragGestures(
-                onDragStart = { offset ->
-                  lastPosition = offset
-                  if (box != null) {
-                    val hit = findCornerHit(offset, box, zoom, panX, panY)
-                    if (hit != null) {
-                      draggingCorner = hit
-                      state.selectCorner(hit)
-                    } else {
-                      draggingBackground = true
-                    }
-                  }
-                },
-                onDrag = { change, _ ->
-                  if (draggingCorner != null && box != null) {
-                    val pos = screenToImage(change.position, zoom, panX, panY)
-                    state.moveCornerWithValidation(boxIndex, draggingCorner!!, pos.x, pos.y)
-                  } else if (draggingBackground) {
-                    val dx = (change.position.x - lastPosition.x).toDouble()
-                    val dy = (change.position.y - lastPosition.y).toDouble()
-                    state.pan(dx, dy)
-                    lastPosition = change.position
-                  }
-                },
-                onDragEnd = {
-                  draggingCorner = null
-                  draggingBackground = false
-                })
-          }
-          .withRefinementKeyboardShortcuts(state)) {
-    // Draw content
+          }) {
+    // Draw the content using Canvas with translate for pan
     Canvas(modifier = Modifier.fillMaxSize()) {
-      // Background
-      drawRect(Color.DarkGray, Offset(panX, panY), Size(image?.width?.toFloat() ?: 0f, image?.height?.toFloat() ?: 0f))
-      
-      // Image
-      sampledImage?.let {
-        drawImage(it.toComposeImageBitmap(), Offset(panX, panY))
-      }
-      
-      // Box and handles
-      if (box != null) {
-        drawRefinementBox(box, selectedCorner, zoom, panX, panY)
+      // Apply pan offset via translate
+      translate(left = panX, top = panY) {
+        // Draw background
+        val imgW = (image?.width ?: 800).toFloat()
+        val imgH = (image?.height ?: 600).toFloat()
+        drawRect(Color.DarkGray, Offset.Zero, Size(imgW * zoom, imgH * zoom))
+        
+        // Draw image (scaled by zoom)
+        if (image != null) {
+          val bitmap = image.toComposeImageBitmap()
+          drawImage(bitmap, 
+            srcOffset = androidx.compose.ui.unit.IntOffset.Zero,
+            srcSize = androidx.compose.ui.unit.IntSize(image.width, image.height),
+            dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
+            dstSize = androidx.compose.ui.unit.IntSize((imgW * zoom).toInt(), (imgH * zoom).toInt()))
+        }
+        
+        // Draw bounding box with throttled display state
+        if (displayBox != null) {
+          drawRefinementBox(displayBox!!, selectedCorner, zoom)
+        }
       }
     }
   }
 }
 
-/** Keyboard shortcuts for refinement mode */
-private fun Modifier.withRefinementKeyboardShortcuts(state: PhotoScanWizardState): Modifier {
-  return this
-}
-
-private class ShiftCheckingKeyEvent(val delegate: Any) {
-  fun isShiftPressed(): Boolean {
-    return try {
-      val method = delegate.javaClass.getMethod("isShiftPressed")
-      method.invoke(delegate) as Boolean
-    } catch (e: Exception) { false }
-  }
-}
-
-internal fun findCornerHit(offset: Offset, box: BoundingBox, zoom: Float, panX: Float, panY: Float): Corner? {
-  val hitRadius = 25f
+private fun isInsideBox(offset: Offset, box: BoundingBox, zoom: Float, panX: Float, panY: Float): Boolean {
   val corners = listOf(
-    Corner.TOP_LEFT to box.corners.topLeft,
-    Corner.TOP_RIGHT to box.corners.topRight,
-    Corner.BOTTOM_LEFT to box.corners.bottomLeft,
-    Corner.BOTTOM_RIGHT to box.corners.bottomRight
+    imageToScreen(box.corners.topLeft, zoom, panX, panY),
+    imageToScreen(box.corners.topRight, zoom, panX, panY),
+    imageToScreen(box.corners.bottomRight, zoom, panX, panY),
+    imageToScreen(box.corners.bottomLeft, zoom, panX, panY)
   )
-  
-  for ((corner, point) in corners) {
-    val screenPos = imageToScreen(point, zoom, panX, panY)
-    if ((offset - screenPos).getDistance() < hitRadius) {
-      return corner
-    }
-  }
-  return null
-}
-
-internal fun screenToImage(screen: Offset, zoom: Float, panX: Float, panY: Float): Point {
-  return Point(((screen.x - panX) / zoom).toDouble(), ((screen.y - panY) / zoom).toDouble())
+  val minX = corners.minOf { it.x }
+  val maxX = corners.maxOf { it.x }
+  val minY = corners.minOf { it.y }
+  val maxY = corners.maxOf { it.y }
+  return offset.x >= minX && offset.x <= maxX && offset.y >= minY && offset.y <= maxY
 }
 
 internal fun imageToScreen(point: Point, zoom: Float, panX: Float, panY: Float): Offset {
-  return Offset((panX + point.x * zoom).toFloat(), (panY + point.y * zoom).toFloat())
+  return Offset(
+      (panX + point.x * zoom).toFloat(),
+      (panY + point.y * zoom).toFloat())
 }
 
-private fun DrawScope.drawRefinementBox(box: BoundingBox, selected: Corner?, zoom: Float, panX: Float, panY: Float) {
-  fun toScreen(p: Point) = imageToScreen(p, zoom, panX, panY)
+
+internal fun screenToImage(screen: Offset, zoom: Float, panX: Float, panY: Float): Point {
+  return Point(
+      ((screen.x - panX) / zoom).toDouble(),
+      ((screen.y - panY) / zoom).toDouble())
+}
+
+private fun DrawScope.drawRefinementBox(box: BoundingBox, selected: Corner?, zoom: Float) {
+  fun toScreen(p: Point) = imageToScreen(p, zoom, 0f, 0f) // Pan is handled by translate()
   
   val tl = toScreen(box.corners.topLeft)
   val tr = toScreen(box.corners.topRight)
@@ -452,9 +487,31 @@ private fun DrawScope.drawRefinementBox(box: BoundingBox, selected: Corner?, zoo
   }
 }
 
+
+
+internal fun findCornerHit(offset: Offset, box: BoundingBox, zoom: Float, panX: Float, panY: Float): Corner? {
+  val hitRadius = 25f
+  val corners = listOf(
+    Corner.TOP_LEFT to box.corners.topLeft,
+    Corner.TOP_RIGHT to box.corners.topRight,
+    Corner.BOTTOM_LEFT to box.corners.bottomLeft,
+    Corner.BOTTOM_RIGHT to box.corners.bottomRight
+  )
+  
+  for ((corner, point) in corners) {
+    val screenPos = Offset(
+      (panX + point.x * zoom).toFloat(),
+      (panY + point.y * zoom).toFloat()
+    )
+    if ((offset - screenPos).getDistance() < hitRadius) {
+      return corner
+    }
+  }
+  return null
+}
 internal fun createSampledImageForRefinement(
-    image: BufferedImage, 
-    scale: Double, 
+    image: BufferedImage,
+    scale: Double,
     targetWidth: Int = (image.width * scale).toInt(),
     targetHeight: Int = (image.height * scale).toInt()
 ): BufferedImage? {
