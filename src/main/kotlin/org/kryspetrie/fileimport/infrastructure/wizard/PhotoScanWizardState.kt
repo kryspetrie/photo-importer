@@ -80,20 +80,22 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   val selectedCorner: StateFlow<Corner?> = _selectedCorner.asStateFlow()
 
   // ========== Throttled Drag State (4Hz for performance) ==========
-  
+
   private val _displayRefinementBox = MutableStateFlow<BoundingBox?>(null)
   val displayRefinementBox: StateFlow<BoundingBox?> = _displayRefinementBox.asStateFlow()
 
   private val _pendingDragX = MutableStateFlow(0.0)
-  val pendingDragX: Double get() = _pendingDragX.value
-  
+  val pendingDragX: Double
+    get() = _pendingDragX.value
+
   private val _pendingDragY = MutableStateFlow(0.0)
-  val pendingDragY: Double get() = _pendingDragY.value
-  
+  val pendingDragY: Double
+    get() = _pendingDragY.value
+
   /** True when user is actively dragging a corner (used for 4Hz throttle loop) */
   val isDragging: Boolean
     get() = _selectedCorner.value != null && _refinementBoxIndex.value >= 0
-  
+
   /** True when there's a pending drag position to sync */
   val hasPendingDrag: Boolean
     get() = _selectedCorner.value != null
@@ -104,9 +106,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     _pendingDragY.value = newY
   }
 
-  /**
-   * Syncs the display state to show the actual box (called after drag ends).
-   */
+  /** Syncs the display state to show the actual box (called after drag ends). */
   fun syncDisplayBox() {
     val index = _refinementBoxIndex.value
     if (index >= 0 && index < _boundingBoxList.value.size()) {
@@ -117,30 +117,29 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   }
 
   /**
-   * Syncs the pending drag position to the display state at 4Hz.
-   * This is a visual preview only - actual box state updated on release.
-   * Called periodically from the LaunchedEffect throttle loop.
+   * Syncs the pending drag position to the display state at 4Hz. This is a visual preview only -
+   * actual box state updated on release. Called periodically from the LaunchedEffect throttle loop.
    */
   fun syncPendingDrag(boxIndex: Int): Long {
     val startNanos = if (DEBUG_TIMING) System.nanoTime() else 0L
-    
+
     val corner = _selectedCorner.value ?: return 0
     val imgX = _pendingDragX.value
     val imgY = _pendingDragY.value
-    
+
     val list = _boundingBoxList.value
     if (boxIndex < 0 || boxIndex >= list.size()) return 0
-    
+
     val box = list.boxes[boxIndex]
     val moved = box.moveCorner(corner, Point(imgX, imgY))
-    
+
     // Validate to prevent rendering invalid shapes
     if (moved.corners.wouldCreateInvalidShape()) {
       return 0
     }
-    
+
     _displayRefinementBox.value = moved
-    
+
     val elapsed = if (DEBUG_TIMING) (System.nanoTime() - startNanos) / 1000 else 0L
     if (DEBUG_TIMING && elapsed > 500) { // Only log if > 0.5ms
       println("⚠️ syncPendingDrag: ${elapsed}μs (boxIndex=$boxIndex)")
@@ -612,24 +611,24 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
   }
 
   /**
-   * Moves a corner with validation to prevent invalid shapes (bowties, self-intersecting).
-   * Returns true if the move was applied, false if it was rejected.
+   * Moves a corner with validation to prevent invalid shapes (bowties, self-intersecting). Returns
+   * true if the move was applied, false if it was rejected.
    */
   fun moveCornerWithValidation(boxIndex: Int, corner: Corner, newX: Double, newY: Double): Boolean {
     val list = _boundingBoxList.value
     if (boxIndex < 0 || boxIndex >= list.size()) return false
-    
+
     val box = list.boxes[boxIndex]
     val moved = box.moveCorner(corner, Point(newX, newY))
-    
+
     // Check if the resulting shape would be valid (no crossing edges)
     if (moved.corners.wouldCreateInvalidShape()) {
       return false
     }
-    
+
     // Save for undo
     _undoRedoManager.value.push(box.id, box)
-    
+
     // Apply the move
     updateBox(boxIndex, moved)
     return true

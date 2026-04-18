@@ -81,14 +81,14 @@ fun Modifier.withWizardKeyboardShortcuts(
 
       // Check shift key using reflection (since the property access varies across platforms)
       val isShiftPressed = checkShiftPressed(keyEvent)
-      
+
       // Use reflection to get the key since the property access is causing issues
       val keyName = getKeyName(keyEvent)
 
       // Arrow keys handling - check if corner is selected
       val cornerDelta = if (isShiftPressed) 10.0 else 1.0
       val panDelta = if (isShiftPressed) 100.0 else 50.0
-      
+
       when (keyName) {
         "DirectionUp" -> {
           if (wizardState.selectedCorner.value != null) {

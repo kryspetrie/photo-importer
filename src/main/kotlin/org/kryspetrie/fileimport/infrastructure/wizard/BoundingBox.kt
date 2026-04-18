@@ -66,60 +66,61 @@ data class BoundingBoxCorners(
   fun aspectRatio(): Double = width() / height()
 
   /**
-   * Checks if this shape would create an invalid (self-intersecting/bowtie) quadrilateral.
-   * A valid quadrilateral has edges that don't cross each other.
+   * Checks if this shape would create an invalid (self-intersecting/bowtie) quadrilateral. A valid
+   * quadrilateral has edges that don't cross each other.
    */
   fun wouldCreateInvalidShape(): Boolean {
     // Get the 4 edges: top, right, bottom, left
-    val edges = listOf(
-        // Top edge: topLeft -> topRight
-        Pair(topLeft, topRight),
-        // Right edge: topRight -> bottomRight
-        Pair(topRight, bottomRight),
-        // Bottom edge: bottomRight -> bottomLeft
-        Pair(bottomRight, bottomLeft),
-        // Left edge: bottomLeft -> topLeft
-        Pair(bottomLeft, topLeft)
-    )
-    
+    val edges =
+        listOf(
+            // Top edge: topLeft -> topRight
+            Pair(topLeft, topRight),
+            // Right edge: topRight -> bottomRight
+            Pair(topRight, bottomRight),
+            // Bottom edge: bottomRight -> bottomLeft
+            Pair(bottomRight, bottomLeft),
+            // Left edge: bottomLeft -> topLeft
+            Pair(bottomLeft, topLeft))
+
     // Check if any two non-adjacent edges intersect
     for (i in edges.indices) {
-        for (j in (i + 2) until edges.size) {
-            // Skip adjacent edges (they share a corner)
-            if (i == 0 && j == 3) continue // top and left are adjacent
-            if (i == 3 && j == 1) continue // left and right are adjacent (not possible with this approach)
-            
-            if (edgesIntersect(edges[i].first, edges[i].second, edges[j].first, edges[j].second)) {
-                return true
-            }
+      for (j in (i + 2) until edges.size) {
+        // Skip adjacent edges (they share a corner)
+        if (i == 0 && j == 3) continue // top and left are adjacent
+        if (i == 3 && j == 1)
+            continue // left and right are adjacent (not possible with this approach)
+
+        if (edgesIntersect(edges[i].first, edges[i].second, edges[j].first, edges[j].second)) {
+          return true
         }
+      }
     }
     return false
   }
-  
-  /**
-   * Checks if line segment AB intersects with line segment CD.
-   */
+
+  /** Checks if line segment AB intersects with line segment CD. */
   private fun edgesIntersect(a: Point, b: Point, c: Point, d: Point): Boolean {
     return doSegmentsIntersect(a.x, a.y, b.x, b.y, c.x, c.y, d.x, d.y)
   }
-  
-  /**
-   * Uses the cross-product method to determine if two line segments intersect.
-   */
+
+  /** Uses the cross-product method to determine if two line segments intersect. */
   private fun doSegmentsIntersect(
-      ax: Double, ay: Double,
-      bx: Double, by: Double,
-      cx: Double, cy: Double,
-      dx: Double, dy: Double
+      ax: Double,
+      ay: Double,
+      bx: Double,
+      by: Double,
+      cx: Double,
+      cy: Double,
+      dx: Double,
+      dy: Double
   ): Boolean {
     fun cross(ax: Double, ay: Double, bx: Double, by: Double): Double = ax * by - ay * bx
-    
+
     val d1 = cross(bx - ax, by - ay, cx - ax, cy - ay)
     val d2 = cross(bx - ax, by - ay, dx - ax, dy - ay)
     val d3 = cross(dx - cx, dy - cy, ax - cx, ay - cy)
     val d4 = cross(dx - cx, dy - cy, bx - cx, by - cy)
-    
+
     // If d1 and d2 have opposite signs, and d3 and d4 have opposite signs
     return (d1 * d2 < 0) && (d3 * d4 < 0)
   }

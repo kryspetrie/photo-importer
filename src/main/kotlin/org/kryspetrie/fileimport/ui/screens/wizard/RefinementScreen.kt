@@ -2,9 +2,7 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -21,14 +19,14 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
@@ -58,11 +56,12 @@ fun RefinementScreen(
   var canvasSize by remember { mutableStateOf(IntSize.Zero) }
 
   // Get current box
-  val currentBox = remember(refinementBoxIndex, boundingBoxList) {
-    if (refinementBoxIndex >= 0 && refinementBoxIndex < boundingBoxList.size()) {
-      boundingBoxList.boxes[refinementBoxIndex]
-    } else null
-  }
+  val currentBox =
+      remember(refinementBoxIndex, boundingBoxList) {
+        if (refinementBoxIndex >= 0 && refinementBoxIndex < boundingBoxList.size()) {
+          boundingBoxList.boxes[refinementBoxIndex]
+        } else null
+      }
 
   // Fit to box when canvas size is known
   LaunchedEffect(canvasSize, refinementBoxIndex) {
@@ -77,25 +76,27 @@ fun RefinementScreen(
         TopAppBar(
             title = { Text("Refine Bounding Box") },
             navigationIcon = {
-              IconButton(onClick = {
-                state.exitRefinement()
-                onBack()
-              }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to Overview")
-              }
+              IconButton(
+                  onClick = {
+                    state.exitRefinement()
+                    onBack()
+                  }) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to Overview")
+                  }
             },
             actions = {
               IconButton(onClick = { state.undo() }) { Icon(Icons.Default.Undo, "Undo") }
               IconButton(onClick = { state.redo() }) { Icon(Icons.Default.Redo, "Redo") }
-              IconButton(onClick = {
-                if (refinementBoxIndex >= 0) {
-                  state.removeBox(refinementBoxIndex)
-                  state.exitRefinement()
-                  onBack()
-                }
-              }) {
-                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
-              }
+              IconButton(
+                  onClick = {
+                    if (refinementBoxIndex >= 0) {
+                      state.removeBox(refinementBoxIndex)
+                      state.exitRefinement()
+                      onBack()
+                    }
+                  }) {
+                    Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                  }
             })
       },
       content = { paddingValues ->
@@ -168,25 +169,43 @@ private fun RefinementControls(
           modifier = Modifier.fillMaxWidth(),
           horizontalArrangement = Arrangement.SpaceBetween,
           verticalAlignment = Alignment.CenterVertically) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-              IconButton(onClick = onPrevious, enabled = currentIndex > 0, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Previous", Modifier.size(18.dp))
-              }
-              Text("Image ${currentIndex + 1} of $totalCount", style = MaterialTheme.typography.titleMedium)
-              IconButton(onClick = onNext, enabled = currentIndex < totalCount - 1, modifier = Modifier.size(32.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, "Next", Modifier.size(18.dp))
-              }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-              if (selectedCorner != null) {
-                Text("Selected: ${selectedCorner.name}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                OutlinedButton(onClick = onDeselect, modifier = Modifier.height(32.dp)) {
-                  Text("Deselect", style = MaterialTheme.typography.labelSmall)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                  IconButton(
+                      onClick = onPrevious,
+                      enabled = currentIndex > 0,
+                      modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Previous", Modifier.size(18.dp))
+                      }
+                  Text(
+                      "Image ${currentIndex + 1} of $totalCount",
+                      style = MaterialTheme.typography.titleMedium)
+                  IconButton(
+                      onClick = onNext,
+                      enabled = currentIndex < totalCount - 1,
+                      modifier = Modifier.size(32.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, "Next", Modifier.size(18.dp))
+                      }
                 }
-              } else {
-                Text("Click a corner to select", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-              }
-            }
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                  if (selectedCorner != null) {
+                    Text(
+                        "Selected: ${selectedCorner.name}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary)
+                    OutlinedButton(onClick = onDeselect, modifier = Modifier.height(32.dp)) {
+                      Text("Deselect", style = MaterialTheme.typography.labelSmall)
+                    }
+                  } else {
+                    Text(
+                        "Click a corner to select",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                  }
+                }
           }
 
       HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -200,7 +219,11 @@ private fun RefinementControls(
             OutlinedButton(onClick = onZoomOut, modifier = Modifier.height(32.dp)) {
               Icon(Icons.Default.ZoomOut, null, Modifier.size(16.dp))
             }
-            Text("${(zoomLevel * 100).toInt()}%", modifier = Modifier.width(44.dp), textAlign = TextAlign.Center, style = MaterialTheme.typography.labelMedium)
+            Text(
+                "${(zoomLevel * 100).toInt()}%",
+                modifier = Modifier.width(44.dp),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelMedium)
             OutlinedButton(onClick = onZoomIn, modifier = Modifier.height(32.dp)) {
               Icon(Icons.Default.ZoomIn, null, Modifier.size(16.dp))
             }
@@ -263,209 +286,220 @@ private fun RefinementCanvas(
   val panX = zoomController.panX.toFloat()
   val panY = zoomController.panY.toFloat()
 
-  // Throttled display state - only updates at 4Hz to minimize redraws
+  // Throttled display state - only updates during dragging
   val displayBox by state.displayRefinementBox.collectAsState()
 
-  // Cache the ImageBitmap - conversion from AWT BufferedImage is EXPENSIVE (~700ms!)
-  // This must be remembered based on the source image, not recomputed every frame
-  val cachedImageBitmap by remember(image) {
-    derivedStateOf {
-      image?.toComposeImageBitmap()
-    }
-  }
-
-  // Track whether we're dragging (for 4Hz throttle)
+  // Track whether we're dragging (for 30Hz throttle)
   var isDragging by remember { mutableStateOf(false) }
 
-  // Precompute corner positions in screen space (for hit testing)
-  val cornerPositions = remember(box, zoom, panX, panY) {
-    if (box != null) {
-      listOf(
-        Corner.TOP_LEFT to imageToScreen(box.corners.topLeft, zoom, panX, panY),
-        Corner.TOP_RIGHT to imageToScreen(box.corners.topRight, zoom, panX, panY),
-        Corner.BOTTOM_LEFT to imageToScreen(box.corners.bottomLeft, zoom, panX, panY),
-        Corner.BOTTOM_RIGHT to imageToScreen(box.corners.bottomRight, zoom, panX, panY)
-      )
-    } else emptyList()
-  }
+  // Use displayBox during dragging (throttled preview), actual box otherwise (immediate)
+  val drawBox = if (isDragging) displayBox else box
 
-  // 12Hz ticker to sync pending drag position to display state (more responsive than 4Hz)
+  // Cache the ImageBitmap - conversion from AWT BufferedImage is EXPENSIVE (~700ms!)
+  val cachedImageBitmap by remember(image) { derivedStateOf { image?.toComposeImageBitmap() } }
+
+  // Precompute corner positions in screen space (for hit testing)
+  val cornerPositions =
+      remember(box, zoom, panX, panY) {
+        if (box != null) {
+          listOf(
+              Corner.TOP_LEFT to imageToScreen(box.corners.topLeft, zoom, panX, panY),
+              Corner.TOP_RIGHT to imageToScreen(box.corners.topRight, zoom, panX, panY),
+              Corner.BOTTOM_LEFT to imageToScreen(box.corners.bottomLeft, zoom, panX, panY),
+              Corner.BOTTOM_RIGHT to imageToScreen(box.corners.bottomRight, zoom, panX, panY))
+        } else emptyList()
+      }
+
+  // 30Hz ticker to sync pending drag position to display state
   LaunchedEffect(isDragging, boxIndex) {
     while (isDragging) {
       state.syncPendingDrag(boxIndex)
-      delay(83L) // 12Hz = every 83ms
+      delay(33L) // 30Hz = every 33ms
     }
   }
 
   Box(
-      modifier = modifier
-          .background(Color.DarkGray)
-          .onSizeChanged { onCanvasSizeChanged(it) }
-          .pointerInput(state, box, zoom, panX, panY) {
-            // Single pointerInput for tap and drag
-            awaitPointerEventScope {
-              var dragging = false
-              var isCornerDrag = false
-              var lastDragX = 0.0
-              var lastDragY = 0.0
-              
-              while (true) {
-                val event = awaitPointerEvent()
-                val pos = event.changes.firstOrNull()?.position ?: continue
-                
-                when (event.type) {
-                  PointerEventType.Press -> {
-                    // Check for corner hit
-                    val hit = cornerPositions.find { (_, screenPos) ->
-                      (pos - screenPos).getDistance() < 25f
-                    }
-                    if (hit != null) {
-                      state.selectCorner(hit.first)
-                      isCornerDrag = true
-                      dragging = true
-                      isDragging = true
-                      // Initialize pending position
-                      lastDragX = ((pos.x - panX) / zoom).toDouble()
-                      lastDragY = ((pos.y - panY) / zoom).toDouble()
-                      state.updatePendingDrag(lastDragX, lastDragY)
-                    }
-                  }
-                  PointerEventType.Move -> {
-                    if (dragging && isCornerDrag) {
-                      // Convert to image coordinates
-                      val imgX = ((pos.x - panX) / zoom).toDouble()
-                      val imgY = ((pos.y - panY) / zoom).toDouble()
-                      // Skip if position hasn't changed meaningfully (reduces processing)
-                      val dx = imgX - lastDragX
-                      val dy = imgY - lastDragY
-                      if (dx * dx + dy * dy > 0.25) { // ~0.5 pixel threshold squared
-                        val updateStart = if (DEBUG_TIMING) System.nanoTime() else 0L
-                        state.updatePendingDrag(imgX, imgY)
-                        if (DEBUG_TIMING) {
-                          val elapsed = (System.nanoTime() - updateStart) / 1000
-                          if (elapsed > 100) {
-                            println("  📝 updatePendingDrag: ${elapsed}μs")
+      modifier =
+          modifier
+              .background(Color.DarkGray)
+              .onSizeChanged { onCanvasSizeChanged(it) }
+              .pointerInput(state, box, zoom, panX, panY) {
+                // Single pointerInput for tap and drag
+                awaitPointerEventScope {
+                  var dragging = false
+                  var isCornerDrag = false
+                  var lastDragX = 0.0
+                  var lastDragY = 0.0
+
+                  while (true) {
+                    val event = awaitPointerEvent()
+                    val pos = event.changes.firstOrNull()?.position ?: continue
+
+                    when (event.type) {
+                      PointerEventType.Press -> {
+                        // Check for corner hit
+                        val hit =
+                            cornerPositions.find { (_, screenPos) ->
+                              (pos - screenPos).getDistance() < 25f
+                            }
+                        if (hit != null) {
+                          state.selectCorner(hit.first)
+                          isCornerDrag = true
+                          dragging = true
+                          isDragging = true
+                          // Initialize pending position
+                          lastDragX = ((pos.x - panX) / zoom).toDouble()
+                          lastDragY = ((pos.y - panY) / zoom).toDouble()
+                          state.updatePendingDrag(lastDragX, lastDragY)
+                        }
+                      }
+                      PointerEventType.Move -> {
+                        if (dragging && isCornerDrag) {
+                          // Convert to image coordinates
+                          val imgX = ((pos.x - panX) / zoom).toDouble()
+                          val imgY = ((pos.y - panY) / zoom).toDouble()
+                          // Skip if position hasn't changed meaningfully (reduces processing)
+                          val dx = imgX - lastDragX
+                          val dy = imgY - lastDragY
+                          if (dx * dx + dy * dy > 0.25) { // ~0.5 pixel threshold squared
+                            val updateStart = if (DEBUG_TIMING) System.nanoTime() else 0L
+                            state.updatePendingDrag(imgX, imgY)
+                            if (DEBUG_TIMING) {
+                              val elapsed = (System.nanoTime() - updateStart) / 1000
+                              if (elapsed > 100) {
+                                println("  📝 updatePendingDrag: ${elapsed}μs")
+                              }
+                            }
+                            lastDragX = imgX
+                            lastDragY = imgY
                           }
                         }
-                        lastDragX = imgX
-                        lastDragY = imgY
                       }
+                      PointerEventType.Release -> {
+                        if (dragging && isCornerDrag) {
+                          // Commit final position to state (immediate, not throttled)
+                          val corner = state.selectedCorner.value
+                          if (corner != null) {
+                            state.moveCornerWithValidation(
+                                boxIndex, corner, state.pendingDragX, state.pendingDragY)
+                            state.syncDisplayBox()
+                          }
+                        }
+                        isDragging = false
+                        dragging = false
+                        isCornerDrag = false
+                      }
+                      else -> {}
                     }
                   }
-                  PointerEventType.Release -> {
-                    if (dragging && isCornerDrag) {
-                      // Commit final position to state (immediate, not throttled)
-                      val corner = state.selectedCorner.value
-                      if (corner != null) {
-                        state.moveCornerWithValidation(boxIndex, corner, state.pendingDragX, state.pendingDragY)
-                        state.syncDisplayBox()
-                      }
-                    }
-                    isDragging = false
-                    dragging = false
-                    isCornerDrag = false
-                  }
-                  else -> {}
                 }
+              }
+              .onKeyEvent { event ->
+                // Arrow key handling
+                if (event.type == KeyEventType.KeyDown) {
+                  val delta = 10.0
+                  val panDelta = 50.0
+
+                  when (event.key) {
+                    Key.DirectionUp -> {
+                      if (selectedCorner != null) {
+                        state.moveSelectedCorner(0.0, -delta)
+                      } else {
+                        state.pan(0.0, panDelta)
+                      }
+                      true
+                    }
+                    Key.DirectionDown -> {
+                      if (selectedCorner != null) {
+                        state.moveSelectedCorner(0.0, delta)
+                      } else {
+                        state.pan(0.0, -panDelta)
+                      }
+                      true
+                    }
+                    Key.DirectionLeft -> {
+                      if (selectedCorner != null) {
+                        state.moveSelectedCorner(-delta, 0.0)
+                      } else {
+                        state.pan(panDelta, 0.0)
+                      }
+                      true
+                    }
+                    Key.DirectionRight -> {
+                      if (selectedCorner != null) {
+                        state.moveSelectedCorner(delta, 0.0)
+                      } else {
+                        state.pan(-panDelta, 0.0)
+                      }
+                      true
+                    }
+                    else -> false
+                  }
+                } else false
+              }) {
+        // Draw the content using Canvas with translate for pan
+        Canvas(modifier = Modifier.fillMaxSize()) {
+          val totalStart = if (DEBUG_TIMING) System.nanoTime() else 0L
+
+          // Apply pan offset via translate
+          translate(left = panX, top = panY) {
+            // Draw background
+            val imgW = (image?.width ?: 800).toFloat()
+            val imgH = (image?.height ?: 600).toFloat()
+            drawRect(Color.DarkGray, Offset.Zero, Size(imgW * zoom, imgH * zoom))
+
+            // Draw image (scaled by zoom) - use cached bitmap to avoid 700ms conversion every frame
+            if (image != null) {
+              val drawStart = if (DEBUG_TIMING) System.nanoTime() else 0L
+              cachedImageBitmap?.let { bitmap ->
+                drawImage(
+                    bitmap,
+                    srcOffset = androidx.compose.ui.unit.IntOffset.Zero,
+                    srcSize = androidx.compose.ui.unit.IntSize(image.width, image.height),
+                    dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
+                    dstSize =
+                        androidx.compose.ui.unit.IntSize(
+                            (imgW * zoom).toInt(), (imgH * zoom).toInt()))
+              }
+              val drawElapsed = if (DEBUG_TIMING) (System.nanoTime() - drawStart) / 1000 else 0L
+              if (DEBUG_TIMING && drawElapsed > 100) {
+                println("  📷 Image draw: ${drawElapsed}μs (cached, no conversion)")
+              }
+            }
+
+            // Draw bounding box (use displayBox during drag for throttled preview, actualBox
+            // otherwise)
+            if (drawBox != null) {
+              val boxStart = if (DEBUG_TIMING) System.nanoTime() else 0L
+              drawRefinementBox(drawBox, selectedCorner, zoom)
+              val boxElapsed = if (DEBUG_TIMING) (System.nanoTime() - boxStart) / 1000 else 0L
+              if (DEBUG_TIMING && boxElapsed > 100) {
+                println("  📦 Box: ${boxElapsed}μs")
               }
             }
           }
-          .onKeyEvent { event ->
-            // Arrow key handling
-            if (event.type == KeyEventType.KeyDown) {
-              val delta = 10.0
-              val panDelta = 50.0
-              
-              when (event.key) {
-                Key.DirectionUp -> {
-                  if (selectedCorner != null) {
-                    state.moveSelectedCorner(0.0, -delta)
-                  } else {
-                    state.pan(0.0, panDelta)
-                  }
-                  true
-                }
-                Key.DirectionDown -> {
-                  if (selectedCorner != null) {
-                    state.moveSelectedCorner(0.0, delta)
-                  } else {
-                    state.pan(0.0, -panDelta)
-                  }
-                  true
-                }
-                Key.DirectionLeft -> {
-                  if (selectedCorner != null) {
-                    state.moveSelectedCorner(-delta, 0.0)
-                  } else {
-                    state.pan(panDelta, 0.0)
-                  }
-                  true
-                }
-                Key.DirectionRight -> {
-                  if (selectedCorner != null) {
-                    state.moveSelectedCorner(delta, 0.0)
-                  } else {
-                    state.pan(-panDelta, 0.0)
-                  }
-                  true
-                }
-                else -> false
-              }
-            } else false
-          }) {
-    // Draw the content using Canvas with translate for pan
-    Canvas(modifier = Modifier.fillMaxSize()) {
-      val totalStart = if (DEBUG_TIMING) System.nanoTime() else 0L
-      
-      // Apply pan offset via translate
-      translate(left = panX, top = panY) {
-        // Draw background
-        val imgW = (image?.width ?: 800).toFloat()
-        val imgH = (image?.height ?: 600).toFloat()
-        drawRect(Color.DarkGray, Offset.Zero, Size(imgW * zoom, imgH * zoom))
-        
-        // Draw image (scaled by zoom) - use cached bitmap to avoid 700ms conversion every frame
-        if (image != null) {
-          val drawStart = if (DEBUG_TIMING) System.nanoTime() else 0L
-          cachedImageBitmap?.let { bitmap ->
-            drawImage(bitmap, 
-              srcOffset = androidx.compose.ui.unit.IntOffset.Zero,
-              srcSize = androidx.compose.ui.unit.IntSize(image.width, image.height),
-              dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
-              dstSize = androidx.compose.ui.unit.IntSize((imgW * zoom).toInt(), (imgH * zoom).toInt()))
-          }
-          val drawElapsed = if (DEBUG_TIMING) (System.nanoTime() - drawStart) / 1000 else 0L
-          if (DEBUG_TIMING && drawElapsed > 100) {
-            println("  📷 Image draw: ${drawElapsed}μs (cached, no conversion)")
-          }
-        }
-        
-        // Draw bounding box with throttled display state
-        if (displayBox != null) {
-          val boxStart = if (DEBUG_TIMING) System.nanoTime() else 0L
-          drawRefinementBox(displayBox!!, selectedCorner, zoom)
-          val boxElapsed = if (DEBUG_TIMING) (System.nanoTime() - boxStart) / 1000 else 0L
-          if (DEBUG_TIMING && boxElapsed > 100) {
-            println("  📦 Box: ${boxElapsed}μs")
+
+          val totalElapsed = if (DEBUG_TIMING) (System.nanoTime() - totalStart) / 1000 else 0L
+          if (DEBUG_TIMING && totalElapsed > 500) {
+            println("⏱️ Canvas TOTAL: ${totalElapsed}μs")
           }
         }
       }
-      
-      val totalElapsed = if (DEBUG_TIMING) (System.nanoTime() - totalStart) / 1000 else 0L
-      if (DEBUG_TIMING && totalElapsed > 500) {
-        println("⏱️ Canvas TOTAL: ${totalElapsed}μs")
-      }
-    }
-  }
 }
 
-private fun isInsideBox(offset: Offset, box: BoundingBox, zoom: Float, panX: Float, panY: Float): Boolean {
-  val corners = listOf(
-    imageToScreen(box.corners.topLeft, zoom, panX, panY),
-    imageToScreen(box.corners.topRight, zoom, panX, panY),
-    imageToScreen(box.corners.bottomRight, zoom, panX, panY),
-    imageToScreen(box.corners.bottomLeft, zoom, panX, panY)
-  )
+private fun isInsideBox(
+    offset: Offset,
+    box: BoundingBox,
+    zoom: Float,
+    panX: Float,
+    panY: Float
+): Boolean {
+  val corners =
+      listOf(
+          imageToScreen(box.corners.topLeft, zoom, panX, panY),
+          imageToScreen(box.corners.topRight, zoom, panX, panY),
+          imageToScreen(box.corners.bottomRight, zoom, panX, panY),
+          imageToScreen(box.corners.bottomLeft, zoom, panX, panY))
   val minX = corners.minOf { it.x }
   val maxX = corners.maxOf { it.x }
   val minY = corners.minOf { it.y }
@@ -474,74 +508,77 @@ private fun isInsideBox(offset: Offset, box: BoundingBox, zoom: Float, panX: Flo
 }
 
 internal fun imageToScreen(point: Point, zoom: Float, panX: Float, panY: Float): Offset {
-  return Offset(
-      (panX + point.x * zoom).toFloat(),
-      (panY + point.y * zoom).toFloat())
+  return Offset((panX + point.x * zoom).toFloat(), (panY + point.y * zoom).toFloat())
 }
 
-
 internal fun screenToImage(screen: Offset, zoom: Float, panX: Float, panY: Float): Point {
-  return Point(
-      ((screen.x - panX) / zoom).toDouble(),
-      ((screen.y - panY) / zoom).toDouble())
+  return Point(((screen.x - panX) / zoom).toDouble(), ((screen.y - panY) / zoom).toDouble())
 }
 
 private fun DrawScope.drawRefinementBox(box: BoundingBox, selected: Corner?, zoom: Float) {
   fun toScreen(p: Point) = imageToScreen(p, zoom, 0f, 0f) // Pan is handled by translate()
-  
+
   val tl = toScreen(box.corners.topLeft)
   val tr = toScreen(box.corners.topRight)
   val bl = toScreen(box.corners.bottomLeft)
   val br = toScreen(box.corners.bottomRight)
-  
+
   // Fill
-  val path = Path().apply {
-    moveTo(tl.x, tl.y)
-    lineTo(tr.x, tr.y)
-    lineTo(br.x, br.y)
-    lineTo(bl.x, bl.y)
-    close()
-  }
+  val path =
+      Path().apply {
+        moveTo(tl.x, tl.y)
+        lineTo(tr.x, tr.y)
+        lineTo(br.x, br.y)
+        lineTo(bl.x, bl.y)
+        close()
+      }
   drawPath(path, Color(0xFF2196F3).copy(alpha = 0.15f), style = Fill)
   drawPath(path, Color(0xFF2196F3), style = Stroke(width = 2f))
-  
+
   // Center cross
   val cx = (tl.x + tr.x + bl.x + br.x) / 4
   val cy = (tl.y + tr.y + bl.y + br.y) / 4
   drawLine(Color(0xFF2196F3).copy(alpha = 0.5f), Offset(cx - 15f, cy), Offset(cx + 15f, cy), 1f)
   drawLine(Color(0xFF2196F3).copy(alpha = 0.5f), Offset(cx, cy - 15f), Offset(cx, cy + 15f), 1f)
-  
+
   // Corner handles
   val handleRadius = 12f
-  listOf(Corner.TOP_LEFT to tl, Corner.TOP_RIGHT to tr, Corner.BOTTOM_LEFT to bl, Corner.BOTTOM_RIGHT to br).forEach { (corner, pos) ->
-    val r = if (corner == selected) handleRadius * 1.3f else handleRadius
-    drawCircle(Color(0xFF2196F3), r, pos)
-    drawCircle(Color.White, r - 3f, pos)
-  }
+  listOf(
+          Corner.TOP_LEFT to tl,
+          Corner.TOP_RIGHT to tr,
+          Corner.BOTTOM_LEFT to bl,
+          Corner.BOTTOM_RIGHT to br)
+      .forEach { (corner, pos) ->
+        val r = if (corner == selected) handleRadius * 1.3f else handleRadius
+        drawCircle(Color(0xFF2196F3), r, pos)
+        drawCircle(Color.White, r - 3f, pos)
+      }
 }
 
-
-
-internal fun findCornerHit(offset: Offset, box: BoundingBox, zoom: Float, panX: Float, panY: Float): Corner? {
+internal fun findCornerHit(
+    offset: Offset,
+    box: BoundingBox,
+    zoom: Float,
+    panX: Float,
+    panY: Float
+): Corner? {
   val hitRadius = 25f
-  val corners = listOf(
-    Corner.TOP_LEFT to box.corners.topLeft,
-    Corner.TOP_RIGHT to box.corners.topRight,
-    Corner.BOTTOM_LEFT to box.corners.bottomLeft,
-    Corner.BOTTOM_RIGHT to box.corners.bottomRight
-  )
-  
+  val corners =
+      listOf(
+          Corner.TOP_LEFT to box.corners.topLeft,
+          Corner.TOP_RIGHT to box.corners.topRight,
+          Corner.BOTTOM_LEFT to box.corners.bottomLeft,
+          Corner.BOTTOM_RIGHT to box.corners.bottomRight)
+
   for ((corner, point) in corners) {
-    val screenPos = Offset(
-      (panX + point.x * zoom).toFloat(),
-      (panY + point.y * zoom).toFloat()
-    )
+    val screenPos = Offset((panX + point.x * zoom).toFloat(), (panY + point.y * zoom).toFloat())
     if ((offset - screenPos).getDistance() < hitRadius) {
       return corner
     }
   }
   return null
 }
+
 internal fun createSampledImageForRefinement(
     image: BufferedImage,
     scale: Double,
@@ -557,5 +594,7 @@ internal fun createSampledImageForRefinement(
     g.drawImage(image, 0, 0, w, h, null)
     g.dispose()
     result
-  } catch (e: Exception) { null }
+  } catch (e: Exception) {
+    null
+  }
 }

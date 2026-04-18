@@ -236,8 +236,7 @@ private fun OverviewControlsPanel(
               }
               else -> {
                 OutlinedButton(
-                    onClick = { state.enterFourPointMode() },
-                    modifier = Modifier.height(40.dp)) {
+                    onClick = { state.enterFourPointMode() }, modifier = Modifier.height(40.dp)) {
                       Icon(Icons.Default.GridOn, null, Modifier.size(18.dp))
                       Spacer(Modifier.width(4.dp))
                       Text("4-Point")
@@ -259,8 +258,7 @@ private fun OverviewControlsPanel(
               }
               else -> {
                 OutlinedButton(
-                    onClick = { state.enterAddBoxMode() },
-                    modifier = Modifier.height(40.dp)) {
+                    onClick = { state.enterAddBoxMode() }, modifier = Modifier.height(40.dp)) {
                       Icon(Icons.Default.Add, null, Modifier.size(18.dp))
                       Spacer(Modifier.width(4.dp))
                       Text("Add Box")
@@ -313,10 +311,13 @@ private fun OverviewControlsPanel(
                   onClick = { state.enterRefinement(selectedBoxIndex) },
                   label = { Text("Box ${selectedBoxIndex + 1} selected") },
                   leadingIcon = {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp))
                   },
                   modifier = Modifier.height(36.dp))
-              
+
               OutlinedButton(
                   onClick = { state.enterRefinement(selectedBoxIndex) },
                   modifier = Modifier.height(40.dp)) {
@@ -336,9 +337,7 @@ private fun OverviewControlsPanel(
             Spacer(Modifier.weight(1f))
 
             // Cancel and Continue buttons
-            OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
-              Text("Cancel")
-            }
+            OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) { Text("Cancel") }
 
             Button(
                 onClick = onToSummary, enabled = boxCount > 0, modifier = Modifier.height(40.dp)) {
