@@ -266,6 +266,14 @@ private fun RefinementCanvas(
   // Throttled display state - only updates at 4Hz to minimize redraws
   val displayBox by state.displayRefinementBox.collectAsState()
 
+  // Cache the ImageBitmap - conversion from AWT BufferedImage is EXPENSIVE (~700ms!)
+  // This must be remembered based on the source image, not recomputed every frame
+  val cachedImageBitmap by remember(image) {
+    derivedStateOf {
+      image?.toComposeImageBitmap()
+    }
+  }
+
   // Track whether we're dragging (for 4Hz throttle)
   var isDragging by remember { mutableStateOf(false) }
 
@@ -331,7 +339,14 @@ private fun RefinementCanvas(
                       val dx = imgX - lastDragX
                       val dy = imgY - lastDragY
                       if (dx * dx + dy * dy > 0.25) { // ~0.5 pixel threshold squared
+                        val updateStart = if (DEBUG_TIMING) System.nanoTime() else 0L
                         state.updatePendingDrag(imgX, imgY)
+                        if (DEBUG_TIMING) {
+                          val elapsed = (System.nanoTime() - updateStart) / 1000
+                          if (elapsed > 100) {
+                            println("  📝 updatePendingDrag: ${elapsed}μs")
+                          }
+                        }
                         lastDragX = imgX
                         lastDragY = imgY
                       }
@@ -400,6 +415,8 @@ private fun RefinementCanvas(
           }) {
     // Draw the content using Canvas with translate for pan
     Canvas(modifier = Modifier.fillMaxSize()) {
+      val totalStart = if (DEBUG_TIMING) System.nanoTime() else 0L
+      
       // Apply pan offset via translate
       translate(left = panX, top = panY) {
         // Draw background
@@ -407,20 +424,36 @@ private fun RefinementCanvas(
         val imgH = (image?.height ?: 600).toFloat()
         drawRect(Color.DarkGray, Offset.Zero, Size(imgW * zoom, imgH * zoom))
         
-        // Draw image (scaled by zoom)
+        // Draw image (scaled by zoom) - use cached bitmap to avoid 700ms conversion every frame
         if (image != null) {
-          val bitmap = image.toComposeImageBitmap()
-          drawImage(bitmap, 
-            srcOffset = androidx.compose.ui.unit.IntOffset.Zero,
-            srcSize = androidx.compose.ui.unit.IntSize(image.width, image.height),
-            dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
-            dstSize = androidx.compose.ui.unit.IntSize((imgW * zoom).toInt(), (imgH * zoom).toInt()))
+          val drawStart = if (DEBUG_TIMING) System.nanoTime() else 0L
+          cachedImageBitmap?.let { bitmap ->
+            drawImage(bitmap, 
+              srcOffset = androidx.compose.ui.unit.IntOffset.Zero,
+              srcSize = androidx.compose.ui.unit.IntSize(image.width, image.height),
+              dstOffset = androidx.compose.ui.unit.IntOffset.Zero,
+              dstSize = androidx.compose.ui.unit.IntSize((imgW * zoom).toInt(), (imgH * zoom).toInt()))
+          }
+          val drawElapsed = if (DEBUG_TIMING) (System.nanoTime() - drawStart) / 1000 else 0L
+          if (DEBUG_TIMING && drawElapsed > 100) {
+            println("  📷 Image draw: ${drawElapsed}μs (cached, no conversion)")
+          }
         }
         
         // Draw bounding box with throttled display state
         if (displayBox != null) {
+          val boxStart = if (DEBUG_TIMING) System.nanoTime() else 0L
           drawRefinementBox(displayBox!!, selectedCorner, zoom)
+          val boxElapsed = if (DEBUG_TIMING) (System.nanoTime() - boxStart) / 1000 else 0L
+          if (DEBUG_TIMING && boxElapsed > 100) {
+            println("  📦 Box: ${boxElapsed}μs")
+          }
         }
+      }
+      
+      val totalElapsed = if (DEBUG_TIMING) (System.nanoTime() - totalStart) / 1000 else 0L
+      if (DEBUG_TIMING && totalElapsed > 500) {
+        println("⏱️ Canvas TOTAL: ${totalElapsed}μs")
       }
     }
   }

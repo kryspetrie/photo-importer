@@ -9,6 +9,9 @@ import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 
+// Debug flag for performance timing - set to true to log timing data
+internal const val DEBUG_TIMING = true
+
 /** Wizard mode for the overview/refinement screens. */
 enum class WizardMode {
   /** Default mode - select, move, zoom */
@@ -118,23 +121,31 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
    * This is a visual preview only - actual box state updated on release.
    * Called periodically from the LaunchedEffect throttle loop.
    */
-  fun syncPendingDrag(boxIndex: Int) {
-    val corner = _selectedCorner.value ?: return
+  fun syncPendingDrag(boxIndex: Int): Long {
+    val startNanos = if (DEBUG_TIMING) System.nanoTime() else 0L
+    
+    val corner = _selectedCorner.value ?: return 0
     val imgX = _pendingDragX.value
     val imgY = _pendingDragY.value
     
     val list = _boundingBoxList.value
-    if (boxIndex < 0 || boxIndex >= list.size()) return
+    if (boxIndex < 0 || boxIndex >= list.size()) return 0
     
     val box = list.boxes[boxIndex]
     val moved = box.moveCorner(corner, Point(imgX, imgY))
     
     // Validate to prevent rendering invalid shapes
     if (moved.corners.wouldCreateInvalidShape()) {
-      return
+      return 0
     }
     
     _displayRefinementBox.value = moved
+    
+    val elapsed = if (DEBUG_TIMING) (System.nanoTime() - startNanos) / 1000 else 0L
+    if (DEBUG_TIMING && elapsed > 500) { // Only log if > 0.5ms
+      println("⚠️ syncPendingDrag: ${elapsed}μs (boxIndex=$boxIndex)")
+    }
+    return elapsed
   }
 
   // ========== Zoom ==========
