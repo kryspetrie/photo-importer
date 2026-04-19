@@ -17,7 +17,7 @@ class FourPointStateTest {
 
   @BeforeEach
   fun setup() {
-    state = FourPointState.active() // Must activate before adding points
+    state = FourPointState.activeQuad() // Must activate before adding points
   }
 
   // 4P-01: Create inactive state
@@ -27,7 +27,7 @@ class FourPointStateTest {
     @Test
     @DisplayName("should be PLACING when activated")
     fun shouldBePlacingWhenActivated() {
-      val activeState = FourPointState.active()
+      val activeState = FourPointState.activeQuad()
       assertEquals(FourPointState.Mode.PLACING, activeState.mode)
       assertEquals(0, activeState.points.size)
     }
@@ -43,7 +43,7 @@ class FourPointStateTest {
     @Test
     @DisplayName("should have no points initially")
     fun shouldHaveNoPoints() {
-      val activeState = FourPointState.active()
+      val activeState = FourPointState.activeQuad()
       assertTrue(activeState.points.isEmpty())
     }
   }

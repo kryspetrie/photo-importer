@@ -373,7 +373,9 @@ private fun OverviewCanvas(
                     if (wizardMode == WizardMode.FOUR_POINT) {
                       val position = event.changes.firstOrNull()?.position
                       if (position != null) {
-                        val point = zoomController.screenToImage(position.x.toDouble(), position.y.toDouble())
+                        val point =
+                            zoomController.screenToImage(
+                                position.x.toDouble(), position.y.toDouble())
                         state.updateCreationMousePosition(Point(point.x, point.y))
                       }
                     }
@@ -613,7 +615,7 @@ private fun DrawScope.drawFourPointPreview(
     val lastPoint = points.last()
     val lastScreen = toScreen(lastPoint)
     val pendingScreen = toScreen(pendingPoint)
-    
+
     if (fourPointState.isRectangle() && points.size == 1) {
       // Rectangle mode: Draw axis-aligned rectangle preview
       val previewPath = Path()
@@ -632,14 +634,22 @@ private fun DrawScope.drawFourPointPreview(
       path.moveTo(lastScreen.x, lastScreen.y)
       path.lineTo(pendingScreen.x, pendingScreen.y)
       drawPath(path, accentColor.copy(alpha = 0.7f), style = Stroke(width = 2f))
-      
+
       // Draw preview closing line to first point when 2+ points placed
       if (points.size >= 2) {
         val firstScreen = toScreen(points.first())
         val closingPath = Path()
         closingPath.moveTo(pendingScreen.x, pendingScreen.y)
         closingPath.lineTo(firstScreen.x, firstScreen.y)
-        drawPath(closingPath, accentColor.copy(alpha = 0.4f), style = Stroke(width = 1.5f, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f))))
+        drawPath(
+            closingPath,
+            accentColor.copy(alpha = 0.4f),
+            style =
+                Stroke(
+                    width = 1.5f,
+                    pathEffect =
+                        androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                            floatArrayOf(10f, 10f))))
       }
     }
   }
@@ -693,15 +703,16 @@ internal fun FourPointStatusBar(
     modifier: Modifier = Modifier
 ) {
   val isRectangle = state.isRectangle()
-  val pointText = if (isRectangle) {
-    when (state.points.size) {
-      0 -> "Click to set first corner"
-      1 -> "Click to set opposite corner"
-      else -> "Done"
-    }
-  } else {
-    "Point ${state.points.size + 1} of 4"
-  }
+  val pointText =
+      if (isRectangle) {
+        when (state.points.size) {
+          0 -> "Click to set first corner"
+          1 -> "Click to set opposite corner"
+          else -> "Done"
+        }
+      } else {
+        "Point ${state.points.size + 1} of 4"
+      }
 
   Surface(
       modifier = modifier,
@@ -711,9 +722,7 @@ internal fun FourPointStatusBar(
             modifier = Modifier.padding(12.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
-              Text(
-                  pointText,
-                  style = MaterialTheme.typography.titleMedium)
+              Text(pointText, style = MaterialTheme.typography.titleMedium)
 
               // Undo button - only in 4-point mode or if there's a point to undo
               if (!isRectangle && state.points.isNotEmpty()) {

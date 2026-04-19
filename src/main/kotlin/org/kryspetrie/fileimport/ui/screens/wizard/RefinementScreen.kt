@@ -2,10 +2,8 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.focusable
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -14,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -325,19 +325,18 @@ private fun RefinementCanvas(
   }
 
   // Request focus when canvas is displayed (so keyboard works without clicking first)
-  LaunchedEffect(Unit) {
-    focusRequester.requestFocus()
-  }
+  LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
   Box(
       modifier =
           modifier
               .background(Color.DarkGray)
-              .focusRequester(focusRequester)  // For auto-focus
-              .focusable()  // Required for keyboard events to work
+              .focusRequester(focusRequester) // For auto-focus
+              .focusable() // Required for keyboard events to work
               .onSizeChanged { onCanvasSizeChanged(it) }
-              .pointerInput(state, box, zoom, panX, panY) {
-                // Single pointerInput for tap and drag
+              .pointerInput(state, box, zoom) {
+                // Pointer handler for corner drag and background pan
+                // Does NOT depend on panX/panY to avoid restart during drag
                 awaitPointerEventScope {
                   var dragging = false
                   var isCornerDrag = false
@@ -347,6 +346,9 @@ private fun RefinementCanvas(
                   while (true) {
                     val event = awaitPointerEvent()
                     val pos = event.changes.firstOrNull()?.position ?: continue
+                    // Read current pan values inside loop to avoid handler restart
+                    val currentPanX = zoomController.panX.toFloat()
+                    val currentPanY = zoomController.panY.toFloat()
 
                     when (event.type) {
                       PointerEventType.Press -> {
@@ -361,16 +363,22 @@ private fun RefinementCanvas(
                           dragging = true
                           isDragging = true
                           // Initialize pending position
-                          lastDragX = ((pos.x - panX) / zoom).toDouble()
-                          lastDragY = ((pos.y - panY) / zoom).toDouble()
+                          lastDragX = ((pos.x - currentPanX) / zoom).toDouble()
+                          lastDragY = ((pos.y - currentPanY) / zoom).toDouble()
                           state.updatePendingDrag(lastDragX, lastDragY)
+                        } else {
+                          // Background drag - start panning
+                          dragging = true
+                          isCornerDrag = false
+                          lastDragX = pos.x.toDouble()
+                          lastDragY = pos.y.toDouble()
                         }
                       }
                       PointerEventType.Move -> {
                         if (dragging && isCornerDrag) {
-                          // Convert to image coordinates
-                          val imgX = ((pos.x - panX) / zoom).toDouble()
-                          val imgY = ((pos.y - panY) / zoom).toDouble()
+                          // Corner drag
+                          val imgX = ((pos.x - currentPanX) / zoom).toDouble()
+                          val imgY = ((pos.y - currentPanY) / zoom).toDouble()
                           // Skip if position hasn't changed meaningfully (reduces processing)
                           val dx = imgX - lastDragX
                           val dy = imgY - lastDragY
@@ -386,6 +394,13 @@ private fun RefinementCanvas(
                             lastDragX = imgX
                             lastDragY = imgY
                           }
+                        } else if (dragging && !isCornerDrag) {
+                          // Background pan
+                          val dx = (pos.x.toDouble() - lastDragX)
+                          val dy = (pos.y.toDouble() - lastDragY)
+                          state.pan(dx, dy)
+                          lastDragX = pos.x.toDouble()
+                          lastDragY = pos.y.toDouble()
                         }
                       }
                       PointerEventType.Release -> {
@@ -401,6 +416,19 @@ private fun RefinementCanvas(
                         isDragging = false
                         dragging = false
                         isCornerDrag = false
+                      }
+                      PointerEventType.Scroll -> {
+                        // Zoom with scroll wheel when no corner is selected
+                        if (selectedCorner == null && !dragging) {
+                          val scrollDelta = event.changes.firstOrNull()?.scrollDelta
+                          if (scrollDelta != null) {
+                            if (scrollDelta.y < 0) {
+                              state.zoomIn()
+                            } else if (scrollDelta.y > 0) {
+                              state.zoomOut()
+                            }
+                          }
+                        }
                       }
                       else -> {}
                     }

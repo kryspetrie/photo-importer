@@ -307,8 +307,8 @@ data class BoundingBox(
     }
 
     /**
-     * Creates a rectangular bounding box from two diagonal corners.
-     * The corners are automatically ordered as top-left, top-right, bottom-right, bottom-left.
+     * Creates a rectangular bounding box from two diagonal corners. The corners are automatically
+     * ordered as top-left, top-right, bottom-right, bottom-left.
      */
     fun fromRectangle(corner1: Point, corner2: Point): BoundingBox {
       val minX = minOf(corner1.x, corner2.x)

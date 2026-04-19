@@ -24,8 +24,8 @@ data class FourPointState(
   }
 
   enum class CreationType {
-    RECTANGLE,  // 2-click diagonal corners
-    QUAD        // 4-click quadrilateral
+    RECTANGLE, // 2-click diagonal corners
+    QUAD // 4-click quadrilateral
   }
 
   /** Returns the number of points placed. */
@@ -50,8 +50,7 @@ data class FourPointState(
 
   /** Activates creation mode. */
   fun activate(type: CreationType = CreationType.RECTANGLE): FourPointState {
-    return copy(
-        mode = Mode.PLACING, points = emptyList(), creationType = type, pendingPoint = null)
+    return copy(mode = Mode.PLACING, points = emptyList(), creationType = type, pendingPoint = null)
   }
 
   /** Deactivates creation mode. */
@@ -62,10 +61,15 @@ data class FourPointState(
   /** Adds a point and returns new state. Does nothing if mode is INACTIVE or COMPLETE. */
   fun addPoint(point: Point): FourPointState {
     if (mode != Mode.PLACING) return this
-    if (isComplete()) return this
+
+    val requiredPoints =
+        when (creationType) {
+          CreationType.RECTANGLE -> 2
+          CreationType.QUAD -> 4
+        }
 
     val newPoints = points + point
-    val newMode = if (isComplete()) Mode.COMPLETE else Mode.PLACING
+    val newMode = if (newPoints.size >= requiredPoints) Mode.COMPLETE else Mode.PLACING
 
     return copy(points = newPoints, mode = newMode, pendingPoint = null)
   }
@@ -99,7 +103,8 @@ data class FourPointState(
   }
 
   /** Resets the state to initial. */
-  fun reset(): FourPointState = copy(mode = Mode.INACTIVE, points = emptyList(), pendingPoint = null)
+  fun reset(): FourPointState =
+      copy(mode = Mode.INACTIVE, points = emptyList(), pendingPoint = null)
 
   /** Returns status message for the current state. */
   fun statusMessage(): String {
@@ -131,9 +136,11 @@ data class FourPointState(
     fun inactive(): FourPointState = FourPointState()
 
     /** Creates an active rectangle creation state (2-click). */
-    fun activeRectangle(): FourPointState = FourPointState(mode = Mode.PLACING, creationType = CreationType.RECTANGLE)
+    fun activeRectangle(): FourPointState =
+        FourPointState(mode = Mode.PLACING, creationType = CreationType.RECTANGLE)
 
     /** Creates an active quadrilateral creation state (4-click). */
-    fun activeQuad(): FourPointState = FourPointState(mode = Mode.PLACING, creationType = CreationType.QUAD)
+    fun activeQuad(): FourPointState =
+        FourPointState(mode = Mode.PLACING, creationType = CreationType.QUAD)
   }
 }
