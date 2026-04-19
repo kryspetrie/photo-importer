@@ -93,12 +93,12 @@ fun DetectionScreen(
                             style = MaterialTheme.typography.labelMedium)
                       }
                 }
-                WizardMode.ADD_BOX -> {
+                WizardMode.FOUR_POINT -> {
                   Surface(
                       color = MaterialTheme.colorScheme.secondaryContainer,
                       shape = RoundedCornerShape(4.dp)) {
                         Text(
-                            "Add Box",
+                            fourPointState.statusMessage(),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelMedium)
                       }
@@ -228,11 +228,11 @@ private fun DetectionToolbar(
             }
           }
 
-          // Add Box toggle button
+          // Add Box toggle button (2-click rectangle)
           when (wizardMode) {
-            WizardMode.ADD_BOX -> {
+            WizardMode.FOUR_POINT -> {
               Button(
-                  onClick = { state.exitAddBoxMode() },
+                  onClick = { state.exitFourPointMode() },
                   colors =
                       ButtonDefaults.buttonColors(
                           containerColor = MaterialTheme.colorScheme.secondary),
@@ -242,7 +242,7 @@ private fun DetectionToolbar(
             }
             else -> {
               OutlinedButton(
-                  onClick = { state.enterAddBoxMode() }, modifier = Modifier.height(36.dp)) {
+                  onClick = { state.enterRectangleMode() }, modifier = Modifier.height(36.dp)) {
                     Icon(Icons.Default.Add, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Add Box", style = MaterialTheme.typography.labelMedium)
@@ -319,12 +319,6 @@ private fun SimpleDetectionCanvas(
                         WizardMode.FOUR_POINT -> {
                           val imagePoint = screenToImagePoint(tapOffset, displayParams)
                           state.addFourPoint(Point(imagePoint.x, imagePoint.y))
-                        }
-                        WizardMode.ADD_BOX -> {
-                          val imagePoint = screenToImagePoint(tapOffset, displayParams)
-                          if (!state.createBoxAtCenter(imagePoint.x, imagePoint.y)) {
-                            onBoxRejected()
-                          }
                         }
                         else -> {
                           // Find corner hit with LARGE tolerance

@@ -88,20 +88,13 @@ fun OverviewScreen(
                       color = MaterialTheme.colorScheme.tertiaryContainer,
                       shape = RoundedCornerShape(4.dp)) {
                         Text(
-                            "4-Point Mode",
+                            fourPointState.statusMessage(),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                             style = MaterialTheme.typography.labelMedium)
                       }
                 }
                 WizardMode.ADD_BOX -> {
-                  Surface(
-                      color = MaterialTheme.colorScheme.secondaryContainer,
-                      shape = RoundedCornerShape(4.dp)) {
-                        Text(
-                            "Add Box Mode",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelMedium)
-                      }
+                  // Handled via fourPointState
                 }
                 WizardMode.REFINEMENT -> {
                   // Handled in refinement screen
@@ -244,11 +237,11 @@ private fun OverviewControlsPanel(
               }
             }
 
-            // Add Box mode toggle
+            // Add Box mode toggle (2-click rectangle)
             when (wizardMode) {
-              WizardMode.ADD_BOX -> {
+              WizardMode.FOUR_POINT -> {
                 Button(
-                    onClick = { state.exitAddBoxMode() },
+                    onClick = { state.exitFourPointMode() },
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondary),
@@ -258,7 +251,7 @@ private fun OverviewControlsPanel(
               }
               else -> {
                 OutlinedButton(
-                    onClick = { state.enterAddBoxMode() }, modifier = Modifier.height(40.dp)) {
+                    onClick = { state.enterRectangleMode() }, modifier = Modifier.height(40.dp)) {
                       Icon(Icons.Default.Add, null, Modifier.size(18.dp))
                       Spacer(Modifier.width(4.dp))
                       Text("Add Box")
@@ -373,6 +366,21 @@ private fun OverviewCanvas(
       modifier =
           Modifier.fillMaxSize()
               .pointerInput(state, wizardMode) {
+                // Track mouse position for creation preview
+                awaitPointerEventScope {
+                  while (true) {
+                    val event = awaitPointerEvent()
+                    if (wizardMode == WizardMode.FOUR_POINT) {
+                      val position = event.changes.firstOrNull()?.position
+                      if (position != null) {
+                        val point = zoomController.screenToImage(position.x.toDouble(), position.y.toDouble())
+                        state.updateCreationMousePosition(Point(point.x, point.y))
+                      }
+                    }
+                  }
+                }
+              }
+              .pointerInput(state, wizardMode) {
                 detectTapGestures(
                     onTap = { offset ->
                       when (wizardMode) {
@@ -380,15 +388,6 @@ private fun OverviewCanvas(
                           val point =
                               zoomController.screenToImage(offset.x.toDouble(), offset.y.toDouble())
                           state.addFourPoint(Point(point.x, point.y))
-                        }
-                        WizardMode.ADD_BOX -> {
-                          val point =
-                              zoomController.screenToImage(offset.x.toDouble(), offset.y.toDouble())
-                          val created = state.createBoxAtCenter(point.x, point.y)
-                          // Show message if box was rejected (too small)
-                          if (!created) {
-                            onBoxRejected()
-                          }
                         }
                         else -> {
                           // Check if tapping on a corner
@@ -582,6 +581,7 @@ private fun DrawScope.drawFourPointPreview(
     panY: Float
 ) {
   val points = fourPointState.points
+  val pendingPoint = fourPointState.pendingPoint
   val accentColor = Color(0xFFFF9800)
 
   fun toScreen(p: Point) = Offset((panX + p.x * scale).toFloat(), (panY + p.y * scale).toFloat())
@@ -594,25 +594,54 @@ private fun DrawScope.drawFourPointPreview(
     drawCircle(Color.White, radius = 12f, center = screen)
   }
 
-  // Draw connecting lines
+  // Draw connecting lines between placed points
   if (points.size >= 2) {
     val path = Path()
     path.moveTo(toScreen(points[0]).x, toScreen(points[0]).y)
     for (i in 1 until points.size) {
       path.lineTo(toScreen(points[i]).x, toScreen(points[i]).y)
     }
+    // Close the shape when 4 points are placed
+    if (points.size == 4) {
+      path.lineTo(toScreen(points[0]).x, toScreen(points[0]).y)
+    }
     drawPath(path, accentColor, style = Stroke(width = 2f))
   }
 
-  // Draw preview line closing to first point
-  if (points.size >= 3) {
-    val path = Path()
-    path.moveTo(toScreen(points[0]).x, toScreen(points[0]).y)
-    for (i in 1 until points.size) {
-      path.lineTo(toScreen(points[i]).x, toScreen(points[i]).y)
+  // Draw preview from last placed point to mouse cursor (if mouse is over canvas)
+  if (pendingPoint != null && points.isNotEmpty()) {
+    val lastPoint = points.last()
+    val lastScreen = toScreen(lastPoint)
+    val pendingScreen = toScreen(pendingPoint)
+    
+    if (fourPointState.isRectangle() && points.size == 1) {
+      // Rectangle mode: Draw axis-aligned rectangle preview
+      val previewPath = Path()
+      previewPath.moveTo(lastScreen.x, lastScreen.y)
+      previewPath.lineTo(pendingScreen.x, lastScreen.y)
+      previewPath.lineTo(pendingScreen.x, pendingScreen.y)
+      previewPath.lineTo(lastScreen.x, pendingScreen.y)
+      previewPath.close()
+      // Fill with semi-transparent color
+      drawPath(previewPath, accentColor.copy(alpha = 0.15f), style = Fill)
+      // Draw rectangle outline
+      drawPath(previewPath, accentColor, style = Stroke(width = 2f))
+    } else {
+      // 4-point mode: Draw line segment from last point to cursor
+      val path = Path()
+      path.moveTo(lastScreen.x, lastScreen.y)
+      path.lineTo(pendingScreen.x, pendingScreen.y)
+      drawPath(path, accentColor.copy(alpha = 0.7f), style = Stroke(width = 2f))
+      
+      // Draw preview closing line to first point when 2+ points placed
+      if (points.size >= 2) {
+        val firstScreen = toScreen(points.first())
+        val closingPath = Path()
+        closingPath.moveTo(pendingScreen.x, pendingScreen.y)
+        closingPath.lineTo(firstScreen.x, firstScreen.y)
+        drawPath(closingPath, accentColor.copy(alpha = 0.4f), style = Stroke(width = 1.5f, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f))))
+      }
     }
-    path.lineTo(toScreen(points[0]).x, toScreen(points[0]).y)
-    drawPath(path, accentColor.copy(alpha = 0.5f), style = Stroke(width = 2f))
   }
 }
 
@@ -663,6 +692,17 @@ internal fun FourPointStatusBar(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+  val isRectangle = state.isRectangle()
+  val pointText = if (isRectangle) {
+    when (state.points.size) {
+      0 -> "Click to set first corner"
+      1 -> "Click to set opposite corner"
+      else -> "Done"
+    }
+  } else {
+    "Point ${state.points.size + 1} of 4"
+  }
+
   Surface(
       modifier = modifier,
       shape = RoundedCornerShape(8.dp),
@@ -672,16 +712,18 @@ internal fun FourPointStatusBar(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically) {
               Text(
-                  "Point ${state.points.size + 1} of 4",
+                  pointText,
                   style = MaterialTheme.typography.titleMedium)
 
-              if (state.points.isNotEmpty()) {
+              // Undo button - only in 4-point mode or if there's a point to undo
+              if (!isRectangle && state.points.isNotEmpty()) {
                 OutlinedButton(onClick = onRemoveLast, modifier = Modifier.height(32.dp)) {
                   Text("Undo", style = MaterialTheme.typography.labelSmall)
                 }
               }
 
-              if (state.canConfirm()) {
+              // Confirm button - only in 4-point mode (rectangle auto-confirms on 2nd click)
+              if (!isRectangle && state.canConfirm()) {
                 Button(onClick = onConfirm, modifier = Modifier.height(32.dp)) {
                   Text("Confirm", style = MaterialTheme.typography.labelSmall)
                 }

@@ -456,7 +456,14 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
   /** Enters 4-point mode for creating a quadrilateral bounding box. */
   fun enterFourPointMode() {
-    _fourPointState.value = FourPointState.active()
+    _fourPointState.value = FourPointState.activeQuad()
+    _wizardMode.value = WizardMode.FOUR_POINT
+    deselectAll()
+  }
+
+  /** Enters 2-click rectangle mode for creating a rectangular bounding box. */
+  fun enterRectangleMode() {
+    _fourPointState.value = FourPointState.activeRectangle()
     _wizardMode.value = WizardMode.FOUR_POINT
     deselectAll()
   }
@@ -466,6 +473,13 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     _fourPointState.value = FourPointState.inactive()
     if (_wizardMode.value == WizardMode.FOUR_POINT) {
       _wizardMode.value = WizardMode.NORMAL
+    }
+  }
+
+  /** Updates the mouse position for drawing line preview in creation mode. */
+  fun updateCreationMousePosition(point: Point?) {
+    if (_wizardMode.value == WizardMode.FOUR_POINT) {
+      _fourPointState.value = _fourPointState.value.updatePendingPoint(point)
     }
   }
 

@@ -307,6 +307,25 @@ data class BoundingBox(
     }
 
     /**
+     * Creates a rectangular bounding box from two diagonal corners.
+     * The corners are automatically ordered as top-left, top-right, bottom-right, bottom-left.
+     */
+    fun fromRectangle(corner1: Point, corner2: Point): BoundingBox {
+      val minX = minOf(corner1.x, corner2.x)
+      val maxX = maxOf(corner1.x, corner2.x)
+      val minY = minOf(corner1.y, corner2.y)
+      val maxY = maxOf(corner1.y, corner2.y)
+
+      return BoundingBox(
+          corners =
+              BoundingBoxCorners(
+                  topLeft = Point(minX, minY),
+                  topRight = Point(maxX, minY),
+                  bottomRight = Point(maxX, maxY),
+                  bottomLeft = Point(minX, maxY)))
+    }
+
+    /**
      * Compute convex hull using gift wrapping (Jarvis march) algorithm. This ensures points are
      * ordered correctly regardless of click order.
      */

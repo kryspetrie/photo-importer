@@ -160,8 +160,8 @@ fun Modifier.withWizardKeyboardShortcuts(
         }
         "A" -> {
           if (wizardState.wizardMode.value != WizardMode.REFINEMENT) {
-            wizardState.enterAddBoxMode()
-            onModeChange?.invoke(WizardMode.ADD_BOX)
+            wizardState.enterRectangleMode()
+            onModeChange?.invoke(WizardMode.FOUR_POINT)
           }
           return@onKeyEvent true
         }

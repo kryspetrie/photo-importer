@@ -3,6 +3,9 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -286,6 +289,9 @@ private fun RefinementCanvas(
   val panX = zoomController.panX.toFloat()
   val panY = zoomController.panY.toFloat()
 
+  // Focus requester for auto-focus on load (so keyboard works immediately)
+  val focusRequester = remember { FocusRequester() }
+
   // Throttled display state - only updates during dragging
   val displayBox by state.displayRefinementBox.collectAsState()
 
@@ -318,10 +324,17 @@ private fun RefinementCanvas(
     }
   }
 
+  // Request focus when canvas is displayed (so keyboard works without clicking first)
+  LaunchedEffect(Unit) {
+    focusRequester.requestFocus()
+  }
+
   Box(
       modifier =
           modifier
               .background(Color.DarkGray)
+              .focusRequester(focusRequester)  // For auto-focus
+              .focusable()  // Required for keyboard events to work
               .onSizeChanged { onCanvasSizeChanged(it) }
               .pointerInput(state, box, zoom, panX, panY) {
                 // Single pointerInput for tap and drag
