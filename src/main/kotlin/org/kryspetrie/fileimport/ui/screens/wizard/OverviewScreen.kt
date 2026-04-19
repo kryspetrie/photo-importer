@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +57,13 @@ fun OverviewScreen(
   var showHelpDialog by remember { mutableStateOf(false) }
   var showBoxRejectedMessage by remember { mutableStateOf(false) }
   val snackbarHostState = remember { SnackbarHostState() }
+
+  // Fit view to image on first load
+  LaunchedEffect(containerSize, image) {
+    if (containerSize.width > 0 && containerSize.height > 0 && image != null) {
+      state.fitToView(containerSize.width.toDouble(), containerSize.height.toDouble())
+    }
+  }
 
   // Launch snackbar when box is rejected
   LaunchedEffect(showBoxRejectedMessage) {
@@ -413,43 +421,81 @@ private fun OverviewCanvas(
                     })
               }
               .pointerInput(state, wizardMode, selectedBoxIndex) {
-                detectDragGestures(
-                    onDragStart = { offset ->
-                      lastDragPos = offset
-                      if (wizardMode == WizardMode.NORMAL && selectedBoxIndex >= 0) {
-                        // Check for corner hit first
-                        val cornerHit = findCornerHit(offset, boundingBoxList, zoomController)
-                        if (cornerHit != null && cornerHit.first == selectedBoxIndex) {
-                          draggedCorner = cornerHit.second
-                          state.selectCorner(cornerHit.second)
-                        } else {
-                          // Check if dragging inside selected box
-                          val boxHit = findBoxHit(offset, boundingBoxList, zoomController)
-                          if (boxHit == selectedBoxIndex) {
-                            isDraggingPhoto = true
-                            draggedBoxIndex = boxHit
+                awaitPointerEventScope {
+                  var isDragging = false
+                  var isCornerDrag = false
+                  var isPhotoDrag = false
+                  var lastDragPos = Offset.Zero
+
+                  while (true) {
+                    val event = awaitPointerEvent()
+                    val pos = event.changes.firstOrNull()?.position ?: continue
+
+                    when (event.type) {
+                      PointerEventType.Press -> {
+                        lastDragPos = pos
+                        isDragging = true
+
+                        if (wizardMode == WizardMode.NORMAL && selectedBoxIndex >= 0) {
+                          // Check for corner hit first
+                          val cornerHit = findCornerHit(pos, boundingBoxList, zoomController)
+                          if (cornerHit != null && cornerHit.first == selectedBoxIndex) {
+                            draggedCorner = cornerHit.second
+                            state.selectCorner(cornerHit.second)
+                            isCornerDrag = true
+                          } else {
+                            // Check if dragging inside selected box
+                            val boxHit = findBoxHit(pos, boundingBoxList, zoomController)
+                            if (boxHit == selectedBoxIndex) {
+                              isPhotoDrag = true
+                              draggedBoxIndex = boxHit
+                            }
                           }
                         }
                       }
-                    },
-                    onDrag = { change, _ ->
-                      if (draggedCorner != null && selectedBoxIndex >= 0) {
-                        val pos =
-                            zoomController.screenToImage(
-                                change.position.x.toDouble(), change.position.y.toDouble())
-                        state.moveCorner(selectedBoxIndex, draggedCorner!!, pos.x, pos.y)
-                      } else if (isDraggingPhoto && draggedBoxIndex >= 0) {
-                        val deltaX = (change.position.x - lastDragPos.x) / zoomController.zoom
-                        val deltaY = (change.position.y - lastDragPos.y) / zoomController.zoom
-                        state.moveSelectedBox(deltaX, deltaY)
-                        lastDragPos = change.position
+                      PointerEventType.Move -> {
+                        if (isDragging) {
+                          if (isCornerDrag && draggedCorner != null && selectedBoxIndex >= 0) {
+                            val screenPos = zoomController.screenToImage(pos.x.toDouble(), pos.y.toDouble())
+                            state.moveCorner(selectedBoxIndex, draggedCorner!!, screenPos.x, screenPos.y)
+                          } else if (isPhotoDrag && draggedBoxIndex >= 0) {
+                            val deltaX = (pos.x - lastDragPos.x) / zoomController.zoom
+                            val deltaY = (pos.y - lastDragPos.y) / zoomController.zoom
+                            state.moveSelectedBox(deltaX, deltaY)
+                          } else {
+                            // Background pan
+                            val deltaX = (pos.x - lastDragPos.x).toDouble()
+                            val deltaY = (pos.y - lastDragPos.y).toDouble()
+                            state.pan(deltaX, deltaY)
+                          }
+                          lastDragPos = pos
+                        }
                       }
-                    },
-                    onDragEnd = {
-                      draggedCorner = null
-                      isDraggingPhoto = false
-                      draggedBoxIndex = -1
-                    })
+                      PointerEventType.Release -> {
+                        isDragging = false
+                        isCornerDrag = false
+                        isPhotoDrag = false
+                        draggedCorner = null
+                        isDraggingPhoto = false
+                        draggedBoxIndex = -1
+                      }
+                      PointerEventType.Scroll -> {
+                        // Scroll zoom when no corner is selected
+                        if (selectedBoxIndex < 0) {
+                          val scrollDelta = event.changes.firstOrNull()?.scrollDelta
+                          if (scrollDelta != null) {
+                            if (scrollDelta.y < 0) {
+                              state.zoomIn()
+                            } else if (scrollDelta.y > 0) {
+                              state.zoomOut()
+                            }
+                          }
+                        }
+                      }
+                      else -> {}
+                    }
+                  }
+                }
               }) {
         // Calculate display parameters
         val scale = zoomController.zoom.toFloat()

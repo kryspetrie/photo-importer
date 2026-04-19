@@ -107,14 +107,29 @@ fun RefinementScreen(
             modifier = modifier.fillMaxSize().padding(paddingValues),
             verticalArrangement = Arrangement.SpaceBetween) {
               // Main canvas area
-              RefinementCanvas(
-                  state = state,
-                  image = image,
-                  box = currentBox,
-                  boxIndex = refinementBoxIndex,
-                  canvasSize = canvasSize,
-                  onCanvasSizeChanged = { canvasSize = it },
-                  modifier = Modifier.weight(1f).fillMaxWidth())
+              Box(
+                  modifier = Modifier.weight(1f).fillMaxWidth()) {
+                RefinementCanvas(
+                    state = state,
+                    image = image,
+                    box = currentBox,
+                    boxIndex = refinementBoxIndex,
+                    canvasSize = canvasSize,
+                    onCanvasSizeChanged = { canvasSize = it },
+                    modifier = Modifier.fillMaxSize())
+
+                // Zoom controls (top-right corner)
+                ZoomControls(
+                    zoomController = zoomController,
+                    onZoomIn = { state.zoomIn() },
+                    onZoomOut = { state.zoomOut() },
+                    onFitToView = {
+                      if (canvasSize.width > 0) {
+                        state.fitToBox(canvasSize.width.toDouble(), canvasSize.height.toDouble())
+                      }
+                    },
+                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp))
+              }
 
               // Bottom controls
               RefinementControls(
