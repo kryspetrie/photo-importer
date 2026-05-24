@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ImportFileDetail(
     /** Unique identifier for this file record */
-    val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String = DomainDefaults.generateId(),
 
     /** Original source file path */
     val sourcePath: String,
@@ -80,7 +80,7 @@ data class ImportFileDetail(
     val cameraModel: String? = null,
 
     /** Import sequence number */
-    val sequenceNumber: Int = 0
+    val sequenceNumber: Int = 0,
 )
 
 /**
@@ -92,10 +92,10 @@ data class ImportFileDetail(
 @Serializable
 data class ImportHistoryEntry(
     /** Unique identifier for this import session */
-    val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String = DomainDefaults.generateId(),
 
     /** Timestamp when import started */
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = DomainDefaults.currentTimeMillis(),
 
     /** Human-readable timestamp string */
     val timestampString: String = "",
@@ -158,12 +158,9 @@ data class ImportHistoryEntry(
     val importSidecars: Boolean = false,
 
     /** Notes or comments about this import */
-    val notes: String = ""
+    val notes: String = "",
 ) {
-  companion object {
-    fun createTimestampString(timestamp: Long): String {
-      val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-      return sdf.format(java.util.Date(timestamp))
+    companion object {
+        fun createTimestampString(timestamp: Long): String = DomainDefaults.formatTimestamp(timestamp)
     }
-  }
 }

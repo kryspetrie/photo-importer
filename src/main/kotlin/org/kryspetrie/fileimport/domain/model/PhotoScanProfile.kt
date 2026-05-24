@@ -13,12 +13,12 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 enum class PhotoOutputFormat(val extension: String, val quality: Int, val description: String) {
-  JPEG_QUALITY_90("jpg", 90, "JPEG High Quality (90%)"),
-  JPEG_QUALITY_85("jpg", 85, "JPEG Medium Quality (85%)"),
-  JPEG_QUALITY_75("jpg", 75, "JPEG Low Quality (75%)"),
-  JPEG_QUALITY_95("jpg", 95, "JPEG Best Quality (95%)"),
-  PNG("png", 100, "PNG (Lossless)"),
-  TIFF("tiff", 100, "TIFF (Uncompressed)")
+    JPEG_QUALITY_90("jpg", 90, "JPEG High Quality (90%)"),
+    JPEG_QUALITY_85("jpg", 85, "JPEG Medium Quality (85%)"),
+    JPEG_QUALITY_75("jpg", 75, "JPEG Low Quality (75%)"),
+    JPEG_QUALITY_95("jpg", 95, "JPEG Best Quality (95%)"),
+    PNG("png", 100, "PNG (Lossless)"),
+    TIFF("tiff", 100, "TIFF (Uncompressed)"),
 }
 
 /**
@@ -32,16 +32,16 @@ enum class PhotoOutputFormat(val extension: String, val quality: Int, val descri
  */
 @Serializable
 enum class AspectRatioPreset(val displayName: String, val value: Double, val printSize: String) {
-  ORIGINAL("Original", 0.0, "Use photo's original aspect ratio"),
-  SQUARE("Square (1:1)", 1.0, "4x4, 8x8, 12x12 inches"),
-  PORTRAIT_4_3("Portrait (4:3)", 3.0 / 4.0, "4x3, 8x6, 12x9 inches"),
-  LANDSCAPE_3_4("Landscape (3:4)", 4.0 / 3.0, "3x4, 6x8, 9x12 inches"),
-  PORTRAIT_2_3("Portrait (2:3)", 2.0 / 3.0, "2x3, 4x6, 8x12 inches"),
-  LANDSCAPE_3_2("Landscape (3:2)", 3.0 / 2.0, "3x2, 6x4, 12x8 inches"),
-  PORTRAIT_5_7("Portrait (5:7)", 5.0 / 7.0, "5x7, 10x14 inches"),
-  PORTRAIT_4_5("Portrait (4:5)", 4.0 / 5.0, "4x5, 8x10, 16x20 inches"),
-  WIDE_16_9("Wide (16:9)", 16.0 / 9.0, "Computer screens, TVs"),
-  PANORAMA_3_1("Panorama (3:1)", 3.0 / 1.0, "Wide prints, banners")
+    ORIGINAL("Original", 0.0, "Use photo's original aspect ratio"),
+    SQUARE("Square (1:1)", 1.0, "4x4, 8x8, 12x12 inches"),
+    PORTRAIT_4_3("Portrait (4:3)", 3.0 / 4.0, "4x3, 8x6, 12x9 inches"),
+    LANDSCAPE_3_4("Landscape (3:4)", 4.0 / 3.0, "3x4, 6x8, 9x12 inches"),
+    PORTRAIT_2_3("Portrait (2:3)", 2.0 / 3.0, "2x3, 4x6, 8x12 inches"),
+    LANDSCAPE_3_2("Landscape (3:2)", 3.0 / 2.0, "3x2, 6x4, 12x8 inches"),
+    PORTRAIT_5_7("Portrait (5:7)", 5.0 / 7.0, "5x7, 10x14 inches"),
+    PORTRAIT_4_5("Portrait (4:5)", 4.0 / 5.0, "4x5, 8x10, 16x20 inches"),
+    WIDE_16_9("Wide (16:9)", 16.0 / 9.0, "Computer screens, TVs"),
+    PANORAMA_3_1("Panorama (3:1)", 3.0 / 1.0, "Wide prints, banners"),
 }
 
 /**
@@ -55,7 +55,7 @@ enum class AspectRatioPreset(val displayName: String, val value: Double, val pri
 data class CorrectionSettings(
     val enablePerspectiveCorrection: Boolean = true,
     val enableRotationCorrection: Boolean = false,
-    val perspectiveMode: PerspectiveMode = PerspectiveMode.AUTO
+    val perspectiveMode: PerspectiveMode = PerspectiveMode.AUTO,
 )
 
 /**
@@ -67,9 +67,9 @@ data class CorrectionSettings(
  */
 @Serializable
 enum class PerspectiveMode {
-  AUTO,
-  MANUAL,
-  DISABLED
+    AUTO,
+    MANUAL,
+    DISABLED,
 }
 
 /**
@@ -137,7 +137,7 @@ data class PhotoScanProfile(
      * - Safe to rename profiles
      * - Can be referenced by ID in settings
      */
-    val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String = DomainDefaults.generateId(),
 
     /**
      * Profile display name.
@@ -241,7 +241,7 @@ data class PhotoScanProfile(
      * - Audit trail
      * - Sync conflict resolution
      */
-    val createdAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = DomainDefaults.currentTimeMillis(),
 
     /**
      * Profile last modification timestamp.
@@ -251,7 +251,7 @@ data class PhotoScanProfile(
      * - Sort by last used
      * - Sync and backup decisions
      */
-    val updatedAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = DomainDefaults.currentTimeMillis(),
 
     /**
      * Profile last usage timestamp.
@@ -271,134 +271,147 @@ data class PhotoScanProfile(
      * - Determining which profiles to suggest
      * - User analytics
      */
-    val useCount: Int = 0
+    val useCount: Int = 0,
 ) {
-  /**
-   * Resolves the default destination to an absolute path.
-   *
-   * Handles:
-   * - Absolute paths (returned as-is)
-   * - Home-relative paths (~/Pictures → /Users/name/Pictures)
-   * - Relative paths (Pictures → /Users/name/Pictures/Pictures)
-   *
-   * @return Absolute path to the destination folder
-   */
-  fun resolveDestination(): String {
-    val home = System.getProperty("user.home")
-    return when {
-      defaultDestination.startsWith("~/") -> defaultDestination.replace("~", home)
-      defaultDestination.startsWith("/") -> defaultDestination
-      else -> "$home/$defaultDestination"
-    }
-  }
-
-  /**
-   * Creates a copy of this profile with updated last-used timestamp and incremented use count.
-   *
-   * @return New profile with updated usage stats
-   */
-  fun markAsUsed(): PhotoScanProfile {
-    return copy(
-        lastUsedAt = System.currentTimeMillis(),
-        useCount = useCount + 1,
-        updatedAt = System.currentTimeMillis())
-  }
-
-  /**
-   * Validates this profile for correctness.
-   *
-   * @return List of validation errors (empty if valid)
-   */
-  fun validate(): List<String> {
-    val errors = mutableListOf<String>()
-
-    if (name.isBlank()) {
-      errors.add("Profile name cannot be empty")
-    }
-
-    if (name.length > 100) {
-      errors.add("Profile name cannot exceed 100 characters")
-    }
-
-    if (description.length > 500) {
-      errors.add("Profile description cannot exceed 500 characters")
-    }
-
-    if (defaultDestination.isBlank()) {
-      errors.add("Default destination cannot be empty")
-    }
-
-    if (namingPattern.isBlank()) {
-      errors.add("Naming pattern cannot be empty")
-    }
-
-    if (!namingPattern.contains("{original}") &&
-        !namingPattern.contains("{counter") &&
-        !namingPattern.contains("{date")) {
-      errors.add("Naming pattern should contain at least one of: {original}, {counter}, {date}")
-    }
-
-    return errors
-  }
-
-  companion object {
     /**
-     * Creates a default profile with sensible defaults.
+     * Resolves the default destination to an absolute path.
      *
-     * @return A default Photo Scan profile
+     * Handles:
+     * - Absolute paths (returned as-is)
+     * - Home-relative paths (~/Pictures → /Users/name/Pictures)
+     * - Relative paths (Pictures → /Users/name/Pictures/Pictures)
+     *
+     * @return Absolute path to the destination folder
      */
-    fun createDefault(): PhotoScanProfile {
-      return PhotoScanProfile(
-          name = "Default",
-          description = "Standard photo scan settings with high-quality JPEG output",
-          defaultDestination = "Pictures/PhotoScan",
-          outputFormat = PhotoOutputFormat.JPEG_QUALITY_90,
-          aspectRatioPreset = AspectRatioPreset.ORIGINAL,
-          correctionSettings =
-              CorrectionSettings(
-                  enablePerspectiveCorrection = true, enableRotationCorrection = false),
-          namingPattern = "{original}",
-          autoDetectEnabled = true)
+    fun resolveDestination(): String {
+        val home = System.getProperty("user.home")
+        return when {
+            defaultDestination.startsWith("~/") -> defaultDestination.replace("~", home)
+            defaultDestination.startsWith("/") -> defaultDestination
+            else -> "$home/$defaultDestination"
+        }
     }
 
     /**
-     * Creates a profile optimized for documents.
+     * Creates a copy of this profile with updated last-used timestamp and incremented use count.
      *
-     * @return A document-optimized Photo Scan profile
+     * @return New profile with updated usage stats
      */
-    fun createDocumentProfile(): PhotoScanProfile {
-      return PhotoScanProfile(
-          name = "Document Scan",
-          description = "Optimized for scanning documents with perspective correction",
-          defaultDestination = "Documents/Scans",
-          outputFormat = PhotoOutputFormat.JPEG_QUALITY_85,
-          aspectRatioPreset = AspectRatioPreset.PORTRAIT_4_3,
-          correctionSettings =
-              CorrectionSettings(
-                  enablePerspectiveCorrection = true,
-                  enableRotationCorrection = true,
-                  perspectiveMode = PerspectiveMode.AUTO),
-          namingPattern = "{date}_{original}",
-          autoDetectEnabled = true)
+    fun markAsUsed(): PhotoScanProfile {
+        return copy(
+            lastUsedAt = DomainDefaults.currentTimeMillis(),
+            useCount = useCount + 1,
+            updatedAt = DomainDefaults.currentTimeMillis(),
+        )
     }
 
     /**
-     * Creates a profile optimized for photo albums.
+     * Validates this profile for correctness.
      *
-     * @return A photo album-optimized Photo Scan profile
+     * @return List of validation errors (empty if valid)
      */
-    fun createPhotoAlbumProfile(): PhotoScanProfile {
-      return PhotoScanProfile(
-          name = "Photo Album",
-          description = "High quality export for photo albums with 4x6 aspect ratio",
-          defaultDestination = "Pictures/PhotoScan/Albums",
-          outputFormat = PhotoOutputFormat.JPEG_QUALITY_95,
-          aspectRatioPreset = AspectRatioPreset.LANDSCAPE_3_2,
-          correctionSettings =
-              CorrectionSettings(
-                  enablePerspectiveCorrection = true, enableRotationCorrection = true),
-          namingPattern = "{original}_{counter4}",
-          autoDetectEnabled = true)
+    fun validate(): List<String> {
+        val errors = mutableListOf<String>()
+
+        if (name.isBlank()) {
+            errors.add("Profile name cannot be empty")
+        }
+
+        if (name.length > 100) {
+            errors.add("Profile name cannot exceed 100 characters")
+        }
+
+        if (description.length > 500) {
+            errors.add("Profile description cannot exceed 500 characters")
+        }
+
+        if (defaultDestination.isBlank()) {
+            errors.add("Default destination cannot be empty")
+        }
+
+        if (namingPattern.isBlank()) {
+            errors.add("Naming pattern cannot be empty")
+        }
+
+        if (
+            !namingPattern.contains("{original}") &&
+                !namingPattern.contains("{counter") &&
+                !namingPattern.contains("{date")
+        ) {
+            errors.add(
+                "Naming pattern should contain at least one of: {original}, {counter}, {date}"
+            )
+        }
+
+        return errors
     }
-  }
+
+    companion object {
+        /**
+         * Creates a default profile with sensible defaults.
+         *
+         * @return A default Photo Scan profile
+         */
+        fun createDefault(): PhotoScanProfile {
+            return PhotoScanProfile(
+                name = "Default",
+                description = "Standard photo scan settings with high-quality JPEG output",
+                defaultDestination = "Pictures/PhotoScan",
+                outputFormat = PhotoOutputFormat.JPEG_QUALITY_90,
+                aspectRatioPreset = AspectRatioPreset.ORIGINAL,
+                correctionSettings =
+                    CorrectionSettings(
+                        enablePerspectiveCorrection = true,
+                        enableRotationCorrection = false,
+                    ),
+                namingPattern = "{original}",
+                autoDetectEnabled = true,
+            )
+        }
+
+        /**
+         * Creates a profile optimized for documents.
+         *
+         * @return A document-optimized Photo Scan profile
+         */
+        fun createDocumentProfile(): PhotoScanProfile {
+            return PhotoScanProfile(
+                name = "Document Scan",
+                description = "Optimized for scanning documents with perspective correction",
+                defaultDestination = "Documents/Scans",
+                outputFormat = PhotoOutputFormat.JPEG_QUALITY_85,
+                aspectRatioPreset = AspectRatioPreset.PORTRAIT_4_3,
+                correctionSettings =
+                    CorrectionSettings(
+                        enablePerspectiveCorrection = true,
+                        enableRotationCorrection = true,
+                        perspectiveMode = PerspectiveMode.AUTO,
+                    ),
+                namingPattern = "{date}_{original}",
+                autoDetectEnabled = true,
+            )
+        }
+
+        /**
+         * Creates a profile optimized for photo albums.
+         *
+         * @return A photo album-optimized Photo Scan profile
+         */
+        fun createPhotoAlbumProfile(): PhotoScanProfile {
+            return PhotoScanProfile(
+                name = "Photo Album",
+                description = "High quality export for photo albums with 4x6 aspect ratio",
+                defaultDestination = "Pictures/PhotoScan/Albums",
+                outputFormat = PhotoOutputFormat.JPEG_QUALITY_95,
+                aspectRatioPreset = AspectRatioPreset.LANDSCAPE_3_2,
+                correctionSettings =
+                    CorrectionSettings(
+                        enablePerspectiveCorrection = true,
+                        enableRotationCorrection = true,
+                    ),
+                namingPattern = "{original}_{counter4}",
+                autoDetectEnabled = true,
+            )
+        }
+    }
 }

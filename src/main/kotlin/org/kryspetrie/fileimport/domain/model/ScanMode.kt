@@ -9,9 +9,9 @@ package org.kryspetrie.fileimport.domain.model
  *   multiple photos from single image files
  */
 enum class ScanMode {
-  /** Standard import mode with duplicate detection */
-  STANDARD,
+    /** Standard import mode with duplicate detection */
+    STANDARD,
 
-  /** Photo scan mode - detects corners of photos on background, splits multiple photos */
-  PHOTO_SCAN
+    /** Photo scan mode - detects corners of photos on background, splits multiple photos */
+    PHOTO_SCAN,
 }

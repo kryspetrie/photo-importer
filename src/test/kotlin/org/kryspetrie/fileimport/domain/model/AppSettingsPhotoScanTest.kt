@@ -1,6 +1,8 @@
 package org.kryspetrie.fileimport.domain.model
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
@@ -10,163 +12,178 @@ import org.junit.jupiter.api.Test
  */
 class AppSettingsPhotoScanTest {
 
-  // ==================== Default Profile Tests ====================
+    // ==================== Default Profile Tests ====================
 
-  @Test
-  fun `default settings includes default photo scan profile`() {
-    val settings = AppSettings()
+    @Test
+    fun `default settings includes default photo scan profile`() {
+        val settings = AppSettings()
 
-    assertEquals(1, settings.photoScanProfiles.size)
-    assertEquals("Default", settings.photoScanProfiles.first().name)
-  }
+        assertEquals(1, settings.photoScanProfiles.size)
+        assertEquals("Default", settings.photoScanProfiles.first().name)
+    }
 
-  @Test
-  fun `activePhotoScanProfile returns selected profile by ID`() {
-    val profile1 = PhotoScanProfile(id = "id1", name = "Profile 1")
-    val profile2 = PhotoScanProfile(id = "id2", name = "Profile 2")
-    val settings =
-        AppSettings(
-            photoScanProfiles = listOf(profile1, profile2), activePhotoScanProfileId = "id2")
+    @Test
+    fun `activePhotoScanProfile returns selected profile by ID`() {
+        val profile1 = PhotoScanProfile(id = "id1", name = "Profile 1")
+        val profile2 = PhotoScanProfile(id = "id2", name = "Profile 2")
+        val settings =
+            AppSettings(
+                photoScanProfiles = listOf(profile1, profile2),
+                activePhotoScanProfileId = "id2",
+            )
 
-    assertEquals("Profile 2", settings.activePhotoScanProfile.name)
-  }
+        assertEquals("Profile 2", settings.activePhotoScanProfile.name)
+    }
 
-  @Test
-  fun `activePhotoScanProfile returns first profile when no ID set`() {
-    val profile1 = PhotoScanProfile(id = "id1", name = "First")
-    val profile2 = PhotoScanProfile(id = "id2", name = "Second")
-    val settings =
-        AppSettings(photoScanProfiles = listOf(profile1, profile2), activePhotoScanProfileId = null)
+    @Test
+    fun `activePhotoScanProfile returns first profile when no ID set`() {
+        val profile1 = PhotoScanProfile(id = "id1", name = "First")
+        val profile2 = PhotoScanProfile(id = "id2", name = "Second")
+        val settings =
+            AppSettings(
+                photoScanProfiles = listOf(profile1, profile2),
+                activePhotoScanProfileId = null,
+            )
 
-    assertEquals("First", settings.activePhotoScanProfile.name)
-  }
+        assertEquals("First", settings.activePhotoScanProfile.name)
+    }
 
-  @Test
-  fun `activePhotoScanProfile returns default when no profiles`() {
-    val settings = AppSettings(photoScanProfiles = emptyList())
+    @Test
+    fun `activePhotoScanProfile returns default when no profiles`() {
+        val settings = AppSettings(photoScanProfiles = emptyList())
 
-    val profile = settings.activePhotoScanProfile
+        val profile = settings.activePhotoScanProfile
 
-    assertNotNull(profile)
-    assertEquals("Default", profile.name)
-  }
+        assertNotNull(profile)
+        assertEquals("Default", profile.name)
+    }
 
-  // ==================== Recent Destinations Tests ====================
+    // ==================== Recent Destinations Tests ====================
 
-  @Test
-  fun `lastPhotoScanDestination returns recent destination when available`() {
-    val settings = AppSettings(recentPhotoScanDestinations = listOf("/recent/path", "/older/path"))
+    @Test
+    fun `lastPhotoScanDestination returns recent destination when available`() {
+        val settings =
+            AppSettings(recentPhotoScanDestinations = listOf("/recent/path", "/older/path"))
 
-    assertEquals("/recent/path", settings.lastPhotoScanDestination)
-  }
+        assertEquals("/recent/path", settings.lastPhotoScanDestination)
+    }
 
-  @Test
-  fun `lastPhotoScanDestination returns profile destination when no recent`() {
-    val profile = PhotoScanProfile(name = "Test", defaultDestination = "~/Pictures/Scans")
-    val settings =
-        AppSettings(photoScanProfiles = listOf(profile), recentPhotoScanDestinations = emptyList())
+    @Test
+    fun `lastPhotoScanDestination returns profile destination when no recent`() {
+        val profile = PhotoScanProfile(name = "Test", defaultDestination = "~/Pictures/Scans")
+        val settings =
+            AppSettings(
+                photoScanProfiles = listOf(profile),
+                recentPhotoScanDestinations = emptyList(),
+            )
 
-    val lastDest = settings.lastPhotoScanDestination
+        val lastDest = settings.lastPhotoScanDestination
 
-    assertTrue(lastDest.contains("Pictures"))
-    assertTrue(lastDest.contains("Scans"))
-  }
+        assertTrue(lastDest.contains("Pictures"))
+        assertTrue(lastDest.contains("Scans"))
+    }
 
-  @Test
-  fun `recent destinations are ordered by recency`() {
-    val settings =
-        AppSettings(
-            recentPhotoScanDestinations =
-                listOf("/path/1", "/path/2", "/path/3", "/path/4", "/path/5"))
+    @Test
+    fun `recent destinations are ordered by recency`() {
+        val settings =
+            AppSettings(
+                recentPhotoScanDestinations =
+                    listOf("/path/1", "/path/2", "/path/3", "/path/4", "/path/5")
+            )
 
-    // Most recent should be first
-    assertEquals("/path/1", settings.lastPhotoScanDestination)
-  }
+        // Most recent should be first
+        assertEquals("/path/1", settings.lastPhotoScanDestination)
+    }
 
-  // ==================== Profile Management Tests ====================
+    // ==================== Profile Management Tests ====================
 
-  @Test
-  fun `can add new photo scan profile`() {
-    val settings = AppSettings()
-    val newProfile = PhotoScanProfile(name = "New Profile")
+    @Test
+    fun `can add new photo scan profile`() {
+        val settings = AppSettings()
+        val newProfile = PhotoScanProfile(name = "New Profile")
 
-    val updated = settings.copy(photoScanProfiles = settings.photoScanProfiles + newProfile)
+        val updated = settings.copy(photoScanProfiles = settings.photoScanProfiles + newProfile)
 
-    assertEquals(2, updated.photoScanProfiles.size)
-    assertTrue(updated.photoScanProfiles.any { it.name == "New Profile" })
-  }
+        assertEquals(2, updated.photoScanProfiles.size)
+        assertTrue(updated.photoScanProfiles.any { it.name == "New Profile" })
+    }
 
-  @Test
-  fun `can remove photo scan profile`() {
-    val profile1 = PhotoScanProfile(id = "id1", name = "Keep")
-    val profile2 = PhotoScanProfile(id = "id2", name = "Remove")
-    val settings = AppSettings(photoScanProfiles = listOf(profile1, profile2))
+    @Test
+    fun `can remove photo scan profile`() {
+        val profile1 = PhotoScanProfile(id = "id1", name = "Keep")
+        val profile2 = PhotoScanProfile(id = "id2", name = "Remove")
+        val settings = AppSettings(photoScanProfiles = listOf(profile1, profile2))
 
-    val updated =
-        settings.copy(photoScanProfiles = settings.photoScanProfiles.filter { it.id != "id2" })
+        val updated =
+            settings.copy(photoScanProfiles = settings.photoScanProfiles.filter { it.id != "id2" })
 
-    assertEquals(1, updated.photoScanProfiles.size)
-    assertTrue(updated.photoScanProfiles.all { it.name == "Keep" })
-  }
+        assertEquals(1, updated.photoScanProfiles.size)
+        assertTrue(updated.photoScanProfiles.all { it.name == "Keep" })
+    }
 
-  @Test
-  fun `can update photo scan profile`() {
-    val profile1 = PhotoScanProfile(id = "id1", name = "Original")
-    val settings = AppSettings(photoScanProfiles = listOf(profile1))
+    @Test
+    fun `can update photo scan profile`() {
+        val profile1 = PhotoScanProfile(id = "id1", name = "Original")
+        val settings = AppSettings(photoScanProfiles = listOf(profile1))
 
-    val updatedProfile = profile1.copy(name = "Updated")
-    val updated =
-        settings.copy(
-            photoScanProfiles =
-                settings.photoScanProfiles.map { if (it.id == "id1") updatedProfile else it })
+        val updatedProfile = profile1.copy(name = "Updated")
+        val updated =
+            settings.copy(
+                photoScanProfiles =
+                    settings.photoScanProfiles.map { if (it.id == "id1") updatedProfile else it }
+            )
 
-    assertEquals("Updated", updated.photoScanProfiles.first().name)
-  }
+        assertEquals("Updated", updated.photoScanProfiles.first().name)
+    }
 
-  @Test
-  fun `active profile ID can be changed`() {
-    val profile1 = PhotoScanProfile(id = "id1", name = "Profile 1")
-    val profile2 = PhotoScanProfile(id = "id2", name = "Profile 2")
-    val settings =
-        AppSettings(
-            photoScanProfiles = listOf(profile1, profile2), activePhotoScanProfileId = "id1")
+    @Test
+    fun `active profile ID can be changed`() {
+        val profile1 = PhotoScanProfile(id = "id1", name = "Profile 1")
+        val profile2 = PhotoScanProfile(id = "id2", name = "Profile 2")
+        val settings =
+            AppSettings(
+                photoScanProfiles = listOf(profile1, profile2),
+                activePhotoScanProfileId = "id1",
+            )
 
-    val updated = settings.copy(activePhotoScanProfileId = "id2")
+        val updated = settings.copy(activePhotoScanProfileId = "id2")
 
-    assertEquals("id2", updated.activePhotoScanProfileId)
-    assertEquals("Profile 2", updated.activePhotoScanProfile.name)
-  }
+        assertEquals("id2", updated.activePhotoScanProfileId)
+        assertEquals("Profile 2", updated.activePhotoScanProfile.name)
+    }
 
-  // ==================== Serialization Tests ====================
+    // ==================== Serialization Tests ====================
 
-  @Test
-  fun `settings can be serialized and deserialized`() {
-    val original =
-        AppSettings(
-            photoScanProfiles =
-                listOf(
-                    PhotoScanProfile(id = "id1", name = "Profile 1"),
-                    PhotoScanProfile.createDocumentProfile()),
-            activePhotoScanProfileId = "id1",
-            recentPhotoScanDestinations = listOf("/recent/path"))
+    @Test
+    fun `settings can be serialized and deserialized`() {
+        val original =
+            AppSettings(
+                photoScanProfiles =
+                    listOf(
+                        PhotoScanProfile(id = "id1", name = "Profile 1"),
+                        PhotoScanProfile.createDocumentProfile(),
+                    ),
+                activePhotoScanProfileId = "id1",
+                recentPhotoScanDestinations = listOf("/recent/path"),
+            )
 
-    // Serialize
-    val json =
-        kotlinx.serialization.json
-            .Json {
-              prettyPrint = true
-              ignoreUnknownKeys = true
-            }
-            .encodeToString(AppSettings.serializer(), original)
+        // Serialize
+        val json =
+            kotlinx.serialization.json
+                .Json {
+                    prettyPrint = true
+                    ignoreUnknownKeys = true
+                }
+                .encodeToString(AppSettings.serializer(), original)
 
-    // Deserialize
-    val deserialized =
-        kotlinx.serialization.json
-            .Json { ignoreUnknownKeys = true }
-            .decodeFromString(AppSettings.serializer(), json)
+        // Deserialize
+        val deserialized =
+            kotlinx.serialization.json
+                .Json { ignoreUnknownKeys = true }
+                .decodeFromString(AppSettings.serializer(), json)
 
-    assertEquals(2, deserialized.photoScanProfiles.size)
-    assertEquals("id1", deserialized.activePhotoScanProfileId)
-    assertEquals(listOf("/recent/path"), deserialized.recentPhotoScanDestinations)
-  }
+        assertEquals(2, deserialized.photoScanProfiles.size)
+        assertEquals("id1", deserialized.activePhotoScanProfileId)
+        assertEquals(listOf("/recent/path"), deserialized.recentPhotoScanDestinations)
+    }
 }

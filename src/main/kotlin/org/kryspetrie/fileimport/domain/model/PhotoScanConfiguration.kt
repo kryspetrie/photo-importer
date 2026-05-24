@@ -31,5 +31,5 @@ data class PhotoScanConfiguration(
     val tags: String = "",
 
     /** Additional notes/metadata */
-    val notes: String = ""
+    val notes: String = "",
 )

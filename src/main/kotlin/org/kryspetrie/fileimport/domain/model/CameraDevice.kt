@@ -1,5 +1,7 @@
 package org.kryspetrie.fileimport.domain.model
 
+import java.util.Locale
+
 data class CameraDevice(
     val id: String,
     val name: String,
@@ -11,31 +13,31 @@ data class CameraDevice(
     val availableSpace: Long?,
     val isConnected: Boolean = true,
     val deviceType: DeviceType = DeviceType.CAMERA,
-    val lastSeen: Long = System.currentTimeMillis()
+    val lastSeen: Long = DomainDefaults.currentTimeMillis(),
 ) {
-  val displayName: String
-    get() = name.ifBlank { model ?: "Unknown Device" }
+    val displayName: String
+        get() = name.ifBlank { model ?: "Unknown Device" }
 
-  val formattedCapacity: String
-    get() = storageCapacity?.let { formatBytes(it) } ?: "Unknown"
+    val formattedCapacity: String
+        get() = storageCapacity?.let { formatBytes(it) } ?: "Unknown"
 
-  val formattedAvailableSpace: String
-    get() = availableSpace?.let { formatBytes(it) } ?: "Unknown"
+    val formattedAvailableSpace: String
+        get() = availableSpace?.let { formatBytes(it) } ?: "Unknown"
 
-  private fun formatBytes(bytes: Long): String {
-    return when {
-      bytes >= 1_000_000_000 -> String.format("%.1f GB", bytes / 1_000_000_000.0)
-      bytes >= 1_000_000 -> String.format("%.1f MB", bytes / 1_000_000.0)
-      bytes >= 1_000 -> String.format("%.1f KB", bytes / 1_000.0)
-      else -> "$bytes bytes"
+    private fun formatBytes(bytes: Long): String {
+        return when {
+            bytes >= 1_000_000_000 -> String.format(Locale.US, "%.1f GB", bytes / 1_000_000_000.0)
+            bytes >= 1_000_000 -> String.format(Locale.US, "%.1f MB", bytes / 1_000_000.0)
+            bytes >= 1_000 -> String.format(Locale.US, "%.1f KB", bytes / 1_000.0)
+            else -> "$bytes bytes"
+        }
     }
-  }
 }
 
 enum class DeviceType {
-  CAMERA,
-  SD_CARD,
-  USB_DRIVE,
-  HARD_DRIVE,
-  UNKNOWN
+    CAMERA,
+    SD_CARD,
+    USB_DRIVE,
+    HARD_DRIVE,
+    UNKNOWN,
 }

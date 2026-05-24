@@ -1,0 +1,31 @@
+# Detekt configuration for Petrie File Importer
+
+build:
+  maxIssues: 999999
+
+style:
+  WildcardImport:
+    active: true
+
+potential-bugs:
+  UnreachableCode:
+    active: false
+
+naming:
+  FunctionNaming:
+    ignoreAnnotated:
+      - 'Composable'
+  InvalidPackageDeclaration:
+    active: false
+
+complexity:
+  LongParameterList:
+    active: false
+  TooManyFunctions:
+    active: false
+
+exceptions:
+  TooGenericExceptionCaught:
+    active: false
+  TooGenericExceptionThrown:
+    active: false

@@ -17,16 +17,16 @@ class PhotoScanDetectorService(
     private val maxPhotos: Int = 4,
 ) {
 
-  private val detector = HybridCornerDetector(rectangleDetector)
+    private val detector = HybridCornerDetector(rectangleDetector)
 
-  /**
-   * Detects rectangular photo regions in a scanned image.
-   *
-   * @param image The scanned image
-   * @return [DetectedPhoto] objects with corners ordered TL→TR→BR→BL.
-   */
-  fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
-    detector.targetPhotoCount = maxPhotos
-    return detector.detectPhotos(image)
-  }
+    /**
+     * Detects rectangular photo regions in a scanned image.
+     *
+     * @param image The scanned image
+     * @return [DetectedPhoto] objects with corners ordered TL→TR→BR→BL.
+     */
+    fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
+        detector.targetPhotoCount = maxPhotos
+        return detector.detectPhotos(image)
+    }
 }

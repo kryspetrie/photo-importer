@@ -17,24 +17,26 @@ data class TabSettings(
     val recentDestinationPaths: List<String> = emptyList(),
 
     // Import configuration
-    val configuration: ImportConfiguration = ImportConfiguration()
+    val configuration: ImportConfiguration = ImportConfiguration(),
 ) {
-  fun withRecentSourcePath(path: String): TabSettings =
-      if (path.isBlank()) this
-      else
-          copy(
-              lastSourcePath = path,
-              recentSourcePaths = listOf(path) + recentSourcePaths.filter { it != path }.take(4))
+    fun withRecentSourcePath(path: String): TabSettings =
+        if (path.isBlank()) this
+        else
+            copy(
+                lastSourcePath = path,
+                recentSourcePaths = listOf(path) + recentSourcePaths.filter { it != path }.take(4),
+            )
 
-  fun withRecentDestinationPath(path: String): TabSettings =
-      if (path.isBlank()) this
-      else
-          copy(
-              lastDestinationPath = path,
-              recentDestinationPaths =
-                  listOf(path) + recentDestinationPaths.filter { it != path }.take(4))
+    fun withRecentDestinationPath(path: String): TabSettings =
+        if (path.isBlank()) this
+        else
+            copy(
+                lastDestinationPath = path,
+                recentDestinationPaths =
+                    listOf(path) + recentDestinationPaths.filter { it != path }.take(4),
+            )
 
-  fun withConfiguration(config: ImportConfiguration): TabSettings = copy(configuration = config)
+    fun withConfiguration(config: ImportConfiguration): TabSettings = copy(configuration = config)
 }
 
 /**
@@ -114,7 +116,7 @@ data class ImportProfile(
      * - Safe to rename profiles
      * - Can be referenced by [AppSettings.activeProfileId]
      */
-    val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String = DomainDefaults.generateId(),
 
     /**
      * Profile display name.
@@ -194,7 +196,7 @@ data class ImportProfile(
      * - Audit trail
      * - Sync conflict resolution
      */
-    val createdAt: Long = System.currentTimeMillis(),
+    val createdAt: Long = DomainDefaults.currentTimeMillis(),
 
     /**
      * Profile last modification timestamp.
@@ -204,7 +206,7 @@ data class ImportProfile(
      * - Sort by last used
      * - Sync and backup decisions
      */
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = DomainDefaults.currentTimeMillis(),
 )
 
 /**
@@ -379,89 +381,91 @@ data class AppSettings(
      * workflow (when used directly without the wizard). These settings are isolated from Media
      * Import and Photo Scan Import tabs.
      */
-    val photoScanTabSettings: TabSettings = TabSettings()
+    val photoScanTabSettings: TabSettings = TabSettings(),
 ) {
-  /** Returns the currently active Photo Scan profile, or the default if none is selected. */
-  val activePhotoScanProfile: PhotoScanProfile
-    get() =
-        photoScanProfiles.find { it.id == activePhotoScanProfileId }
-            ?: photoScanProfiles.firstOrNull()
-            ?: PhotoScanProfile.createDefault()
+    /** Returns the currently active Photo Scan profile, or the default if none is selected. */
+    val activePhotoScanProfile: PhotoScanProfile
+        get() =
+            photoScanProfiles.find { it.id == activePhotoScanProfileId }
+                ?: photoScanProfiles.firstOrNull()
+                ?: PhotoScanProfile.createDefault()
 
-  /**
-   * Returns the most recently used destination, or the default destination from the active profile.
-   */
-  val lastPhotoScanDestination: String
-    get() = recentPhotoScanDestinations.firstOrNull() ?: activePhotoScanProfile.resolveDestination()
+    /**
+     * Returns the most recently used destination, or the default destination from the active
+     * profile.
+     */
+    val lastPhotoScanDestination: String
+        get() =
+            recentPhotoScanDestinations.firstOrNull() ?: activePhotoScanProfile.resolveDestination()
 
-  /**
-   * Adds a path to the recent source paths list.
-   * - Moves to front if already exists
-   * - Keeps max 5 entries
-   * - Skips blank paths
-   *
-   * @param path The source path to add
-   * @return Updated settings with path added to recentSourcePaths
-   */
-  fun withRecentSourcePath(path: String): AppSettings =
-      if (path.isBlank()) this
-      else withImportTabSettings(importTabSettings.withRecentSourcePath(path))
+    /**
+     * Adds a path to the recent source paths list.
+     * - Moves to front if already exists
+     * - Keeps max 5 entries
+     * - Skips blank paths
+     *
+     * @param path The source path to add
+     * @return Updated settings with path added to recentSourcePaths
+     */
+    fun withRecentSourcePath(path: String): AppSettings =
+        if (path.isBlank()) this
+        else withImportTabSettings(importTabSettings.withRecentSourcePath(path))
 
-  /**
-   * Adds a path to the recent destination paths list.
-   * - Moves to front if already exists
-   * - Keeps max 5 entries
-   * - Skips blank paths
-   *
-   * @param path The destination path to add
-   * @return Updated settings with path added to recentDestinationPaths
-   */
-  fun withRecentDestinationPath(path: String): AppSettings =
-      if (path.isBlank()) this
-      else withImportTabSettings(importTabSettings.withRecentDestinationPath(path))
+    /**
+     * Adds a path to the recent destination paths list.
+     * - Moves to front if already exists
+     * - Keeps max 5 entries
+     * - Skips blank paths
+     *
+     * @param path The destination path to add
+     * @return Updated settings with path added to recentDestinationPaths
+     */
+    fun withRecentDestinationPath(path: String): AppSettings =
+        if (path.isBlank()) this
+        else withImportTabSettings(importTabSettings.withRecentDestinationPath(path))
 
-  /**
-   * Adds a path to the recent Photo Scan destinations list.
-   * - Moves to front if already exists
-   * - Keeps max 5 entries
-   * - Skips blank paths
-   *
-   * @param path The Photo Scan destination path to add
-   * @return Updated settings with path added to recentPhotoScanDestinations
-   */
-  fun withRecentPhotoScanDestination(path: String): AppSettings =
-      if (path.isBlank()) this
-      else {
-        val updated = recentPhotoScanDestinations.filter { it != path }.take(4)
-        copy(recentPhotoScanDestinations = listOf(path) + updated)
-      }
+    /**
+     * Adds a path to the recent Photo Scan destinations list.
+     * - Moves to front if already exists
+     * - Keeps max 5 entries
+     * - Skips blank paths
+     *
+     * @param path The Photo Scan destination path to add
+     * @return Updated settings with path added to recentPhotoScanDestinations
+     */
+    fun withRecentPhotoScanDestination(path: String): AppSettings =
+        if (path.isBlank()) this
+        else {
+            val updated = recentPhotoScanDestinations.filter { it != path }.take(4)
+            copy(recentPhotoScanDestinations = listOf(path) + updated)
+        }
 
-  /**
-   * Updates the Import tab settings.
-   *
-   * @param tabSettings New tab settings to persist
-   * @return Updated settings with new Import tab settings
-   */
-  fun withImportTabSettings(tabSettings: TabSettings): AppSettings =
-      copy(importTabSettings = tabSettings)
+    /**
+     * Updates the Import tab settings.
+     *
+     * @param tabSettings New tab settings to persist
+     * @return Updated settings with new Import tab settings
+     */
+    fun withImportTabSettings(tabSettings: TabSettings): AppSettings =
+        copy(importTabSettings = tabSettings)
 
-  /**
-   * Updates the Photo Import tab settings.
-   *
-   * @param tabSettings New tab settings to persist
-   * @return Updated settings with new Photo Import tab settings
-   */
-  fun withPhotoScanImportTabSettings(tabSettings: TabSettings): AppSettings =
-      copy(photoScanImportTabSettings = tabSettings)
+    /**
+     * Updates the Photo Import tab settings.
+     *
+     * @param tabSettings New tab settings to persist
+     * @return Updated settings with new Photo Import tab settings
+     */
+    fun withPhotoScanImportTabSettings(tabSettings: TabSettings): AppSettings =
+        copy(photoScanImportTabSettings = tabSettings)
 
-  /**
-   * Updates the Photo Scan tab settings.
-   *
-   * @param tabSettings New tab settings to persist
-   * @return Updated settings with new Photo Scan tab settings
-   */
-  fun withPhotoScanTabSettings(tabSettings: TabSettings): AppSettings =
-      copy(photoScanTabSettings = tabSettings)
+    /**
+     * Updates the Photo Scan tab settings.
+     *
+     * @param tabSettings New tab settings to persist
+     * @return Updated settings with new Photo Scan tab settings
+     */
+    fun withPhotoScanTabSettings(tabSettings: TabSettings): AppSettings =
+        copy(photoScanTabSettings = tabSettings)
 }
 
 /**
@@ -541,7 +545,7 @@ data class WindowState(
      * If true, window should be restored to maximized state on startup. Takes precedence over
      * width/height when restoring.
      */
-    val isMaximized: Boolean = false
+    val isMaximized: Boolean = false,
 )
 
 /**
@@ -572,36 +576,36 @@ data class WindowState(
  * @see DarkColorScheme Dark theme colors
  */
 enum class AppTheme {
-  /**
-   * Light theme - light backgrounds, dark text.
-   *
-   * Best for:
-   * - Bright environments
-   * - Daytime use
-   * - Users who prefer traditional light UI
-   */
-  LIGHT,
+    /**
+     * Light theme - light backgrounds, dark text.
+     *
+     * Best for:
+     * - Bright environments
+     * - Daytime use
+     * - Users who prefer traditional light UI
+     */
+    LIGHT,
 
-  /**
-   * Dark theme - dark backgrounds, light text.
-   *
-   * Best for:
-   * - Low-light environments
-   * - Nighttime use
-   * - Reducing eye strain
-   * - OLED displays (saves power)
-   */
-  DARK,
+    /**
+     * Dark theme - dark backgrounds, light text.
+     *
+     * Best for:
+     * - Low-light environments
+     * - Nighttime use
+     * - Reducing eye strain
+     * - OLED displays (saves power)
+     */
+    DARK,
 
-  /**
-   * System theme - follows operating system setting.
-   *
-   * Automatically switches between light and dark based on:
-   * - macOS: System Preferences → General → Appearance
-   * - Windows: Settings → Personalization → Colors → Choose your mode
-   * - Linux: Depends on desktop environment (GNOME, KDE, etc.)
-   *
-   * Most convenient option for most users.
-   */
-  SYSTEM
+    /**
+     * System theme - follows operating system setting.
+     *
+     * Automatically switches between light and dark based on:
+     * - macOS: System Preferences → General → Appearance
+     * - Windows: Settings → Personalization → Colors → Choose your mode
+     * - Linux: Depends on desktop environment (GNOME, KDE, etc.)
+     *
+     * Most convenient option for most users.
+     */
+    SYSTEM,
 }

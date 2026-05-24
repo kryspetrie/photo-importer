@@ -87,95 +87,102 @@ private const val APP_TITLE = "Petrie Image Importer"
  * @see application Compose Desktop application lifecycle
  */
 fun main(args: Array<String>) {
-  // Check for CLI mode - allows running headless for automation
-  if (args.isNotEmpty() && args[0] == "--cli") {
-    org.kryspetrie.fileimport.cli.main(args.drop(1).toTypedArray())
-    return
-  }
-
-  // Initialize dependency injection container
-  // This is equivalent to Spring's ApplicationContext initialization
-  startKoin { modules(appModule) }
-
-  // Load persisted application settings
-  // Settings include: theme preference, import profiles, window dimensions
-  val settingsAdapter = SettingsAdapter()
-  val settings = runBlocking { settingsAdapter.loadSettings() }
-
-  // Initialize window state with persisted dimensions
-  // Uses Compose's dp (density-independent pixels) for consistent sizing across displays
-  val windowState =
-      WindowState(width = settings.windowState.width.dp, height = settings.windowState.height.dp)
-
-  // Generate application icon from embedded PNG resource
-  // Icon is used in window title bar, taskbar, and application switcher
-  val appIcon = BitmapPainter(createAppIcon(512).toComposeImageBitmap())
-
-  // Start Compose Desktop application lifecycle
-  // This creates the composition root and enters the UI event loop
-  application {
-    // Mutable state holder for current settings
-    // Changes to this state trigger recomposition of dependent UI
-    val currentSettings = mutableStateOf(settings)
-
-    // Get the application logger
-    val appLogger: AppLogger = org.koin.core.context.GlobalContext.get().get()
-
-    // Callback to persist settings changes
-    // Called when user changes theme or other persisted settings
-    // Runs coroutine to save settings asynchronously, then updates state
-    val onSettingsChange = { newSettings: org.kryspetrie.fileimport.domain.model.AppSettings ->
-      runBlocking { settingsAdapter.saveSettings(newSettings) }
-      currentSettings.value = newSettings
+    // Check for CLI mode - allows running headless for automation
+    if (args.isNotEmpty() && args[0] == "--cli") {
+        org.kryspetrie.fileimport.cli.main(args.drop(1).toTypedArray())
+        return
     }
 
-    // Create main application window
-    // Window is the top-level container for all Compose UI content
-    Window(
-        // Callback when user clicks window close button
-        onCloseRequest = ::exitApplication,
-        // Window dimensions and position
-        state = windowState,
-        // Window title shown in title bar
-        title = APP_TITLE,
-        // Application icon for window decorations
-        icon = appIcon) {
-          // Create application menu bar (File, View, Help)
-          // Standard desktop application menu pattern
-          MenuBar {
-            Menu("File") { Item("Quit", onClick = ::exitApplication) }
-            Menu("View") {
-              // Theme switching menu items
-              // Updates persisted settings and triggers UI recomposition
-              Item(
-                  "Light Theme",
-                  onClick = {
-                    onSettingsChange(currentSettings.value.copy(theme = AppTheme.LIGHT))
-                  })
-              Item(
-                  "Dark Theme",
-                  onClick = { onSettingsChange(currentSettings.value.copy(theme = AppTheme.DARK)) })
-              Item(
-                  "System Theme",
-                  onClick = {
-                    onSettingsChange(currentSettings.value.copy(theme = AppTheme.SYSTEM))
-                  })
-            }
-            Menu("Help") {
-              Item("View Log File") { appLogger.openLogFileWithSystemViewer() }
-              Item("About $APP_TITLE", onClick = {})
-            }
-          }
+    // Initialize dependency injection container
+    // This is equivalent to Spring's ApplicationContext initialization
+    startKoin { modules(appModule) }
 
-          // Render the main application UI
-          // This composable contains all screens, navigation, and state management
-          PetrieFileImporterApp(
-              // Current application settings (theme, profiles, etc.)
-              settings = currentSettings.value,
-              // Callback to update and persist settings
-              onSettingsChange = onSettingsChange,
-              // Window state for potential window management
-              windowState = windowState)
+    // Load persisted application settings
+    // Settings include: theme preference, import profiles, window dimensions
+    val settingsAdapter = SettingsAdapter()
+    val settings = runBlocking { settingsAdapter.loadSettings() }
+
+    // Initialize window state with persisted dimensions
+    // Uses Compose's dp (density-independent pixels) for consistent sizing across displays
+    val windowState =
+        WindowState(width = settings.windowState.width.dp, height = settings.windowState.height.dp)
+
+    // Generate application icon from embedded PNG resource
+    // Icon is used in window title bar, taskbar, and application switcher
+    val appIcon = BitmapPainter(createAppIcon(512).toComposeImageBitmap())
+
+    // Start Compose Desktop application lifecycle
+    // This creates the composition root and enters the UI event loop
+    application {
+        // Mutable state holder for current settings
+        // Changes to this state trigger recomposition of dependent UI
+        val currentSettings = mutableStateOf(settings)
+
+        // Get the application logger
+        val appLogger: AppLogger = org.koin.core.context.GlobalContext.get().get()
+
+        // Callback to persist settings changes
+        // Called when user changes theme or other persisted settings
+        // Runs coroutine to save settings asynchronously, then updates state
+        val onSettingsChange = { newSettings: org.kryspetrie.fileimport.domain.model.AppSettings ->
+            runBlocking { settingsAdapter.saveSettings(newSettings) }
+            currentSettings.value = newSettings
         }
-  }
+
+        // Create main application window
+        // Window is the top-level container for all Compose UI content
+        Window(
+            // Callback when user clicks window close button
+            onCloseRequest = ::exitApplication,
+            // Window dimensions and position
+            state = windowState,
+            // Window title shown in title bar
+            title = APP_TITLE,
+            // Application icon for window decorations
+            icon = appIcon,
+        ) {
+            // Create application menu bar (File, View, Help)
+            // Standard desktop application menu pattern
+            MenuBar {
+                Menu("File") { Item("Quit", onClick = ::exitApplication) }
+                Menu("View") {
+                    // Theme switching menu items
+                    // Updates persisted settings and triggers UI recomposition
+                    Item(
+                        "Light Theme",
+                        onClick = {
+                            onSettingsChange(currentSettings.value.copy(theme = AppTheme.LIGHT))
+                        },
+                    )
+                    Item(
+                        "Dark Theme",
+                        onClick = {
+                            onSettingsChange(currentSettings.value.copy(theme = AppTheme.DARK))
+                        },
+                    )
+                    Item(
+                        "System Theme",
+                        onClick = {
+                            onSettingsChange(currentSettings.value.copy(theme = AppTheme.SYSTEM))
+                        },
+                    )
+                }
+                Menu("Help") {
+                    Item("View Log File") { appLogger.openLogFileWithSystemViewer() }
+                    Item("About $APP_TITLE", onClick = {})
+                }
+            }
+
+            // Render the main application UI
+            // This composable contains all screens, navigation, and state management
+            PetrieFileImporterApp(
+                // Current application settings (theme, profiles, etc.)
+                settings = currentSettings.value,
+                // Callback to update and persist settings
+                onSettingsChange = onSettingsChange,
+                // Window state for potential window management
+                windowState = windowState,
+            )
+        }
+    }
 }

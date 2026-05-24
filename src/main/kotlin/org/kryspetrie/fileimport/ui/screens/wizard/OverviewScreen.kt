@@ -1,18 +1,61 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FitScreen
+import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -31,7 +74,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.infrastructure.wizard.*
+import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
+import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
+import org.kryspetrie.fileimport.infrastructure.wizard.Corner
+import org.kryspetrie.fileimport.infrastructure.wizard.FourPointState
+import org.kryspetrie.fileimport.ui.screens.wizard.KeyboardShortcutHelpDialog
+import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.infrastructure.wizard.Point
+import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
+import org.kryspetrie.fileimport.infrastructure.wizard.ZoomController
+import org.kryspetrie.fileimport.ui.screens.wizard.withWizardKeyboardShortcuts
 
 /**
  * Overview screen showing the full scanned image with all detected bounding boxes. Users can
@@ -205,6 +257,7 @@ fun OverviewScreen(
  * Consolidated controls panel for the bottom half of the overview screen. Contains all navigation,
  * mode selection, and action buttons.
  */
+@Suppress("UnusedParameter")
 @Composable
 private fun OverviewControlsPanel(
     state: PhotoScanWizardState,
@@ -351,6 +404,7 @@ private fun OverviewControlsPanel(
   }
 }
 
+@Suppress("UnusedParameter")
 @Composable
 private fun OverviewCanvas(
     state: PhotoScanWizardState,
@@ -367,7 +421,6 @@ private fun OverviewCanvas(
   // Hit detection for corners
   var draggedCorner by remember { mutableStateOf<Corner?>(null) }
   var isDraggingPhoto by remember { mutableStateOf(false) }
-  var lastDragPos by remember { mutableStateOf(Offset.Zero) }
   var draggedBoxIndex by remember { mutableStateOf(-1) }
 
   Canvas(
@@ -571,7 +624,9 @@ private fun findBoxHit(offset: Offset, boxes: BoundingBoxList, zoom: ZoomControl
     val minY = screenPoints.minOf { it.y }
     val maxY = screenPoints.maxOf { it.y }
 
-    if (offset.x >= minX && offset.x <= maxX && offset.y >= minY && offset.y <= maxY) {
+    val isXInRange = offset.x >= minX && offset.x <= maxX
+    val isYInRange = offset.y >= minY && offset.y <= maxY
+    if (isXInRange && isYInRange) {
       return i
     }
   }
@@ -802,7 +857,7 @@ private fun createSampledImage(image: BufferedImage, scale: Double): BufferedIma
     graphics.drawImage(image, 0, 0, targetWidth, targetHeight, null)
     graphics.dispose()
     sampled
-  } catch (e: Exception) {
+  } catch (_: Exception) {
     null
   }
 }

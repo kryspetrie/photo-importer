@@ -40,30 +40,31 @@ data class ImageMetadata(
     val videoCodec: String? = null,
     val audioCodec: String? = null,
     val bitrate: Long? = null,
-    val rotation: Int? = null
+    val rotation: Int? = null,
 ) {
-  val cameraModel: String
-    get() = listOfNotNull(make, model).joinToString(" ")
+    val cameraModel: String
+        get() = listOfNotNull(make, model).joinToString(" ")
 
-  val hasGpsData: Boolean
-    get() = latitude != null && longitude != null
+    val hasGpsData: Boolean
+        get() = latitude != null && longitude != null
 
-  val lensInfo: String
-    get() = lensModel ?: "Unknown"
+    val lensInfo: String
+        get() = lensModel ?: "Unknown"
 
-  val cameraMake: String
-    get() = make ?: "Unknown"
+    val cameraMake: String
+        get() = make ?: "Unknown"
 
-  val resolution: String?
-    get() =
-        if (imageWidth != null && imageHeight != null) "${imageWidth}\u00D7${imageHeight}" else null
+    val resolution: String?
+        get() =
+            if (imageWidth != null && imageHeight != null) "${imageWidth}\u00D7${imageHeight}"
+            else null
 
-  val durationFormatted: String?
-    get() {
-      val secs = durationSeconds ?: return null
-      val h = (secs / 3600).toInt()
-      val m = ((secs % 3600) / 60).toInt()
-      val s = (secs % 60).toInt()
-      return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
-    }
+    val durationFormatted: String?
+        get() {
+            val secs = durationSeconds ?: return null
+            val h = (secs / 3600).toInt()
+            val m = ((secs % 3600) / 60).toInt()
+            val s = (secs % 60).toInt()
+            return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+        }
 }

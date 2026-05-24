@@ -9,11 +9,11 @@ import kotlinx.serialization.Serializable
  * Determines whether files are moved (originals removed) or copied (originals preserved).
  */
 enum class ReorganizeMode {
-  /** Move files to new locations, removing originals */
-  MOVE,
+    /** Move files to new locations, removing originals */
+    MOVE,
 
-  /** Copy files to new locations, keeping originals intact */
-  COPY
+    /** Copy files to new locations, keeping originals intact */
+    COPY,
 }
 
 /**
@@ -29,21 +29,21 @@ data class ReorganizeMapping(
     val wouldConflict: Boolean = false,
     val isChanged: Boolean = true,
     /** Operation mode: MOVE or COPY */
-    val mode: ReorganizeMode = ReorganizeMode.MOVE
+    val mode: ReorganizeMode = ReorganizeMode.MOVE,
 ) {
-  val currentRelativePath: String
-    get() = file.file.name
+    val currentRelativePath: String
+        get() = file.file.name
 
-  val newRelativePath: String
-    get() = File(newPath).name
+    val newRelativePath: String
+        get() = File(newPath).name
 
-  /** Current parent directory */
-  val currentParent: String
-    get() = File(currentPath).parent
+    /** Current parent directory */
+    val currentParent: String
+        get() = File(currentPath).parent
 
-  /** New parent directory */
-  val newParent: String
-    get() = File(newPath).parent
+    /** New parent directory */
+    val newParent: String
+        get() = File(newPath).parent
 }
 
 /** Preview of reorganization operation before execution. */
@@ -53,7 +53,7 @@ data class ReorganizePreview(
     val changedFiles: Int,
     val conflictCount: Int,
     val newFolderCount: Int,
-    val operationMode: ReorganizeMode = ReorganizeMode.MOVE
+    val operationMode: ReorganizeMode = ReorganizeMode.MOVE,
 )
 
 /** Progress tracking during reorganization. */
@@ -62,17 +62,17 @@ data class ReorganizeProgress(
     val total: Int = 0,
     val currentFile: String = "",
     val phase: ReorganizePhase = ReorganizePhase.SCANNING,
-    val operationMode: ReorganizeMode = ReorganizeMode.MOVE
+    val operationMode: ReorganizeMode = ReorganizeMode.MOVE,
 )
 
 /** Phases of reorganization operation. */
 enum class ReorganizePhase {
-  SCANNING,
-  PREVIEWING,
-  EXECUTING,
-  COMPLETE,
-  ROLLING_BACK,
-  UNDOING
+    SCANNING,
+    PREVIEWING,
+    EXECUTING,
+    COMPLETE,
+    ROLLING_BACK,
+    UNDOING,
 }
 
 /** Results of a reorganization operation. */
@@ -84,7 +84,7 @@ data class ReorganizeResult(
     val errorCount: Int,
     val errors: List<String> = emptyList(),
     val journalPath: String? = null,
-    val operationMode: ReorganizeMode = ReorganizeMode.MOVE
+    val operationMode: ReorganizeMode = ReorganizeMode.MOVE,
 )
 
 /**
@@ -125,22 +125,22 @@ data class JournalEntry(
     val patternUsed: String = "",
 
     /** Whether file was renamed, moved, or both */
-    val changeType: FileChangeType = FileChangeType.BOTH
+    val changeType: FileChangeType = FileChangeType.BOTH,
 )
 
 /** Type of change applied to a file. */
 enum class FileChangeType {
-  /** Only filename changed */
-  RENAME_ONLY,
+    /** Only filename changed */
+    RENAME_ONLY,
 
-  /** Only location changed */
-  MOVE_ONLY,
+    /** Only location changed */
+    MOVE_ONLY,
 
-  /** Both filename and location changed */
-  BOTH,
+    /** Both filename and location changed */
+    BOTH,
 
-  /** No changes applied */
-  NONE
+    /** No changes applied */
+    NONE,
 }
 
 /**
@@ -151,10 +151,10 @@ enum class FileChangeType {
 @Serializable
 data class ReorganizeJournal(
     /** Unique identifier for this journal */
-    val id: String = java.util.UUID.randomUUID().toString(),
+    val id: String = DomainDefaults.generateId(),
 
     /** Timestamp when operation started */
-    val timestamp: Long = System.currentTimeMillis(),
+    val timestamp: Long = DomainDefaults.currentTimeMillis(),
 
     /** Human-readable timestamp */
     val timestampString: String = "",
@@ -184,14 +184,11 @@ data class ReorganizeJournal(
     val undone: Boolean = false,
 
     /** Notes about the operation */
-    val notes: String = ""
+    val notes: String = "",
 ) {
-  companion object {
-    fun createTimestampString(timestamp: Long): String {
-      val sdf = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.getDefault())
-      return sdf.format(java.util.Date(timestamp))
+    companion object {
+        fun createTimestampString(timestamp: Long): String = DomainDefaults.formatTimestamp(timestamp)
     }
-  }
 }
 
 /** Summary of a reorganize journal for display purposes. */
@@ -203,5 +200,5 @@ data class ReorganizeJournalSummary(
     val operationMode: ReorganizeMode,
     val totalFiles: Int,
     val changedFiles: Int,
-    val undone: Boolean
+    val undone: Boolean,
 )

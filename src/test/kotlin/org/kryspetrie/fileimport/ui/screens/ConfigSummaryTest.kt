@@ -1,92 +1,97 @@
 package org.kryspetrie.fileimport.ui.screens
 
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.ui.components.configSummary
 
 @DisplayName("configSummary")
 class ConfigSummaryTest {
 
-  @Test
-  @DisplayName("should show folder pattern and original names for defaults")
-  fun shouldShowDefaults() {
-    val config = ImportConfiguration()
-    val summary = configSummary(config)
+    @Test
+    @DisplayName("should show folder pattern and original names for defaults")
+    fun shouldShowDefaults() {
+        val config = ImportConfiguration()
+        val summary = configSummary(config)
 
-    assertThat(summary).contains("{yyyy-MM-dd}")
-    assertThat(summary).contains("original names")
-    assertThat(summary).contains("verify")
-    assertThat(summary).doesNotContain("delete source")
-    assertThat(summary).doesNotContain("dedup")
-  }
+        assertThat(summary).contains("{yyyy-MM-dd}")
+        assertThat(summary).contains("original names")
+        assertThat(summary).contains("verify")
+        assertThat(summary).doesNotContain("delete source")
+        assertThat(summary).doesNotContain("dedup")
+    }
 
-  @Test
-  @DisplayName("should show Flat when no subfolders")
-  fun shouldShowFlat() {
-    val config = ImportConfiguration(createSubfolders = false)
-    val summary = configSummary(config)
+    @Test
+    @DisplayName("should show Flat when no subfolders")
+    fun shouldShowFlat() {
+        val config = ImportConfiguration(createSubfolders = false)
+        val summary = configSummary(config)
 
-    assertThat(summary).startsWith("Flat")
-    assertThat(summary).doesNotContain("{yyyy-MM-dd}")
-  }
+        assertThat(summary).startsWith("Flat")
+        assertThat(summary).doesNotContain("{yyyy-MM-dd}")
+    }
 
-  @Test
-  @DisplayName("should show custom filename pattern when not preserving original")
-  fun shouldShowCustomFilename() {
-    val config =
-        ImportConfiguration(preserveOriginalName = false, fileNamePattern = "{yyyy}_{counter}")
-    val summary = configSummary(config)
+    @Test
+    @DisplayName("should show custom filename pattern when not preserving original")
+    fun shouldShowCustomFilename() {
+        val config =
+            ImportConfiguration(preserveOriginalName = false, fileNamePattern = "{yyyy}_{counter}")
+        val summary = configSummary(config)
 
-    assertThat(summary).contains("{yyyy}_{counter}")
-    assertThat(summary).doesNotContain("original names")
-  }
+        assertThat(summary).contains("{yyyy}_{counter}")
+        assertThat(summary).doesNotContain("original names")
+    }
 
-  @Test
-  @DisplayName("should include delete source when enabled")
-  fun shouldShowDeleteSource() {
-    val config = ImportConfiguration(deleteAfterImport = true)
-    val summary = configSummary(config)
+    @Test
+    @DisplayName("should include delete source when enabled")
+    fun shouldShowDeleteSource() {
+        val config = ImportConfiguration(deleteAfterImport = true)
+        val summary = configSummary(config)
 
-    assertThat(summary).contains("delete source")
-  }
+        assertThat(summary).contains("delete source")
+    }
 
-  @Test
-  @DisplayName("should include dedup when visual duplicates enabled")
-  fun shouldShowDedup() {
-    val config = ImportConfiguration(detectVisualDuplicates = true)
-    val summary = configSummary(config)
+    @Test
+    @DisplayName("should include dedup when visual duplicates enabled")
+    fun shouldShowDedup() {
+        val config = ImportConfiguration(detectVisualDuplicates = true)
+        val summary = configSummary(config)
 
-    assertThat(summary).contains("dedup")
-  }
+        assertThat(summary).contains("dedup")
+    }
 
-  @Test
-  @DisplayName("should not include verify when disabled")
-  fun shouldNotShowVerify() {
-    val config = ImportConfiguration(verifyAfterCopy = false)
-    val summary = configSummary(config)
+    @Test
+    @DisplayName("should not include verify when disabled")
+    fun shouldNotShowVerify() {
+        val config = ImportConfiguration(verifyAfterCopy = false)
+        val summary = configSummary(config)
 
-    assertThat(summary).doesNotContain("verify")
-  }
+        assertThat(summary).doesNotContain("verify")
+    }
 
-  @Test
-  @DisplayName("should show custom folder pattern")
-  fun shouldShowCustomFolderPattern() {
-    val config = ImportConfiguration(folderPattern = "{yyyy}/{MM}/{dd}")
-    val summary = configSummary(config)
+    @Test
+    @DisplayName("should show custom folder pattern")
+    fun shouldShowCustomFolderPattern() {
+        val config = ImportConfiguration(folderPattern = "{yyyy}/{MM}/{dd}")
+        val summary = configSummary(config)
 
-    assertThat(summary).contains("{yyyy}/{MM}/{dd}")
-  }
+        assertThat(summary).contains("{yyyy}/{MM}/{dd}")
+    }
 
-  @Test
-  @DisplayName("should combine multiple flags")
-  fun shouldCombineFlags() {
-    val config =
-        ImportConfiguration(
-            deleteAfterImport = true, detectVisualDuplicates = true, verifyAfterCopy = true)
-    val summary = configSummary(config)
+    @Test
+    @DisplayName("should combine multiple flags")
+    fun shouldCombineFlags() {
+        val config =
+            ImportConfiguration(
+                deleteAfterImport = true,
+                detectVisualDuplicates = true,
+                verifyAfterCopy = true,
+            )
+        val summary = configSummary(config)
 
-    assertThat(summary).contains("verify")
-    assertThat(summary).contains("delete source")
-    assertThat(summary).contains("dedup")
-  }
+        assertThat(summary).contains("verify")
+        assertThat(summary).contains("delete source")
+        assertThat(summary).contains("dedup")
+    }
 }

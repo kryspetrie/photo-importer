@@ -2,8 +2,12 @@ package org.kryspetrie.fileimport.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
+import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -74,7 +78,8 @@ private val LightColorScheme =
 
         // Error state color
         error = Color(0xFFCC3333),
-        onError = Color.White)
+        onError = Color.White,
+    )
 
 /**
  * Dark theme color scheme for the Petrie File Importer application.
@@ -134,7 +139,8 @@ private val DarkColorScheme =
 
         // Error state - brighter red for visibility
         error = Color(0xFFFF6B6B),
-        onError = Color(0xFF1E1E1E))
+        onError = Color(0xFF1E1E1E),
+    )
 
 /**
  * Typography scale optimized for desktop applications.
@@ -175,7 +181,8 @@ private val DesktopTypography =
                 fontSize = 22.sp,
                 fontWeight = FontWeight.SemiBold,
                 letterSpacing = (-0.5).sp, // Tighter tracking for headlines
-                lineHeight = 28.sp),
+                lineHeight = 28.sp,
+            ),
         // Medium section headers
         headlineMedium =
             TextStyle(fontSize = 18.sp, fontWeight = FontWeight.SemiBold, lineHeight = 24.sp),
@@ -204,7 +211,8 @@ private val DesktopTypography =
         labelMedium =
             TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, lineHeight = 14.sp),
         // Small labels, hints
-        labelSmall = TextStyle(fontSize = 11.sp, lineHeight = 14.sp))
+        labelSmall = TextStyle(fontSize = 11.sp, lineHeight = 14.sp),
+    )
 
 /**
  * Shape definitions for UI components.
@@ -242,7 +250,8 @@ private val DesktopShapes =
         small = RoundedCornerShape(4.dp),
         medium = RoundedCornerShape(6.dp),
         large = RoundedCornerShape(8.dp),
-        extraLarge = RoundedCornerShape(10.dp))
+        extraLarge = RoundedCornerShape(10.dp),
+    )
 
 /**
  * Application theme composable that applies the Petrie File Importer theme.
@@ -329,26 +338,27 @@ fun PetrieTheme(
      * }
      * ```
      */
-    content: @Composable () -> Unit
+    content: @Composable () -> Unit,
 ) {
-  // Determine if dark theme should be used
-  // Respects user preference and system theme
-  val darkTheme =
-      when (appTheme) {
-        AppTheme.LIGHT -> false // Force light theme
-        AppTheme.DARK -> true // Force dark theme
-        AppTheme.SYSTEM -> isSystemInDarkTheme() // Follow OS setting
-      }
+    // Determine if dark theme should be used
+    // Respects user preference and system theme
+    val darkTheme =
+        when (appTheme) {
+            AppTheme.LIGHT -> false // Force light theme
+            AppTheme.DARK -> true // Force dark theme
+            AppTheme.SYSTEM -> isSystemInDarkTheme() // Follow OS setting
+        }
 
-  // Apply Material Theme with our customizations
-  // All child composables can access colors, typography, shapes via MaterialTheme
-  MaterialTheme(
-      // Color scheme based on theme mode
-      colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
-      // Desktop-optimized typography
-      typography = DesktopTypography,
-      // Consistent shape definitions
-      shapes = DesktopShapes,
-      // Content that receives the theme
-      content = content)
+    // Apply Material Theme with our customizations
+    // All child composables can access colors, typography, shapes via MaterialTheme
+    MaterialTheme(
+        // Color scheme based on theme mode
+        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
+        // Desktop-optimized typography
+        typography = DesktopTypography,
+        // Consistent shape definitions
+        shapes = DesktopShapes,
+        // Content that receives the theme
+        content = content,
+    )
 }

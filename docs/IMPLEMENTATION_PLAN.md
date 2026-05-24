@@ -1,15 +1,19 @@
 # Photo Import Wizard - Implementation Plan
 
 **Created**: 2026-04-08  
-**Last Updated**: 2026-04-08  
+**Last Updated**: 2026-05-17  
 **Status**: Planning
-**Version**: 1.1
+**Version**: 1.3
 
 ---
 
 ## Overview
 
 This document outlines the implementation plan for a comprehensive photo import wizard that provides users with fine-grained control over photo detection, refinement, and transformation.
+
+> **Note on ML Detection:** For detection mode selection (Computer Vision / Bounding Box / Pose / Hybrid), ONNX model integration, per-photo detection settings, crop modes, and training data export, see [ML_DETECTION_INTEGRATION_PLAN.md](./ML_DETECTION_INTEGRATION_PLAN.md). The CV auto-detection toggle described in Section 0.2 below remains valid as the COMPUTER_VISION mode within the broader ML detection settings system.
+>
+> **Note on Camera Device Import:** For importing from PTP/MTP camera devices that don't mount as USB mass storage (e.g., Fujifilm, Canon in PTP mode), see [CAMERA_DEVICE_IMPORT_PLAN.md](./CAMERA_DEVICE_IMPORT_PLAN.md). The folder-based source selection described in this document remains the default; camera device import adds an "Import from Camera" button alongside the existing "Import from Folder" button. When a camera is plugged in at startup, the app auto-selects the camera source.
 
 ---
 
@@ -32,6 +36,8 @@ This document outlines the implementation plan for a comprehensive photo import 
 - Includes 4-point manual selection feature
 
 ### 0.2 CV Auto-Detection Toggle
+
+> **See also:** [ML_DETECTION_INTEGRATION_PLAN.md](./ML_DETECTION_INTEGRATION_PLAN.md) — The CV toggle described here is superseded by the DetectionMode settings system (Section 3), which offers Computer Vision, Bounding Box, Pose, and Hybrid modes with full parameter configuration.
 
 **Setting**: Enable/disable automatic CV-based bounding box detection.
 

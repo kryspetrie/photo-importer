@@ -1,6 +1,11 @@
 **Project:** Multi-Photo Extraction and Perspective Correction Pipeline
 **Target:** Kotlin Multiplatform (KMP) - Android, iOS, Desktop (JVM)
-**Core Constraint:** Traditional Computer Vision ONLY (No ML), tolerant of uneven lighting, gradient backgrounds, and blending edges.
+
+> ⚠️ **NOTE:** The "Traditional Computer Vision ONLY" constraint described below has been superseded by the ML-based detection approach detailed in [ML_DETECTION_INTEGRATION_PLAN.md](./ML_DETECTION_INTEGRATION_PLAN.md). The application now uses ONNX YOLO models (detection + pose + optional fiducial) alongside CV refinement, not pure traditional CV. The CLAHE/bilateral/Canny/contour pipeline described here is still relevant as the fallback COMPUTER_VISION detection mode, but the primary detection path is ML-based. Refer to the new plan for the current architecture.
+>
+> This document is retained as a reference for the CV-only fallback path and algorithm details.
+
+**Core Constraint (Historical):** Traditional Computer Vision ONLY (No ML), tolerant of uneven lighting, gradient backgrounds, and blending edges.
 
 ---
 

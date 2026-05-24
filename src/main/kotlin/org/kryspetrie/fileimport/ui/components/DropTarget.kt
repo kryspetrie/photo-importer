@@ -1,7 +1,12 @@
 package org.kryspetrie.fileimport.ui.components
 
 import java.awt.datatransfer.DataFlavor
-import java.awt.dnd.*
+import java.awt.datatransfer.Transferable
+import java.awt.dnd.DnDConstants
+import java.awt.dnd.DropTarget
+import java.awt.dnd.DropTargetAdapter
+import java.awt.dnd.DropTargetDropEvent
+import java.awt.dnd.DropTargetListener
 import java.io.File
 
 /**
@@ -54,27 +59,27 @@ import java.io.File
  * @see DropTargetListener AWT interface for handling drop events
  */
 fun extractDroppedPath(transferable: java.awt.datatransfer.Transferable): String? {
-  return try {
-    // Check if the transferable supports Java file list flavor
-    // This is the standard way to transfer files in Java AWT
-    if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-      @Suppress("UNCHECKED_CAST")
-      // Extract the file list from the transferable
-      // Cast is safe because we checked the flavor first
-      val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
+    return try {
+        // Check if the transferable supports Java file list flavor
+        // This is the standard way to transfer files in Java AWT
+        if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+            @Suppress("UNCHECKED_CAST")
+            // Extract the file list from the transferable
+            // Cast is safe because we checked the flavor first
+            val files = transferable.getTransferData(DataFlavor.javaFileListFlavor) as List<File>
 
-      // Get the first file/directory from the drop
-      val first = files.firstOrNull() ?: return null
+            // Get the first file/directory from the drop
+            val first = files.firstOrNull() ?: return null
 
-      // Return directory path if dropped item is a directory,
-      // or parent directory path if dropped item is a file
-      if (first.isDirectory) first.absolutePath else first.parentFile?.absolutePath
-    } else null
-  } catch (_: Exception) {
-    // Catch any exceptions during data extraction
-    // Returns null to indicate drop was not successful
-    null
-  }
+            // Return directory path if dropped item is a directory,
+            // or parent directory path if dropped item is a file
+            if (first.isDirectory) first.absolutePath else first.parentFile?.absolutePath
+        } else null
+    } catch (_: Exception) {
+        // Catch any exceptions during data extraction
+        // Returns null to indicate drop was not successful
+        null
+    }
 }
 
 /**
@@ -147,43 +152,43 @@ fun extractDroppedPath(transferable: java.awt.datatransfer.Transferable): String
  * @see DropTargetAdapter Base class for implementing drop listeners
  */
 fun createFolderDropListener(onDrop: (String) -> Unit): DropTargetListener {
-  // Create an anonymous object extending DropTargetAdapter
-  // DropTargetAdapter provides default implementations for all listener methods
-  // We only override the drop() method we care about
-  return object : DropTargetAdapter() {
-    /**
-     * Called when the user releases the drag operation (drops the file/folder).
-     *
-     * This is the main entry point for handling drop events. The method:
-     * 1. Accepts the drop with COPY action
-     * 2. Extracts the folder path using [extractDroppedPath]
-     * 3. Invokes the callback if path is valid
-     * 4. Marks the drop as complete (success or failure)
-     *
-     * @param event The drop event containing transferable data and drop context
-     */
-    override fun drop(event: DropTargetDropEvent) {
-      try {
-        // Accept the drop with COPY action
-        // This tells the drag source we'll copy (not move) the files
-        event.acceptDrop(DnDConstants.ACTION_COPY)
+    // Create an anonymous object extending DropTargetAdapter
+    // DropTargetAdapter provides default implementations for all listener methods
+    // We only override the drop() method we care about
+    return object : DropTargetAdapter() {
+        /**
+         * Called when the user releases the drag operation (drops the file/folder).
+         *
+         * This is the main entry point for handling drop events. The method:
+         * 1. Accepts the drop with COPY action
+         * 2. Extracts the folder path using [extractDroppedPath]
+         * 3. Invokes the callback if path is valid
+         * 4. Marks the drop as complete (success or failure)
+         *
+         * @param event The drop event containing transferable data and drop context
+         */
+        override fun drop(event: DropTargetDropEvent) {
+            try {
+                // Accept the drop with COPY action
+                // This tells the drag source we'll copy (not move) the files
+                event.acceptDrop(DnDConstants.ACTION_COPY)
 
-        // Extract the folder path from the drop event
-        val path = extractDroppedPath(event.transferable)
+                // Extract the folder path from the drop event
+                val path = extractDroppedPath(event.transferable)
 
-        // If we successfully extracted a path, invoke callback and mark success
-        if (path != null) {
-          onDrop(path)
-          event.dropComplete(true)
-        } else {
-          // Path extraction failed, mark drop as unsuccessful
-          event.dropComplete(false)
+                // If we successfully extracted a path, invoke callback and mark success
+                if (path != null) {
+                    onDrop(path)
+                    event.dropComplete(true)
+                } else {
+                    // Path extraction failed, mark drop as unsuccessful
+                    event.dropComplete(false)
+                }
+            } catch (_: Exception) {
+                // Any exception during drop handling
+                // Mark drop as unsuccessful to prevent UI inconsistencies
+                event.dropComplete(false)
+            }
         }
-      } catch (_: Exception) {
-        // Any exception during drop handling
-        // Mark drop as unsuccessful to prevent UI inconsistencies
-        event.dropComplete(false)
-      }
     }
-  }
 }

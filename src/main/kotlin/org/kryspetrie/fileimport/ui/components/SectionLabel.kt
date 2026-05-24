@@ -6,6 +6,9 @@ import androidx.compose.runtime.Composable
 
 @Composable
 fun SectionLabel(text: String) {
-  Text(
-      text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    Text(
+        text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary,
+    )
 }

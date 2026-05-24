@@ -2,262 +2,431 @@ package org.kryspetrie.fileimport.ui.screens
 
 import java.io.File
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.*
+import org.junit.jupiter.api.DisplayName
+import org.junit.jupiter.api.Nested
+import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.kryspetrie.fileimport.domain.model.*
+import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.ImportMode
+import org.kryspetrie.fileimport.domain.model.ImportProfile
+import org.kryspetrie.fileimport.domain.model.TabSettings
 
 @DisplayName("ImportScreen Logic")
 class ImportScreenLogicTest {
 
-  @TempDir lateinit var tempDir: File
+    @TempDir lateinit var tempDir: File
 
-  @Nested
-  @DisplayName("Path Validation")
-  inner class PathValidationTest {
+    @Nested
+    @DisplayName("Path Validation")
+    inner class PathValidationTest {
 
-    @Test
-    @DisplayName("should validate existing directory as valid")
-    fun existingDirectoryShouldBeValid() {
-      val dir = File(tempDir, "photos").apply { mkdirs() }
+        @Test
+        @DisplayName("should validate existing directory as valid")
+        fun existingDirectoryShouldBeValid() {
+            val dir = File(tempDir, "photos").apply { mkdirs() }
 
-      assertThat(dir.isDirectory).isTrue()
+            assertThat(dir.isDirectory).isTrue()
+        }
+
+        @Test
+        @DisplayName("should validate non-existent path as invalid")
+        fun nonExistentPathShouldBeInvalid() {
+            val path = File(tempDir, "does-not-exist")
+
+            assertThat(path.isDirectory).isFalse()
+        }
+
+        @Test
+        @DisplayName("should validate file path as invalid directory")
+        fun filePathShouldBeInvalidDirectory() {
+            val file = File(tempDir, "file.txt").apply { createNewFile() }
+
+            assertThat(file.isDirectory).isFalse()
+        }
+
+        @Test
+        @DisplayName("blank path should not be treated as error")
+        fun blankPathShouldNotBeError() {
+            val path = ""
+
+            assertThat(path.isNotBlank() && !File(path).isDirectory).isFalse()
+        }
     }
 
-    @Test
-    @DisplayName("should validate non-existent path as invalid")
-    fun nonExistentPathShouldBeInvalid() {
-      val path = File(tempDir, "does-not-exist")
+    @Nested
+    @DisplayName("Profile Selection")
+    inner class ProfileSelectionTest {
 
-      assertThat(path.isDirectory).isFalse()
+        @Test
+        @DisplayName("should find profile by ID")
+        fun shouldFindProfileById() {
+            val profile1 = ImportProfile(name = "Canon")
+            val profile2 = ImportProfile(name = "Sony")
+            val settings = AppSettings(profiles = listOf(profile1, profile2))
+
+            val found = settings.profiles.find { it.id == profile1.id }
+
+            assertThat(found).isNotNull()
+            assertThat(found!!.name).isEqualTo("Canon")
+        }
+
+        @Test
+        @DisplayName("should return null for unknown profile ID")
+        fun shouldReturnNullForUnknown() {
+            val settings = AppSettings(profiles = listOf(ImportProfile(name = "Canon")))
+
+            val found = settings.profiles.find { it.id == "nonexistent" }
+
+            assertThat(found).isNull()
+        }
+
+        @Test
+        @DisplayName("should match camera name for auto-selection")
+        fun shouldMatchCameraName() {
+            val profile = ImportProfile(name = "My Canon", cameraName = "Canon EOS R5")
+            val settings = AppSettings(profiles = listOf(profile))
+            val deviceName = "Canon EOS R5"
+
+            val match =
+                settings.profiles.find { p ->
+                    p.cameraName.isNotBlank() && deviceName.equals(p.cameraName, ignoreCase = true)
+                }
+
+            assertThat(match).isNotNull()
+            assertThat(match!!.name).isEqualTo("My Canon")
+        }
+
+        @Test
+        @DisplayName("should not match different camera name")
+        fun shouldNotMatchDifferentCamera() {
+            val profile = ImportProfile(name = "My Canon", cameraName = "Canon EOS R5")
+            val settings = AppSettings(profiles = listOf(profile))
+            val deviceName = "Sony A7III"
+
+            val match =
+                settings.profiles.find { p ->
+                    p.cameraName.isNotBlank() && deviceName.equals(p.cameraName, ignoreCase = true)
+                }
+
+            assertThat(match).isNull()
+        }
+
+        @Test
+        @DisplayName("should match camera name case-insensitively")
+        fun shouldMatchCaseInsensitive() {
+            val profile = ImportProfile(name = "Test", cameraName = "canon eos r5")
+            val deviceName = "CANON EOS R5"
+
+            val matches = deviceName.equals(profile.cameraName, ignoreCase = true)
+
+            assertThat(matches).isTrue()
+        }
     }
 
-    @Test
-    @DisplayName("should validate file path as invalid directory")
-    fun filePathShouldBeInvalidDirectory() {
-      val file = File(tempDir, "file.txt").apply { createNewFile() }
+    @Nested
+    @DisplayName("Profile CRUD Operations")
+    inner class ProfileCrudTest {
 
-      assertThat(file.isDirectory).isFalse()
+        @Test
+        @DisplayName("should add profile to settings")
+        fun shouldAddProfile() {
+            val settings = AppSettings()
+            val profile = ImportProfile(name = "New Profile")
+
+            val updated =
+                settings.copy(profiles = settings.profiles + profile, activeProfileId = profile.id)
+
+            assertThat(updated.profiles).hasSize(1)
+            assertThat(updated.activeProfileId).isEqualTo(profile.id)
+        }
+
+        @Test
+        @DisplayName("should delete profile from settings")
+        fun shouldDeleteProfile() {
+            val profile = ImportProfile(name = "To Delete")
+            val settings = AppSettings(profiles = listOf(profile), activeProfileId = profile.id)
+
+            val updated =
+                settings.copy(
+                    profiles = settings.profiles.filter { it.id != profile.id },
+                    activeProfileId = null,
+                )
+
+            assertThat(updated.profiles).isEmpty()
+            assertThat(updated.activeProfileId).isNull()
+        }
+
+        @Test
+        @DisplayName("should update profile configuration")
+        fun shouldUpdateProfile() {
+            val profile = ImportProfile(name = "My Profile")
+            val settings = AppSettings(profiles = listOf(profile))
+            val newConfig = ImportConfiguration(folderPattern = "{yyyy}/{MM}")
+
+            val updated =
+                settings.copy(
+                    profiles =
+                        settings.profiles.map {
+                            if (it.id == profile.id) it.copy(configuration = newConfig) else it
+                        }
+                )
+
+            assertThat(updated.profiles.first().configuration.folderPattern)
+                .isEqualTo("{yyyy}/{MM}")
+        }
+
+        @Test
+        @DisplayName("should update profile paths")
+        fun shouldUpdatePaths() {
+            val profile = ImportProfile(name = "Test")
+            val settings = AppSettings(profiles = listOf(profile))
+
+            val updated =
+                settings.copy(
+                    profiles =
+                        settings.profiles.map {
+                            if (it.id == profile.id)
+                                it.copy(
+                                    lastSourcePath = "/new/source",
+                                    lastDestinationPath = "/new/dest",
+                                )
+                            else it
+                        }
+                )
+
+            val updatedProfile = updated.profiles.first()
+            assertThat(updatedProfile.lastSourcePath).isEqualTo("/new/source")
+            assertThat(updatedProfile.lastDestinationPath).isEqualTo("/new/dest")
+        }
+
+        @Test
+        @DisplayName("should handle delete of non-active profile")
+        fun shouldDeleteNonActiveProfile() {
+            val active = ImportProfile(name = "Active")
+            val other = ImportProfile(name = "Other")
+            val settings =
+                AppSettings(profiles = listOf(active, other), activeProfileId = active.id)
+
+            val updated =
+                settings.copy(
+                    profiles = settings.profiles.filter { it.id != other.id },
+                    activeProfileId =
+                        if (settings.activeProfileId == other.id) null else settings.activeProfileId,
+                )
+
+            assertThat(updated.profiles).hasSize(1)
+            assertThat(updated.activeProfileId).isEqualTo(active.id)
+        }
     }
 
-    @Test
-    @DisplayName("blank path should not be treated as error")
-    fun blankPathShouldNotBeError() {
-      val path = ""
+    @Nested
+    @DisplayName("Import Mode")
+    inner class ImportModeTest {
 
-      assertThat(path.isNotBlank() && !File(path).isDirectory).isFalse()
-    }
-  }
-
-  @Nested
-  @DisplayName("Profile Selection")
-  inner class ProfileSelectionTest {
-
-    @Test
-    @DisplayName("should find profile by ID")
-    fun shouldFindProfileById() {
-      val profile1 = ImportProfile(name = "Canon")
-      val profile2 = ImportProfile(name = "Sony")
-      val settings = AppSettings(profiles = listOf(profile1, profile2))
-
-      val found = settings.profiles.find { it.id == profile1.id }
-
-      assertThat(found).isNotNull()
-      assertThat(found!!.name).isEqualTo("Canon")
+        @Test
+        @DisplayName("should have three import modes")
+        fun shouldHaveThreeModes() {
+            assertThat(ImportMode.entries).hasSize(3)
+            assertThat(ImportMode.entries)
+                .contains(ImportMode.ALL, ImportMode.NEW, ImportMode.SELECT)
+        }
     }
 
-    @Test
-    @DisplayName("should return null for unknown profile ID")
-    fun shouldReturnNullForUnknown() {
-      val settings = AppSettings(profiles = listOf(ImportProfile(name = "Canon")))
+    @Nested
+    @DisplayName("Quick Start Card Visibility")
+    inner class QuickStartVisibilityTest {
 
-      val found = settings.profiles.find { it.id == "nonexistent" }
+        @Test
+        @DisplayName("should show quick start when previous paths exist and are valid")
+        fun shouldShowQuickStartWhenPathsValid() {
+            val source = File(tempDir, "source").apply { mkdirs() }
+            val dest = File(tempDir, "dest").apply { mkdirs() }
+            val settings =
+                AppSettings(
+                    importTabSettings =
+                        TabSettings(
+                            lastSourcePath = source.absolutePath,
+                            lastDestinationPath = dest.absolutePath,
+                        )
+                )
 
-      assertThat(found).isNull()
+            val hasPreviousSettings = settings.importTabSettings.lastSourcePath.isNotBlank()
+            val quickSourceDir = File(settings.importTabSettings.lastSourcePath)
+            val quickDestDir = File(settings.importTabSettings.lastDestinationPath)
+            val quickPathsValid =
+                hasPreviousSettings && quickSourceDir.isDirectory && quickDestDir.isDirectory
+
+            assertThat(quickPathsValid).isTrue()
+        }
+
+        @Test
+        @DisplayName("should not show quick start when source path does not exist")
+        fun shouldNotShowQuickStartWhenSourceMissing() {
+            val dest = File(tempDir, "dest").apply { mkdirs() }
+            val settings =
+                AppSettings(
+                    importTabSettings =
+                        TabSettings(
+                            lastSourcePath = "/nonexistent/path",
+                            lastDestinationPath = dest.absolutePath,
+                        )
+                )
+
+            val hasPreviousSettings = settings.importTabSettings.lastSourcePath.isNotBlank()
+            val quickSourceDir = File(settings.importTabSettings.lastSourcePath)
+            val quickDestDir = File(settings.importTabSettings.lastDestinationPath)
+            val quickPathsValid =
+                hasPreviousSettings && quickSourceDir.isDirectory && quickDestDir.isDirectory
+
+            assertThat(quickPathsValid).isFalse()
+        }
+
+        @Test
+        @DisplayName("should not show quick start when destination path does not exist")
+        fun shouldNotShowQuickStartWhenDestMissing() {
+            val source = File(tempDir, "source").apply { mkdirs() }
+            val settings =
+                AppSettings(
+                    importTabSettings =
+                        TabSettings(
+                            lastSourcePath = source.absolutePath,
+                            lastDestinationPath = "/nonexistent/path",
+                        )
+                )
+
+            val hasPreviousSettings = settings.importTabSettings.lastSourcePath.isNotBlank()
+            val quickSourceDir = File(settings.importTabSettings.lastSourcePath)
+            val quickDestDir = File(settings.importTabSettings.lastDestinationPath)
+            val quickPathsValid =
+                hasPreviousSettings && quickSourceDir.isDirectory && quickDestDir.isDirectory
+
+            assertThat(quickPathsValid).isFalse()
+        }
+
+        @Test
+        @DisplayName("should not show quick start when no previous source path")
+        fun shouldNotShowQuickStartWhenNoPreviousSource() {
+            val settings = AppSettings(importTabSettings = TabSettings(lastSourcePath = ""))
+
+            val hasPreviousSettings = settings.importTabSettings.lastSourcePath.isNotBlank()
+
+            assertThat(hasPreviousSettings).isFalse()
+        }
+
+        @Test
+        @DisplayName("should not show quick start when source is a file not directory")
+        fun shouldNotShowQuickStartWhenSourceIsFile() {
+            val sourceFile = File(tempDir, "file.txt").apply { createNewFile() }
+            val dest = File(tempDir, "dest").apply { mkdirs() }
+            val settings =
+                AppSettings(
+                    importTabSettings =
+                        TabSettings(
+                            lastSourcePath = sourceFile.absolutePath,
+                            lastDestinationPath = dest.absolutePath,
+                        )
+                )
+
+            val hasPreviousSettings = settings.importTabSettings.lastSourcePath.isNotBlank()
+            val quickSourceDir = File(settings.importTabSettings.lastSourcePath)
+            val quickPathsValid = hasPreviousSettings && quickSourceDir.isDirectory
+
+            assertThat(quickPathsValid).isFalse()
+        }
+
+        @Test
+        @DisplayName("should persist config changes to tab settings")
+        fun shouldPersistConfigChanges() {
+            val config =
+                ImportConfiguration(folderPattern = "{yyyy}/{MM}", preserveOriginalName = false)
+            val settings = AppSettings()
+            val updated =
+                settings.withImportTabSettings(settings.importTabSettings.withConfiguration(config))
+
+            assertThat(updated.importTabSettings.configuration.folderPattern)
+                .isEqualTo("{yyyy}/{MM}")
+            assertThat(updated.importTabSettings.configuration.preserveOriginalName).isFalse()
+        }
+
+        @Test
+        @DisplayName("should initialize config from persisted tab settings")
+        fun shouldInitConfigFromPersistedSettings() {
+            val config =
+                ImportConfiguration(deleteAfterImport = true, detectVisualDuplicates = true)
+            val settings = AppSettings(importTabSettings = TabSettings(configuration = config))
+
+            val restoredConfig = settings.importTabSettings.configuration
+
+            assertThat(restoredConfig.deleteAfterImport).isTrue()
+            assertThat(restoredConfig.detectVisualDuplicates).isTrue()
+        }
+
+        @Test
+        @DisplayName("should use default config when no persisted settings")
+        fun shouldUseDefaultConfigWhenNoSettings() {
+            val settings = AppSettings()
+
+            val config = settings.importTabSettings.configuration
+
+            assertThat(config).isEqualTo(ImportConfiguration())
+            assertThat(config.folderPattern).isEqualTo("{yyyy-MM-dd}")
+            assertThat(config.preserveOriginalName).isTrue()
+        }
+
+        @Test
+        @DisplayName("should extract folder names for quick start display")
+        fun shouldExtractFolderNamesForDisplay() {
+            val source = File(tempDir, "MyCamera").apply { mkdirs() }
+            val dest = File(tempDir, "Imports").apply { mkdirs() }
+
+            assertThat(source.name).isEqualTo("MyCamera")
+            assertThat(dest.name).isEqualTo("Imports")
+        }
     }
 
-    @Test
-    @DisplayName("should match camera name for auto-selection")
-    fun shouldMatchCameraName() {
-      val profile = ImportProfile(name = "My Canon", cameraName = "Canon EOS R5")
-      val settings = AppSettings(profiles = listOf(profile))
-      val deviceName = "Canon EOS R5"
+    @Nested
+    @DisplayName("canStart validation")
+    inner class CanStartTest {
 
-      val match =
-          settings.profiles.find { p ->
-            p.cameraName.isNotBlank() && deviceName.equals(p.cameraName, ignoreCase = true)
-          }
+        @Test
+        @DisplayName("should be true when both paths are non-blank")
+        fun shouldBeTrueWhenBothPaths() {
+            val sourcePath = "/some/source"
+            val destinationPath = "/some/dest"
+            val canStart = sourcePath.isNotBlank() && destinationPath.isNotBlank()
 
-      assertThat(match).isNotNull()
-      assertThat(match!!.name).isEqualTo("My Canon")
+            assertThat(canStart).isTrue()
+        }
+
+        @Test
+        @DisplayName("should be false when source is blank")
+        fun shouldBeFalseWithoutSource() {
+            val sourcePath = ""
+            val destinationPath = "/some/dest"
+            val canStart = sourcePath.isNotBlank() && destinationPath.isNotBlank()
+
+            assertThat(canStart).isFalse()
+        }
+
+        @Test
+        @DisplayName("should be false when destination is blank")
+        fun shouldBeFalseWithoutDest() {
+            val sourcePath = "/some/source"
+            val destinationPath = ""
+            val canStart = sourcePath.isNotBlank() && destinationPath.isNotBlank()
+
+            assertThat(canStart).isFalse()
+        }
+
+        @Test
+        @DisplayName("should be false when both paths are blank")
+        fun shouldBeFalseWhenBothBlank() {
+            val sourcePath = ""
+            val destinationPath = ""
+            val canStart = sourcePath.isNotBlank() && destinationPath.isNotBlank()
+
+            assertThat(canStart).isFalse()
+        }
     }
-
-    @Test
-    @DisplayName("should not match different camera name")
-    fun shouldNotMatchDifferentCamera() {
-      val profile = ImportProfile(name = "My Canon", cameraName = "Canon EOS R5")
-      val settings = AppSettings(profiles = listOf(profile))
-      val deviceName = "Sony A7III"
-
-      val match =
-          settings.profiles.find { p ->
-            p.cameraName.isNotBlank() && deviceName.equals(p.cameraName, ignoreCase = true)
-          }
-
-      assertThat(match).isNull()
-    }
-
-    @Test
-    @DisplayName("should match camera name case-insensitively")
-    fun shouldMatchCaseInsensitive() {
-      val profile = ImportProfile(name = "Test", cameraName = "canon eos r5")
-      val deviceName = "CANON EOS R5"
-
-      val matches = deviceName.equals(profile.cameraName, ignoreCase = true)
-
-      assertThat(matches).isTrue()
-    }
-  }
-
-  @Nested
-  @DisplayName("Profile CRUD Operations")
-  inner class ProfileCrudTest {
-
-    @Test
-    @DisplayName("should add profile to settings")
-    fun shouldAddProfile() {
-      val settings = AppSettings()
-      val profile = ImportProfile(name = "New Profile")
-
-      val updated =
-          settings.copy(profiles = settings.profiles + profile, activeProfileId = profile.id)
-
-      assertThat(updated.profiles).hasSize(1)
-      assertThat(updated.activeProfileId).isEqualTo(profile.id)
-    }
-
-    @Test
-    @DisplayName("should delete profile from settings")
-    fun shouldDeleteProfile() {
-      val profile = ImportProfile(name = "To Delete")
-      val settings = AppSettings(profiles = listOf(profile), activeProfileId = profile.id)
-
-      val updated =
-          settings.copy(
-              profiles = settings.profiles.filter { it.id != profile.id }, activeProfileId = null)
-
-      assertThat(updated.profiles).isEmpty()
-      assertThat(updated.activeProfileId).isNull()
-    }
-
-    @Test
-    @DisplayName("should update profile configuration")
-    fun shouldUpdateProfile() {
-      val profile = ImportProfile(name = "My Profile")
-      val settings = AppSettings(profiles = listOf(profile))
-      val newConfig = ImportConfiguration(folderPattern = "{yyyy}/{MM}")
-
-      val updated =
-          settings.copy(
-              profiles =
-                  settings.profiles.map {
-                    if (it.id == profile.id) it.copy(configuration = newConfig) else it
-                  })
-
-      assertThat(updated.profiles.first().configuration.folderPattern).isEqualTo("{yyyy}/{MM}")
-    }
-
-    @Test
-    @DisplayName("should update profile paths")
-    fun shouldUpdatePaths() {
-      val profile = ImportProfile(name = "Test")
-      val settings = AppSettings(profiles = listOf(profile))
-
-      val updated =
-          settings.copy(
-              profiles =
-                  settings.profiles.map {
-                    if (it.id == profile.id)
-                        it.copy(lastSourcePath = "/new/source", lastDestinationPath = "/new/dest")
-                    else it
-                  })
-
-      val updatedProfile = updated.profiles.first()
-      assertThat(updatedProfile.lastSourcePath).isEqualTo("/new/source")
-      assertThat(updatedProfile.lastDestinationPath).isEqualTo("/new/dest")
-    }
-
-    @Test
-    @DisplayName("should handle delete of non-active profile")
-    fun shouldDeleteNonActiveProfile() {
-      val active = ImportProfile(name = "Active")
-      val other = ImportProfile(name = "Other")
-      val settings = AppSettings(profiles = listOf(active, other), activeProfileId = active.id)
-
-      val updated =
-          settings.copy(
-              profiles = settings.profiles.filter { it.id != other.id },
-              activeProfileId =
-                  if (settings.activeProfileId == other.id) null else settings.activeProfileId)
-
-      assertThat(updated.profiles).hasSize(1)
-      assertThat(updated.activeProfileId).isEqualTo(active.id)
-    }
-  }
-
-  @Nested
-  @DisplayName("Import Mode")
-  inner class ImportModeTest {
-
-    @Test
-    @DisplayName("should have three import modes")
-    fun shouldHaveThreeModes() {
-      assertThat(ImportMode.entries).hasSize(3)
-      assertThat(ImportMode.entries).contains(ImportMode.ALL, ImportMode.NEW, ImportMode.SELECT)
-    }
-  }
-
-  @Nested
-  @DisplayName("canStart validation")
-  inner class CanStartTest {
-
-    @Test
-    @DisplayName("should be true when both paths are non-blank")
-    fun shouldBeTrueWhenBothPaths() {
-      val sourcePath = "/some/source"
-      val destinationPath = "/some/dest"
-      val canStart = sourcePath.isNotBlank() && destinationPath.isNotBlank()
-
-      assertThat(canStart).isTrue()
-    }
-
-    @Test
-    @DisplayName("should be false when source is blank")
-    fun shouldBeFalseWithoutSource() {
-      val sourcePath = ""
-      val destinationPath = "/some/dest"
-      val canStart = sourcePath.isNotBlank() && destinationPath.isNotBlank()
-
-      assertThat(canStart).isFalse()
-    }
-
-    @Test
-    @DisplayName("should be false when destination is blank")
-    fun shouldBeFalseWithoutDest() {
-      val sourcePath = "/some/source"
-      val destinationPath = ""
-      val canStart = sourcePath.isNotBlank() && destinationPath.isNotBlank()
-
-      assertThat(canStart).isFalse()
-    }
-
-    @Test
-    @DisplayName("should be false when both paths are blank")
-    fun shouldBeFalseWhenBothBlank() {
-      val sourcePath = ""
-      val destinationPath = ""
-      val canStart = sourcePath.isNotBlank() && destinationPath.isNotBlank()
-
-      assertThat(canStart).isFalse()
-    }
-  }
 }
