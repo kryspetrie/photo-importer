@@ -13,16 +13,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,7 +36,7 @@ import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.ReorganizeJournalSummary
 import org.kryspetrie.fileimport.domain.model.ReorganizeMode
-import org.kryspetrie.fileimport.ui.components.pickFolder
+import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeActionBar
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizePreviewSection
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeProgressSection
@@ -175,23 +172,13 @@ fun ReorganizeScreen(
             )
 
             // Folder selection
-            OutlinedTextField(
+            FolderSelectionField(
                 value = viewModel.folderPath,
                 onValueChange = { viewModel.folderPath = it },
-                label = { Text("Library Folder") },
-                placeholder = { Text("Select folder to reorganize...") },
                 modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodyMedium,
-                singleLine = true,
-                trailingIcon = {
-                    IconButton(
-                        onClick = {
-                            pickFolder("Select Library Folder")?.let { viewModel.folderPath = it }
-                        }
-                    ) {
-                        Icon(Icons.Default.FolderOpen, "Browse", Modifier.size(20.dp))
-                    }
-                },
+                label = "Library Folder",
+                placeholder = "Select folder to reorganize...",
+                title = "Select Library Folder",
                 supportingText = {
                     Text("Paste a path or browse", style = MaterialTheme.typography.labelSmall)
                 },

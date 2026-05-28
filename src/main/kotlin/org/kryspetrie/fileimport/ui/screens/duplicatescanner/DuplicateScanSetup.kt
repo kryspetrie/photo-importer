@@ -9,20 +9,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.ui.components.pickFolder
+import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 
 @Composable
 fun DuplicateScanSetup(
@@ -37,19 +34,13 @@ fun DuplicateScanSetup(
     errorMessage: String?,
 ) {
     // Folder selection
-    OutlinedTextField(
+    FolderSelectionField(
         value = folderPath,
         onValueChange = onFolderPathChange,
-        label = { Text("Library Folder") },
-        placeholder = { Text("Select folder to scan...") },
         modifier = Modifier.fillMaxWidth(),
-        textStyle = MaterialTheme.typography.bodyMedium,
-        singleLine = true,
-        trailingIcon = {
-            IconButton(onClick = { pickFolder("Select Library Folder")?.let(onFolderPathChange) }) {
-                Icon(Icons.Default.FolderOpen, "Browse", Modifier.size(20.dp))
-            }
-        },
+        label = "Library Folder",
+        placeholder = "Select folder to scan...",
+        title = "Select Library Folder",
         supportingText = {
             Text("Paste a path or browse", style = MaterialTheme.typography.labelSmall)
         },

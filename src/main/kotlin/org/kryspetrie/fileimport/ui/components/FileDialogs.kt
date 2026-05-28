@@ -3,6 +3,7 @@ package org.kryspetrie.fileimport.ui.components
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import java.io.FilenameFilter
 import javax.swing.JFileChooser
 import javax.swing.UIManager
 import javax.swing.filechooser.FileNameExtensionFilter
@@ -55,12 +56,12 @@ fun pickFolder(title: String): String? {
 /**
  * Opens a native file picker dialog, cross-platform.
  *
- * Uses [JFileChooser] on all platforms with system look-and-feel for native appearance. This avoids
- * the AWT [FileDialog] issue on Linux/Wayland where dialogs can be invisible.
- *
- * On macOS, JFileChooser with Aqua LaF renders as a native-looking dialog. On Windows, JFileChooser
- * with Windows LaF renders as a native-looking dialog. On Linux, JFileChooser works under all
- * window managers including Wayland.
+ * Platform behavior:
+ * - **macOS**: Uses AWT [FileDialog] which gives the native macOS file chooser (the familiar blue
+ *   dialog, same as used by [pickFolder]). This matches the macOS folder picker experience exactly.
+ * - **Windows/Linux**: Uses [JFileChooser] in `FILES_ONLY` mode with the system look-and-feel. This
+ *   gives a native-looking dialog that works on all Linux window managers including Wayland, where
+ *   AWT [FileDialog] can be invisible.
  *
  * @param title Dialog window title
  * @param extensionFilter Optional list of extensions to filter (e.g. listOf("jpg", "png"))
@@ -68,6 +69,26 @@ fun pickFolder(title: String): String? {
  */
 @Suppress("SpreadOperator")
 fun pickFile(title: String, extensionFilter: List<String>? = null): String? {
+    // macOS: use AWT FileDialog for the native macOS file chooser (same dialog as pickFolder).
+    if (Platform.isMac) {
+        val dialog = FileDialog(null as Frame?, title, FileDialog.LOAD)
+        // FileDialog.LOAD without apple.awt.fileDialogForDirectories selects files by default.
+        // Filename filtering on AWT FileDialog uses FilenameFilter on the visible filename,
+        // which works for the native macOS dialog.
+        if (extensionFilter != null) {
+            dialog.filenameFilter = FilenameFilter { _, name ->
+                extensionFilter.any { ext -> name.lowercase().endsWith(".$ext") }
+            }
+        }
+        dialog.isVisible = true
+        return if (dialog.directory != null && dialog.file != null) {
+            File(dialog.directory, dialog.file).absolutePath
+        } else null
+    }
+
+    // Windows and Linux: use JFileChooser with system look-and-feel.
+    // JFileChooser renders natively on Windows (Windows LaF) and works correctly
+    // on Linux/Wayland where AWT FileDialog can be invisible.
     applySystemLookAndFeel()
     val chooser =
         JFileChooser().apply {
