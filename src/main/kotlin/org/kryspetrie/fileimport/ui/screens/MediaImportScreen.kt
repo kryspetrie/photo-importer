@@ -176,6 +176,23 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
             if (destinationPath.isNotBlank()) File(destinationPath) else null
         }
     val destValid = remember(destinationPath) { destDir?.isDirectory == true }
+    val destCanCreate =
+        remember(destinationPath) {
+            if (destinationPath.isBlank()) false
+            else {
+                val dir = File(destinationPath)
+                if (dir.isDirectory) false // already exists, not "can create"
+                else {
+                    // Walk up to find an existing ancestor — if one exists, the path is creatable
+                    var parent = dir.parentFile
+                    while (parent != null) {
+                        if (parent.isDirectory) break
+                        parent = parent.parentFile
+                    }
+                    parent != null
+                }
+            }
+        }
 
     fun resetFlow() {
         flowStep = MediaImportFlowStep.SETUP
@@ -371,6 +388,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                 onDestinationPathChange = { destinationPath = it },
                 sourceValid = sourceValid,
                 destValid = destValid,
+                destCanCreate = destCanCreate,
                 sourceDirName = sourceDir?.name,
                 destDirName = destDir?.name,
             )

@@ -10,8 +10,8 @@ import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,10 +20,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 
 /**
- * A consistent path selection field with an inline folder browse button.
+ * A consistent path selection field with an inline folder browse button labeled "Select Folder".
  *
- * Uses a [OutlinedTextField] with a folder icon leading, a create-folder browse button trailing,
- * and consistent styling across the app.
+ * Uses a [OutlinedTextField] with a folder icon leading, a labeled browse button trailing, and
+ * consistent styling across the app.
  *
  * @param value The current folder path text
  * @param onValueChange Callback when the path changes (from typing or picker selection)
@@ -60,12 +60,10 @@ fun FolderSelectionField(
             Icon(leadingIcon, contentDescription = "Folder", modifier = Modifier.size(20.dp))
         },
         trailingIcon = {
-            IconButton(onClick = { pickFolder(title)?.let(onValueChange) }) {
-                Icon(
-                    Icons.Default.CreateNewFolder,
-                    contentDescription = "Browse",
-                    modifier = Modifier.size(20.dp),
-                )
+            OutlinedButton(onClick = { pickFolder(title)?.let(onValueChange) }) {
+                Icon(Icons.Default.CreateNewFolder, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Select Folder", style = MaterialTheme.typography.labelSmall)
             }
         },
         supportingText = supportingText,
@@ -73,7 +71,7 @@ fun FolderSelectionField(
 }
 
 /**
- * A consistent path selection field with an inline file browse button.
+ * A consistent path selection field with an inline file browse button labeled "Select File".
  *
  * @param value The current file path text
  * @param onValueChange Callback when the path changes (from typing or picker selection)
@@ -112,12 +110,10 @@ fun FileSelectionField(
             Icon(leadingIcon, contentDescription = "File", modifier = Modifier.size(20.dp))
         },
         trailingIcon = {
-            IconButton(onClick = { pickFile(title, extensionFilter)?.let(onValueChange) }) {
-                Icon(
-                    Icons.Default.CreateNewFolder,
-                    contentDescription = "Browse",
-                    modifier = Modifier.size(20.dp),
-                )
+            OutlinedButton(onClick = { pickFile(title, extensionFilter)?.let(onValueChange) }) {
+                Icon(leadingIcon, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Select File", style = MaterialTheme.typography.labelSmall)
             }
         },
         supportingText = supportingText,
@@ -128,15 +124,12 @@ fun FileSelectionField(
  * A consistent source path field that supports both file and folder selection.
  *
  * For cases where the user can select either a file (e.g., a single image) or a folder (e.g., a
- * folder of images). Provides two trailing action buttons — one for file browsing and one for
- * folder browsing.
+ * folder of images). Provides two trailing labeled buttons — "Select File" and "Select Folder".
  *
  * @param value The current path text
  * @param onValueChange Callback when the path changes
- * @param onPickFile Called with the file picker title, should invoke [pickFile] or [pickImageFile]
- *   and call [onValueChange] with the result.
- * @param onPickFolder Called with the folder picker title, should invoke [pickFolder] and call
- *   [onValueChange] with the result.
+ * @param onPickFile Called when the user clicks "Select File" to browse for a file.
+ * @param onPickFolder Called when the user clicks "Select Folder" to browse for a folder.
  * @param modifier Optional modifier
  * @param label The field label
  * @param placeholder Placeholder text when empty
@@ -145,7 +138,7 @@ fun FileSelectionField(
  * @param leadingIcon Optional leading icon (default: [Icons.Default.Image])
  * @param fileIcon Icon for the file browse button (default:
  *   [Icons.AutoMirrored.Filled.InsertDriveFile])
- * @param folderIcon Icon for the folder browse button (default: [Icons.Default.FolderOpen])
+ * @param folderIcon Icon for the folder browse button (default: [Icons.Default.CreateNewFolder])
  */
 @Composable
 fun SourcePathField(
@@ -176,20 +169,16 @@ fun SourcePathField(
         },
         trailingIcon = {
             Row {
-                IconButton(onClick = onPickFile) {
-                    Icon(
-                        fileIcon,
-                        contentDescription = "Select File",
-                        modifier = Modifier.size(20.dp),
-                    )
+                OutlinedButton(onClick = onPickFile) {
+                    Icon(fileIcon, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Select File", style = MaterialTheme.typography.labelSmall)
                 }
                 Spacer(Modifier.width(4.dp))
-                IconButton(onClick = onPickFolder) {
-                    Icon(
-                        folderIcon,
-                        contentDescription = "Select Folder",
-                        modifier = Modifier.size(20.dp),
-                    )
+                OutlinedButton(onClick = onPickFolder) {
+                    Icon(folderIcon, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Select Folder", style = MaterialTheme.typography.labelSmall)
                 }
             }
         },

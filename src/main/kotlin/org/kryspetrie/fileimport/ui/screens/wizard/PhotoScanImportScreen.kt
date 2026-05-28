@@ -128,6 +128,22 @@ fun PhotoScanImportScreen(
         }
 
     val destValid = destDir != null
+    val destCanCreate =
+        remember(destinationPath) {
+            if (destinationPath.isBlank()) false
+            else {
+                val dir = File(destinationPath)
+                if (dir.isDirectory) false
+                else {
+                    var parent = dir.parentFile
+                    while (parent != null) {
+                        if (parent.isDirectory) break
+                        parent = parent.parentFile
+                    }
+                    parent != null
+                }
+            }
+        }
 
     // Get the first image file - either the selected file or first file from selected folder
     val firstImageFile: File? =
@@ -141,7 +157,7 @@ fun PhotoScanImportScreen(
             }
         }
 
-    val canStart = firstImageFile != null && destValid
+    val canStart = firstImageFile != null && (destValid || destCanCreate)
 
     Scaffold(
         content = { paddingValues ->
@@ -172,6 +188,7 @@ fun PhotoScanImportScreen(
                     destinationPath = destinationPath,
                     onDestinationPathChange = { destinationPath = it },
                     destValid = destValid,
+                    destCanCreate = destCanCreate,
                     destDirName = destDir?.name,
                 )
 

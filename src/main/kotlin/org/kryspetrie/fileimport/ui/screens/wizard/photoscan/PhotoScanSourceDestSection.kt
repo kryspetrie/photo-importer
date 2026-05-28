@@ -93,6 +93,7 @@ fun DestinationSelectionSection(
     destinationPath: String,
     onDestinationPathChange: (String) -> Unit,
     destValid: Boolean,
+    destCanCreate: Boolean = false,
     destDirName: String?,
     modifier: Modifier = Modifier,
 ) {
@@ -106,11 +107,17 @@ fun DestinationSelectionSection(
             label = "Destination Folder",
             placeholder = "Select destination...",
             title = "Select Destination Folder",
-            isError = destinationPath.isNotBlank() && !destValid,
+            isError = destinationPath.isNotBlank() && !destValid && !destCanCreate,
             supportingText = {
                 when {
                     destinationPath.isBlank() -> Text("Paste a path or browse")
-                    !destValid -> Text("Folder not found", color = MaterialTheme.colorScheme.error)
+                    !destValid && !destCanCreate ->
+                        Text(
+                            "Drive or parent path not accessible",
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    !destValid && destCanCreate ->
+                        Text("Folder will be created", color = MaterialTheme.colorScheme.primary)
                     else -> Text(destDirName ?: "")
                 }
             },
