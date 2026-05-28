@@ -48,16 +48,6 @@ class OverviewScreenTest {
     }
 
     @Test
-    @DisplayName("should display back button")
-    fun shouldDisplayBackButton() {
-        composeTestRule.setContent {
-            OverviewScreen(state = wizardState, onBack = {}, onToSummary = {})
-        }
-
-        composeTestRule.onNodeWithContentDescription("Back").assertIsDisplayed()
-    }
-
-    @Test
     @DisplayName("should display 4-Point button")
     fun shouldDisplay4PointButton() {
         composeTestRule.setContent {
@@ -85,20 +75,6 @@ class OverviewScreenTest {
         }
 
         composeTestRule.onNodeWithText("To Summary").assertIsDisplayed()
-    }
-
-    @Test
-    @DisplayName("should call onBack when clicked")
-    fun shouldCallOnBackWhenClicked() {
-        var backCalled = false
-
-        composeTestRule.setContent {
-            OverviewScreen(state = wizardState, onBack = { backCalled = true }, onToSummary = {})
-        }
-
-        composeTestRule.onNodeWithContentDescription("Back").performClick()
-
-        assertThat(backCalled).isTrue()
     }
 
     @Test

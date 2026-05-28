@@ -291,8 +291,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _image.value = image
         _imageFile.value = file
 
-        // Initialize zoom to fit view
-        updateZoomController()
+        // Zoom/pan will be set by the UI via fitToView when the container size is known
 
         // Clear previous state
         _boundingBoxList.value = BoundingBoxList.empty()
@@ -306,14 +305,28 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _undoRedoVersion.value++
     }
 
-    /** Sets whether CV auto-detection is enabled. */
+    /** Sets whether auto-detection is enabled. */
     fun setCvAutoDetectEnabled(enabled: Boolean) {
         _cvAutoDetectEnabled.value = enabled
     }
 
-    /** Sets the detected bounding boxes (from CV). */
+    /** Sets the detected bounding boxes (from YOLO pipeline). */
     fun setDetectedBoxes(boxes: List<BoundingBox>) {
-        _boundingBoxList.value = BoundingBoxList(boxes)
+        // Sort in reading order: left-to-right within rows, top-to-bottom across rows.
+        // Group by vertical position (within 20% of image height = same row), then sort by x.
+        val imageHeight = _image.value?.height?.toDouble() ?: 1.0
+        val sorted =
+            boxes.sortedWith(
+                compareBy<BoundingBox> { box ->
+                        // Round y to nearest 20% of image height to group same-row items
+                        ((box.corners.center().y / imageHeight) * 5).toInt()
+                    }
+                    .thenBy { box ->
+                        // Within same row, sort by x
+                        box.corners.center().x
+                    }
+            )
+        _boundingBoxList.value = BoundingBoxList(sorted)
         _selectedBoxIndex.value = -1
     }
 
@@ -551,10 +564,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     /** Updates a bounding box at the given index. */
     fun updateBox(index: Int, box: BoundingBox) {
-        println("DEBUG updateBox: index=$index, box.id=${box.id}, box.corners=${box.corners}")
         val list = _boundingBoxList.value
         _boundingBoxList.value = list.updateAt(index) { box }
-        println("DEBUG updateBox: list now has ${_boundingBoxList.value.size()} boxes")
     }
 
     /** Selects a box at the given index. */
@@ -570,16 +581,9 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _selectedCorner.value = null
     }
 
-    /** Selects a corner for arrow key movement. */
+    /** Selects a corner for arrow key movement. Does NOT change selectedBoxIndex — callers must set that explicitly via selectBox() or enterRefinement(). Previously this set selectedBoxIndex = refinementBoxIndex, which broke overview-page corner dragging because refinementBoxIndex is -1 when not in refinement mode. */
     fun selectCorner(corner: Corner) {
-        println(
-            "DEBUG selectCorner: corner=$corner, " +
-                "_refinementBoxIndex=${_refinementBoxIndex.value}, " +
-                "_selectedBoxIndex was=${_selectedBoxIndex.value}"
-        )
-        _selectedBoxIndex.value = _refinementBoxIndex.value // Set which box we're editing
         _selectedCorner.value = corner
-        println("DEBUG selectCorner: _selectedBoxIndex now=${_selectedBoxIndex.value}")
     }
 
     /** Deselects the current corner. */
@@ -712,14 +716,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     /** Enters refinement mode for the box at the given index. */
     fun enterRefinement(boxIndex: Int) {
-        println(
-            "DEBUG enterRefinement: boxIndex=$boxIndex, _selectedBoxIndex was=${_selectedBoxIndex.value}"
-        )
         _refinementBoxIndex.value = boxIndex
+        _selectedBoxIndex.value = boxIndex
         _selectedCorner.value = null // Clear any previous corner selection
-        _currentStep.value = WizardStep.REFINEMENT
-        println("DEBUG enterRefinement: _refinementBoxIndex now=${_refinementBoxIndex.value}")
-        // Zoom/pan will be set by the UI once container size is known
+        // Stay on OVERVIEW step — corner editing is now inline
+        _currentStep.value = WizardStep.OVERVIEW
     }
 
     /** Exits refinement mode and returns to overview. */
@@ -727,14 +728,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _refinementBoxIndex.value = -1
         _selectedCorner.value = null
         _currentStep.value = WizardStep.OVERVIEW
-
-        // Reset zoom to fit image
-        updateZoomController()
     }
 
     // ========== Box Manipulation ==========
 
-    /** Moves the selected box by the given delta. */
+    /** Moves the selected box by the given delta (pushes to undo stack). */
     fun moveSelectedBox(deltaX: Double, deltaY: Double) {
         val index = _selectedBoxIndex.value
         if (index >= 0) {
@@ -750,7 +748,18 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         }
     }
 
-    /** Moves a specific corner of the box at the given index. */
+    /** Moves the selected box by the given delta without saving to undo (for drag intermediate). */
+    fun moveSelectedBoxWithoutUndo(deltaX: Double, deltaY: Double) {
+        val index = _selectedBoxIndex.value
+        if (index >= 0) {
+            val list = _boundingBoxList.value
+            val box = list.boxes[index]
+            val moved = box.move(deltaX, deltaY)
+            updateBox(index, moved)
+        }
+    }
+
+    /** Moves a specific corner of the box at the given index (pushes to undo stack). */
     fun moveCorner(boxIndex: Int, corner: Corner, newX: Double, newY: Double) {
         val list = _boundingBoxList.value
         if (boxIndex >= 0 && boxIndex < list.size()) {
@@ -765,9 +774,21 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         }
     }
 
+    /** Moves a corner without saving to undo (for drag intermediate frames). */
+    fun moveCornerWithoutUndo(boxIndex: Int, corner: Corner, newX: Double, newY: Double) {
+        val list = _boundingBoxList.value
+        if (boxIndex >= 0 && boxIndex < list.size()) {
+            val box = list.boxes[boxIndex]
+            val moved = box.moveCorner(corner, Point(newX, newY))
+            if (!moved.corners.wouldCreateInvalidShape()) {
+                updateBox(boxIndex, moved)
+            }
+        }
+    }
+
     /**
      * Moves a corner with validation to prevent invalid shapes (bowties, self-intersecting).
-     * Returns true if the move was applied, false if it was rejected.
+     * Returns true if the move was applied, false if it was rejected. Pushes to undo stack.
      */
     @Suppress("ReturnCount")
     fun moveCornerWithValidation(
@@ -795,13 +816,22 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         return true
     }
 
-    /** Moves the selected corner by the given delta (arrow key movement). */
+    /**
+     * Saves the current state of a box to the undo stack. Call this once at the start of a drag
+     * operation, then use moveCornerWithoutUndo/moveSelectedBoxWithoutUndo for intermediate frames.
+     */
+    fun saveBoxUndoSnapshot(boxIndex: Int) {
+        val list = _boundingBoxList.value
+        if (boxIndex >= 0 && boxIndex < list.size()) {
+            val box = list.boxes[boxIndex]
+            _undoRedoManager.push(box.id, box)
+        }
+    }
+
+    /** Moves the selected corner by the given delta (arrow key movement, pushes to undo). */
     fun moveSelectedCorner(deltaX: Double, deltaY: Double) {
         val index = _selectedBoxIndex.value
         val corner = _selectedCorner.value
-        println(
-            "DEBUG moveSelectedCorner: index=$index, corner=$corner, refinementBoxIndex=${_refinementBoxIndex.value}"
-        )
         if (index >= 0 && corner != null) {
             val list = _boundingBoxList.value
             val box = list.boxes[index]
@@ -814,36 +844,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
             val moved =
                 box.moveCorner(corner, Point(cornerPoint.x + deltaX, cornerPoint.y + deltaY))
             updateBox(index, moved)
-        }
-    }
-
-    /** Expands the box at the given index. */
-    fun expandBox(boxIndex: Int, scaleFactor: Double) {
-        val list = _boundingBoxList.value
-        if (boxIndex >= 0 && boxIndex < list.size()) {
-            val box = list.boxes[boxIndex]
-
-            // Save for undo
-            _undoRedoManager.push(box.id, box)
-
-            // Expand
-            val expanded = box.expand(scaleFactor)
-            updateBox(boxIndex, expanded)
-        }
-    }
-
-    /** Rotates the box at the given index. */
-    fun rotateBox(boxIndex: Int, angleDegrees: Double) {
-        val list = _boundingBoxList.value
-        if (boxIndex >= 0 && boxIndex < list.size()) {
-            val box = list.boxes[boxIndex]
-
-            // Save for undo
-            _undoRedoManager.push(box.id, box)
-
-            // Rotate
-            val rotated = box.rotate(angleDegrees)
-            updateBox(boxIndex, rotated)
         }
     }
 
@@ -956,6 +956,16 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     /** Fits the view to the current refinement box. */
     fun fitToBox(viewportWidth: Double = 800.0, viewportHeight: Double = 600.0) {
         val index = _refinementBoxIndex.value
+        if (index >= 0 && index < _boundingBoxList.value.size()) {
+            val box = _boundingBoxList.value.boxes[index]
+            _zoomController.value =
+                _zoomController.value.fitToBox(box.corners, viewportWidth, viewportHeight)
+        }
+    }
+
+    /** Fits the view to the currently selected box (used on overview page). */
+    fun fitToSelectedBox(viewportWidth: Double = 800.0, viewportHeight: Double = 600.0) {
+        val index = _selectedBoxIndex.value
         if (index >= 0 && index < _boundingBoxList.value.size()) {
             val box = _boundingBoxList.value.boxes[index]
             _zoomController.value =

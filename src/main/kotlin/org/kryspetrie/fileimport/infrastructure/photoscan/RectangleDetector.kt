@@ -371,7 +371,7 @@ class RectangleDetector(
 
     // ===== Step 5: Polygon approximation + quadrilateral extraction =====
 
-@Suppress("UnusedParameter", "LoopWithTooManyJumpStatements", "ReturnCount")
+    @Suppress("UnusedParameter", "LoopWithTooManyJumpStatements", "ReturnCount")
     private fun approximateToQuadrilateral(
         contour: List<Point>,
         imageW: Int,
@@ -629,7 +629,6 @@ class RectangleDetector(
 
         return true
     }
-
 
     // ===== Step 7: Non-maximum suppression =====
 

@@ -326,11 +326,11 @@ private fun MetadataForm(
     onApplyToAll: () -> Unit,
 ) {
     var originalDate by
-        remember(configuration) { mutableStateOf(configuration.originalDateOverride .orEmpty()) }
+        remember(configuration) { mutableStateOf(configuration.originalDateOverride.orEmpty()) }
     var originalYear by
-        remember(configuration) { mutableStateOf(configuration.originalYearOverride .orEmpty()) }
+        remember(configuration) { mutableStateOf(configuration.originalYearOverride.orEmpty()) }
     var originalMonth by
-        remember(configuration) { mutableStateOf(configuration.originalMonthOverride .orEmpty()) }
+        remember(configuration) { mutableStateOf(configuration.originalMonthOverride.orEmpty()) }
     var tags by remember(configuration) { mutableStateOf(configuration.tags) }
     var notes by remember(configuration) { mutableStateOf(configuration.notes) }
 

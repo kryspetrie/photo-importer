@@ -66,69 +66,69 @@ import org.kryspetrie.fileimport.ui.theme.PetrieTheme
  * @see NavigationBarItem Individual tab item in the navigation bar
  */
 private enum class AppTab(val label: String, val icon: ImageVector) {
-  /**
-   * Media Import tab - standard file import workflow.
-   *
-   * Provides UI for:
-   * - Selecting source (camera, folder, SD card)
-   * - Choosing destination directory
-   * - Configuring import settings (naming patterns, duplicate detection)
-   * - Previewing changes before import
-   * - Executing the import with progress tracking
-   *
-   * @see ImportScreen The composable that implements this tab
-   */
-  MEDIA_IMPORT("Media Import", Icons.Default.Download),
+    /**
+     * Media Import tab - standard file import workflow.
+     *
+     * Provides UI for:
+     * - Selecting source (camera, folder, SD card)
+     * - Choosing destination directory
+     * - Configuring import settings (naming patterns, duplicate detection)
+     * - Previewing changes before import
+     * - Executing the import with progress tracking
+     *
+     * @see ImportScreen The composable that implements this tab
+     */
+    MEDIA_IMPORT("Media Import", Icons.Default.Download),
 
-  /**
-   * Photo Scan Import tab - scan printed photos from a single image.
-   *
-   * Enables users to:
-   * - Import an image containing multiple printed photos
-   * - Automatically detect photo boundaries using computer vision
-   * - Manually refine detection corners for accuracy
-   * - Apply perspective correction and rotation
-   * - Export individual photos with proper aspect ratios
-   *
-   * This is useful for digitizing physical photo prints that were photographed together, such as
-   * photos on a scanner bed or photos of a photo album page.
-   *
-   * @see WizardContainer The composable that implements this tab
-   */
-  PHOTO_SCAN("Photo Scan Import", Icons.Default.DocumentScanner),
+    /**
+     * Photo Scan Import tab - scan printed photos from a single image.
+     *
+     * Enables users to:
+     * - Import an image containing multiple printed photos
+     * - Automatically detect photo boundaries using computer vision
+     * - Manually refine detection corners for accuracy
+     * - Apply perspective correction and rotation
+     * - Export individual photos with proper aspect ratios
+     *
+     * This is useful for digitizing physical photo prints that were photographed together, such as
+     * photos on a scanner bed or photos of a photo album page.
+     *
+     * @see WizardContainer The composable that implements this tab
+     */
+    PHOTO_SCAN("Photo Scan Import", Icons.Default.DocumentScanner),
 
-  /**
-   * Reorganize tab - library reorganization workflow.
-   *
-   * Allows users to:
-   * - Select existing photo library folder
-   * - Apply new folder/filename patterns retroactively
-   * - Preview all changes before applying
-   * - Execute reorganization with undo support
-   * - Track reorganization history
-   *
-   * This is useful when users want to change their organization scheme after already importing
-   * photos.
-   *
-   * @see ReorganizeScreen The composable that implements this tab
-   */
-  REORGANIZE("Reorganize", Icons.AutoMirrored.Filled.DriveFileMove),
+    /**
+     * Reorganize tab - library reorganization workflow.
+     *
+     * Allows users to:
+     * - Select existing photo library folder
+     * - Apply new folder/filename patterns retroactively
+     * - Preview all changes before applying
+     * - Execute reorganization with undo support
+     * - Track reorganization history
+     *
+     * This is useful when users want to change their organization scheme after already importing
+     * photos.
+     *
+     * @see ReorganizeScreen The composable that implements this tab
+     */
+    REORGANIZE("Reorganize", Icons.AutoMirrored.Filled.DriveFileMove),
 
-  /**
-   * Duplicate Scanner tab - library deduplication workflow.
-   *
-   * Enables users to:
-   * - Scan entire photo library for duplicates
-   * - Use multiple detection strategies (hash, EXIF, perceptual hash, SURF)
-   * - Review duplicate groups with side-by-side previews
-   * - Choose which copies to keep/delete
-   * - Resolve duplicates safely with confirmation
-   *
-   * Helps reclaim storage space and organize photo collections.
-   *
-   * @see DuplicateScannerScreen The composable that implements this tab
-   */
-  DUPLICATES("Library Duplicates", Icons.Default.ContentCopy)
+    /**
+     * Duplicate Scanner tab - library deduplication workflow.
+     *
+     * Enables users to:
+     * - Scan entire photo library for duplicates
+     * - Use multiple detection strategies (hash, EXIF, perceptual hash, SURF)
+     * - Review duplicate groups with side-by-side previews
+     * - Choose which copies to keep/delete
+     * - Resolve duplicates safely with confirmation
+     *
+     * Helps reclaim storage space and organize photo collections.
+     *
+     * @see DuplicateScannerScreen The composable that implements this tab
+     */
+    DUPLICATES("Library Duplicates", Icons.Default.ContentCopy),
 }
 
 /**
@@ -272,84 +272,104 @@ fun PetrieFileImporterApp(
      *
      * Defaults to [Modifier] (no modifications applied).
      */
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
-  // Apply application theme
-  // Theme provides colors, typography, and shapes to all child composables
-  // Theme changes trigger recomposition of entire UI tree
-  PetrieTheme(settings.theme) {
-    // State: Currently selected navigation tab
-    // remember{} ensures state survives recomposition
-    // mutableStateOf{} makes it observable - changes trigger recomposition
-    var currentTab by remember { mutableStateOf(AppTab.MEDIA_IMPORT) }
+    // Apply application theme
+    // Theme provides colors, typography, and shapes to all child composables
+    // Theme changes trigger recomposition of entire UI tree
+    PetrieTheme(settings.theme) {
+        // State: Currently selected navigation tab
+        // remember{} ensures state survives recomposition
+        // mutableStateOf{} makes it observable - changes trigger recomposition
+        var currentTab by remember { mutableStateOf(AppTab.MEDIA_IMPORT) }
 
-    // Surface: Material Design container with background color
-    // Provides consistent background across the application
-    // Fills entire window area
-    Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-      // Column: Vertical layout container
-      // Arranges navigation bar and screen content vertically
-      Column(modifier = Modifier.fillMaxSize()) {
+        // Surface: Material Design container with background color
+        // Provides consistent background across the application
+        // Fills entire window area
+        Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            // Column: Vertical layout container
+            // Arranges navigation bar and screen content vertically
+            Column(modifier = Modifier.fillMaxSize()) {
 
-        // NavigationBar: Bottom navigation bar with tabs
-        // tonalElevation adds subtle shadow for depth
-        // Standard Material Design navigation pattern
-        NavigationBar(tonalElevation = 1.dp) {
-          // Create navigation item for each tab
-          AppTab.entries.forEach { tab ->
-            NavigationBarItem(
-                // Icon: Visual representation of the tab
-                // Uses 20.dp size for consistency
-                icon = {
-                  Icon(tab.icon, contentDescription = tab.label, modifier = Modifier.size(20.dp))
-                },
-                // Label: Text shown below icon
-                // Uses Material Theme typography for consistency
-                label = { Text(tab.label, style = MaterialTheme.typography.labelSmall) },
-                // Selection state: Highlight when tab is active
-                selected = currentTab == tab,
-                // Click handler: Switch to this tab
-                onClick = { currentTab = tab })
-          }
+                // NavigationBar: Bottom navigation bar with tabs
+                // tonalElevation adds subtle shadow for depth
+                // Standard Material Design navigation pattern
+                NavigationBar(tonalElevation = 1.dp) {
+                    // Create navigation item for each tab
+                    AppTab.entries.forEach { tab ->
+                        NavigationBarItem(
+                            // Icon: Visual representation of the tab
+                            // Uses 20.dp size for consistency
+                            icon = {
+                                Icon(
+                                    tab.icon,
+                                    contentDescription = tab.label,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            },
+                            // Label: Text shown below icon
+                            // Uses Material Theme typography for consistency
+                            label = {
+                                Text(tab.label, style = MaterialTheme.typography.labelSmall)
+                            },
+                            // Selection state: Highlight when tab is active
+                            selected = currentTab == tab,
+                            // Click handler: Switch to this tab
+                            onClick = { currentTab = tab },
+                        )
+                    }
+                }
+
+                // Box: Container for screen content
+                // Fills remaining space after navigation bar
+                // Adds 12dp padding around content for breathing room
+                Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                    // Conditional rendering based on selected tab
+                    // Only the active screen is composed (performance optimization)
+                    // Each screen receives settings and callback for consistency
+                    when (currentTab) {
+                        // Import tab: Main photo import workflow
+                        AppTab.MEDIA_IMPORT ->
+                            MediaImportScreen(
+                                settings = settings,
+                                onSettingsChange = onSettingsChange,
+                            )
+
+                        // Reorganize tab: Library reorganization workflow
+                        AppTab.REORGANIZE ->
+                            ReorganizeScreen(
+                                settings = settings,
+                                onSettingsChange = onSettingsChange,
+                            )
+
+                        // Duplicates tab: Duplicate detection and resolution
+                        AppTab.DUPLICATES ->
+                            DuplicateScannerScreen(
+                                settings = settings,
+                                onSettingsChange = onSettingsChange,
+                            )
+
+                        // Photo Scan tab: Multi-photo scan wizard
+                        AppTab.PHOTO_SCAN ->
+                            WizardContainer(
+                                onComplete = { processedPhotos ->
+                                    // Log results for debugging
+                                    println(
+                                        "Photo Scan Complete: ${processedPhotos.size} photos exported"
+                                    )
+                                    processedPhotos.forEach { photo ->
+                                        println(
+                                            "  - ${photo.outputPath} (${photo.dimensions.first}x${photo.dimensions.second})"
+                                        )
+                                    }
+                                    // Switch back to Import tab after completion
+                                    currentTab = AppTab.MEDIA_IMPORT
+                                },
+                                onCancel = { currentTab = AppTab.MEDIA_IMPORT },
+                            )
+                    }
+                }
+            }
         }
-
-        // Box: Container for screen content
-        // Fills remaining space after navigation bar
-        // Adds 12dp padding around content for breathing room
-        Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-          // Conditional rendering based on selected tab
-          // Only the active screen is composed (performance optimization)
-          // Each screen receives settings and callback for consistency
-          when (currentTab) {
-            // Import tab: Main photo import workflow
-            AppTab.MEDIA_IMPORT ->
-                MediaImportScreen(settings = settings, onSettingsChange = onSettingsChange)
-
-            // Reorganize tab: Library reorganization workflow
-            AppTab.REORGANIZE ->
-                ReorganizeScreen(settings = settings, onSettingsChange = onSettingsChange)
-
-            // Duplicates tab: Duplicate detection and resolution
-            AppTab.DUPLICATES ->
-                DuplicateScannerScreen(settings = settings, onSettingsChange = onSettingsChange)
-
-            // Photo Scan tab: Multi-photo scan wizard
-            AppTab.PHOTO_SCAN ->
-                WizardContainer(
-                    onComplete = { processedPhotos ->
-                      // Log results for debugging
-                      println("Photo Scan Complete: ${processedPhotos.size} photos exported")
-                      processedPhotos.forEach { photo ->
-                        println(
-                            "  - ${photo.outputPath} (${photo.dimensions.first}x${photo.dimensions.second})")
-                      }
-                      // Switch back to Import tab after completion
-                      currentTab = AppTab.MEDIA_IMPORT
-                    },
-                    onCancel = { currentTab = AppTab.MEDIA_IMPORT })
-          }
-        }
-      }
     }
-  }
 }

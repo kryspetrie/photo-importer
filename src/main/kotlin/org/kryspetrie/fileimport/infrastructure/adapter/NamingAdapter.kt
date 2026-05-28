@@ -65,28 +65,31 @@ class NamingAdapter : NamingPort {
         val meta = imageFile.metadata
         val mediaType = if (imageFile.fileType.isVideo) "video" else "photo"
         val durationStr =
-            meta?.durationSeconds?.let {
-                val m = (it / 60).toInt()
-                val s = (it % 60).toInt()
-                if (m > 0) "${m}m${s}s" else "${s}s"
-            } .orEmpty()
+            meta
+                ?.durationSeconds
+                ?.let {
+                    val m = (it / 60).toInt()
+                    val s = (it % 60).toInt()
+                    if (m > 0) "${m}m${s}s" else "${s}s"
+                }
+                .orEmpty()
         fileNamePattern =
             replaceDateTokens(fileNamePattern, date)
-                .replace("{camera}", sanitizeFileName(meta?.cameraModel .orEmpty()))
-                .replace("{make}", sanitizeFileName(meta?.cameraMake .orEmpty()))
-                .replace("{lens}", sanitizeFileName(meta?.lensModel .orEmpty()))
-                .replace("{iso}", meta?.iso?.toString() .orEmpty())
-                .replace("{aperture}", meta?.aperture?.let { "f${it}" } .orEmpty())
-                .replace("{shutter}", sanitizeFileName(meta?.shutterSpeed .orEmpty()))
-                .replace("{focal}", meta?.focalLength?.let { "${it.toInt()}mm" } .orEmpty())
-                .replace("{focal35}", meta?.focalLength35mm?.let { "${it}mm" } .orEmpty())
-                .replace("{width}", meta?.imageWidth?.toString() .orEmpty())
-                .replace("{height}", meta?.imageHeight?.toString() .orEmpty())
+                .replace("{camera}", sanitizeFileName(meta?.cameraModel.orEmpty()))
+                .replace("{make}", sanitizeFileName(meta?.cameraMake.orEmpty()))
+                .replace("{lens}", sanitizeFileName(meta?.lensModel.orEmpty()))
+                .replace("{iso}", meta?.iso?.toString().orEmpty())
+                .replace("{aperture}", meta?.aperture?.let { "f${it}" }.orEmpty())
+                .replace("{shutter}", sanitizeFileName(meta?.shutterSpeed.orEmpty()))
+                .replace("{focal}", meta?.focalLength?.let { "${it.toInt()}mm" }.orEmpty())
+                .replace("{focal35}", meta?.focalLength35mm?.let { "${it}mm" }.orEmpty())
+                .replace("{width}", meta?.imageWidth?.toString().orEmpty())
+                .replace("{height}", meta?.imageHeight?.toString().orEmpty())
                 .replace("{counter}", counter.toString().padStart(4, '0'))
                 .replace("{type}", mediaType)
                 .replace("{duration}", durationStr)
-                .replace("{fps}", meta?.frameRate?.let { "%.0f".format(it) } .orEmpty())
-                .replace("{codec}", sanitizeFileName(meta?.videoCodec .orEmpty()))
+                .replace("{fps}", meta?.frameRate?.let { "%.0f".format(it) }.orEmpty())
+                .replace("{codec}", sanitizeFileName(meta?.videoCodec.orEmpty()))
 
         val extension =
             if (configuration.fileNameExtension == "{ext}") imageFile.file.extension.lowercase()

@@ -32,9 +32,14 @@ class DuplicateScannerServiceTest {
     fun setup() {
         imageRepository = mock(ImageRepositoryPort::class.java)
         deduplicationPort = mock(DeduplicationPort::class.java)
-        service = DuplicateScannerService(
-            imageRepository, deduplicationPort, null, TestTimeProvider(), TestDispatcherProvider()
-        )
+        service =
+            DuplicateScannerService(
+                imageRepository,
+                deduplicationPort,
+                null,
+                TestTimeProvider(),
+                TestDispatcherProvider(),
+            )
     }
 
     @Nested

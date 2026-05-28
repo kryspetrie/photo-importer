@@ -254,9 +254,7 @@ class WizardContainerTest {
         @DisplayName("should not zoom below minimum")
         fun shouldNotZoomBelowMinimum() {
             // Zoom out multiple times
-            repeat(21) {
-                wizardState.zoomOut()
-            }
+            repeat(21) { wizardState.zoomOut() }
             assertThat(wizardState.zoomController.value.zoom)
                 .isGreaterThanOrEqualTo(wizardState.zoomController.value.minZoom)
         }

@@ -122,10 +122,7 @@ class ImportWorkflowIntegrationTest {
             val photos =
                 (1..5).flatMap { i ->
                     listOf(
-                        createTestFile(
-                            "IMG_${"%04d".format(i)}.cr2",
-                            ImageFileType.RAW_CR2,
-                        ),
+                        createTestFile("IMG_${"%04d".format(i)}.cr2", ImageFileType.RAW_CR2),
                         createTestFile("IMG_${"%04d".format(i)}.jpg"),
                     )
                 }
@@ -322,10 +319,7 @@ class ImportWorkflowIntegrationTest {
             val photos =
                 (1..20).flatMap { i ->
                     listOf(
-                        createTestFile(
-                            "IMG_${"%04d".format(i)}.cr2",
-                            ImageFileType.RAW_CR2,
-                        ),
+                        createTestFile("IMG_${"%04d".format(i)}.cr2", ImageFileType.RAW_CR2),
                         createTestFile("IMG_${"%04d".format(i)}.jpg"),
                     )
                 }

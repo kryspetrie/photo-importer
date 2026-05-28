@@ -1,47 +1,13 @@
 package org.kryspetrie.fileimport.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.CreateNewFolder
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.NewReleases
-import androidx.compose.material.icons.filled.PhotoLibrary
-import androidx.compose.material.icons.filled.Preview
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -49,16 +15,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
@@ -66,7 +25,6 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.ImportService
 import org.kryspetrie.fileimport.application.WatchFolderService
-import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.CameraDevice
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
@@ -79,28 +37,22 @@ import org.kryspetrie.fileimport.domain.model.ImportResult
 import org.kryspetrie.fileimport.domain.model.IndexProgress
 import org.kryspetrie.fileimport.domain.port.DeviceEvent
 import org.kryspetrie.fileimport.domain.port.DevicePort
-
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
 import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
-import org.kryspetrie.fileimport.ui.components.formatFileSize
-import org.kryspetrie.fileimport.ui.screens.components.ImportProgressInline
-import org.kryspetrie.fileimport.ui.screens.components.ImportResultInline
-import org.kryspetrie.fileimport.ui.screens.components.ProgressCard
 import org.kryspetrie.fileimport.ui.screens.components.SettingsSection
-
-private enum class FlowStep {
-    SETUP,
-    SCANNING,
-    SELECTING,
-    INDEXING,
-    CHECKING_DUPES,
-    DUPE_REVIEW,
-    PREVIEW,
-    IMPORTING,
-    COMPLETE,
-}
+import org.kryspetrie.fileimport.ui.screens.mediaimport.ClearCacheConfirmDialog
+import org.kryspetrie.fileimport.ui.screens.mediaimport.DuplicateReviewDialog
+import org.kryspetrie.fileimport.ui.screens.mediaimport.ErrorCard
+import org.kryspetrie.fileimport.ui.screens.mediaimport.ImageSelectionDialog
+import org.kryspetrie.fileimport.ui.screens.mediaimport.ImportHistorySection
+import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportActionBar
+import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportFlowStep
+import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportProgressView
+import org.kryspetrie.fileimport.ui.screens.mediaimport.PreviewStructureDialog
+import org.kryspetrie.fileimport.ui.screens.mediaimport.SourceDestinationFields
+import org.kryspetrie.fileimport.ui.screens.mediaimport.WatchFolderStatusCard
 
 internal fun configSummary(c: ImportConfiguration): String = buildString {
     if (c.createSubfolders) append(c.folderPattern) else append("Flat")
@@ -121,15 +73,12 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
     val timeProvider = koinInject<TimeProvider>()
     val watchStatus by watchFolderService.status.collectAsState()
     val scope = rememberCoroutineScope()
-
-    // Camera detection
     var detectedDevices by remember { mutableStateOf<List<CameraDevice>>(emptyList()) }
-
     var settingsExpanded by remember { mutableStateOf(false) }
     var wantsReview by remember { mutableStateOf(false) }
 
     // Flow state
-    var flowStep by remember { mutableStateOf(FlowStep.SETUP) }
+    var flowStep by remember { mutableStateOf(MediaImportFlowStep.SETUP) }
     var images by remember { mutableStateOf<List<ImageFile>>(emptyList()) }
     var filteredImages by remember { mutableStateOf<List<ImageFile>>(emptyList()) }
     var duplicates by remember { mutableStateOf<List<DuplicateInfo>>(emptyList()) }
@@ -148,7 +97,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
         )
     }
 
-    // Sync local state from settings (persists across tabs)
+    // Sync local state from settings
     LaunchedEffect(
         settings.importTabSettings.lastSourcePath,
         settings.importTabSettings.lastDestinationPath,
@@ -159,68 +108,65 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
         }
     }
 
-    // Persist paths immediately when changed (using settingsPort to avoid stale closure)
+    // Persist sourcePath when changed
     LaunchedEffect(sourcePath) {
         if (sourcePath.isNotBlank()) {
-            val latestSettings = settingsPort.observeSettings().first()
-            val newSettings =
-                latestSettings.withImportTabSettings(
-                    latestSettings.importTabSettings.withRecentSourcePath(sourcePath)
+            val s = settingsPort.observeSettings().first()
+            scope.launch {
+                settingsPort.saveSettings(
+                    s.withImportTabSettings(s.importTabSettings.withRecentSourcePath(sourcePath))
                 )
-            scope.launch { settingsPort.saveSettings(newSettings) }
+            }
         }
     }
 
+    // Persist destinationPath when changed
     LaunchedEffect(destinationPath) {
         if (destinationPath.isNotBlank()) {
-            val latestSettings = settingsPort.observeSettings().first()
-            val newSettings =
-                latestSettings.withImportTabSettings(
-                    latestSettings.importTabSettings.withRecentDestinationPath(destinationPath)
+            val s = settingsPort.observeSettings().first()
+            scope.launch {
+                settingsPort.saveSettings(
+                    s.withImportTabSettings(
+                        s.importTabSettings.withRecentDestinationPath(destinationPath)
+                    )
                 )
-            scope.launch { settingsPort.saveSettings(newSettings) }
+            }
         }
     }
+
     var customConfig by remember { mutableStateOf(ImportConfiguration()) }
 
     // Detect cameras on launch, then monitor for hot-plug events
     LaunchedEffect(Unit) {
-        val initialDevices =
+        detectedDevices =
             try {
                 devicePort.detectDevices()
             } catch (_: Exception) {
                 emptyList()
             }
-        detectedDevices = initialDevices
-
         devicePort.observeDeviceChanges().collect { event ->
             when (event) {
                 is DeviceEvent.Connected -> {
                     val device = event.device
                     detectedDevices = detectedDevices.filter { it.id != device.id } + device
                 }
-                is DeviceEvent.Disconnected -> {
+                is DeviceEvent.Disconnected ->
                     detectedDevices = detectedDevices.filter { it.id != event.deviceId }
-                }
                 is DeviceEvent.MountChanged -> {}
             }
         }
     }
 
-    // Scanning / indexing progress
     var scanProgress by remember { mutableStateOf("") }
     var scanTotal by remember { mutableStateOf(0) }
     var scanCurrent by remember { mutableStateOf(0) }
     var indexProgress by remember { mutableStateOf(IndexProgress()) }
-
-    // Error
     var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    // Dialogs
     var showClearCacheConfirm by remember { mutableStateOf(false) }
-
     val canStart =
-        sourcePath.isNotBlank() && destinationPath.isNotBlank() && flowStep == FlowStep.SETUP
+        sourcePath.isNotBlank() &&
+            destinationPath.isNotBlank() &&
+            flowStep == MediaImportFlowStep.SETUP
 
     // Path validation
     val sourceDir = remember(sourcePath) { if (sourcePath.isNotBlank()) File(sourcePath) else null }
@@ -232,7 +178,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
     val destValid = remember(destinationPath) { destDir?.isDirectory == true }
 
     fun resetFlow() {
-        flowStep = FlowStep.SETUP
+        flowStep = MediaImportFlowStep.SETUP
         images = emptyList()
         filteredImages = emptyList()
         duplicates = emptyList()
@@ -245,21 +191,19 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
     }
 
     fun doImport(toImport: List<ImageFile> = filteredImages) {
-        flowStep = FlowStep.IMPORTING
+        flowStep = MediaImportFlowStep.IMPORTING
         importProgress = ImportProgress()
         importResult = null
         importJob =
             scope.launch {
                 try {
                     val result =
-                        importService.executeImport(toImport, destinationPath, customConfig) { p ->
-                            importProgress = p
+                        importService.executeImport(toImport, destinationPath, customConfig) {
+                            importProgress = it
                         }
                     importResult = result
-                    // Save detailed history entry with per-file information
                     result.historyEntry?.let { entry -> historyAdapter.addEntry(entry) }
                         ?: run {
-                            // Fallback for backward compatibility
                             historyAdapter.addEntry(
                                 ImportHistoryEntry(
                                     timestamp = timeProvider.currentTimeMillis(),
@@ -283,7 +227,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                             )
                         }
                     importService.indexFolder(destinationPath, true) {}
-                    flowStep = FlowStep.COMPLETE
+                    flowStep = MediaImportFlowStep.COMPLETE
                 } catch (_: Exception) {
                     importResult =
                         ImportResult(
@@ -295,7 +239,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                             deletedSourceCount = 0,
                             endTime = timeProvider.currentTimeMillis(),
                         )
-                    flowStep = FlowStep.COMPLETE
+                    flowStep = MediaImportFlowStep.COMPLETE
                 }
             }
     }
@@ -305,9 +249,8 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
             scope.launch {
                 try {
                     var toImport = importService.applyPairFilter(selectedImages, customConfig)
-
                     if (importMode == ImportMode.NEW) {
-                        flowStep = FlowStep.INDEXING
+                        flowStep = MediaImportFlowStep.INDEXING
                         importService.indexFolder(destinationPath, true) { indexProgress = it }
                         val destHashes = importService.getDestinationHashes(destinationPath)
                         toImport =
@@ -317,27 +260,20 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                                 customConfig,
                             )
                     }
-
                     filteredImages = toImport
-
                     if (customConfig.detectVisualDuplicates) {
-                        flowStep = FlowStep.CHECKING_DUPES
+                        flowStep = MediaImportFlowStep.CHECKING_DUPES
                         val found = importService.findVisualDuplicates(toImport, customConfig)
                         if (found.isNotEmpty()) {
                             duplicates = found
-                            flowStep = FlowStep.DUPE_REVIEW
+                            flowStep = MediaImportFlowStep.DUPE_REVIEW
                             return@launch
                         }
                     }
-
-                    if (wantsReview) {
-                        flowStep = FlowStep.PREVIEW
-                    } else {
-                        doImport(toImport)
-                    }
+                    if (wantsReview) flowStep = MediaImportFlowStep.PREVIEW else doImport(toImport)
                 } catch (e: Exception) {
                     errorMessage = e.message ?: "Processing failed"
-                    flowStep = FlowStep.SETUP
+                    flowStep = MediaImportFlowStep.SETUP
                 }
             }
     }
@@ -346,8 +282,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
         importMode = mode
         wantsReview = withReview
         errorMessage = null
-
-        flowStep = FlowStep.SCANNING
+        flowStep = MediaImportFlowStep.SCANNING
         importJob =
             scope.launch {
                 try {
@@ -358,125 +293,68 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                             scanProgress = file
                         }
                     images = scanned.map { it.copy(isSelected = true) }
-
                     if (mode == ImportMode.SELECT) {
-                        flowStep = FlowStep.SELECTING
+                        flowStep = MediaImportFlowStep.SELECTING
                         return@launch
                     }
-
                     continueAfterSelection(scanned.map { it.copy(isSelected = true) })
                 } catch (e: Exception) {
                     errorMessage = e.message ?: "Scan failed"
-                    flowStep = FlowStep.SETUP
+                    flowStep = MediaImportFlowStep.SETUP
                 }
             }
     }
 
     // --- Dialogs ---
-
     if (showClearCacheConfirm) {
-        AlertDialog(
-            onDismissRequest = { showClearCacheConfirm = false },
-            title = { Text("Clear Index Cache") },
-            text = {
-                Text("Clear all cached folder indexes? Folders will be re-indexed on next use.")
+        ClearCacheConfirmDialog(
+            onConfirm = {
+                scope.launch { importService.clearAllIndexes() }
+                showClearCacheConfirm = false
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        scope.launch { importService.clearAllIndexes() }
-                        showClearCacheConfirm = false
-                    }
-                ) {
-                    Text("Clear")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showClearCacheConfirm = false }) { Text("Cancel") }
-            },
+            onDismiss = { showClearCacheConfirm = false },
         )
     }
 
-    // --- Media selection dialog ---
-    if (flowStep == FlowStep.SELECTING) {
-        Dialog(
-            onDismissRequest = { flowStep = FlowStep.SETUP },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-        ) {
-            Surface(
-                Modifier.fillMaxSize(0.95f),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-            ) {
-                ImagePreviewScreen(
-                    images = images,
-                    onToggleSelection = { id ->
-                        images =
-                            images.map {
-                                if (it.id == id) it.copy(isSelected = !it.isSelected) else it
-                            }
-                    },
-                    onSelectAll = { images = images.map { it.copy(isSelected = true) } },
-                    onSelectNone = { images = images.map { it.copy(isSelected = false) } },
-                    onContinue = {
-                        // Filter to only selected images, then continue
-                        val selectedImages = images.filter { it.isSelected }
-                        filteredImages = selectedImages
-                        flowStep = FlowStep.SETUP
-                        continueAfterSelection(selectedImages)
-                    },
-                    onBack = { flowStep = FlowStep.SETUP },
-                    selectedCount = images.count { it.isSelected },
-                )
-            }
-        }
+    if (flowStep == MediaImportFlowStep.SELECTING) {
+        ImageSelectionDialog(
+            images = images,
+            onToggleSelection = { id ->
+                images =
+                    images.map { if (it.id == id) it.copy(isSelected = !it.isSelected) else it }
+            },
+            onSelectAll = { images = images.map { it.copy(isSelected = true) } },
+            onSelectNone = { images = images.map { it.copy(isSelected = false) } },
+            onContinue = {
+                val selectedImages = images.filter { it.isSelected }
+                filteredImages = selectedImages
+                flowStep = MediaImportFlowStep.SETUP
+                continueAfterSelection(selectedImages)
+            },
+            onBack = { flowStep = MediaImportFlowStep.SETUP },
+            selectedCount = images.count { it.isSelected },
+        )
     }
 
-    // --- Duplicate review dialog ---
-    if (flowStep == FlowStep.DUPE_REVIEW) {
-        Dialog(
-            onDismissRequest = {},
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-        ) {
-            Surface(
-                Modifier.fillMaxSize(0.95f),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-            ) {
-                DuplicateReviewScreen(
-                    duplicates = duplicates,
-                    onResolution = { _, _ -> },
-                    onContinue = { if (wantsReview) flowStep = FlowStep.PREVIEW else doImport() },
-                    onBack = { resetFlow() },
-                )
-            }
-        }
+    if (flowStep == MediaImportFlowStep.DUPE_REVIEW) {
+        DuplicateReviewDialog(
+            duplicates = duplicates,
+            onContinue = {
+                if (wantsReview) flowStep = MediaImportFlowStep.PREVIEW else doImport()
+            },
+            onBack = { resetFlow() },
+        )
     }
 
-    // --- Preview dialog ---
-    if (flowStep == FlowStep.PREVIEW) {
-        Dialog(
-            onDismissRequest = {},
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-        ) {
-            Surface(
-                Modifier.fillMaxSize(0.95f),
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surface,
-                tonalElevation = 2.dp,
-            ) {
-                PreviewStructureScreen(
-                    images = filteredImages,
-                    sourcePath = sourcePath,
-                    destinationPath = destinationPath,
-                    configuration = customConfig,
-                    onImport = { doImport() },
-                    onBack = { resetFlow() },
-                )
-            }
-        }
+    if (flowStep == MediaImportFlowStep.PREVIEW) {
+        PreviewStructureDialog(
+            images = filteredImages,
+            sourcePath = sourcePath,
+            destinationPath = destinationPath,
+            configuration = customConfig,
+            onImport = { doImport() },
+            onBack = { resetFlow() },
+        )
     }
 
     // --- Main layout ---
@@ -486,185 +364,35 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Import", style = MaterialTheme.typography.headlineSmall)
-
-            // ── #5 / #9: Source & Destination with path validation ──
-
-            // ── #5 / #9: Source & Destination with path validation ──
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                OutlinedTextField(
-                    value = sourcePath,
-                    onValueChange = { sourcePath = it },
-                    label = { Text("Source Folder") },
-                    placeholder = { Text("Select source...") },
-                    modifier = Modifier.weight(1f),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    singleLine = true,
-                    isError = sourcePath.isNotBlank() && !sourceValid,
-                    supportingText = {
-                        when {
-                            sourcePath.isBlank() ->
-                                Text(
-                                    "Paste a path or browse",
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            !sourceValid ->
-                                Text(
-                                    "Folder not found",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            else ->
-                                Text(
-                                    sourceDir!!.name,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF2E7D32),
-                                )
-                        }
-                    },
-                )
-                OutlinedButton(
-                    onClick = { pickFolder("Select Source Folder")?.let { sourcePath = it } },
-                    modifier = Modifier.height(56.dp),
-                ) {
-                    Icon(Icons.Default.FolderOpen, null, Modifier.size(20.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Browse")
-                }
-            }
-
-            // ── Destination ──
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
-                    value = destinationPath,
-                    onValueChange = { destinationPath = it },
-                    label = { Text("Destination Folder") },
-                    placeholder = { Text("Select destination...") },
-                    modifier = Modifier.weight(1f),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    singleLine = true,
-                    isError = destinationPath.isNotBlank() && !destValid,
-                    supportingText = {
-                        when {
-                            destinationPath.isBlank() ->
-                                Text(
-                                    "Paste a path or browse",
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            !destValid ->
-                                Text(
-                                    "Folder not found",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.error,
-                                )
-                            else ->
-                                Text(
-                                    destDir?.name ?: destinationPath,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF2E7D32),
-                                )
-                        }
-                    },
-                )
-                OutlinedButton(
-                    onClick = {
-                        pickFolder("Select Destination Folder")?.let { destinationPath = it }
-                    },
-                    modifier = Modifier.height(56.dp),
-                ) {
-                    Icon(Icons.Default.CreateNewFolder, null, Modifier.size(20.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Browse")
-                }
-            }
-
-            // Watch folder status
+            SourceDestinationFields(
+                sourcePath = sourcePath,
+                onSourcePathChange = { sourcePath = it },
+                destinationPath = destinationPath,
+                onDestinationPathChange = { destinationPath = it },
+                sourceValid = sourceValid,
+                destValid = destValid,
+                sourceDirName = sourceDir?.name,
+                destDirName = destDir?.name,
+            )
             if (watchStatus.isWatching) {
-                OutlinedCard(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Visibility,
-                            null,
-                            Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                "Watching: ${watchStatus.watchPath}",
-                                style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Text(
-                                "${watchStatus.filesDetected} files detected",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { watchFolderService.stopWatching() },
-                            modifier = Modifier.height(28.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp),
-                        ) {
-                            Text("Stop", style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
+                WatchFolderStatusCard(
+                    watchStatus = watchStatus,
+                    onStopWatching = { watchFolderService.stopWatching() },
+                )
             }
-
-            // Error
-            errorMessage?.let {
-                OutlinedCard(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            null,
-                            Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-            }
-
-            // Progress states
-            when (flowStep) {
-                FlowStep.SCANNING ->
-                    ProgressCard("Scanning source folder...", scanCurrent, scanTotal, scanProgress)
-                FlowStep.INDEXING ->
-                    ProgressCard(
-                        "Indexing destination...",
-                        indexProgress.indexed,
-                        indexProgress.total,
-                        indexProgress.currentFile,
-                    )
-                FlowStep.CHECKING_DUPES -> ProgressCard("Checking for duplicates...", 0, 0, "")
-                FlowStep.IMPORTING ->
-                    ImportProgressInline(importProgress) {
-                        importJob?.cancel()
-                        resetFlow()
-                    }
-                // #11: pass destinationPath to ImportResultInline
-                FlowStep.COMPLETE ->
-                    importResult?.let { ImportResultInline(it, destinationPath) { resetFlow() } }
-                else -> {}
-            }
-
-            // ── #3: Custom settings with 3 collapsible subsections ──
+            errorMessage?.let { ErrorCard(message = it) }
+            MediaImportProgressView(
+                flowStep = flowStep,
+                scanCurrent = scanCurrent,
+                scanTotal = scanTotal,
+                scanProgress = scanProgress,
+                indexProgress = indexProgress,
+                importProgress = importProgress,
+                importResult = importResult,
+                importJob = importJob,
+                destinationPath = destinationPath,
+                onReset = { resetFlow() },
+            )
             SettingsSection(
                 expanded = settingsExpanded,
                 onToggle = { settingsExpanded = !settingsExpanded },
@@ -679,168 +407,21 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                 watchStatus = watchStatus,
                 scope = scope,
             )
-
-            // ── #6: Import history (collapsible) ──
             var historyExpanded by remember { mutableStateOf(false) }
             var historyEntries by remember { mutableStateOf<List<ImportHistoryEntry>>(emptyList()) }
             LaunchedEffect(flowStep) { historyEntries = historyAdapter.loadHistory() }
-
-            if (historyEntries.isNotEmpty()) {
-                OutlinedCard(Modifier.fillMaxWidth()) {
-                    Column {
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .clickable { historyExpanded = !historyExpanded }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(
-                                Icons.Default.History,
-                                null,
-                                Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Column(Modifier.weight(1f)) {
-                                Text("Import History", style = MaterialTheme.typography.titleSmall)
-                                Text(
-                                    "${historyEntries.size} imports • " +
-                                        "${historyEntries.take(10).sumOf { it.successCount }} files",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Icon(
-                                if (historyExpanded) Icons.Default.ExpandLess
-                                else Icons.Default.ExpandMore,
-                                "Toggle",
-                                Modifier.size(18.dp),
-                            )
-                        }
-                        AnimatedVisibility(
-                            historyExpanded,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            Column {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                                Column(
-                                    Modifier.padding(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                                ) {
-                                    historyEntries.take(10).forEach { entry ->
-                                        Row(
-                                            Modifier.fillMaxWidth()
-                                                .clip(MaterialTheme.shapes.small)
-                                                .padding(vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        ) {
-                                            Icon(
-                                                if (entry.errorCount == 0) Icons.Default.CheckCircle
-                                                else Icons.Default.Warning,
-                                                null,
-                                                Modifier.size(16.dp),
-                                                tint =
-                                                    if (entry.errorCount == 0)
-                                                        MaterialTheme.colorScheme.primary
-                                                    else MaterialTheme.colorScheme.error,
-                                            )
-                                            Column(Modifier.weight(1f)) {
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(
-                                                        entry.sourcePath,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis,
-                                                    )
-                                                    Spacer(Modifier.width(4.dp))
-                                                    Text(
-                                                        "— ${entry.successCount} files",
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color =
-                                                            MaterialTheme.colorScheme
-                                                                .onSurfaceVariant,
-                                                    )
-                                                }
-                                                Text(
-                                                    java.text
-                                                        .SimpleDateFormat("yyyy-MM-dd HH:mm")
-                                                        .format(java.util.Date(entry.timestamp)),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color =
-                                                        MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                            Text(
-                                                formatFileSize(entry.totalBytes),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── #4: Unified bottom action bar ──
-            if (flowStep == FlowStep.SETUP) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                Row(
-                    modifier =
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Button(
-                        onClick = { startFlow(withReview = false, mode = ImportMode.ALL) },
-                        enabled = canStart,
-                    ) {
-                        Icon(Icons.Default.PhotoLibrary, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Import All")
-                    }
-                    Button(
-                        onClick = { startFlow(withReview = false, mode = ImportMode.NEW) },
-                        enabled = canStart,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.secondary,
-                                contentColor = MaterialTheme.colorScheme.onSecondary,
-                            ),
-                    ) {
-                        Icon(Icons.Default.NewReleases, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Import New")
-                    }
-                    Button(
-                        onClick = { startFlow(withReview = false, mode = ImportMode.SELECT) },
-                        enabled = canStart,
-                        colors =
-                            ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.tertiary,
-                                contentColor = MaterialTheme.colorScheme.onTertiary,
-                            ),
-                    ) {
-                        Icon(Icons.Default.CheckCircle, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Select & Import")
-                    }
-                    Spacer(Modifier.weight(1f))
-                    OutlinedButton(
-                        onClick = { startFlow(withReview = true, mode = importMode) },
-                        enabled = canStart,
-                    ) {
-                        Icon(Icons.Default.Preview, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Preview First ▶")
-                    }
-                }
+            ImportHistorySection(
+                historyEntries = historyEntries,
+                expanded = historyExpanded,
+                onToggle = { historyExpanded = !historyExpanded },
+            )
+            if (flowStep == MediaImportFlowStep.SETUP) {
+                MediaImportActionBar(
+                    canStart = canStart,
+                    importMode = importMode,
+                    onImportModeChange = {},
+                    onStartFlow = { withReview, mode -> startFlow(withReview, mode) },
+                )
             }
         }
     }

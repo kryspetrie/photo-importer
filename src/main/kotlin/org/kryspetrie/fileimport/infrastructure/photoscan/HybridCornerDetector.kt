@@ -191,7 +191,7 @@ class HybridCornerDetector(
     }
 
     /** Builds a DetectedPhoto from a quadrilateral. */
-@Suppress("UnusedParameter")
+    @Suppress("UnusedParameter")
     private fun buildDetectedPhoto(
         image: BufferedImage,
         quad: DetectedQuadrilateral,

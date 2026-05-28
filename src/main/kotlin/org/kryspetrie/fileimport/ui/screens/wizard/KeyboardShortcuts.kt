@@ -179,8 +179,12 @@ fun Modifier.withWizardKeyboardShortcuts(
                     // Context-aware: cycle corners forward when one is selected, otherwise next box
                     if (wizardState.selectedCorner.value != null) {
                         cycleCorner(wizardState, reverse = false)
-                    } else if (wizardState.refinementBoxIndex.value >= 0) {
-                        wizardState.nextBox()
+                    } else {
+                        val current = wizardState.selectedBoxIndex.value
+                        val count = wizardState.boxCount()
+                        if (count > 0 && current >= 0) {
+                            wizardState.selectBox((current + 1) % count)
+                        }
                     }
                     return@onKeyEvent true
                 }
@@ -189,20 +193,12 @@ fun Modifier.withWizardKeyboardShortcuts(
                     // previous box
                     if (wizardState.selectedCorner.value != null) {
                         cycleCorner(wizardState, reverse = true)
-                    } else if (wizardState.refinementBoxIndex.value >= 0) {
-                        wizardState.previousBox()
-                    }
-                    return@onKeyEvent true
-                }
-                Key.Comma -> {
-                    if (wizardState.refinementBoxIndex.value >= 0) {
-                        wizardState.rotateBox(wizardState.refinementBoxIndex.value, -5.0)
-                    }
-                    return@onKeyEvent true
-                }
-                Key.Period -> {
-                    if (wizardState.refinementBoxIndex.value >= 0) {
-                        wizardState.rotateBox(wizardState.refinementBoxIndex.value, 5.0)
+                    } else {
+                        val current = wizardState.selectedBoxIndex.value
+                        val count = wizardState.boxCount()
+                        if (count > 0 && current >= 0) {
+                            wizardState.selectBox((current - 1 + count) % count)
+                        }
                     }
                     return@onKeyEvent true
                 }

@@ -2,7 +2,6 @@ package org.kryspetrie.fileimport.application
 
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
-
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -23,11 +22,10 @@ import org.kryspetrie.fileimport.domain.model.ReorganizePhase
 import org.kryspetrie.fileimport.domain.model.ReorganizePreview
 import org.kryspetrie.fileimport.domain.model.ReorganizeProgress
 import org.kryspetrie.fileimport.domain.model.ReorganizeResult
-import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
-
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
-import org.kryspetrie.fileimport.domain.port.TimeProvider
+import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort
+import org.kryspetrie.fileimport.domain.port.TimeProvider
 
 private val SCAN_CONCURRENCY = Runtime.getRuntime().availableProcessors().coerceIn(2, 8)
 private val json = Json { prettyPrint = true }
@@ -251,8 +249,8 @@ class ReorganizeService(
                                         newPath = mapping.newPath,
                                         originalFilename = source.name,
                                         newFilename = dest.name,
-                                        originalParent = source.parent .orEmpty(),
-                                        newParent = dest.parent .orEmpty(),
+                                        originalParent = source.parent.orEmpty(),
+                                        newParent = dest.parent.orEmpty(),
                                         operationType = ReorganizeMode.MOVE,
                                         wasSuccessful = true,
                                         fileSize = source.length(),
@@ -271,8 +269,8 @@ class ReorganizeService(
                                         newPath = mapping.newPath,
                                         originalFilename = source.name,
                                         newFilename = dest.name,
-                                        originalParent = source.parent .orEmpty(),
-                                        newParent = dest.parent .orEmpty(),
+                                        originalParent = source.parent.orEmpty(),
+                                        newParent = dest.parent.orEmpty(),
                                         operationType = ReorganizeMode.MOVE,
                                         wasSuccessful = true,
                                         fileSize = dest.length(),
@@ -291,8 +289,8 @@ class ReorganizeService(
                                     newPath = mapping.newPath,
                                     originalFilename = source.name,
                                     newFilename = dest.name,
-                                    originalParent = source.parent .orEmpty(),
-                                    newParent = dest.parent .orEmpty(),
+                                    originalParent = source.parent.orEmpty(),
+                                    newParent = dest.parent.orEmpty(),
                                     operationType = ReorganizeMode.COPY,
                                     wasSuccessful = true,
                                     fileSize = dest.length(),
@@ -330,7 +328,7 @@ class ReorganizeService(
             var journalPath: String? = null
             if (journalEntries.isNotEmpty()) {
                 val rootFolder =
-                    preview.mappings.firstOrNull()?.file?.file?.parentFile?.absolutePath .orEmpty()
+                    preview.mappings.firstOrNull()?.file?.file?.parentFile?.absolutePath.orEmpty()
                 val journal =
                     ReorganizeJournal(
                         rootFolder = rootFolder,

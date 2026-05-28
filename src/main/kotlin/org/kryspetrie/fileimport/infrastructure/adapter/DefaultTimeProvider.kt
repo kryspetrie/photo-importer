@@ -11,11 +11,11 @@ class DefaultTimeProvider : TimeProvider {
     override fun currentTimeMillis(): Long = System.currentTimeMillis()
 
     override fun formattedTimestamp(): String =
-        DateTimeFormatter.ISO_LOCAL_DATE_TIME
-            .withZone(ZoneId.systemDefault())
+        DateTimeFormatter.ISO_LOCAL_DATE_TIME.withZone(ZoneId.systemDefault())
             .format(Instant.ofEpochMilli(currentTimeMillis()))
 
     override fun formatTimestamp(timestamp: Long): String =
-        java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
+        java.text
+            .SimpleDateFormat("yyyy-MM-dd HH:mm:ss", java.util.Locale.US)
             .format(java.util.Date(timestamp))
 }

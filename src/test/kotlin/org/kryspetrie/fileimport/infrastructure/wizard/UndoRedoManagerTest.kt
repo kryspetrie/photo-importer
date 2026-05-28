@@ -263,8 +263,7 @@ class UndoRedoManagerTest {
         val boxId = box.id
 
         // Verify initial state
-        @Suppress("UnusedPrivateProperty")
-        val initialX = box.corners.topLeft.x
+        @Suppress("UnusedPrivateProperty") val initialX = box.corners.topLeft.x
 
         // Push initial state
         manager.push(boxId, box)

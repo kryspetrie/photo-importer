@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.ui.screens
 
-import java.util.Locale
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -43,13 +42,13 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -60,7 +59,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,9 +71,11 @@ import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import java.awt.Cursor
 import java.io.File
+import java.util.Locale
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
 import org.kryspetrie.fileimport.ui.components.ThumbnailImage
@@ -102,247 +102,42 @@ fun ImagePreviewScreen(
 ) {
     val totalSelectedSize = images.filter { it.isSelected }.sumOf { it.fileSize }
     val density = LocalDensity.current
-
     val filteredAndSorted =
-        remember(images, viewModel.filterType, viewModel.sortMode, viewModel.sortAscending, viewModel.searchQuery) {
+        remember(
+            images,
+            viewModel.filterType,
+            viewModel.sortMode,
+            viewModel.sortAscending,
+            viewModel.searchQuery,
+        ) {
             viewModel.filteredAndSorted(images)
         }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Select Files to Import", style = MaterialTheme.typography.headlineSmall)
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(
-                        onClick = { viewModel.viewMode = ImagePreviewViewModel.ViewMode.LIST },
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ViewList,
-                            "List view",
-                            tint =
-                                if (viewModel.viewMode == ImagePreviewViewModel.ViewMode.LIST)
-                                        MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    IconButton(
-                        onClick = { viewModel.viewMode = ImagePreviewViewModel.ViewMode.GRID },
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.GridView,
-                            "Grid view",
-                            tint =
-                                if (viewModel.viewMode == ImagePreviewViewModel.ViewMode.GRID)
-                                    MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = onSelectAll) { Text("Select All") }
-                    TextButton(onClick = onSelectNone) { Text("Select None") }
-                }
-            }
-
+            ImagePreviewHeader(
+                viewModel = viewModel,
+                onSelectAll = onSelectAll,
+                onSelectNone = onSelectNone,
+            )
             Spacer(Modifier.height(4.dp))
-
-            // Filter and sort bar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = viewModel.searchQuery,
-                    onValueChange = { viewModel.searchQuery = it },
-                    placeholder = {
-                        Text("Search files...", style = MaterialTheme.typography.bodySmall)
-                    },
-                    modifier = Modifier.weight(1f).height(40.dp),
-                    textStyle = MaterialTheme.typography.bodySmall,
-                    singleLine = true,
-                    leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(16.dp)) },
-                    trailingIcon = {
-                        if (viewModel.searchQuery.isNotBlank()) {
-                            IconButton(
-                                onClick = { viewModel.searchQuery = "" },
-                                modifier = Modifier.size(20.dp),
-                            ) {
-                                Icon(Icons.Default.Clear, "Clear", Modifier.size(14.dp))
-                            }
-                        }
-                    },
-                )
-                ImagePreviewViewModel.FileFilter.entries.forEach { filter ->
-                    FilterChip(
-                        selected = viewModel.filterType == filter,
-                        onClick = { viewModel.filterType = filter },
-                        label = {
-                            Text(
-                                filter.name.lowercase().replaceFirstChar { it.uppercase() },
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        },
-                        modifier = Modifier.height(28.dp),
-                    )
-                }
-                // Sort dropdown
-                var sortMenuExpanded by remember { mutableStateOf(false) }
-                Box {
-                    FilterChip(
-                        selected = false,
-                        onClick = { sortMenuExpanded = true },
-                        label = {
-                            Text(
-                                "Sort: ${viewModel.sortMode.name.lowercase().replaceFirstChar { it.uppercase() }}",
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        },
-                        trailingIcon = {
-                            Icon(
-                                if (viewModel.sortAscending) Icons.Default.ArrowUpward
-                                else Icons.Default.ArrowDownward,
-                                null,
-                                Modifier.size(14.dp),
-                            )
-                        },
-                        modifier = Modifier.height(28.dp),
-                    )
-                    DropdownMenu(
-                        expanded = sortMenuExpanded,
-                        onDismissRequest = { sortMenuExpanded = false },
-                    ) {
-                        ImagePreviewViewModel.SortMode.entries.forEach { mode ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        mode.name.lowercase().replaceFirstChar { it.uppercase() },
-                                        style = MaterialTheme.typography.bodySmall,
-                                    )
-                                },
-                                onClick = {
-                                    viewModel.sortMode = mode
-                                    sortMenuExpanded = false
-                                },
-                                trailingIcon = {
-                                    if (viewModel.sortMode == mode)
-                                        Icon(
-                                            if (viewModel.sortAscending) Icons.Default.ArrowUpward
-                                            else Icons.Default.ArrowDownward,
-                                            null,
-                                            Modifier.size(14.dp),
-                                        )
-                                },
-                            )
-                        }
-                    }
-                }
-            }
-
+            FilterAndSortBar(viewModel = viewModel)
             Spacer(Modifier.height(8.dp))
-
-            OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text(
-                        "$selectedCount of ${images.size} files selected" +
-                            if (filteredAndSorted.size != images.size)
-                                " (showing ${filteredAndSorted.size})"
-                            else "",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        formatFileSize(totalSelectedSize),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-
+            SelectionStatusBar(
+                selectedCount = selectedCount,
+                totalImages = images.size,
+                filteredCount = filteredAndSorted.size,
+                totalSelectedSize = totalSelectedSize,
+            )
             Spacer(Modifier.height(8.dp))
-
-            // Content area
-            if (filteredAndSorted.isEmpty()) {
-                EmptyState(modifier = Modifier.weight(1f).fillMaxWidth())
-            } else {
-                Row(modifier = Modifier.weight(1f)) {
-                    Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        when (viewModel.viewMode) {
-                            ImagePreviewViewModel.ViewMode.LIST ->
-                                ImageListView(
-                                    filteredAndSorted,
-                                    onToggle = onToggleSelection,
-                                    onPreview = { viewModel.previewImage = it },
-                                )
-                            ImagePreviewViewModel.ViewMode.GRID ->
-                                ImageGridView(
-                                    filteredAndSorted,
-                                    onToggle = onToggleSelection,
-                                    onPreview = { viewModel.previewImage = it },
-                                )
-                        }
-                    }
-
-                    viewModel.previewImage?.let { img ->
-                        // Drag handle
-                        val dragInteraction = remember { MutableInteractionSource() }
-                        val isDragHovered by dragInteraction.collectIsHoveredAsState()
-                        Box(
-                            modifier =
-                                Modifier.width(8.dp)
-                                    .fillMaxHeight()
-                                    .hoverable(dragInteraction)
-                                    .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
-                                    .draggable(
-                                        orientation = Orientation.Horizontal,
-                                        state =
-                                            rememberDraggableState { deltaPx ->
-                                                val deltaDp = with(density) { deltaPx.toDp().value }
-                                                viewModel.paneWidthDp =
-                                                    (viewModel.paneWidthDp - deltaDp).coerceIn(
-                                                        ImagePreviewViewModel.PANE_MIN_DP,
-                                                        ImagePreviewViewModel.PANE_MAX_DP,
-                                                    )
-                                            },
-                                    ),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Box(
-                                modifier =
-                                    Modifier.width(2.dp)
-                                        .fillMaxHeight(0.3f)
-                                        .clip(MaterialTheme.shapes.small)
-                                        .background(
-                                            if (isDragHovered)
-                                                MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
-                                            else MaterialTheme.colorScheme.outlineVariant
-                                        )
-                            )
-                        }
-
-                        PreviewSidePane(
-                            image = img,
-                            modifier = Modifier.width(viewModel.paneWidthDp.dp).fillMaxHeight(),
-                            onClose = { viewModel.previewImage = null },
-                            onFullScreen = { viewModel.fullScreenImage = img },
-                        )
-                    }
-                }
-            }
-
+            ImageContentArea(
+                filteredAndSorted = filteredAndSorted,
+                viewModel = viewModel,
+                density = density,
+                onToggleSelection = onToggleSelection,
+                modifier = Modifier.weight(1f),
+            )
             Spacer(Modifier.height(8.dp))
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -351,9 +146,257 @@ fun ImagePreviewScreen(
                 Button(onClick = onContinue, enabled = selectedCount > 0) { Text("Continue") }
             }
         }
-
         viewModel.fullScreenImage?.let { img ->
             FullScreenOverlay(image = img, onDismiss = { viewModel.fullScreenImage = null })
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Extracted sub-composables
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun ImagePreviewHeader(
+    viewModel: ImagePreviewViewModel,
+    onSelectAll: () -> Unit,
+    onSelectNone: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text("Select Files to Import", style = MaterialTheme.typography.headlineSmall)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(
+                onClick = { viewModel.viewMode = ImagePreviewViewModel.ViewMode.LIST },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ViewList,
+                    "List view",
+                    tint =
+                        if (viewModel.viewMode == ImagePreviewViewModel.ViewMode.LIST)
+                            MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            IconButton(
+                onClick = { viewModel.viewMode = ImagePreviewViewModel.ViewMode.GRID },
+                modifier = Modifier.size(32.dp),
+            ) {
+                Icon(
+                    Icons.Default.GridView,
+                    "Grid view",
+                    tint =
+                        if (viewModel.viewMode == ImagePreviewViewModel.ViewMode.GRID)
+                            MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            TextButton(onClick = onSelectAll) { Text("Select All") }
+            TextButton(onClick = onSelectNone) { Text("Select None") }
+        }
+    }
+}
+
+@Composable
+private fun FilterAndSortBar(viewModel: ImagePreviewViewModel) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        OutlinedTextField(
+            value = viewModel.searchQuery,
+            onValueChange = { viewModel.searchQuery = it },
+            placeholder = { Text("Search files...", style = MaterialTheme.typography.bodySmall) },
+            modifier = Modifier.weight(1f).height(40.dp),
+            textStyle = MaterialTheme.typography.bodySmall,
+            singleLine = true,
+            leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(16.dp)) },
+            trailingIcon = {
+                if (viewModel.searchQuery.isNotBlank()) {
+                    IconButton(
+                        onClick = { viewModel.searchQuery = "" },
+                        modifier = Modifier.size(20.dp),
+                    ) {
+                        Icon(Icons.Default.Clear, "Clear", Modifier.size(14.dp))
+                    }
+                }
+            },
+        )
+        ImagePreviewViewModel.FileFilter.entries.forEach { filter ->
+            FilterChip(
+                selected = viewModel.filterType == filter,
+                onClick = { viewModel.filterType = filter },
+                label = {
+                    Text(
+                        filter.name.lowercase().replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                },
+                modifier = Modifier.height(28.dp),
+            )
+        }
+        // Sort dropdown
+        var sortMenuExpanded by remember { mutableStateOf(false) }
+        Box {
+            FilterChip(
+                selected = false,
+                onClick = { sortMenuExpanded = true },
+                label = {
+                    Text(
+                        "Sort: ${viewModel.sortMode.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                },
+                trailingIcon = {
+                    Icon(
+                        if (viewModel.sortAscending) Icons.Default.ArrowUpward
+                        else Icons.Default.ArrowDownward,
+                        null,
+                        Modifier.size(14.dp),
+                    )
+                },
+                modifier = Modifier.height(28.dp),
+            )
+            DropdownMenu(
+                expanded = sortMenuExpanded,
+                onDismissRequest = { sortMenuExpanded = false },
+            ) {
+                ImagePreviewViewModel.SortMode.entries.forEach { mode ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                mode.name.lowercase().replaceFirstChar { it.uppercase() },
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        },
+                        onClick = {
+                            viewModel.sortMode = mode
+                            sortMenuExpanded = false
+                        },
+                        trailingIcon = {
+                            if (viewModel.sortMode == mode)
+                                Icon(
+                                    if (viewModel.sortAscending) Icons.Default.ArrowUpward
+                                    else Icons.Default.ArrowDownward,
+                                    null,
+                                    Modifier.size(14.dp),
+                                )
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SelectionStatusBar(
+    selectedCount: Int,
+    totalImages: Int,
+    filteredCount: Int,
+    totalSelectedSize: Long,
+) {
+    OutlinedCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                "$selectedCount of $totalImages files selected" +
+                    if (filteredCount != totalImages) " (showing $filteredCount)" else "",
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Text(
+                formatFileSize(totalSelectedSize),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ImageContentArea(
+    filteredAndSorted: List<ImageFile>,
+    viewModel: ImagePreviewViewModel,
+    density: Density,
+    onToggleSelection: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (filteredAndSorted.isEmpty()) {
+        EmptyState(modifier = modifier.fillMaxWidth())
+    } else {
+        Row(modifier = modifier) {
+            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                when (viewModel.viewMode) {
+                    ImagePreviewViewModel.ViewMode.LIST ->
+                        ImageListView(
+                            filteredAndSorted,
+                            onToggle = onToggleSelection,
+                            onPreview = { viewModel.previewImage = it },
+                        )
+                    ImagePreviewViewModel.ViewMode.GRID ->
+                        ImageGridView(
+                            filteredAndSorted,
+                            onToggle = onToggleSelection,
+                            onPreview = { viewModel.previewImage = it },
+                        )
+                }
+            }
+
+            viewModel.previewImage?.let { img ->
+                // Drag handle
+                val dragInteraction = remember { MutableInteractionSource() }
+                val isDragHovered by dragInteraction.collectIsHoveredAsState()
+                Box(
+                    modifier =
+                        Modifier.width(8.dp)
+                            .fillMaxHeight()
+                            .hoverable(dragInteraction)
+                            .pointerHoverIcon(PointerIcon(Cursor(Cursor.E_RESIZE_CURSOR)))
+                            .draggable(
+                                orientation = Orientation.Horizontal,
+                                state =
+                                    rememberDraggableState { deltaPx ->
+                                        val deltaDp = with(density) { deltaPx.toDp().value }
+                                        viewModel.paneWidthDp =
+                                            (viewModel.paneWidthDp - deltaDp).coerceIn(
+                                                ImagePreviewViewModel.PANE_MIN_DP,
+                                                ImagePreviewViewModel.PANE_MAX_DP,
+                                            )
+                                    },
+                            ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier.width(2.dp)
+                                .fillMaxHeight(0.3f)
+                                .clip(MaterialTheme.shapes.small)
+                                .background(
+                                    if (isDragHovered)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)
+                                    else MaterialTheme.colorScheme.outlineVariant
+                                )
+                    )
+                }
+
+                PreviewSidePane(
+                    image = img,
+                    modifier = Modifier.width(viewModel.paneWidthDp.dp).fillMaxHeight(),
+                    onClose = { viewModel.previewImage = null },
+                    onFullScreen = { viewModel.fullScreenImage = img },
+                )
+            }
         }
     }
 }
@@ -634,7 +677,7 @@ private fun PreviewSidePane(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                MetadataRow("Path", image.file.parent .orEmpty())
+                MetadataRow("Path", image.file.parent.orEmpty())
                 MetadataRow("Type", image.fileType.displayName)
                 MetadataRow("Size", formatFileSize(image.fileSize))
                 MetadataRow("Date", image.dateTakenFormatted)
@@ -718,46 +761,53 @@ private fun PreviewImageWithHover(
     }
 }
 
-private fun buildDetailEntries(m: ImageMetadata, isVideo: Boolean): List<Pair<String, String>> =
-    buildList {
-        if (isVideo) {
-            m.durationFormatted?.let { add("Duration" to it) }
-            m.frameRate?.let { add("Frame Rate" to "%.1f fps".format(it)) }
-            m.videoCodec?.let { add("Video Codec" to it) }
-            m.audioCodec?.let { add("Audio Codec" to it) }
-            m.bitrate?.let { add("Bitrate" to "${it / 1000} kbps") }
-            m.rotation?.let { add("Rotation" to "${it}\u00B0") }
-        } else {
-            m.iso?.let { add("ISO" to it.toString()) }
-            m.aperture?.let { add("Aperture" to "f/$it") }
-            m.shutterSpeed?.let { add("Shutter Speed" to it) }
-            m.focalLength?.let {
-                val text = buildString {
-                    append("${it}mm")
-                    m.focalLength35mm?.let { eq -> append(" (${eq}mm eq.)") }
-                }
-                add("Focal Length" to text)
-            }
-            m.exposureProgram?.let { add("Exposure Program" to it) }
-            m.exposureCompensation?.let { add("Exposure Comp." to "${it} EV") }
-            m.meteringMode?.let { add("Metering" to it) }
-            m.flash?.let { add("Flash" to it) }
-            m.whiteBalance?.let { add("White Balance" to it) }
-            m.colorSpace?.let { add("Color Space" to it) }
-            m.orientation?.let { add("Orientation" to it.toString()) }
+private fun buildDetailEntries(m: ImageMetadata, isVideo: Boolean): List<Pair<String, String>> {
+    val specific = if (isVideo) buildVideoDetailEntries(m) else buildPhotoDetailEntries(m)
+    return specific + buildCommonDetailEntries(m)
+}
+
+private fun buildVideoDetailEntries(m: ImageMetadata): List<Pair<String, String>> = buildList {
+    m.durationFormatted?.let { add("Duration" to it) }
+    m.frameRate?.let { add("Frame Rate" to "%.1f fps".format(it)) }
+    m.videoCodec?.let { add("Video Codec" to it) }
+    m.audioCodec?.let { add("Audio Codec" to it) }
+    m.bitrate?.let { add("Bitrate" to "${it / 1000} kbps") }
+    m.rotation?.let { add("Rotation" to "${it}\u00B0") }
+}
+
+private fun buildPhotoDetailEntries(m: ImageMetadata): List<Pair<String, String>> = buildList {
+    m.iso?.let { add("ISO" to it.toString()) }
+    m.aperture?.let { add("Aperture" to "f/$it") }
+    m.shutterSpeed?.let { add("Shutter Speed" to it) }
+    m.focalLength?.let {
+        val text = buildString {
+            append("${it}mm")
+            m.focalLength35mm?.let { eq -> append(" (${eq}mm eq.)") }
         }
-        m.software?.let { add("Software" to it) }
-        m.artist?.let { add("Artist" to it) }
-        m.copyright?.let { add("Copyright" to it) }
-        m.description?.let { add("Description" to it) }
-        if (m.hasGpsData) {
-            add("Latitude" to String.format(Locale.US, "%.6f", m.latitude))
-            add("Longitude" to String.format(Locale.US, "%.6f", m.longitude))
-            m.altitude?.let { add("Altitude" to String.format(Locale.US, "%.1fm", it)) }
-        }
-        m.dateTimeDigitized?.let { add("Date Digitized" to it.toString()) }
-        m.dateTimeModified?.let { add("Date Modified" to it.toString()) }
+        add("Focal Length" to text)
     }
+    m.exposureProgram?.let { add("Exposure Program" to it) }
+    m.exposureCompensation?.let { add("Exposure Comp." to "${it} EV") }
+    m.meteringMode?.let { add("Metering" to it) }
+    m.flash?.let { add("Flash" to it) }
+    m.whiteBalance?.let { add("White Balance" to it) }
+    m.colorSpace?.let { add("Color Space" to it) }
+    m.orientation?.let { add("Orientation" to it.toString()) }
+}
+
+private fun buildCommonDetailEntries(m: ImageMetadata): List<Pair<String, String>> = buildList {
+    m.software?.let { add("Software" to it) }
+    m.artist?.let { add("Artist" to it) }
+    m.copyright?.let { add("Copyright" to it) }
+    m.description?.let { add("Description" to it) }
+    if (m.hasGpsData) {
+        add("Latitude" to String.format(Locale.US, "%.6f", m.latitude))
+        add("Longitude" to String.format(Locale.US, "%.6f", m.longitude))
+        m.altitude?.let { add("Altitude" to String.format(Locale.US, "%.1fm", it)) }
+    }
+    m.dateTimeDigitized?.let { add("Date Digitized" to it.toString()) }
+    m.dateTimeModified?.let { add("Date Modified" to it.toString()) }
+}
 
 @Composable
 private fun CollapsibleExifSection(

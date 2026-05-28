@@ -2,7 +2,6 @@ package org.kryspetrie.fileimport.domain.model
 
 /**
  * Strategy for resolving filename conflicts at destination.
- *
  * - **RENAME**: Add numeric suffix to avoid conflict (safest, recommended)
  * - **SKIP**: Don't import conflicting file (keep existing)
  * - **REPLACE**: Overwrite existing file (destructive!)

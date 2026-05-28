@@ -12,7 +12,7 @@ data class ZoomController(
     val panY: Double = 0.0,
     val minZoom: Double = 0.1,
     val maxZoom: Double = 10.0,
-    val zoomStep: Double = 1.25,
+    val zoomStep: Double = 1.05,
 ) {
     /** Returns a new controller with zoomed in view. */
     fun zoomIn(cursorX: Double? = null, cursorY: Double? = null): ZoomController {
@@ -52,7 +52,7 @@ data class ZoomController(
         return copy(zoom = clampedZoom, panX = newPanX, panY = newPanY)
     }
 
-    /** Returns a new controller fit to the given image and viewport dimensions. */
+    /** Returns a new controller zoomed to fit the entire image within the viewport. */
     fun fitToView(
         imageWidth: Double,
         imageHeight: Double,
@@ -61,7 +61,8 @@ data class ZoomController(
     ): ZoomController {
         val scaleX = viewportWidth / imageWidth
         val scaleY = viewportHeight / imageHeight
-        val fitZoom = min(scaleX, scaleY) * 0.95 // 0.95 to add some margin
+        // Use min to fit: entire image is visible with possible letterboxing on edges
+        val fitZoom = minOf(scaleX, scaleY)
 
         val clampedZoom = fitZoom.coerceIn(minZoom, maxZoom)
 

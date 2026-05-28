@@ -27,7 +27,9 @@ import org.slf4j.LoggerFactory
  * - Windows: %APPDATA%/PetrieImageImporter/logs/
  */
 @Singleton
-class AppLogger @Inject constructor(private val timeProvider: TimeProvider = DefaultTimeProvider()) {
+class AppLogger
+@Inject
+constructor(private val timeProvider: TimeProvider = DefaultTimeProvider()) {
 
     private val logger: Logger = LoggerFactory.getLogger(AppLogger::class.java)
 

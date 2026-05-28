@@ -3,7 +3,6 @@ package org.kryspetrie.fileimport.ui.screens
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import org.kryspetrie.fileimport.domain.model.ImageFile
 
@@ -19,9 +18,24 @@ import org.kryspetrie.fileimport.domain.model.ImageFile
  * - Computed filtered + sorted image list
  */
 class ImagePreviewViewModel {
-    enum class ViewMode { LIST, GRID }
-    enum class FileFilter { ALL, PHOTOS, VIDEOS, RAW }
-    enum class SortMode { NAME, DATE, SIZE, TYPE }
+    enum class ViewMode {
+        LIST,
+        GRID,
+    }
+
+    enum class FileFilter {
+        ALL,
+        PHOTOS,
+        VIDEOS,
+        RAW,
+    }
+
+    enum class SortMode {
+        NAME,
+        DATE,
+        SIZE,
+        TYPE,
+    }
 
     // ── View state ──────────────────────────────────────────────
 

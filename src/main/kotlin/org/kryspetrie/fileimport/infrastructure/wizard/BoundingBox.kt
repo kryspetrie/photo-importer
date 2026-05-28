@@ -1,10 +1,10 @@
 package org.kryspetrie.fileimport.infrastructure.wizard
 
-import org.kryspetrie.fileimport.domain.model.DomainDefaults
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import org.kryspetrie.fileimport.domain.model.DomainDefaults
 
 /**
  * Represents a 2D point with floating-point coordinates. Used for precise positioning of bounding

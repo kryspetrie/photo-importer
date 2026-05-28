@@ -107,14 +107,16 @@ class PhotoScanWizardStateTest {
 
     // WS-08: Enter refinement mode
     @Test
-    fun `enter refinement sets step and index`() {
+    fun `enter refinement selects box and stays on overview`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.addBox(box)
 
         state.enterRefinement(0)
 
-        assertEquals(PhotoScanWizardState.WizardStep.REFINEMENT, state.currentStep.value)
+        // Refinement is now inline — stays on OVERVIEW step
+        assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
         assertEquals(0, state.refinementBoxIndex.value)
+        assertEquals(0, state.selectedBoxIndex.value)
     }
 
     // WS-09: Exit refinement returns to overview
@@ -159,34 +161,6 @@ class PhotoScanWizardStateTest {
         val movedBox = state.boundingBoxList.value.boxes[0]
         assertEquals(50.0, movedBox.corners.topLeft.x, 0.01)
         assertEquals(50.0, movedBox.corners.topLeft.y, 0.01)
-    }
-
-    // WS-12: Rotate box
-    @Test
-    fun `rotate box rotates around center`() {
-        val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-
-        val centerBefore = box.center()
-
-        state.rotateBox(0, 45.0)
-
-        val rotatedBox = state.boundingBoxList.value.boxes[0]
-        assertEquals(centerBefore.x, rotatedBox.center().x, 0.01)
-        assertEquals(centerBefore.y, rotatedBox.center().y, 0.01)
-    }
-
-    // WS-13: Expand box
-    @Test
-    fun `expand box increases size`() {
-        val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-        val widthBefore = box.width()
-
-        state.expandBox(0, 1.2)
-
-        val expandedBox = state.boundingBoxList.value.boxes[0]
-        assertTrue(expandedBox.width() > widthBefore)
     }
 
     // WS-14: Enter 4-point mode
@@ -782,5 +756,74 @@ class PhotoScanWizardStateTest {
         state.switchToImage(1)
 
         assertTrue(state.photoConfigurations.value.isEmpty())
+    }
+
+    // ==================== selectCorner Bug Fix Tests ====================
+
+    // WS-52: selectCorner should NOT reset selectedBoxIndex (overview page corner drag bug)
+    @Test
+    fun `selectCorner does not reset selectedBoxIndex`() {
+        val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
+        state.addBox(box)
+
+        // Select box 0 (sets selectedBoxIndex = 0)
+        state.selectBox(0)
+        assertEquals(0, state.selectedBoxIndex.value)
+
+        // Select a corner — this should NOT reset selectedBoxIndex to -1
+        state.selectCorner(Corner.TOP_LEFT)
+        assertEquals(0, state.selectedBoxIndex.value) // WAS -1 before the fix (bug!)
+        assertEquals(Corner.TOP_LEFT, state.selectedCorner.value)
+    }
+
+    // WS-53: selectCorner preserves selectedBoxIndex even without refinement mode
+    @Test
+    fun `selectCorner preserves selectedBoxIndex without refinement mode`() {
+        val box1 = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
+        val box2 = BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0)
+        state.addBox(box1)
+        state.addBox(box2)
+
+        // refinementBoxIndex is -1 (no refinement mode)
+        assertEquals(-1, state.refinementBoxIndex.value)
+
+        // Select box 1 (not 0)
+        state.selectBox(1)
+        assertEquals(1, state.selectedBoxIndex.value)
+
+        // Select a corner — should preserve selectedBoxIndex = 1, not set it to refinementBoxIndex(-1)
+        state.selectCorner(Corner.BOTTOM_RIGHT)
+        assertEquals(1, state.selectedBoxIndex.value) // WAS -1 before the fix
+        assertEquals(Corner.BOTTOM_RIGHT, state.selectedCorner.value)
+    }
+
+    // WS-54: selectCorner after enterRefinement preserves selectedBoxIndex
+    @Test
+    fun `selectCorner after enterRefinement preserves selectedBoxIndex`() {
+        val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
+        state.addBox(box)
+
+        state.enterRefinement(0)
+        assertEquals(0, state.selectedBoxIndex.value)
+        assertEquals(0, state.refinementBoxIndex.value)
+
+        state.selectCorner(Corner.TOP_RIGHT)
+        assertEquals(0, state.selectedBoxIndex.value)
+        assertEquals(Corner.TOP_RIGHT, state.selectedCorner.value)
+    }
+
+    // WS-55: deselectCorner does not change selectedBoxIndex
+    @Test
+    fun `deselectCorner does not change selectedBoxIndex`() {
+        val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
+        state.addBox(box)
+
+        state.selectBox(0)
+        state.selectCorner(Corner.TOP_LEFT)
+        assertEquals(0, state.selectedBoxIndex.value)
+
+        state.deselectCorner()
+        assertEquals(0, state.selectedBoxIndex.value) // Should still be 0
+        assertNull(state.selectedCorner.value)
     }
 }

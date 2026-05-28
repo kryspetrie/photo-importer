@@ -14,7 +14,6 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
-import org.kryspetrie.fileimport.infrastructure.wizard.Corner
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
@@ -64,14 +63,6 @@ class RefinementScreenTest {
     }
 
     @Test
-    @DisplayName("should display back button")
-    fun shouldDisplayBackButton() {
-        composeTestRule.setContent { RefinementScreen(state = wizardState, onBack = {}) }
-
-        composeTestRule.onNodeWithContentDescription("Back").assertIsDisplayed()
-    }
-
-    @Test
     @DisplayName("should display perspective toggle")
     fun shouldDisplayPerspectiveToggle() {
         composeTestRule.setContent { RefinementScreen(state = wizardState, onBack = {}) }
@@ -115,17 +106,6 @@ class RefinementScreenTest {
         composeTestRule.waitForIdle()
 
         assertThat(wizardState.zoomController.value.zoom).isGreaterThan(initialZoom)
-    }
-
-    @Test
-    @DisplayName("should go to overview when back clicked")
-    fun shouldGoToOverviewWhenBackClicked() {
-        composeTestRule.setContent { RefinementScreen(state = wizardState, onBack = {}) }
-
-        composeTestRule.onNodeWithContentDescription("Back").performClick()
-
-        assertThat(wizardState.currentStep.value)
-            .isEqualTo(PhotoScanWizardState.WizardStep.OVERVIEW)
     }
 
     @Test

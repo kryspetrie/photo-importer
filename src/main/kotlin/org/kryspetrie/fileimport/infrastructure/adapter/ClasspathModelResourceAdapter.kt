@@ -11,10 +11,11 @@ import org.kryspetrie.fileimport.domain.port.ModelResourcePort
  * default strategy — models ship with the application and require no user configuration.
  *
  * ## Model files
- * | File                          | Purpose                               | Approx. size |
- * |-------------------------------|---------------------------------------|--------------|
- * | `models/detection_model.onnx` | YOLO detection — finds bounding boxes | ~10 MB       |
- * | `models/pose_model.onnx`      | YOLO pose — finds 4-corner keypoints  | ~10 MB       |
+ * | File                                  | Purpose                                  | Approx. size |
+ * |---------------------------------------|------------------------------------------|--------------|
+ * | `models/detection_model.onnx`         | YOLO detection — finds bounding boxes    | ~10 MB       |
+ * | `models/pose_model.onnx`              | YOLO pose — finds 4-corner keypoints     | ~38 MB       |
+ * | `models/corner_regression_model.onnx` | Corner regression — sub-pixel refinement | ~10 MB       |
  *
  * ## Error handling
  *
@@ -35,6 +36,7 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
     private companion object {
         const val DETECTION_MODEL_PATH = "models/detection_model.onnx"
         const val POSE_MODEL_PATH = "models/pose_model.onnx"
+        const val CORNER_REGRESSION_MODEL_PATH = "models/corner_regression_model.onnx"
         const val BUFFER_SIZE = 8192
     }
 
@@ -44,9 +46,16 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
     /** Cached pose model bytes, loaded lazily. */
     private val poseModelBytes: ByteArray by lazy { loadResource(POSE_MODEL_PATH) }
 
+    /** Cached corner regression model bytes, loaded lazily. */
+    private val cornerRegressionModelBytes: ByteArray by lazy {
+        loadResource(CORNER_REGRESSION_MODEL_PATH)
+    }
+
     override fun loadDetectionModel(): ByteArray = detectionModelBytes
 
     override fun loadPoseModel(): ByteArray = poseModelBytes
+
+    override fun loadCornerRegressionModel(): ByteArray = cornerRegressionModelBytes
 
     override fun detectionModelStream(): InputStream {
         val stream =
@@ -66,19 +75,26 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
         return stream
     }
 
+    override fun cornerRegressionModelStream(): InputStream {
+        val stream =
+            javaClass.classLoader.getResourceAsStream(CORNER_REGRESSION_MODEL_PATH)
+                ?: throw ModelNotFoundException(
+                    "Corner regression model not found on classpath: $CORNER_REGRESSION_MODEL_PATH"
+                )
+        return stream
+    }
+
     override fun isModelAvailable(): Boolean {
         return javaClass.classLoader.getResource(DETECTION_MODEL_PATH) != null &&
-            javaClass.classLoader.getResource(POSE_MODEL_PATH) != null
+            javaClass.classLoader.getResource(POSE_MODEL_PATH) != null &&
+            javaClass.classLoader.getResource(CORNER_REGRESSION_MODEL_PATH) != null
     }
 
-    override fun detectionModelVersion(): String {
-        // Version derived from model filename — will be updated when models are retrained
-        return "detection_model_v1"
-    }
+    override fun detectionModelVersion(): String = "detection_ep47"
 
-    override fun poseModelVersion(): String {
-        return "pose_model_v1"
-    }
+    override fun poseModelVersion(): String = "pose_single_ep42"
+
+    override fun cornerRegressionModelVersion(): String = "corner_regression_v2"
 
     /**
      * Loads a classpath resource fully into a byte array.

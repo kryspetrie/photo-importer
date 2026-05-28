@@ -7,8 +7,8 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.kryspetrie.fileimport.application.TestDispatcherProvider
 import org.junit.jupiter.api.io.TempDir
+import org.kryspetrie.fileimport.application.TestDispatcherProvider
 import org.kryspetrie.fileimport.domain.model.ImportHistoryEntry
 
 @DisplayName("ImportHistoryAdapter")

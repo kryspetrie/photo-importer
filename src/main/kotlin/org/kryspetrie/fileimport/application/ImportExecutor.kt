@@ -262,8 +262,8 @@ class ImportExecutor(
                         sidecarsImported = sidecarFiles.isNotEmpty(),
                         sidecarFiles = sidecarFiles,
                         sourceDeleted = sourceDeleted,
-                        exifDate = image.metadata?.dateTimeOriginal?.toString() .orEmpty(),
-                        cameraModel = image.metadata?.cameraModel .orEmpty(),
+                        exifDate = image.metadata?.dateTimeOriginal?.toString().orEmpty(),
+                        cameraModel = image.metadata?.cameraModel.orEmpty(),
                         sequenceNumber = counter,
                     )
                 )
@@ -315,7 +315,7 @@ class ImportExecutor(
             ImportHistoryEntry(
                 timestamp = startTime,
                 timestampString = ImportHistoryEntry.createTimestampString(startTime),
-                sourcePath = images.firstOrNull()?.filePath?.substringBeforeLast("/") .orEmpty(),
+                sourcePath = images.firstOrNull()?.filePath?.substringBeforeLast("/").orEmpty(),
                 destinationPath = destinationPath,
                 profileName = "",
                 folderPattern = configuration.folderPattern,

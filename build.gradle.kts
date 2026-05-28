@@ -83,6 +83,7 @@ dependencies {
     implementation("commons-codec:commons-codec:1.17.1")
     implementation("org.xerial:sqlite-jdbc:3.49.0.0")
     implementation("org.boofcv:boofcv-feature:1.2.2")
+    implementation("com.microsoft.onnxruntime:onnxruntime:1.21.0")
 
     implementation("org.apache.commons:commons-imaging:1.0-alpha3")
     implementation("javax.inject:javax.inject:1")
@@ -93,6 +94,7 @@ dependencies {
     implementation("io.insert-koin:koin-compose:4.0.0")
     implementation("org.jline:jline:3.27.1")
 
+    testImplementation("com.microsoft.onnxruntime:onnxruntime:1.21.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testImplementation("org.junit.platform:junit-platform-launcher:1.11.4")
 

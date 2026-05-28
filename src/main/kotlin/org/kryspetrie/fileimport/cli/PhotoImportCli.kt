@@ -14,7 +14,6 @@ import org.kryspetrie.fileimport.application.ImportService
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.infrastructure.adapter.DeduplicationAdapter
-
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
@@ -188,7 +187,8 @@ fun main(args: Array<String>) {
     val executor = ImportExecutor(imageRepo, NamingAdapter(), timeProvider)
     val importService =
         ImportService(scanner, executor, DeduplicationAdapter(dispatcherProvider), NamingAdapter())
-    val reorganizeService = ReorganizeService(imageRepo, NamingAdapter(), timeProvider, dispatcherProvider)
+    val reorganizeService =
+        ReorganizeService(imageRepo, NamingAdapter(), timeProvider, dispatcherProvider)
     val cli = PhotoImportCli(importService, reorganizeService)
     cli.subcommands(
             ImportCommand(importService),

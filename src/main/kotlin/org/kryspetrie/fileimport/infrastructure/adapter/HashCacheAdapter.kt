@@ -17,8 +17,8 @@ import org.kryspetrie.fileimport.domain.model.FolderIndex
 import org.kryspetrie.fileimport.domain.model.HashCacheEntry
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.IndexProgress
-import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 
 private const val BATCH_SIZE = 500

@@ -187,7 +187,8 @@ data class ReorganizeJournal(
     val notes: String = "",
 ) {
     companion object {
-        fun createTimestampString(timestamp: Long): String = DomainDefaults.formatTimestamp(timestamp)
+        fun createTimestampString(timestamp: Long): String =
+            DomainDefaults.formatTimestamp(timestamp)
     }
 }
 

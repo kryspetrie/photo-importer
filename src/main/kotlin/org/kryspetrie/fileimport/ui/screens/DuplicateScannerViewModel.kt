@@ -1,7 +1,6 @@
 package org.kryspetrie.fileimport.ui.screens
 
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.kryspetrie.fileimport.application.DuplicateAction
@@ -62,6 +61,9 @@ class DuplicateScannerViewModel {
             }
     }
 
-    val totalDupeFiles: Int get() = duplicates.sumOf { it.duplicateImages.size }
-    val totalWastedBytes: Long get() = duplicates.sumOf { group -> group.duplicateImages.sumOf { it.fileSize } }
+    val totalDupeFiles: Int
+        get() = duplicates.sumOf { it.duplicateImages.size }
+
+    val totalWastedBytes: Long
+        get() = duplicates.sumOf { group -> group.duplicateImages.sumOf { it.fileSize } }
 }

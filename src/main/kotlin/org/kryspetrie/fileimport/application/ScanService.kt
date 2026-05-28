@@ -7,7 +7,6 @@ import javax.imageio.ImageIO
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-
 import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 
 /**
@@ -19,11 +18,10 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
  * for precise corners. Domain constraints (max 4 photos, similar dimensions, near-rectangular
  * corners) are applied to filter false positives.
  *
- * @param hybridCornerDetector Hybrid detector combining CV region proposals with ML corner refinement
+ * @param hybridCornerDetector Hybrid detector combining CV region proposals with ML corner
+ *   refinement
  */
-class ScanService(
-    private val hybridCornerDetector: HybridCornerDetector,
-) {
+class ScanService(private val hybridCornerDetector: HybridCornerDetector) {
 
     /**
      * Detects photos within a scanned image.
@@ -131,7 +129,7 @@ class ScanService(
      * @param configuration Export configuration
      * @return Absolute path to the exported file
      */
-@Suppress("UnusedParameter")
+    @Suppress("UnusedParameter")
     fun exportPhoto(
         photoImage: BufferedImage,
         destinationPath: String,

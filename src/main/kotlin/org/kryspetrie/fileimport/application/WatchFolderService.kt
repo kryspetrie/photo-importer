@@ -7,7 +7,6 @@ import java.nio.file.StandardWatchEventKinds
 import java.nio.file.WatchEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -150,8 +149,7 @@ class WatchFolderService(
                 } catch (_: CancellationException) {
                     // Coroutine cancelled — normal shutdown, do nothing
                 } catch (e: Exception) {
-                    _status.value =
-                        _status.value.copy(isWatching = false, lastError = e.message)
+                    _status.value = _status.value.copy(isWatching = false, lastError = e.message)
                 }
             }
     }

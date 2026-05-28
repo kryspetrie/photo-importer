@@ -6,7 +6,6 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.choice
-import com.github.ajalt.clikt.parameters.types.path
 import kotlinx.coroutines.runBlocking
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.domain.model.ConflictResolution

@@ -15,14 +15,14 @@ import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.IdGenerator
-import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
+import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.ClasspathModelResourceAdapter
-import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DeduplicationAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultIdGenerator
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DeviceAdapter
@@ -39,9 +39,9 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
 /**
  * Koin DI module for the Petrie File Importer application.
  *
- * Registers all domain port implementations, application services, and infrastructure
- * components. See [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) for the full
- * dependency graph and design rationale.
+ * Registers all domain port implementations, application services, and infrastructure components.
+ * See [docs/ARCHITECTURE.md](../../../docs/ARCHITECTURE.md) for the full dependency graph and
+ * design rationale.
  */
 val appModule = module {
     // ── Domain Ports → Adapter Implementations ──────────────────────
@@ -85,13 +85,15 @@ val appModule = module {
             dispatcherProvider = get(),
         )
     }
-    single { WatchFolderService(importService = get(), timeProvider = get(), dispatcherProvider = get()) }
+    single {
+        WatchFolderService(importService = get(), timeProvider = get(), dispatcherProvider = get())
+    }
 
     // ── Photo Scan Pipeline ─────────────────────────────────────────
 
     single { RectangleDetector() }
     single { HybridCornerDetector(rectangleDetector = get()) }
-    single { PhotoScanDetectorService() }
+    single { PhotoScanDetectorService(modelResourcePort = get(), appLogger = getOrNull()) }
     single { ScanService(hybridCornerDetector = get()) }
     single { PerspectiveCorrectionService() }
     single { PhotoScanExportService(get()) }

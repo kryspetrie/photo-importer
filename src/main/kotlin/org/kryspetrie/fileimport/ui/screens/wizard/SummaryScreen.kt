@@ -1,79 +1,34 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.CropFree
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.RotateLeft
-import androidx.compose.material.icons.filled.RotateRight
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
+import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
+import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
+import org.kryspetrie.fileimport.ui.screens.wizard.summary.PhotoListPanel
+import org.kryspetrie.fileimport.ui.screens.wizard.summary.PhotoPreviewPanel
 
-/** Common aspect ratios for photo correction. */
 /**
  * Summary screen showing all detected photos with correction options. Allows per-photo and bulk
  * configuration of perspective, rotation, and aspect ratio.
@@ -83,6 +38,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 fun SummaryScreen(
     state: PhotoScanWizardState,
     image: BufferedImage,
+    perspectiveService: PerspectiveCorrectionService,
     onBack: () -> Unit,
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
@@ -91,8 +47,6 @@ fun SummaryScreen(
 ) {
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
-
-    // Preview image for selected photo
     var selectedPreviewIndex by remember { mutableIntStateOf(0) }
     val currentBox =
         remember(boundingBoxList, selectedPreviewIndex) {
@@ -100,581 +54,127 @@ fun SummaryScreen(
                 boundingBoxList.boxes[selectedPreviewIndex]
             } else null
         }
-
-    // Cropped preview
+    val currentConfig =
+        remember(photoConfigurations, currentBox) {
+            currentBox?.let { photoConfigurations[it.id] } ?: PhotoConfiguration()
+        }
     val previewImage =
-        remember(image, currentBox) { currentBox?.let { box -> cropBoundingBox(image, box) } }
+        remember(image, currentBox, currentConfig) {
+            currentBox?.let { box ->
+                cropBoundingBox(image, box, currentConfig, perspectiveService)
+            }
+        }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Photo Summary") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back")
-                    }
-                },
-                actions = {
-                    Text(
-                        "${boundingBoxList.size()} photo(s)",
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                },
-            )
-        },
+        topBar = { SummaryTopAppBar(photoCount = boundingBoxList.size()) },
         content = { paddingValues ->
-            Row(modifier = modifier.fillMaxSize().padding(paddingValues)) {
-                // Left panel: Photo list and options
-                Column(modifier = Modifier.weight(0.55f).fillMaxHeight().padding(16.dp)) {
-                    // Bulk action buttons
-                    BulkActionButtons(
-                        onRotateAllCW = { state.rotateAllBoxesCW() },
-                        onRotateAllCCW = { state.rotateAllBoxesCCW() },
-                        onPerspectiveAll = { state.setPerspectiveCorrectionAll(true) },
-                        onClearAll = { state.clearAllConfigurations() },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // Destination folder selector
-                    DestinationSelector(
-                        destination = exportDestination,
-                        onDestinationChange = { onDestinationChange?.invoke(it) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // Photo list
-                    LazyColumn(
-                        modifier =
-                            Modifier.weight(1f)
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .border(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.outlineVariant,
-                                    RoundedCornerShape(8.dp),
-                                ),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(8.dp),
-                    ) {
-                        itemsIndexed(boundingBoxList.boxes) { index, box ->
-                            PhotoSummaryCard(
-                                box = box,
-                                index = index,
-                                isSelected = index == selectedPreviewIndex,
-                                config = photoConfigurations[box.id] ?: PhotoConfiguration(),
-                                onSelect = { selectedPreviewIndex = index },
-                                onConfigChange = { config ->
-                                    state.setPhotoConfiguration(box.id, config)
-                                },
-                                onDelete = {
-                                    state.removeBox(index)
-                                    if (selectedPreviewIndex >= boundingBoxList.size()) {
-                                        selectedPreviewIndex = maxOf(0, boundingBoxList.size() - 1)
-                                    }
-                                },
-                            )
-                        }
-                    }
-                }
-
-                // Right panel: Preview
-                Box(
-                    modifier =
-                        Modifier.weight(0.45f)
-                            .fillMaxHeight()
-                            .padding(16.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .border(
-                                1.dp,
-                                MaterialTheme.colorScheme.outlineVariant,
-                                RoundedCornerShape(8.dp),
-                            )
-                            .background(Color.DarkGray)
-                ) {
-                    if (previewImage != null) {
-                        Image(
-                            bitmap = previewImage.toComposeImageBitmap(),
-                            contentDescription = "Photo preview",
-                            modifier = Modifier.fillMaxSize().padding(16.dp),
-                            contentScale = ContentScale.Fit,
-                        )
-
-                        // Click to return to overview hint
-                        Surface(
-                            modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp),
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color.Black.copy(alpha = 0.6f),
-                        ) {
-                            Text(
-                                "Click on photo in list to preview",
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                            )
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                "Select a photo to preview",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = Color.White.copy(alpha = 0.7f),
-                            )
-                        }
-                    }
-                }
-            }
+            SummaryContent(
+                state = state,
+                boundingBoxList = boundingBoxList,
+                photoConfigurations = photoConfigurations,
+                selectedPreviewIndex = selectedPreviewIndex,
+                onSelectedPreviewIndexChange = { selectedPreviewIndex = it },
+                previewImage = previewImage,
+                exportDestination = exportDestination,
+                onDestinationChange = onDestinationChange,
+                modifier = modifier.padding(paddingValues),
+            )
         },
         bottomBar = {
-            Surface(tonalElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        "Ready to export ${boundingBoxList.size()} photo(s)",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = onBack, modifier = Modifier.height(48.dp)) {
-                            Icon(Icons.Default.Edit, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Back to Overview")
-                        }
-
-                        Button(
-                            onClick = onExport,
-                            enabled = boundingBoxList.size() > 0,
-                            modifier = Modifier.height(48.dp),
-                        ) {
-                            Icon(Icons.Default.Download, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Export Photos")
-                        }
-                    }
-                }
-            }
+            ExportBottomBar(
+                photoCount = boundingBoxList.size(),
+                onBack = onBack,
+                onExport = onExport,
+            )
         },
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BulkActionButtons(
-    onRotateAllCW: () -> Unit,
-    onRotateAllCCW: () -> Unit,
-    onPerspectiveAll: () -> Unit,
-    onClearAll: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Surface(tonalElevation = 1.dp, shape = RoundedCornerShape(8.dp), modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+private fun SummaryTopAppBar(photoCount: Int) {
+    TopAppBar(
+        title = { Text("Photo Summary") },
+        actions = {
             Text(
-                "Bulk Actions:",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "$photoCount photo(s)",
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = 16.dp),
             )
-
-            OutlinedButton(onClick = onRotateAllCW, modifier = Modifier.height(32.dp)) {
-                Icon(Icons.Default.RotateRight, null, Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Rotate CW", style = MaterialTheme.typography.labelSmall)
-            }
-
-            OutlinedButton(onClick = onRotateAllCCW, modifier = Modifier.height(32.dp)) {
-                Icon(Icons.Default.RotateLeft, null, Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Rotate CCW", style = MaterialTheme.typography.labelSmall)
-            }
-
-            OutlinedButton(onClick = onPerspectiveAll, modifier = Modifier.height(32.dp)) {
-                Icon(Icons.Default.CropFree, null, Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Perspective", style = MaterialTheme.typography.labelSmall)
-            }
-
-            OutlinedButton(
-                onClick = onClearAll,
-                modifier = Modifier.height(32.dp),
-                colors =
-                    ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    ),
-            ) {
-                Icon(Icons.Default.Clear, null, Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text("Clear All", style = MaterialTheme.typography.labelSmall)
-            }
-
-            // Tooltip explaining the mutex behavior
-            var showTooltip by remember { mutableStateOf(false) }
-            Box {
-                IconButton(onClick = { showTooltip = true }, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Default.Info,
-                        "Correction info",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (showTooltip) {
-                    AlertDialog(
-                        onDismissRequest = { showTooltip = false },
-                        title = { Text("Correction Options") },
-                        text = {
-                            Text(
-                                "Perspective and Rotation corrections are mutually exclusive. " +
-                                    "Enabling one will disable the other. Use Perspective to correct " +
-                                    "keystone distortion, or Rotation to fix scan orientation."
-                            )
-                        },
-                        confirmButton = {
-                            TextButton(onClick = { showTooltip = false }) { Text("OK") }
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DestinationSelector(
-    destination: String,
-    onDestinationChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    var showFolderPicker by remember { mutableStateOf(false) }
-
-    Surface(tonalElevation = 1.dp, shape = RoundedCornerShape(8.dp), modifier = modifier) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                Icons.Default.Folder,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "Export Destination",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Text(destination, style = MaterialTheme.typography.bodySmall, maxLines = 1)
-            }
-
-            OutlinedButton(
-                onClick = { showFolderPicker = true },
-                modifier = Modifier.height(32.dp),
-            ) {
-                Text("Change", style = MaterialTheme.typography.labelSmall)
-            }
-        }
-    }
-
-    // Folder picker dialog
-    if (showFolderPicker) {
-        FolderPickerDialog(
-            initialPath = destination,
-            onPathSelected = { path ->
-                onDestinationChange(path)
-                showFolderPicker = false
-            },
-            onDismiss = { showFolderPicker = false },
-        )
-    }
-}
-
-@Composable
-private fun FolderPickerDialog(
-    initialPath: String,
-    onPathSelected: (String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var folderPath by remember { mutableStateOf(initialPath) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Select Export Destination") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(
-                    "Enter the folder path where photos will be exported:",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-
-                OutlinedTextField(
-                    value = folderPath,
-                    onValueChange = { folderPath = it },
-                    label = { Text("Folder path") },
-                    placeholder = { Text("/path/to/folder") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-
-                // Quick access buttons
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    TextButton(
-                        onClick = { folderPath = System.getProperty("user.home") + "/Pictures" }
-                    ) {
-                        Text("Pictures")
-                    }
-                    TextButton(
-                        onClick = {
-                            folderPath = System.getProperty("user.home") + "/Pictures/PhotoScan"
-                        }
-                    ) {
-                        Text("PhotoScan")
-                    }
-                    TextButton(
-                        onClick = { folderPath = System.getProperty("user.home") + "/Desktop" }
-                    ) {
-                        Text("Desktop")
-                    }
-                }
-            }
         },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val path = folderPath.trim()
-                    if (path.isNotBlank()) {
-                        // Create directory if it doesn't exist
-                        val dir = java.io.File(path)
-                        if (!dir.exists()) {
-                            dir.mkdirs()
-                        }
-                        onPathSelected(path)
-                    }
-                },
-                enabled = folderPath.isNotBlank(),
-            ) {
-                Text("Select")
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PhotoSummaryCard(
-    box: BoundingBox,
-    index: Int,
-    isSelected: Boolean,
-    config: PhotoConfiguration,
-    onSelect: () -> Unit,
-    onConfigChange: (PhotoConfiguration) -> Unit,
-    onDelete: () -> Unit,
+private fun SummaryContent(
+    state: PhotoScanWizardState,
+    boundingBoxList: BoundingBoxList,
+    photoConfigurations: Map<String, PhotoConfiguration>,
+    selectedPreviewIndex: Int,
+    onSelectedPreviewIndexChange: (Int) -> Unit,
+    previewImage: BufferedImage?,
+    exportDestination: String,
+    onDestinationChange: ((String) -> Unit)?,
+    modifier: Modifier = Modifier,
 ) {
-    val borderColor =
-        if (isSelected) {
-            MaterialTheme.colorScheme.primary
-        } else {
-            MaterialTheme.colorScheme.outlineVariant
-        }
-
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onSelect),
-        border = BorderStroke(if (isSelected) 2.dp else 1.dp, borderColor),
-        colors =
-            CardDefaults.cardColors(
-                containerColor =
-                    if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    }
-            ),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Header row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("Photo ${index + 1}", style = MaterialTheme.typography.titleSmall)
-                Text(
-                    "${box.width().toInt()} x ${box.height().toInt()} px",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-
-            // Correction options row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                // Perspective correction toggle
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = config.perspectiveCorrectionEnabled,
-                        onCheckedChange = { enabled ->
-                            // Mutex: If enabling perspective, disable rotation
-                            onConfigChange(
-                                config.copy(
-                                    perspectiveCorrectionEnabled = enabled,
-                                    rotationDegrees = if (enabled) 0 else config.rotationDegrees,
-                                )
-                            )
-                        },
-                        modifier = Modifier.height(32.dp),
-                    )
-                    Text("Perspective", style = MaterialTheme.typography.labelSmall)
-                }
-
-                // Rotation controls
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = config.rotationDegrees != 0,
-                        onCheckedChange = { enabled ->
-                            // Mutex: If enabling rotation, disable perspective
-                            onConfigChange(
-                                config.copy(
-                                    rotationDegrees = if (enabled) 90 else 0,
-                                    perspectiveCorrectionEnabled =
-                                        if (enabled) false else config.perspectiveCorrectionEnabled,
-                                )
-                            )
-                        },
-                        modifier = Modifier.height(32.dp),
-                    )
-                    Text("Rotation", style = MaterialTheme.typography.labelSmall)
-                }
-
-                Spacer(Modifier.weight(1f))
-
-                // Aspect ratio dropdown
-                AspectRatioDropdown(
-                    selectedRatio = config.aspectRatio,
-                    onRatioChange = { ratio -> onConfigChange(config.copy(aspectRatio = ratio)) },
-                    boxAspectRatio = box.aspectRatio(),
-                )
-
-                // Delete button
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Default.Delete,
-                        "Delete",
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-
-            // Rotation angle selection (when rotation enabled)
-            if (config.rotationDegrees != 0) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Angle:", style = MaterialTheme.typography.labelSmall)
-                    listOf(-90 to "CCW", -180 to "180", 90 to "CW").forEach { (angle, label) ->
-                        FilterChip(
-                            selected = config.rotationDegrees == angle,
-                            onClick = { onConfigChange(config.copy(rotationDegrees = angle)) },
-                            label = { Text(label) },
-                            modifier = Modifier.height(28.dp),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AspectRatioDropdown(
-    selectedRatio: Double,
-    onRatioChange: (Double) -> Unit,
-    boxAspectRatio: Double,
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    // Find best matching ratio
-    val currentRatioName =
-        remember(selectedRatio, boxAspectRatio) {
-            if (selectedRatio == 0.0) {
-                // Auto-select closest ratio
-                val bestMatch =
-                    AspectRatio.entries.minByOrNull { ratio ->
-                        if (ratio.value == 0.0) Double.MAX_VALUE
-                        else kotlin.math.abs(ratio.value - boxAspectRatio)
-                    }
-                bestMatch?.displayName ?: "Current"
-            } else {
-                AspectRatio.entries.find { it.value == selectedRatio }?.displayName ?: "Custom"
-            }
-        }
-
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
-        OutlinedTextField(
-            value = currentRatioName,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text("Aspect Ratio") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().width(140.dp).height(40.dp),
-            textStyle = MaterialTheme.typography.labelSmall,
+    Row(modifier = modifier.fillMaxSize()) {
+        PhotoListPanel(
+            state = state,
+            boundingBoxList = boundingBoxList,
+            photoConfigurations = photoConfigurations,
+            selectedPreviewIndex = selectedPreviewIndex,
+            onSelectedPreviewIndexChange = onSelectedPreviewIndexChange,
+            exportDestination = exportDestination,
+            onDestinationChange = onDestinationChange,
+            modifier = Modifier.weight(0.55f).fillMaxHeight().padding(16.dp),
         )
-
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            AspectRatio.entries.forEach { ratio ->
-                DropdownMenuItem(
-                    text = { Text(ratio.displayName, style = MaterialTheme.typography.labelSmall) },
-                    onClick = {
-                        onRatioChange(ratio.value)
-                        expanded = false
-                    },
-                )
-            }
-        }
+        PhotoPreviewPanel(
+            previewImage = previewImage,
+            modifier = Modifier.weight(0.45f).fillMaxHeight().padding(16.dp),
+        )
     }
 }
 
-private fun cropBoundingBox(image: BufferedImage, box: BoundingBox): BufferedImage? {
+private fun cropBoundingBox(
+    image: BufferedImage,
+    box: BoundingBox,
+    config: PhotoConfiguration,
+    perspectiveService: PerspectiveCorrectionService,
+): BufferedImage? {
     return try {
-        val bounds = box.corners
-        val minX = minOf(bounds.topLeft.x, bounds.bottomLeft.x).toInt().coerceIn(0, image.width - 1)
-        val minY = minOf(bounds.topLeft.y, bounds.topRight.y).toInt().coerceIn(0, image.height - 1)
-        val maxX = maxOf(bounds.topRight.x, bounds.bottomRight.x).toInt().coerceIn(0, image.width)
-        val maxY =
-            maxOf(bounds.bottomLeft.y, bounds.bottomRight.y).toInt().coerceIn(0, image.height)
-
-        val cropWidth = maxX - minX
-        val cropHeight = maxY - minY
-
-        if (cropWidth <= 0 || cropHeight <= 0) return null
-
-        image.getSubimage(minX, minY, cropWidth, cropHeight)
+        if (config.perspectiveCorrectionEnabled) {
+            // Apply true perspective correction using homography
+            val detectedPhoto = boxToDetectedPhoto(box)
+            perspectiveService.correctPerspective(image, detectedPhoto)
+        } else {
+            // Simple axis-aligned crop from bounding box
+            val bounds = box.corners
+            val minX =
+                minOf(bounds.topLeft.x, bounds.bottomLeft.x).toInt().coerceIn(0, image.width - 1)
+            val minY =
+                minOf(bounds.topLeft.y, bounds.topRight.y).toInt().coerceIn(0, image.height - 1)
+            val maxX =
+                maxOf(bounds.topRight.x, bounds.bottomRight.x).toInt().coerceIn(0, image.width)
+            val maxY =
+                maxOf(bounds.bottomLeft.y, bounds.bottomRight.y).toInt().coerceIn(0, image.height)
+            val cropWidth = maxX - minX
+            val cropHeight = maxY - minY
+            if (cropWidth <= 0 || cropHeight <= 0) return null
+            image.getSubimage(minX, minY, cropWidth, cropHeight)
+        }
     } catch (_: Exception) {
         null
     }
+}
+
+/** Converts a [BoundingBox] to a [DetectedPhoto] for use with [PerspectiveCorrectionService]. */
+private fun boxToDetectedPhoto(box: BoundingBox): DetectedPhoto {
+    return DetectedPhoto(
+        topLeft = PhotoCorner(box.corners.topLeft.x.toFloat(), box.corners.topLeft.y.toFloat()),
+        topRight = PhotoCorner(box.corners.topRight.x.toFloat(), box.corners.topRight.y.toFloat()),
+        bottomLeft =
+            PhotoCorner(box.corners.bottomLeft.x.toFloat(), box.corners.bottomLeft.y.toFloat()),
+        bottomRight =
+            PhotoCorner(box.corners.bottomRight.x.toFloat(), box.corners.bottomRight.y.toFloat()),
+    )
 }

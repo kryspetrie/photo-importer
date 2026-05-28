@@ -2,7 +2,6 @@ package org.kryspetrie.fileimport.application
 
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
-
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope

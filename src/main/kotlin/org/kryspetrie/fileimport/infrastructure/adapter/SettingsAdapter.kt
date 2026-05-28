@@ -80,7 +80,9 @@ class SettingsAdapter(
         try {
             settingsFile.writeText(json.encodeToString(settings))
             _settings.value = settings
-        } catch (_: Exception) { /* Settings file write failed — non-critical */ }
+        } catch (_: Exception) {
+            /* Settings file write failed — non-critical */
+        }
     }
 
     override fun observeSettings(): Flow<AppSettings> = _settings

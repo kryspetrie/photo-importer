@@ -2,7 +2,6 @@ package org.kryspetrie.fileimport.application
 
 import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
-
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -11,9 +10,9 @@ import kotlinx.coroutines.sync.withPermit
 import org.kryspetrie.fileimport.domain.model.FolderIndex
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.IndexProgress
+import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
-import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 
 /** Maximum concurrency for metadata extraction operations. */
 private val METADATA_CONCURRENCY = Runtime.getRuntime().availableProcessors().coerceIn(2, 8)

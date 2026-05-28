@@ -33,7 +33,13 @@ class ReorganizeServiceTest {
     fun setup() {
         imageRepository = mock(ImageRepositoryPort::class.java)
         namingPort = mock(NamingPort::class.java)
-        service = ReorganizeService(imageRepository, namingPort, TestTimeProvider(), TestDispatcherProvider())
+        service =
+            ReorganizeService(
+                imageRepository,
+                namingPort,
+                TestTimeProvider(),
+                TestDispatcherProvider(),
+            )
     }
 
     @Nested

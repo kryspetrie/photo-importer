@@ -2,7 +2,6 @@ package org.kryspetrie.fileimport.application
 
 import java.awt.image.BufferedImage
 import java.io.File
-import java.util.Date
 import java.util.Locale
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
@@ -202,7 +201,7 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
      * @param outputFile Destination file
      * @param config Photo configuration with metadata overrides
      */
-@Suppress("UnusedParameter")
+    @Suppress("UnusedParameter")
     private fun writeImageWithMetadata(
         image: BufferedImage,
         outputFile: File,

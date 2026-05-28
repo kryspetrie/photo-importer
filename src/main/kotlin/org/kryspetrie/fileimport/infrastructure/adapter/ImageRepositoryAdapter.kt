@@ -16,20 +16,19 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.time.ZoneId
 import kotlinx.coroutines.withContext
-import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.apache.commons.codec.digest.DigestUtils
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
 import org.kryspetrie.fileimport.domain.model.SidecarExtensions
+import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 
 private const val COPY_BUFFER_SIZE = 262144 // 256KB
 private const val HASH_BUFFER_SIZE = 262144 // 256KB — matches COPY_BUFFER_SIZE for consistency
 
-class ImageRepositoryAdapter(
-    private val dispatcherProvider: DispatcherProvider,
-) : ImageRepositoryPort {
+class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider) :
+    ImageRepositoryPort {
     private val supportedExtensions = ImageFileType.supportedExtensions()
 
     override suspend fun scanDirectory(directory: File, recursive: Boolean): List<ImageFile> =

@@ -1,13 +1,7 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,29 +12,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CreateNewFolder
-import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.FolderCopy
-import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Scanner
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -50,28 +27,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.AppSettings
-import org.kryspetrie.fileimport.ui.components.isImageFile
-import org.kryspetrie.fileimport.ui.components.pickFolder
-import org.kryspetrie.fileimport.ui.components.pickImageFile
-import org.kryspetrie.fileimport.domain.model.ConflictResolution
-import org.kryspetrie.fileimport.domain.model.DateSource
-import org.kryspetrie.fileimport.domain.model.FilenamePresets
-import org.kryspetrie.fileimport.domain.model.FolderPresets
-import org.kryspetrie.fileimport.domain.model.ImportConfiguration
-import org.kryspetrie.fileimport.domain.model.NamePlaceholders
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.components.PlaceholderHelpTooltip
-import org.kryspetrie.fileimport.ui.components.SectionLabel
+import org.kryspetrie.fileimport.ui.components.isImageFile
+import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.AutoDetectCard
+import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.DestinationSelectionSection
+import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SourceSelectionSection
 
 /** Import screen for the wizard - source selection and configuration. */
 @Suppress("UnusedParameter")
@@ -89,9 +57,8 @@ fun PhotoScanImportScreen(
     val scope = rememberCoroutineScope()
 
     val cvAutoDetectEnabled by state.cvAutoDetectEnabled.collectAsState()
-    val configuration by state.configuration.collectAsState()
 
-    // Expanded settings state
+    // Settings expanded state
     var settingsExpanded by remember { mutableStateOf(false) }
 
     // Configuration state (initialized from tab settings, mutable copy for editing)
@@ -122,7 +89,7 @@ fun PhotoScanImportScreen(
         }
     }
 
-    // Persist paths immediately when changed (using scope to avoid stale closure)
+    // Persist paths immediately when changed
     LaunchedEffect(sourcePath) {
         if (sourcePath.isNotBlank()) {
             val currentSettings = settingsPort.observeSettings().first()
@@ -187,130 +154,26 @@ fun PhotoScanImportScreen(
                         .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-
                 // ── Auto-detect Option ──
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors =
-                        CardDefaults.cardColors(
-                            containerColor =
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
-                        ),
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp).fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Auto-detect bounding boxes",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            Text(
-                                "Uses computer vision to find photo boundaries",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        Switch(
-                            checked = cvAutoDetectEnabled,
-                            onCheckedChange = { state.setCvAutoDetectEnabled(it) },
-                        )
-                    }
-                }
+                AutoDetectCard(
+                    cvAutoDetectEnabled = cvAutoDetectEnabled,
+                    onCvAutoDetectChange = { state.setCvAutoDetectEnabled(it) },
+                )
 
                 // ── Source Selection ──
-                Text("Source", style = MaterialTheme.typography.titleMedium)
-
-                // Source path field
-                OutlinedTextField(
-                    value = sourcePath,
-                    onValueChange = { sourcePath = it },
-                    label = { Text("Source") },
-                    placeholder = { Text("Select source file or folder...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    singleLine = true,
-                    isError = sourcePath.isNotBlank() && sourceFile == null,
-                    supportingText = {
-                        when {
-                            sourcePath.isBlank() ->
-                                Text("Select a scanned image file or folder of images")
-                            sourceFile == null ->
-                                Text("Path not found", color = MaterialTheme.colorScheme.error)
-                            sourceFile.isDirectory -> {
-                                val imageCount =
-                                    sourceFile.listFiles { f -> f.isFile && isImageFile(f) }?.size
-                                        ?: 0
-                                Text("Folder: $imageCount image(s)")
-                            }
-                            else -> Text("File: ${sourceFile.name}")
-                        }
-                    },
+                SourceSelectionSection(
+                    sourcePath = sourcePath,
+                    onSourcePathChange = { sourcePath = it },
+                    sourceFile = sourceFile,
                 )
-
-                // File/Folder selection buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = { pickImageFile("Select Image File")?.let { sourcePath = it } },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(Icons.Default.Image, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Select File")
-                    }
-                    OutlinedButton(
-                        onClick = { pickFolder("Select Folder")?.let { sourcePath = it } },
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(Icons.Default.Folder, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Select Folder")
-                    }
-                }
 
                 // ── Destination ──
-                Text("Destination", style = MaterialTheme.typography.titleMedium)
-
-                OutlinedTextField(
-                    value = destinationPath,
-                    onValueChange = { destinationPath = it },
-                    label = { Text("Destination Folder") },
-                    placeholder = { Text("Select destination...") },
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    singleLine = true,
-                    isError = destinationPath.isNotBlank() && !destValid,
-                    supportingText = {
-                        when {
-                            destinationPath.isBlank() -> Text("Paste a path or browse")
-                            !destValid ->
-                                Text("Folder not found", color = MaterialTheme.colorScheme.error)
-                            else -> Text(destDir.name)
-                        }
-                    },
+                DestinationSelectionSection(
+                    destinationPath = destinationPath,
+                    onDestinationPathChange = { destinationPath = it },
+                    destValid = destValid,
+                    destDirName = destDir?.name,
                 )
-
-                // Destination selection button
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = {
-                            pickFolder("Select Destination Folder")?.let { destinationPath = it }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Icon(Icons.Default.CreateNewFolder, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Select Destination Folder")
-                    }
-                }
 
                 // ── Import Photo Scans Button ──
                 Button(
@@ -324,242 +187,12 @@ fun PhotoScanImportScreen(
                 }
 
                 // ── Custom Settings ──
-                OutlinedCard(Modifier.fillMaxWidth()) {
-                    Column {
-                        Row(
-                            Modifier.fillMaxWidth()
-                                .clickable { settingsExpanded = !settingsExpanded }
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        ) {
-                            Icon(
-                                Icons.Default.Tune,
-                                null,
-                                Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.primary,
-                            )
-                            Column(Modifier.weight(1f)) {
-                                Text("Custom Settings", style = MaterialTheme.typography.titleSmall)
-                                if (!settingsExpanded) {
-                                    Text(
-                                        configSummary(customConfig),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
-                            }
-                            Icon(
-                                if (settingsExpanded) Icons.Default.ExpandLess
-                                else Icons.Default.ExpandMore,
-                                "Toggle",
-                                Modifier.size(18.dp),
-                            )
-                        }
-                        AnimatedVisibility(
-                            settingsExpanded,
-                            enter = expandVertically(),
-                            exit = shrinkVertically(),
-                        ) {
-                            Column {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                                Column(
-                                    Modifier.padding(14.dp),
-                                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                                ) {
-                                    // ── Organization ──
-                                    var orgExpanded by remember { mutableStateOf(true) }
-                                    PhotoScanCollapsibleSubsection(
-                                        title = "Organization",
-                                        icon = Icons.Default.FolderCopy,
-                                        expanded = orgExpanded,
-                                        onToggle = { orgExpanded = !orgExpanded },
-                                    ) {
-                                        SectionLabel("Folder Organization")
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(
-                                                customConfig.createSubfolders,
-                                                {
-                                                    customConfig =
-                                                        customConfig.copy(createSubfolders = it)
-                                                },
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            Text(
-                                                "Create date-based subfolders",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                        }
-                                        if (customConfig.createSubfolders) {
-                                            OutlinedTextField(
-                                                customConfig.folderPattern,
-                                                {
-                                                    customConfig =
-                                                        customConfig.copy(folderPattern = it)
-                                                },
-                                                label = { Text("Folder Pattern") },
-                                                textStyle = MaterialTheme.typography.bodyMedium,
-                                                modifier = Modifier.fillMaxWidth(),
-                                            )
-                                            Row(
-                                                Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            ) {
-                                                FolderPresets.builtIn.take(4).forEach { preset ->
-                                                    FilterChip(
-                                                        customConfig.folderPattern ==
-                                                            preset.pattern,
-                                                        {
-                                                            customConfig =
-                                                                customConfig.copy(
-                                                                    folderPattern = preset.pattern
-                                                                )
-                                                        },
-                                                        label = {
-                                                            Text(
-                                                                preset.name,
-                                                                style =
-                                                                    MaterialTheme.typography
-                                                                        .labelSmall,
-                                                            )
-                                                        },
-                                                        modifier = Modifier.height(28.dp),
-                                                    )
-                                                }
-                                            }
-                                            PlaceholderHelpTooltip(
-                                                NamePlaceholders.folderPlaceholders
-                                            )
-                                        }
-
-                                        Spacer(Modifier.height(6.dp))
-
-                                        // Filename
-                                        SectionLabel("Filename")
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Checkbox(
-                                                customConfig.preserveOriginalName,
-                                                {
-                                                    customConfig =
-                                                        customConfig.copy(
-                                                            preserveOriginalName = it,
-                                                            fileNamePattern =
-                                                                if (it) "{original}"
-                                                                else customConfig.fileNamePattern,
-                                                        )
-                                                },
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            Text(
-                                                "Preserve original filename",
-                                                style = MaterialTheme.typography.bodyMedium,
-                                            )
-                                        }
-                                        OutlinedTextField(
-                                            customConfig.fileNamePattern,
-                                            {
-                                                customConfig =
-                                                    customConfig.copy(fileNamePattern = it)
-                                            },
-                                            enabled = !customConfig.preserveOriginalName,
-                                            label = { Text("Filename Pattern") },
-                                            textStyle = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
-                                        if (!customConfig.preserveOriginalName) {
-                                            Row(
-                                                Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                            ) {
-                                                FilenamePresets.builtIn.take(4).forEach { preset ->
-                                                    FilterChip(
-                                                        customConfig.fileNamePattern ==
-                                                            preset.pattern,
-                                                        {
-                                                            customConfig =
-                                                                customConfig.copy(
-                                                                    fileNamePattern = preset.pattern
-                                                                )
-                                                        },
-                                                        label = {
-                                                            Text(
-                                                                preset.name,
-                                                                style =
-                                                                    MaterialTheme.typography
-                                                                        .labelSmall,
-                                                            )
-                                                        },
-                                                        modifier = Modifier.height(28.dp),
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        Spacer(Modifier.height(6.dp))
-
-                                        // Conflict resolution
-                                        SectionLabel("Conflict Resolution")
-                                        Row(Modifier.fillMaxWidth()) {
-                                            ConflictResolution.entries.forEach { r ->
-                                                Row(
-                                                    Modifier.weight(1f),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                ) {
-                                                    RadioButton(
-                                                        customConfig.conflictResolution == r,
-                                                        {
-                                                            customConfig =
-                                                                customConfig.copy(
-                                                                    conflictResolution = r
-                                                                )
-                                                        },
-                                                    )
-                                                    Text(
-                                                        r.name
-                                                            .replace("_", " ")
-                                                            .lowercase()
-                                                            .replaceFirstChar { it.uppercase() },
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        maxLines = 1,
-                                                    )
-                                                }
-                                            }
-                                        }
-
-                                        // Date source
-                                        SectionLabel("Date Source")
-                                        Row(Modifier.fillMaxWidth()) {
-                                            DateSource.entries.forEach { s ->
-                                                Row(
-                                                    Modifier.weight(1f),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                ) {
-                                                    RadioButton(
-                                                        customConfig.dateSource == s,
-                                                        {
-                                                            customConfig =
-                                                                customConfig.copy(dateSource = s)
-                                                        },
-                                                    )
-                                                    Text(
-                                                        s.name
-                                                            .replace("_", " ")
-                                                            .lowercase()
-                                                            .replaceFirstChar { it.uppercase() },
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        maxLines = 1,
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                PhotoScanSettingsSection(
+                    config = customConfig,
+                    onConfigChange = { customConfig = it },
+                    settingsExpanded = settingsExpanded,
+                    onSettingsExpandedChange = { settingsExpanded = it },
+                )
             }
         }
     )
@@ -577,39 +210,3 @@ fun PhotoScanImportScreen(
         onSettingsChange(settings.withPhotoScanImportTabSettings(tabSettings))
     }
 }
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PhotoScanCollapsibleSubsection(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Column {
-        Row(
-            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Icon(icon, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(title, style = MaterialTheme.typography.labelLarge)
-            Icon(
-                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                null,
-                Modifier.size(16.dp),
-            )
-        }
-        AnimatedVisibility(expanded, enter = expandVertically(), exit = shrinkVertically()) {
-            Column(content = content)
-        }
-    }
-}
-
-private fun configSummary(c: ImportConfiguration): String = buildString {
-    if (c.createSubfolders) append("${c.folderPattern} • ")
-    if (c.preserveOriginalName) append("Original name") else append(c.fileNamePattern)
-    append(" • ${c.conflictResolution.name.lowercase().replace("_", " ")}")
-}
-

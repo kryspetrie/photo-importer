@@ -26,22 +26,22 @@ class ZoomControllerTest {
     @Test
     fun `zoom in increases zoom level by zoomStep`() {
         val controller = ZoomController()
-        val expectedZoom = 1.0 * controller.zoomStep // 1.25
+        val expectedZoom = 1.0 * controller.zoomStep // 1.05
 
         val zoomed = controller.zoomIn()
 
-        assertEquals(expectedZoom, zoomed.zoom)
+        assertEquals(expectedZoom, zoomed.zoom, 0.001)
     }
 
     // ZC-03: Zoom out decreases zoom level by zoomStep
     @Test
     fun `zoom out decreases zoom level by zoomStep`() {
         val controller = ZoomController()
-        val expectedZoom = 1.0 / controller.zoomStep // 0.8
+        val expectedZoom = 1.0 / controller.zoomStep // ~0.952
 
         val zoomed = controller.zoomOut()
 
-        assertEquals(expectedZoom, zoomed.zoom)
+        assertEquals(expectedZoom, zoomed.zoom, 0.001)
     }
 
     // ZC-04: Zoom is bounded by max zoom
@@ -51,7 +51,7 @@ class ZoomControllerTest {
 
         // Keep zooming in
         var current = controller
-        repeat(20) { current = current.zoomIn() }
+        repeat(50) { current = current.zoomIn() }
 
         assertTrue(current.zoom <= current.maxZoom)
     }
@@ -63,7 +63,7 @@ class ZoomControllerTest {
 
         // Keep zooming out
         var current = controller
-        repeat(20) { current = current.zoomOut() }
+        repeat(50) { current = current.zoomOut() }
 
         assertTrue(current.zoom >= current.minZoom)
     }
@@ -97,9 +97,9 @@ class ZoomControllerTest {
         assertEquals(30.0, panned.panY)
     }
 
-    // ZC-08: Fit creates zoom to fit image in viewport
+    // ZC-08: Fit mode zooms so entire image fits within viewport
     @Test
-    fun `fit creates zoom to fit image in viewport`() {
+    fun `fit creates zoom so entire image fits in viewport`() {
         val imageWidth = 1000.0
         val imageHeight = 800.0
         val viewportWidth = 500.0
@@ -107,14 +107,13 @@ class ZoomControllerTest {
 
         val controller = ZoomController.fit(imageWidth, imageHeight, viewportWidth, viewportHeight)
 
-        // After fit, the entire image should fit in viewport with some margin
-        // Calculate how much of image is visible at this zoom
+        // Fit mode: use min of scale ratios so entire image is visible
+        // scaleX = 500/1000 = 0.5, scaleY = 400/800 = 0.5 → fitZoom = min(0.5, 0.5) = 0.5
+        // Entire image should be visible
         val visibleWidth = viewportWidth / controller.zoom
         val visibleHeight = viewportHeight / controller.zoom
-
-        // Visible should be >= image dimensions
-        assertTrue(visibleWidth >= imageWidth * 0.95) // Within 5%
-        assertTrue(visibleHeight >= imageHeight * 0.95)
+        assertTrue(visibleWidth >= imageWidth * 0.99)
+        assertTrue(visibleHeight >= imageHeight * 0.99)
     }
 
     // ZC-09: Fit to box zooms to show box
@@ -175,14 +174,14 @@ class ZoomControllerTest {
         val withPan = controller.pan(50.0, 30.0)
         val withBoth = controller.zoomIn().pan(50.0, 30.0)
 
-        assertEquals(withZoom.zoom, withBoth.zoom)
-        assertEquals(withPan.panX, withBoth.panX)
-        assertEquals(withPan.panY, withBoth.panY)
+        assertEquals(withZoom.zoom, withBoth.zoom, 0.001)
+        assertEquals(withPan.panX, withBoth.panX, 0.001)
+        assertEquals(withPan.panY, withBoth.panY, 0.001)
     }
 
     // ZC-13: Zoom with null cursor centers on viewport center
     @Test
-    fun `zoom with null cursor centers on viewport center`() {
+    fun `zoom with null cursor centers on viewport_center`() {
         val controller = ZoomController()
         val viewportWidth = 800.0
         val viewportHeight = 600.0
@@ -223,8 +222,13 @@ class ZoomControllerTest {
 
         val controller = ZoomController.fit(imageWidth, imageHeight, viewportWidth, viewportHeight)
 
-        // Portrait image in landscape viewport - should fit with letterboxing
+        // Portrait image in landscape viewport - fit mode uses min scale
+        // scaleX = 1000/800 = 1.25, scaleY = 600/1200 = 0.5 → fitZoom = min(1.25, 0.5) = 0.5
         assertTrue(controller.zoom < 1.0)
+
+        // Entire image should be visible
+        assertTrue(imageWidth * controller.zoom <= viewportWidth + 1.0)
+        assertTrue(imageHeight * controller.zoom <= viewportHeight + 1.0)
     }
 
     // ZC-16: Fit landscape image in portrait viewport
@@ -237,8 +241,13 @@ class ZoomControllerTest {
 
         val controller = ZoomController.fit(imageWidth, imageHeight, viewportWidth, viewportHeight)
 
-        // Landscape image in portrait viewport - should fit with letterboxing
+        // Landscape image in portrait viewport - fit mode uses min scale
+        // scaleX = 600/1200 = 0.5, scaleY = 1000/800 = 1.25 → fitZoom = min(0.5, 1.25) = 0.5
         assertTrue(controller.zoom < 1.0)
+
+        // Entire image should be visible
+        assertTrue(imageWidth * controller.zoom <= viewportWidth + 1.0)
+        assertTrue(imageHeight * controller.zoom <= viewportHeight + 1.0)
     }
 
     // ZC-17: Box fitting preserves aspect ratio awareness

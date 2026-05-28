@@ -11,6 +11,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
@@ -57,6 +58,7 @@ class SummaryScreenTest {
             SummaryScreen(
                 state = wizardState,
                 image = testImage,
+                perspectiveService = PerspectiveCorrectionService(),
                 exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},
@@ -67,28 +69,13 @@ class SummaryScreenTest {
     }
 
     @Test
-    @DisplayName("should display back button")
-    fun shouldDisplayBackButton() {
-        composeTestRule.setContent {
-            SummaryScreen(
-                state = wizardState,
-                image = testImage,
-                exportDestination = "/test/output",
-                onBack = {},
-                onExport = {},
-            )
-        }
-
-        composeTestRule.onNodeWithText("Back").assertIsDisplayed()
-    }
-
-    @Test
     @DisplayName("should display export button")
     fun shouldDisplayExportButton() {
         composeTestRule.setContent {
             SummaryScreen(
                 state = wizardState,
                 image = testImage,
+                perspectiveService = PerspectiveCorrectionService(),
                 exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},
@@ -105,6 +92,7 @@ class SummaryScreenTest {
             SummaryScreen(
                 state = wizardState,
                 image = testImage,
+                perspectiveService = PerspectiveCorrectionService(),
                 exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},
@@ -121,6 +109,7 @@ class SummaryScreenTest {
             SummaryScreen(
                 state = wizardState,
                 image = testImage,
+                perspectiveService = PerspectiveCorrectionService(),
                 exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},
@@ -128,26 +117,6 @@ class SummaryScreenTest {
         }
 
         composeTestRule.onNodeWithText("/test/output").assertIsDisplayed()
-    }
-
-    @Test
-    @DisplayName("should call onBack when clicked")
-    fun shouldCallOnBackWhenClicked() {
-        var backCalled = false
-
-        composeTestRule.setContent {
-            SummaryScreen(
-                state = wizardState,
-                image = testImage,
-                exportDestination = "/test/output",
-                onBack = { backCalled = true },
-                onExport = {},
-            )
-        }
-
-        composeTestRule.onNodeWithText("Back").performClick()
-
-        assertThat(backCalled).isTrue()
     }
 
     @Test
@@ -159,6 +128,7 @@ class SummaryScreenTest {
             SummaryScreen(
                 state = wizardState,
                 image = testImage,
+                perspectiveService = PerspectiveCorrectionService(),
                 exportDestination = "/test/output",
                 onBack = {},
                 onExport = { exportCalled = true },
@@ -177,6 +147,7 @@ class SummaryScreenTest {
             SummaryScreen(
                 state = wizardState,
                 image = testImage,
+                perspectiveService = PerspectiveCorrectionService(),
                 exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},
@@ -193,6 +164,7 @@ class SummaryScreenTest {
             SummaryScreen(
                 state = wizardState,
                 image = testImage,
+                perspectiveService = PerspectiveCorrectionService(),
                 exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},

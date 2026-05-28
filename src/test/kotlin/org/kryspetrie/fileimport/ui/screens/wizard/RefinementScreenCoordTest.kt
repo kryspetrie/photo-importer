@@ -8,6 +8,10 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.Corner
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
+import org.kryspetrie.fileimport.ui.screens.wizard.refinement.createSampledImageForRefinement
+import org.kryspetrie.fileimport.ui.screens.wizard.refinement.findCornerHit
+import org.kryspetrie.fileimport.ui.screens.wizard.refinement.imageToScreen
+import org.kryspetrie.fileimport.ui.screens.wizard.refinement.screenToImage
 
 /**
  * Unit tests for RefinementScreen coordinate transformations. Tests coordinate math that's critical

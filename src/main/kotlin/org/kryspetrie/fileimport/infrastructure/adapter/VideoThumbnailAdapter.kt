@@ -2,10 +2,9 @@ package org.kryspetrie.fileimport.infrastructure.adapter
 
 import java.awt.image.BufferedImage
 import java.io.File
-import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**

@@ -11,9 +11,7 @@ import org.kryspetrie.fileimport.domain.port.DeviceEvent
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 
-class DeviceAdapter(
-    private val dispatcherProvider: DispatcherProvider,
-) : DevicePort {
+class DeviceAdapter(private val dispatcherProvider: DispatcherProvider) : DevicePort {
 
     override suspend fun detectDevices(): List<CameraDevice> =
         withContext(dispatcherProvider.io) {
