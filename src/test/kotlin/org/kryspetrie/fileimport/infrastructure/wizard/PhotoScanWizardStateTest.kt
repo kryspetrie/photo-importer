@@ -791,7 +791,8 @@ class PhotoScanWizardStateTest {
         state.selectBox(1)
         assertEquals(1, state.selectedBoxIndex.value)
 
-        // Select a corner — should preserve selectedBoxIndex = 1, not set it to refinementBoxIndex(-1)
+        // Select a corner — should preserve selectedBoxIndex = 1, not set it to
+        // refinementBoxIndex(-1)
         state.selectCorner(Corner.BOTTOM_RIGHT)
         assertEquals(1, state.selectedBoxIndex.value) // WAS -1 before the fix
         assertEquals(Corner.BOTTOM_RIGHT, state.selectedCorner.value)

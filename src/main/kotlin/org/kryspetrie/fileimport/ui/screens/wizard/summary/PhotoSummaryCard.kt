@@ -27,7 +27,10 @@ import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 
-/** Card showing summary and rotation options for a single detected photo. Warp-stretch is always applied. */
+/**
+ * Card showing summary and rotation options for a single detected photo. Warp-stretch is always
+ * applied.
+ */
 @Composable
 fun PhotoSummaryCard(
     box: BoundingBox,
@@ -102,7 +105,9 @@ private fun PhotoCardHeader(box: BoundingBox, index: Int, config: PhotoConfigura
     }
 }
 
-/** Row with rotation button and delete button. Warp-stretch is always applied, no checkbox needed. */
+/**
+ * Row with rotation button and delete button. Warp-stretch is always applied, no checkbox needed.
+ */
 @Composable
 private fun PhotoCorrectionRow(
     config: PhotoConfiguration,
@@ -116,14 +121,14 @@ private fun PhotoCorrectionRow(
     ) {
         // Rotation cycles: 0° → 90° → 180° → 270° → 0°
         IconButton(
-            onClick = { onConfigChange(config.copy(rotationDegrees = config.cycleRotationCW().rotationDegrees)) },
+            onClick = {
+                onConfigChange(
+                    config.copy(rotationDegrees = config.cycleRotationCW().rotationDegrees)
+                )
+            },
             modifier = Modifier.size(36.dp),
         ) {
-            Icon(
-                Icons.Default.RotateRight,
-                "Rotate clockwise",
-                modifier = Modifier.size(20.dp),
-            )
+            Icon(Icons.Default.RotateRight, "Rotate clockwise", modifier = Modifier.size(20.dp))
         }
         Text(
             "${config.rotationDegrees}°",

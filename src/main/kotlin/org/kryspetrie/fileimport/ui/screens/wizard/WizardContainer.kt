@@ -56,12 +56,12 @@ import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
+import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.SettingsPort
-import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
@@ -135,9 +135,12 @@ fun WizardContainer(
                 // Persist to settings so the import screen stays in sync
                 scope.launch {
                     val currentSettings = settingsPort.observeSettings().first()
-                    val updated = currentSettings.withPhotoScanImportTabSettings(
-                        currentSettings.photoScanImportTabSettings.withRecentDestinationPath(newDest)
-                    )
+                    val updated =
+                        currentSettings.withPhotoScanImportTabSettings(
+                            currentSettings.photoScanImportTabSettings.withRecentDestinationPath(
+                                newDest
+                            )
+                        )
                     settingsPort.saveSettings(updated)
                 }
             },

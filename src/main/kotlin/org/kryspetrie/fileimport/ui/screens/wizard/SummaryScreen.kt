@@ -1,7 +1,7 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -22,7 +22,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
-import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -59,9 +58,9 @@ import org.kryspetrie.fileimport.ui.screens.wizard.summary.DestinationSelector
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 
 /**
- * Summary screen showing all detected photos as a scrolling grid of image tiles. Each tile
- * displays the cropped+rotated preview with inline rotation buttons. Warp-stretch perspective
- * correction is always applied.
+ * Summary screen showing all detected photos as a scrolling grid of image tiles. Each tile displays
+ * the cropped+rotated preview with inline rotation buttons. Warp-stretch perspective correction is
+ * always applied.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -186,20 +185,16 @@ private fun PhotoGrid(
                 box = box,
                 config = config,
                 previewImage = previewImage,
-                onRotateCW = {
-                    onConfigChange(box.id, config.cycleRotationCW())
-                },
-                onRotateCCW = {
-                    onConfigChange(box.id, config.cycleRotationCCW())
-                },
+                onRotateCW = { onConfigChange(box.id, config.cycleRotationCW()) },
+                onRotateCCW = { onConfigChange(box.id, config.cycleRotationCCW()) },
             )
         }
     }
 }
 
 /**
- * A single tile in the photo grid. Shows the cropped+rotated preview image with rotation
- * buttons at the bottom.
+ * A single tile in the photo grid. Shows the cropped+rotated preview image with rotation buttons at
+ * the bottom.
  */
 @Composable
 private fun PhotoTile(
@@ -240,8 +235,6 @@ private fun PhotoTile(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-
-
             }
 
             // Bottom bar with rotation buttons and info
@@ -266,10 +259,7 @@ private fun PhotoTile(
 
                     // Center: photo label + rotation state
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            "Photo ${index + 1}",
-                            style = MaterialTheme.typography.labelSmall,
-                        )
+                        Text("Photo ${index + 1}", style = MaterialTheme.typography.labelSmall)
                         if (config.rotationDegrees != 0) {
                             Text(
                                 "${config.rotationDegrees}°",

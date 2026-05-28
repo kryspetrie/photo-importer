@@ -42,10 +42,11 @@ fun OverviewCanvas(
     val zoomController by state.zoomController.collectAsState()
 
     Canvas(
-        modifier = Modifier.fillMaxSize()
-            .then(mousePositionTracker(state, wizardMode))
-            .then(canvasTapHandler(state, wizardMode))
-            .then(canvasDragHandler(state, wizardMode))
+        modifier =
+            Modifier.fillMaxSize()
+                .then(mousePositionTracker(state, wizardMode))
+                .then(canvasTapHandler(state, wizardMode))
+                .then(canvasDragHandler(state, wizardMode))
     ) {
         drawCanvasContent(
             image = image,
@@ -59,13 +60,10 @@ fun OverviewCanvas(
 }
 
 /**
- * Tracks mouse position for creation preview in 4-point mode. Reads zoomController live from
- * state to avoid stale closures.
+ * Tracks mouse position for creation preview in 4-point mode. Reads zoomController live from state
+ * to avoid stale closures.
  */
-private fun mousePositionTracker(
-    state: PhotoScanWizardState,
-    wizardMode: WizardMode,
-): Modifier =
+private fun mousePositionTracker(state: PhotoScanWizardState, wizardMode: WizardMode): Modifier =
     Modifier.pointerInput(state, wizardMode) {
         awaitPointerEventScope {
             while (true) {
@@ -91,10 +89,7 @@ private fun mousePositionTracker(
  * zoomController live from state to avoid stale closures — these values change without restarting
  * the handler.
  */
-private fun canvasTapHandler(
-    state: PhotoScanWizardState,
-    wizardMode: WizardMode,
-): Modifier =
+private fun canvasTapHandler(state: PhotoScanWizardState, wizardMode: WizardMode): Modifier =
     Modifier.pointerInput(state, wizardMode) {
         detectTapGestures(
             onTap = { offset ->
@@ -132,13 +127,10 @@ private fun canvasTapHandler(
  * event so they always reflect the current values without needing to restart the handler.
  *
  * Undo behavior: A single undo snapshot is saved on Press (before the drag starts). Move events use
- * no-undo variants so intermediate positions don't fill the undo buffer. One undo = one complete drag
- * operation.
+ * no-undo variants so intermediate positions don't fill the undo buffer. One undo = one complete
+ * drag operation.
  */
-private fun canvasDragHandler(
-    state: PhotoScanWizardState,
-    wizardMode: WizardMode,
-): Modifier =
+private fun canvasDragHandler(state: PhotoScanWizardState, wizardMode: WizardMode): Modifier =
     Modifier.pointerInput(state, wizardMode) {
         awaitPointerEventScope {
             var isDragging = false
@@ -203,10 +195,8 @@ private fun canvasDragHandler(
                                     )
                                 }
                                 isPhotoDrag && draggedBoxIndex >= 0 -> {
-                                    val deltaX =
-                                        (pos.x - lastDragPos.x) / zoomController.zoom
-                                    val deltaY =
-                                        (pos.y - lastDragPos.y) / zoomController.zoom
+                                    val deltaX = (pos.x - lastDragPos.x) / zoomController.zoom
+                                    val deltaY = (pos.y - lastDragPos.y) / zoomController.zoom
                                     // Use withoutUndo variant — undo was saved on Press
                                     state.moveSelectedBoxWithoutUndo(deltaX, deltaY)
                                 }

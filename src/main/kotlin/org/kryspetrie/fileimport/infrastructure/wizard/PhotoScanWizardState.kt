@@ -581,7 +581,12 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _selectedCorner.value = null
     }
 
-    /** Selects a corner for arrow key movement. Does NOT change selectedBoxIndex — callers must set that explicitly via selectBox() or enterRefinement(). Previously this set selectedBoxIndex = refinementBoxIndex, which broke overview-page corner dragging because refinementBoxIndex is -1 when not in refinement mode. */
+    /**
+     * Selects a corner for arrow key movement. Does NOT change selectedBoxIndex — callers must set
+     * that explicitly via selectBox() or enterRefinement(). Previously this set selectedBoxIndex =
+     * refinementBoxIndex, which broke overview-page corner dragging because refinementBoxIndex is
+     * -1 when not in refinement mode.
+     */
     fun selectCorner(corner: Corner) {
         _selectedCorner.value = corner
     }

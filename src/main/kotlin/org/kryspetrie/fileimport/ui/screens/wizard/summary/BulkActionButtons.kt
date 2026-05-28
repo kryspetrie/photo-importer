@@ -24,7 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Row of bulk action buttons. Warp-stretch is always applied; only rotation and clear are needed. */
+/**
+ * Row of bulk action buttons. Warp-stretch is always applied; only rotation and clear are needed.
+ */
 @Composable
 fun BulkActionButtons(
     onRotateAllCW: () -> Unit,
