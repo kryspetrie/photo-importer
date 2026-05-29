@@ -10,6 +10,7 @@ import javax.imageio.plugins.jpeg.JPEGImageWriteParam
 import javax.inject.Inject
 import javax.inject.Singleton
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.PhotoScanExportResult
 import org.kryspetrie.fileimport.domain.model.PhotoScanExportedFile
@@ -63,6 +64,8 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
      * @param detectedPhotos List of detected photos with their configurations
      * @param destinationPath Destination folder for exported images
      * @param baseFileName Base filename (without extension) for exported images
+     * @param marginFraction Margin as fraction of photo diagonal (0.0–0.2, default 0.02). Pushes
+     *   corners outward from quad center for warp, or expands bounding box for simple crop.
      * @return ExportResult with success status and exported file information
      */
     fun exportPhotos(
@@ -71,6 +74,7 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
         detectedPhotos: List<DetectedPhoto>,
         destinationPath: String,
         baseFileName: String,
+        marginFraction: Double = 0.02,
     ): ExportResult {
         val errors = mutableListOf<String>()
         val exportedFiles = mutableListOf<ExportedFile>()
@@ -83,14 +87,17 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
 
         for ((index, photo) in detectedPhotos.withIndex()) {
             try {
+                // Apply margin to corners before processing
+                val marginedPhoto = applyMargin(photo, marginFraction)
+
                 // Crop and correct the image based on photo settings
                 val correctedImage =
-                    if (photo.applyPerspectiveCorrection) {
+                    if (marginedPhoto.applyPerspectiveCorrection) {
                         // Apply perspective correction
-                        perspectiveService.correctPerspective(image, photo)
+                        perspectiveService.correctPerspective(image, marginedPhoto)
                     } else {
                         // Simple axis-aligned crop
-                        cropAxisAligned(image, photo)
+                        cropAxisAligned(image, marginedPhoto)
                     }
 
                 // Apply rotation if needed
@@ -145,6 +152,7 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
      * @param detectedPhoto The photo to export with corner positions and configuration
      * @param destinationPath Destination folder for the exported image
      * @param baseFileName Base filename (without extension)
+     * @param marginFraction Margin as fraction of photo diagonal (0.0–0.2, default 0.02)
      * @return SingleExportResult with the result of the export
      */
     fun exportSinglePhoto(
@@ -152,14 +160,18 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
         detectedPhoto: DetectedPhoto,
         destinationPath: String,
         baseFileName: String,
+        marginFraction: Double = 0.02,
     ): SingleExportResult {
         return try {
+            // Apply margin to corners before processing
+            val marginedPhoto = applyMargin(detectedPhoto, marginFraction)
+
             // Crop and correct the image based on photo settings
             val correctedImage =
-                if (detectedPhoto.applyPerspectiveCorrection) {
-                    perspectiveService.correctPerspective(sourceImage, detectedPhoto)
+                if (marginedPhoto.applyPerspectiveCorrection) {
+                    perspectiveService.correctPerspective(sourceImage, marginedPhoto)
                 } else {
-                    cropAxisAligned(sourceImage, detectedPhoto)
+                    cropAxisAligned(sourceImage, marginedPhoto)
                 }
 
             // Apply rotation if needed
@@ -314,6 +326,69 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
             g.dispose()
             cropped
         }
+    }
+
+    /**
+     * Applies margin to a detected photo's corners, pushing them outward from the quad center.
+     *
+     * This mirrors the margin logic in photocrop.py: each corner is expanded outward along the
+     * direction from the quad center to that corner. The margin is computed as a fraction of the
+     * photo's diagonal length.
+     *
+     * @param photo The detected photo
+     * @param marginFraction Margin as fraction of the photo's diagonal (e.g. 0.02 = 2%)
+     * @return New DetectedPhoto with corners pushed outward, or the same photo if margin is 0
+     */
+    fun applyMargin(photo: DetectedPhoto, marginFraction: Double): DetectedPhoto {
+        if (marginFraction <= 0.0) return photo
+
+        val corners =
+            listOf(
+                photo.topLeft.x.toDouble() to photo.topLeft.y.toDouble(),
+                photo.topRight.x.toDouble() to photo.topRight.y.toDouble(),
+                photo.bottomRight.x.toDouble() to photo.bottomRight.y.toDouble(),
+                photo.bottomLeft.x.toDouble() to photo.bottomLeft.y.toDouble(),
+            )
+
+        // Quad center (centroid of the 4 corners)
+        val cx = corners.map { it.first }.average()
+        val cy = corners.map { it.second }.average()
+
+        // Diagonal length of the quad (max opposite-corner distance)
+        val diag1 = distance(corners[0], corners[2]) // TL to BR
+        val diag2 = distance(corners[1], corners[3]) // TR to BL
+        val diagonal = maxOf(diag1, diag2)
+
+        if (diagonal <= 0.0) return photo
+
+        val marginPx = marginFraction * diagonal
+
+        // Push each corner outward from center
+        val expanded =
+            corners.map { (x, y) ->
+                val dx = x - cx
+                val dy = y - cy
+                val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                if (dist > 0) {
+                    (x + (marginPx / dist) * dx) to (y + (marginPx / dist) * dy)
+                } else {
+                    x to y
+                }
+            }
+
+        return photo.copy(
+            topLeft = PhotoCorner(expanded[0].first.toFloat(), expanded[0].second.toFloat()),
+            topRight = PhotoCorner(expanded[1].first.toFloat(), expanded[1].second.toFloat()),
+            bottomRight = PhotoCorner(expanded[2].first.toFloat(), expanded[2].second.toFloat()),
+            bottomLeft = PhotoCorner(expanded[3].first.toFloat(), expanded[3].second.toFloat()),
+        )
+    }
+
+    /** Euclidean distance between two points. */
+    private fun distance(a: Pair<Double, Double>, b: Pair<Double, Double>): Double {
+        val dx = b.first - a.first
+        val dy = b.second - a.second
+        return kotlin.math.sqrt(dx * dx + dy * dy)
     }
 
     /** Rotates an image by the specified rotation angle. */

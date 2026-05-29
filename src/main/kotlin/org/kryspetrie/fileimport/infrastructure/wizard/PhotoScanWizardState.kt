@@ -49,6 +49,29 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _configuration.value = config
     }
 
+    // ========== Export Settings ==========
+
+    /** Whether to apply perspective correction (warp-stretch) when exporting. Default: true. */
+    private val _perspectiveCorrectionEnabled = MutableStateFlow(true)
+    val perspectiveCorrectionEnabled: StateFlow<Boolean> =
+        _perspectiveCorrectionEnabled.asStateFlow()
+
+    fun setPerspectiveCorrectionEnabled(enabled: Boolean) {
+        _perspectiveCorrectionEnabled.value = enabled
+    }
+
+    /**
+     * Margin to add around each photo during export, expressed as a fraction of the photo's
+     * diagonal length. Default: 0.02 (2%). For perspective correction: corners are pushed outward
+     * from the quad center. For simple crop: the bounding box is expanded.
+     */
+    private val _exportMarginPercent = MutableStateFlow(0.02)
+    val exportMarginPercent: StateFlow<Double> = _exportMarginPercent.asStateFlow()
+
+    fun setExportMarginPercent(percent: Double) {
+        _exportMarginPercent.value = percent.coerceIn(0.0, 0.2)
+    }
+
     // ========== Image ==========
 
     private val _image = MutableStateFlow<BufferedImage?>(null)

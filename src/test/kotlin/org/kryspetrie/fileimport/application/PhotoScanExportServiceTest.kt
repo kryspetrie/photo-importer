@@ -131,6 +131,94 @@ class PhotoScanExportServiceTest {
     }
 
     @Nested
+    @DisplayName("margin application")
+    inner class MarginApplication {
+        @Test
+        @DisplayName("zero margin returns same photo")
+        fun zeroMarginReturnsSamePhoto() {
+            val photo = createDetectedPhoto(10f, 10f, 110f, 10f, 110f, 110f, 10f, 110f)
+            val result = service.applyMargin(photo, 0.0)
+            assertThat(result.topLeft.x).isEqualTo(photo.topLeft.x)
+            assertThat(result.topLeft.y).isEqualTo(photo.topLeft.y)
+            assertThat(result.bottomRight.x).isEqualTo(photo.bottomRight.x)
+        }
+
+        @Test
+        @DisplayName("negative margin returns same photo")
+        fun negativeMarginReturnsSamePhoto() {
+            val photo = createDetectedPhoto(10f, 10f, 110f, 10f, 110f, 110f, 10f, 110f)
+            val result = service.applyMargin(photo, -0.05)
+            assertThat(result.topLeft.x).isEqualTo(photo.topLeft.x)
+        }
+
+        @Test
+        @DisplayName("2% margin pushes corners outward from center")
+        fun twoPercentMarginPushesOutward() {
+            // 100x100 square centered at (150, 150)
+            val photo = createDetectedPhoto(100f, 100f, 200f, 100f, 200f, 200f, 100f, 200f)
+            val result = service.applyMargin(photo, 0.02)
+
+            // Diagonal = sqrt(100^2 + 100^2) ≈ 141.4
+            // marginPx = 0.02 * 141.4 ≈ 2.83
+            // Each corner pushed outward by ~2.83 pixels from center (150, 150)
+            // TL (100,100): direction from center = (-50, -50), dist = 70.7
+            //   new_x = 100 + (2.83/70.7)*(-50) = 100 - 2.0 = 98.0
+            //   new_y = 100 + (2.83/70.7)*(-50) = 100 - 2.0 = 98.0
+            assertThat(result.topLeft.x).isLessThan(photo.topLeft.x)
+            assertThat(result.topLeft.y).isLessThan(photo.topLeft.y)
+            assertThat(result.bottomRight.x).isGreaterThan(photo.bottomRight.x)
+            assertThat(result.bottomRight.y).isGreaterThan(photo.bottomRight.y)
+        }
+
+        @Test
+        @DisplayName("margin preserves perspective correction flag")
+        fun marginPreservesPerspectiveFlag() {
+            val photo =
+                createDetectedPhoto(10f, 10f, 110f, 10f, 110f, 110f, 10f, 110f)
+                    .copy(applyPerspectiveCorrection = false)
+            val result = service.applyMargin(photo, 0.02)
+            assertThat(result.applyPerspectiveCorrection).isFalse()
+        }
+
+        @Test
+        @DisplayName("margin preserves rotation")
+        fun marginPreservesRotation() {
+            val photo =
+                createDetectedPhoto(10f, 10f, 110f, 10f, 110f, 110f, 10f, 110f)
+                    .copy(rotation = org.kryspetrie.fileimport.domain.model.RotationAngle.CW_90)
+            val result = service.applyMargin(photo, 0.02)
+            assertThat(result.rotation)
+                .isEqualTo(org.kryspetrie.fileimport.domain.model.RotationAngle.CW_90)
+        }
+
+        @Test
+        @DisplayName("equal margin on all corners for symmetric quad")
+        fun equalMarginForSymmetricQuad() {
+            // Perfect square: all corners equidistant from center
+            val photo = createDetectedPhoto(100f, 100f, 200f, 100f, 200f, 200f, 100f, 200f)
+            val result = service.applyMargin(photo, 0.02)
+
+            val tlExpansion =
+                kotlin.math.sqrt(
+                    (result.topLeft.x - photo.topLeft.x.toDouble()) *
+                        (result.topLeft.x - photo.topLeft.x.toDouble()) +
+                        (result.topLeft.y - photo.topLeft.y.toDouble()) *
+                            (result.topLeft.y - photo.topLeft.y.toDouble())
+                )
+            val brExpansion =
+                kotlin.math.sqrt(
+                    (result.bottomRight.x - photo.bottomRight.x.toDouble()) *
+                        (result.bottomRight.x - photo.bottomRight.x.toDouble()) +
+                        (result.bottomRight.y - photo.bottomRight.y.toDouble()) *
+                            (result.bottomRight.y - photo.bottomRight.y.toDouble())
+                )
+
+            // All corners should expand by the same amount (within floating point tolerance)
+            assertThat(tlExpansion).isCloseTo(brExpansion, org.assertj.core.data.Offset.offset(0.1))
+        }
+    }
+
+    @Nested
     @DisplayName("export with real images")
     inner class RealImageExport {
         @Test

@@ -827,4 +827,43 @@ class PhotoScanWizardStateTest {
         assertEquals(0, state.selectedBoxIndex.value) // Should still be 0
         assertNull(state.selectedCorner.value)
     }
+
+    // ==================== Export Settings ====================
+
+    // WS-56: perspectiveCorrectionEnabled defaults to true
+    @Test
+    fun `perspectiveCorrectionEnabled defaults to true`() {
+        assertTrue(state.perspectiveCorrectionEnabled.value)
+    }
+
+    // WS-57: setPerspectiveCorrectionEnabled toggles the state
+    @Test
+    fun `setPerspectiveCorrectionEnabled toggles the state`() {
+        state.setPerspectiveCorrectionEnabled(false)
+        assertFalse(state.perspectiveCorrectionEnabled.value)
+        state.setPerspectiveCorrectionEnabled(true)
+        assertTrue(state.perspectiveCorrectionEnabled.value)
+    }
+
+    // WS-58: exportMarginPercent defaults to 0.02
+    @Test
+    fun `exportMarginPercent defaults to 2 percent`() {
+        assertEquals(0.02, state.exportMarginPercent.value)
+    }
+
+    // WS-59: setExportMarginPercent updates the state
+    @Test
+    fun `setExportMarginPercent updates the state`() {
+        state.setExportMarginPercent(0.05)
+        assertEquals(0.05, state.exportMarginPercent.value)
+    }
+
+    // WS-60: setExportMarginPercent clamps to 0.0-0.2
+    @Test
+    fun `setExportMarginPercent clamps to valid range`() {
+        state.setExportMarginPercent(-0.1)
+        assertEquals(0.0, state.exportMarginPercent.value)
+        state.setExportMarginPercent(0.5)
+        assertEquals(0.2, state.exportMarginPercent.value)
+    }
 }

@@ -488,8 +488,12 @@ private suspend fun exportSinglePhoto(
     val progress = (index + 1).toFloat() / totalCount
     onProgress(progress * 0.9f, fileName)
 
+    val perspectiveEnabled = state.perspectiveCorrectionEnabled.value
+    val marginFraction = state.exportMarginPercent.value
+
     val corrections = mutableListOf<String>()
-    corrections.add("Warp-stretch")
+    corrections.add(if (perspectiveEnabled) "Warp-stretch" else "Simple crop")
+    if (marginFraction > 0) corrections.add("Margin ${(marginFraction * 100).toInt()}%")
     if (config.rotationDegrees != 0) corrections.add("Rotation ${config.rotationDegrees}°")
 
     appLogger.logOperationStart(
@@ -510,7 +514,7 @@ private suspend fun exportSinglePhoto(
                     box.corners.bottomRight.x.toFloat(),
                     box.corners.bottomRight.y.toFloat(),
                 ),
-            applyPerspectiveCorrection = true, // Always warp-stretch
+            applyPerspectiveCorrection = perspectiveEnabled,
             rotation = rotationFromDegrees(config.rotationDegrees),
         )
 
@@ -522,6 +526,7 @@ private suspend fun exportSinglePhoto(
                     detectedPhoto,
                     outputDir.absolutePath,
                     fileName,
+                    marginFraction = marginFraction,
                 )
             ProcessedPhoto(
                     originalFile = state.imageFile.value ?: File(""),

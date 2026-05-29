@@ -192,6 +192,9 @@ fun PhotoScanImportScreen(
                     destDirName = destDir?.name,
                 )
 
+                // ── Export Settings ──
+                ExportSettingsCard(state = state)
+
                 // ── Import Photo Scans Button ──
                 Button(
                     onClick = { firstImageFile?.let { onImageSelected(it) } },
