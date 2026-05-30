@@ -41,7 +41,10 @@ class PhotoScanImportScreenTest {
     }
 
     @Composable
-    private fun importScreenCall(onImageSelected: (File) -> Unit, onCancel: () -> Unit) =
+    private fun importScreenCall(
+        onImageSelected: (File, List<File>?) -> Unit,
+        onCancel: () -> Unit,
+    ) =
         PhotoScanImportScreen(
             state = wizardState,
             settingsPort = settingsPort,
@@ -53,7 +56,9 @@ class PhotoScanImportScreenTest {
     @Test
     @DisplayName("should display Photo Scan Import title")
     fun shouldDisplayTitle() {
-        composeTestRule.setContent { importScreenCall(onImageSelected = {}, onCancel = {}) }
+        composeTestRule.setContent {
+            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
+        }
 
         composeTestRule.onNodeWithText("Photo Scan Import").assertIsDisplayed()
     }
@@ -61,7 +66,9 @@ class PhotoScanImportScreenTest {
     @Test
     @DisplayName("should display Import Mode header")
     fun shouldDisplayImportModeHeader() {
-        composeTestRule.setContent { importScreenCall(onImageSelected = {}, onCancel = {}) }
+        composeTestRule.setContent {
+            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
+        }
 
         composeTestRule.onNodeWithText("Import Mode").assertIsDisplayed()
     }
@@ -69,7 +76,9 @@ class PhotoScanImportScreenTest {
     @Test
     @DisplayName("should display Photo Scan mode card")
     fun shouldDisplayPhotoScanCard() {
-        composeTestRule.setContent { importScreenCall(onImageSelected = {}, onCancel = {}) }
+        composeTestRule.setContent {
+            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
+        }
 
         composeTestRule.onNodeWithText("Photo Scan").assertIsDisplayed()
     }
@@ -77,7 +86,9 @@ class PhotoScanImportScreenTest {
     @Test
     @DisplayName("should display Single Photo mode card")
     fun shouldDisplaySinglePhotoCard() {
-        composeTestRule.setContent { importScreenCall(onImageSelected = {}, onCancel = {}) }
+        composeTestRule.setContent {
+            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
+        }
 
         composeTestRule.onNodeWithText("Single Photo").assertIsDisplayed()
     }
@@ -85,7 +96,9 @@ class PhotoScanImportScreenTest {
     @Test
     @DisplayName("should display auto-detect toggle")
     fun shouldDisplayAutoDetectToggle() {
-        composeTestRule.setContent { importScreenCall(onImageSelected = {}, onCancel = {}) }
+        composeTestRule.setContent {
+            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
+        }
 
         composeTestRule.onNodeWithText("Auto-detect bounding boxes").assertIsDisplayed()
     }
@@ -93,7 +106,9 @@ class PhotoScanImportScreenTest {
     @Test
     @DisplayName("should display cancel button")
     fun shouldDisplayCancelButton() {
-        composeTestRule.setContent { importScreenCall(onImageSelected = {}, onCancel = {}) }
+        composeTestRule.setContent {
+            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
+        }
 
         composeTestRule.onNodeWithContentDescription("Cancel").assertIsDisplayed()
     }
@@ -104,7 +119,7 @@ class PhotoScanImportScreenTest {
         var cancelCalled = false
 
         composeTestRule.setContent {
-            importScreenCall(onImageSelected = {}, onCancel = { cancelCalled = true })
+            importScreenCall(onImageSelected = { _, _ -> }, onCancel = { cancelCalled = true })
         }
 
         composeTestRule.onNodeWithContentDescription("Cancel").performClick()
@@ -115,7 +130,9 @@ class PhotoScanImportScreenTest {
     @Test
     @DisplayName("should display Select Image button")
     fun shouldDisplaySelectImageButton() {
-        composeTestRule.setContent { importScreenCall(onImageSelected = {}, onCancel = {}) }
+        composeTestRule.setContent {
+            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
+        }
 
         composeTestRule.onNodeWithText("Select Image").assertIsDisplayed()
     }

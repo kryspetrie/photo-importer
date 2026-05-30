@@ -758,7 +758,92 @@ class PhotoScanWizardStateTest {
         assertTrue(state.photoConfigurations.value.isEmpty())
     }
 
-    // ==================== selectCorner Bug Fix Tests ====================
+    @Test
+    fun `hasMoreBatchImages returns true when more images exist`() {
+        val file1 = java.io.File("/test/img1.jpg")
+        val file2 = java.io.File("/test/img2.jpg")
+        val file3 = java.io.File("/test/img3.jpg")
+        val files = listOf(file1, file2, file3)
+        state.initializeBatch(files)
+        // After initialize, index is 0 — more images exist
+        assertTrue(state.hasMoreBatchImages)
+    }
+
+    @Test
+    fun `hasMoreBatchImages returns false when at last image`() {
+        val file1 = java.io.File("/test/img1.jpg")
+        val file2 = java.io.File("/test/img2.jpg")
+        val files = listOf(file1, file2)
+        state.initializeBatch(files)
+        // Advance to last image
+        state.advanceToNextBatchFile()
+        assertFalse(state.hasMoreBatchImages)
+    }
+
+    @Test
+    fun `hasMoreBatchImages returns false in single file mode`() {
+        assertFalse(state.hasMoreBatchImages)
+    }
+
+    @Test
+    fun `advanceToNextBatchFile moves to next and returns file`() {
+        val file1 = java.io.File("/test/img1.jpg")
+        val file2 = java.io.File("/test/img2.jpg")
+        val file3 = java.io.File("/test/img3.jpg")
+        val files = listOf(file1, file2, file3)
+        state.initializeBatch(files)
+
+        assertEquals(0, state.currentImageIndex.value)
+
+        val next = state.advanceToNextBatchFile()
+        assertEquals(file2, next)
+        assertEquals(1, state.currentImageIndex.value)
+
+        val next2 = state.advanceToNextBatchFile()
+        assertEquals(file3, next2)
+        assertEquals(2, state.currentImageIndex.value)
+    }
+
+    @Test
+    fun `advanceToNextBatchFile returns null at end of batch`() {
+        val file1 = java.io.File("/test/img1.jpg")
+        val file2 = java.io.File("/test/img2.jpg")
+        val files = listOf(file1, file2)
+        state.initializeBatch(files)
+        state.advanceToNextBatchFile() // move to index 1
+
+        val result = state.advanceToNextBatchFile()
+        assertNull(result)
+        assertEquals(1, state.currentImageIndex.value) // index unchanged
+    }
+
+    @Test
+    fun `resetPerImageState clears boxes and configs but preserves batch state`() {
+        val file1 = java.io.File("/test/img1.jpg")
+        val file2 = java.io.File("/test/img2.jpg")
+        val files = listOf(file1, file2)
+
+        state.initializeBatch(files)
+        val sampleImage = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
+        state.initializeWithImage(sampleImage, file1)
+        val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
+        state.addBox(box)
+        state.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+
+        // Before reset: has boxes and configs
+        assertEquals(1, state.boxCount())
+        assertTrue(state.photoConfigurations.value.isNotEmpty())
+        assertEquals(2, state.sourceFiles.value.size)
+
+        state.resetPerImageState()
+
+        // After reset: boxes and configs cleared
+        assertEquals(0, state.boxCount())
+        assertTrue(state.photoConfigurations.value.isEmpty())
+        // But batch state is preserved
+        assertEquals(2, state.sourceFiles.value.size)
+        assertTrue(state.isBatchMode)
+    }
 
     // WS-52: selectCorner should NOT reset selectedBoxIndex (overview page corner drag bug)
     @Test

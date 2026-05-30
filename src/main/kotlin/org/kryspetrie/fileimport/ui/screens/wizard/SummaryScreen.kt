@@ -54,7 +54,6 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.screens.wizard.summary.DestinationSelector
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 
 /**
@@ -71,8 +70,6 @@ fun SummaryScreen(
     onBack: () -> Unit,
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
-    exportDestination: String = System.getProperty("user.home") + "/Pictures/PhotoScan",
-    onDestinationChange: ((String) -> Unit)? = null,
 ) {
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
@@ -81,8 +78,6 @@ fun SummaryScreen(
         topBar = {
             SummaryTopAppBar(
                 photoCount = boundingBoxList.size(),
-                exportDestination = exportDestination,
-                onDestinationChange = onDestinationChange,
                 onRotateAllCW = { state.rotateAllBoxesCW() },
                 onRotateAllCCW = { state.rotateAllBoxesCCW() },
                 onClearAll = { state.clearAllConfigurations() },
@@ -112,8 +107,6 @@ fun SummaryScreen(
 @Composable
 private fun SummaryTopAppBar(
     photoCount: Int,
-    exportDestination: String,
-    onDestinationChange: ((String) -> Unit)?,
     onRotateAllCW: () -> Unit,
     onRotateAllCCW: () -> Unit,
     onClearAll: () -> Unit,
@@ -121,7 +114,6 @@ private fun SummaryTopAppBar(
     TopAppBar(
         title = { Text("Photo Summary — $photoCount photo(s)") },
         actions = {
-            // Bulk rotation buttons in the top bar
             OutlinedButton(onClick = onRotateAllCCW, modifier = Modifier.height(32.dp)) {
                 Icon(Icons.AutoMirrored.Filled.RotateLeft, null, Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
@@ -144,11 +136,6 @@ private fun SummaryTopAppBar(
             ) {
                 Text("Reset", style = MaterialTheme.typography.labelSmall)
             }
-            Spacer(Modifier.width(8.dp))
-            DestinationSelector(
-                destination = exportDestination,
-                onDestinationChange = { onDestinationChange?.invoke(it) },
-            )
         },
     )
 }

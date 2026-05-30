@@ -59,7 +59,6 @@ class SummaryScreenTest {
                 state = wizardState,
                 image = testImage,
                 perspectiveService = PerspectiveCorrectionService(),
-                exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},
             )
@@ -76,7 +75,6 @@ class SummaryScreenTest {
                 state = wizardState,
                 image = testImage,
                 perspectiveService = PerspectiveCorrectionService(),
-                exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},
             )
@@ -93,30 +91,12 @@ class SummaryScreenTest {
                 state = wizardState,
                 image = testImage,
                 perspectiveService = PerspectiveCorrectionService(),
-                exportDestination = "/test/output",
                 onBack = {},
                 onExport = {},
             )
         }
 
         composeTestRule.onNodeWithText("1 photo(s)").assertIsDisplayed()
-    }
-
-    @Test
-    @DisplayName("should display export destination")
-    fun shouldDisplayExportDestination() {
-        composeTestRule.setContent {
-            SummaryScreen(
-                state = wizardState,
-                image = testImage,
-                perspectiveService = PerspectiveCorrectionService(),
-                exportDestination = "/test/output",
-                onBack = {},
-                onExport = {},
-            )
-        }
-
-        composeTestRule.onNodeWithText("/test/output").assertIsDisplayed()
     }
 
     @Test
@@ -129,7 +109,6 @@ class SummaryScreenTest {
                 state = wizardState,
                 image = testImage,
                 perspectiveService = PerspectiveCorrectionService(),
-                exportDestination = "/test/output",
                 onBack = {},
                 onExport = { exportCalled = true },
             )
@@ -138,39 +117,5 @@ class SummaryScreenTest {
         composeTestRule.onNodeWithText("Export").performClick()
 
         assertThat(exportCalled).isTrue()
-    }
-
-    @Test
-    @DisplayName("should display perspective setting")
-    fun shouldDisplayPerspectiveSetting() {
-        composeTestRule.setContent {
-            SummaryScreen(
-                state = wizardState,
-                image = testImage,
-                perspectiveService = PerspectiveCorrectionService(),
-                exportDestination = "/test/output",
-                onBack = {},
-                onExport = {},
-            )
-        }
-
-        composeTestRule.onNodeWithText("Perspective Correction").assertIsDisplayed()
-    }
-
-    @Test
-    @DisplayName("should display rotation setting")
-    fun shouldDisplayRotationSetting() {
-        composeTestRule.setContent {
-            SummaryScreen(
-                state = wizardState,
-                image = testImage,
-                perspectiveService = PerspectiveCorrectionService(),
-                exportDestination = "/test/output",
-                onBack = {},
-                onExport = {},
-            )
-        }
-
-        composeTestRule.onNodeWithText("Rotation").assertIsDisplayed()
     }
 }

@@ -11,18 +11,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.HourglassEmpty
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,6 +67,9 @@ import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanConstants
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
+import org.kryspetrie.fileimport.ui.components.isImageFile
+import org.kryspetrie.fileimport.ui.components.pickFolder
+import org.kryspetrie.fileimport.ui.components.pickImageFile
 
 /**
  * Main container for the Photo Import Wizard. Manages the step-by-step workflow: Import → Overview
@@ -203,8 +201,12 @@ private fun WizardStepContent(
                 onSettingsChange = { newSettings ->
                     scope.launch { settingsPort.saveSettings(newSettings) }
                 },
-                onImageSelected = { file ->
+                onImageSelected = { file, batchFiles ->
                     scope.launch {
+                        // Initialize batch mode if multiple files selected
+                        if (batchFiles != null && batchFiles.size > 1) {
+                            state.initializeBatch(batchFiles)
+                        }
                         loadImageAndDetect(
                             state = state,
                             file = file,
@@ -252,8 +254,6 @@ private fun WizardStepContent(
                     state = state,
                     image = image,
                     perspectiveService = perspectiveService,
-                    exportDestination = exportDestination,
-                    onDestinationChange = onExportDestinationChange,
                     onBack = { state.goToOverview() },
                     onExport = {
                         scope.launch {
@@ -274,9 +274,9 @@ private fun WizardStepContent(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
                                     )
-                                    // Stay on PROCESSING screen — progress >= 1f triggers the
-                                    // completion UI inline so the user can choose what to do next.
-                                    onComplete(processedPhotos)
+                                    // Go to COMPLETE step — the completion screen will
+                                    // offer next actions based on batch state.
+                                    state.goToComplete()
                                 },
                             )
                         }
@@ -291,14 +291,93 @@ private fun WizardStepContent(
             ProcessingScreen(
                 progress = processingProgress,
                 currentFile = processingCurrentFile,
-                isComplete = processingProgress >= 1f,
-                boxCount = state.boxCount(),
+                onBack = { state.resetToImportStep() },
+            )
+        }
+
+        PhotoScanWizardState.WizardStep.COMPLETE -> {
+            CompletionScreen(
+                photoCount = state.boxCount(),
                 exportDestination = exportDestination,
-                onScanAnother = { state.resetToImportStep() },
+                isBatchMode = state.isBatchMode,
+                hasMoreBatchImages = state.hasMoreBatchImages,
+                currentBatchIndex = state.currentImageIndex.value,
+                batchTotal = state.batchTotal,
                 onDone = {
                     state.resetToImportStep()
                     onCancel()
                 },
+                onImportFile = {
+                    val path = pickImageFile("Select Image File")
+                    if (path != null) {
+                        val file = File(path)
+                        state.resetToImportStep()
+                        scope.launch {
+                            loadImageAndDetect(
+                                state = state,
+                                file = file,
+                                detectorService = detectorService,
+                                cvAutoDetect = state.cvAutoDetectEnabled.value,
+                                appLogger = appLogger,
+                                dispatcherProvider = dispatcherProvider,
+                                isLoading = isLoading,
+                                onMessage = onMessage,
+                                onError = onError,
+                                onComplete = { state.goToOverview() },
+                            )
+                        }
+                    }
+                },
+                onImportFolder = {
+                    val path = pickFolder("Select Source Folder")
+                    if (path != null) {
+                        val folder = File(path)
+                        val batchFiles =
+                            folder
+                                .listFiles { f -> f.isFile && isImageFile(f) }
+                                ?.sortedBy { it.name }
+                                ?.toList() ?: emptyList()
+                        state.resetToImportStep()
+                        if (batchFiles.isNotEmpty()) {
+                            scope.launch {
+                                if (batchFiles.size > 1) state.initializeBatch(batchFiles)
+                                loadImageAndDetect(
+                                    state = state,
+                                    file = batchFiles.first(),
+                                    detectorService = detectorService,
+                                    cvAutoDetect = state.cvAutoDetectEnabled.value,
+                                    appLogger = appLogger,
+                                    dispatcherProvider = dispatcherProvider,
+                                    isLoading = isLoading,
+                                    onMessage = onMessage,
+                                    onError = onError,
+                                    onComplete = { state.goToOverview() },
+                                )
+                            }
+                        }
+                    }
+                },
+                onContinueToNextPhoto = {
+                    val nextFile = state.advanceToNextBatchFile()
+                    if (nextFile != null) {
+                        state.resetPerImageState()
+                        scope.launch {
+                            loadImageAndDetect(
+                                state = state,
+                                file = nextFile,
+                                detectorService = detectorService,
+                                cvAutoDetect = state.cvAutoDetectEnabled.value,
+                                appLogger = appLogger,
+                                dispatcherProvider = dispatcherProvider,
+                                isLoading = isLoading,
+                                onMessage = onMessage,
+                                onError = onError,
+                                onComplete = { state.goToOverview() },
+                            )
+                        }
+                    }
+                },
+                onCancelImport = { state.resetToImportStep() },
                 onOpenFolder = {
                     try {
                         val dir = java.io.File(exportDestination)
@@ -314,35 +393,6 @@ private fun WizardStepContent(
                         }
                     } catch (_: Exception) {
                         // Best effort — if Desktop.open fails, just skip
-                    }
-                },
-            )
-        }
-
-        PhotoScanWizardState.WizardStep.COMPLETE -> {
-            // COMPLETE step is no longer used — results are shown inline on the PROCESSING screen.
-            // If we somehow land here, redirect back to PROCESSING to show the completion UI.
-            ProcessingScreen(
-                progress = 1f,
-                currentFile = "",
-                isComplete = true,
-                boxCount = state.boxCount(),
-                exportDestination = exportDestination,
-                onScanAnother = { state.resetToImportStep() },
-                onDone = {
-                    state.resetToImportStep()
-                    onCancel()
-                },
-                onOpenFolder = {
-                    try {
-                        val dir = java.io.File(exportDestination)
-                        if (dir.exists()) {
-                            if (java.awt.Desktop.isDesktopSupported()) {
-                                java.awt.Desktop.getDesktop().open(dir)
-                            }
-                        }
-                    } catch (_: Exception) {
-                        // Best effort
                     }
                 },
             )
@@ -732,85 +782,39 @@ private fun LoadingOverlay(message: String) {
     }
 }
 
+/**
+ * In-progress processing screen. Shows a progress indicator and current file. Completion UI is on
+ * the separate [CompletionScreen] at the COMPLETE wizard step.
+ */
 @Composable
-private fun ProcessingScreen(
-    progress: Float,
-    currentFile: String,
-    isComplete: Boolean,
-    boxCount: Int,
-    exportDestination: String,
-    onScanAnother: () -> Unit,
-    onDone: () -> Unit,
-    onOpenFolder: () -> Unit,
-) {
+private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () -> Unit) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp),
             modifier = Modifier.padding(32.dp),
         ) {
-            if (isComplete) {
-                // Completion state — show results and action buttons on the same screen
-                Icon(
-                    Icons.Default.CheckCircle,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
+            Icon(
+                Icons.Default.HourglassEmpty,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
 
-                Text("Export Complete", style = MaterialTheme.typography.headlineMedium)
+            Text("Processing Photos", style = MaterialTheme.typography.headlineSmall)
 
-                Card(modifier = Modifier.fillMaxWidth(0.6f)) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Text(
-                            "$boxCount photo(s) exported",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
+            LinearProgressIndicator(
+                progress = { progress.coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth(0.8f),
+            )
 
-                        Text(
-                            exportDestination,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+            Text(
+                if (currentFile.isNotEmpty()) "Processing: $currentFile" else "Finalizing...",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedButton(onClick = onDone) { Text("Done") }
-                    OutlinedButton(onClick = onOpenFolder) {
-                        Icon(Icons.Default.FolderOpen, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Open Folder")
-                    }
-                    Button(onClick = onScanAnother) { Text("Scan Another") }
-                }
-            } else {
-                // In-progress state — show progress spinner and file name
-                Icon(
-                    Icons.Default.HourglassEmpty,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-
-                Text("Processing Photos", style = MaterialTheme.typography.headlineSmall)
-
-                LinearProgressIndicator(
-                    progress = { progress.coerceIn(0f, 1f) },
-                    modifier = Modifier.fillMaxWidth(0.8f),
-                )
-
-                Text(
-                    if (currentFile.isNotEmpty()) "Processing: $currentFile" else "Finalizing...",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            OutlinedButton(onClick = onBack) { Text("Cancel") }
         }
     }
 }

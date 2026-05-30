@@ -49,7 +49,7 @@ fun PhotoScanImportScreen(
     state: PhotoScanWizardState,
     settingsPort: SettingsPort,
     onSettingsChange: (AppSettings) -> Unit,
-    onImageSelected: (java.io.File) -> Unit,
+    onImageSelected: (java.io.File, List<java.io.File>?) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -197,7 +197,18 @@ fun PhotoScanImportScreen(
 
                 // ── Import Photo Scans Button ──
                 Button(
-                    onClick = { firstImageFile?.let { onImageSelected(it) } },
+                    onClick = {
+                        firstImageFile?.let { file ->
+                            val batchFiles =
+                                if (sourceFile?.isDirectory == true) {
+                                    sourceFile
+                                        .listFiles { f -> f.isFile && isImageFile(f) }
+                                        ?.sortedBy { it.name }
+                                        ?.toList()
+                                } else null
+                            onImageSelected(file, batchFiles)
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     enabled = canStart,
                 ) {

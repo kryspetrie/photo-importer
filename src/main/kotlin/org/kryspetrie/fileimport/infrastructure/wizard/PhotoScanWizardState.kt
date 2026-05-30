@@ -173,6 +173,22 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         return switchToImage(_currentImageIndex.value - 1)
     }
 
+    /** Returns true when in batch mode and there are more images after the current one. */
+    val hasMoreBatchImages: Boolean
+        get() = isBatchMode && _currentImageIndex.value < _sourceFiles.value.size - 1
+
+    /**
+     * Advances the batch index to the next image and returns that file, or null if there are no
+     * more. Does not load or detect — caller is responsible for calling initializeWithImage or
+     * loadImageAndDetect afterwards.
+     */
+    fun advanceToNextBatchFile(): File? {
+        val nextIndex = _currentImageIndex.value + 1
+        if (nextIndex >= _sourceFiles.value.size) return null
+        _currentImageIndex.value = nextIndex
+        return _sourceFiles.value[nextIndex]
+    }
+
     /** Returns true if the next image in the batch is pre-processed and ready. */
     val isNextImageReady: Boolean
         get() =
@@ -306,7 +322,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         REFINEMENT, // Zoomed single box
         SUMMARY, // Correction options
         PROCESSING, // Export in progress
-        COMPLETE, // Done
+        COMPLETE, // Done — post-export completion page
     }
 
     /** Initializes the wizard with an image file. */
@@ -1048,6 +1064,24 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _preProcessedCache.value = emptyMap()
         _preProcessCount.value = 0
         _preProcessing.value = false
+    }
+
+    /**
+     * Resets per-image state (boxes, selections, configs) while preserving batch/folder state. Use
+     * this when moving to the next image in a batch folder import so the user gets a clean canvas
+     * while the source file list and current index are maintained.
+     */
+    fun resetPerImageState() {
+        _boundingBoxList.value = BoundingBoxList.empty()
+        _selectedBoxIndex.value = -1
+        _refinementBoxIndex.value = -1
+        _selectedCorner.value = null
+        _fourPointState.value = FourPointState.inactive()
+        _wizardMode.value = WizardMode.NORMAL
+        _undoRedoManager.clearAll()
+        _undoRedoVersion.value++
+        _photoConfigurations.value = emptyMap()
+        _zoomController.value = ZoomController()
     }
 
     // ========== Utility ==========
