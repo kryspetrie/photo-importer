@@ -1,7 +1,6 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.overview
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -44,9 +43,7 @@ fun OverviewCanvas(
     Canvas(
         modifier =
             Modifier.fillMaxSize()
-                .then(mousePositionTracker(state, wizardMode))
-                .then(canvasTapHandler(state, wizardMode))
-                .then(canvasDragHandler(state, wizardMode))
+                .then(canvasPointerHandler(state, wizardMode))
     ) {
         drawCanvasContent(
             image = image,
@@ -60,77 +57,24 @@ fun OverviewCanvas(
 }
 
 /**
- * Tracks mouse position for creation preview in 4-point mode. Reads zoomController live from state
- * to avoid stale closures.
- */
-private fun mousePositionTracker(state: PhotoScanWizardState, wizardMode: WizardMode): Modifier =
-    Modifier.pointerInput(state, wizardMode) {
-        awaitPointerEventScope {
-            while (true) {
-                val event = awaitPointerEvent()
-                if (wizardMode == WizardMode.FOUR_POINT) {
-                    val position = event.changes.firstOrNull()?.position
-                    if (position != null) {
-                        val zoomController = state.zoomController.value
-                        val point =
-                            zoomController.screenToImage(
-                                position.x.toDouble(),
-                                position.y.toDouble(),
-                            )
-                        state.updateCreationMousePosition(Point(point.x, point.y))
-                    }
-                }
-            }
-        }
-    }
-
-/**
- * Handles tap gestures on the canvas for selection and point placement. Reads boundingBoxList and
- * zoomController live from state to avoid stale closures — these values change without restarting
- * the handler.
- */
-private fun canvasTapHandler(state: PhotoScanWizardState, wizardMode: WizardMode): Modifier =
-    Modifier.pointerInput(state, wizardMode) {
-        detectTapGestures(
-            onTap = { offset ->
-                val boundingBoxList = state.boundingBoxList.value
-                val zoomController = state.zoomController.value
-                when (wizardMode) {
-                    WizardMode.FOUR_POINT -> {
-                        val point =
-                            zoomController.screenToImage(offset.x.toDouble(), offset.y.toDouble())
-                        state.addFourPoint(Point(point.x, point.y))
-                    }
-                    else -> {
-                        val cornerHit = findCornerHit(offset, boundingBoxList, zoomController)
-                        if (cornerHit != null) {
-                            state.selectBox(cornerHit.first)
-                            state.selectCorner(cornerHit.second)
-                        } else {
-                            val boxHit = findBoxHit(offset, boundingBoxList, zoomController)
-                            if (boxHit >= 0) {
-                                state.selectBox(boxHit)
-                            } else {
-                                state.deselectAll()
-                            }
-                        }
-                    }
-                }
-            }
-        )
-    }
-
-/**
- * Handles press/drag/release/scroll for panning, corner dragging, and box dragging. All drag state
- * (draggedCorner, draggedBoxIndex) is kept as local variables inside the pointer event loop to
- * avoid stale closure captures. Reads boundingBoxList and zoomController live from state on each
- * event so they always reflect the current values without needing to restart the handler.
+ * Unified pointer handler for the overview canvas. Merges mouse position tracking, tap
+ * selection, corner/box dragging, panning, and scroll-zoom into a single `awaitPointerEventScope`.
+ *
+ * Why a single handler? Previously, `detectTapGestures` in a separate `pointerInput` consumed the
+ * Press event, preventing the drag handler from ever seeing it. This meant corner drags and box
+ * drags never started — the user could only pan (background drag) because the drag handler fell
+ * through to the else branch on every move. The fix: handle everything in one event loop so
+ * Press is seen by the same code that handles Move/Release.
+ *
+ * Tap detection: On Release, if the total movement distance is below a threshold (8px), we treat
+ * it as a tap and perform selection/4-point placement. If movement exceeded the threshold, the
+ * interaction was a drag (corner move, box move, or pan) and we skip the tap logic.
  *
  * Undo behavior: A single undo snapshot is saved on Press (before the drag starts). Move events use
  * no-undo variants so intermediate positions don't fill the undo buffer. One undo = one complete
  * drag operation.
  */
-private fun canvasDragHandler(state: PhotoScanWizardState, wizardMode: WizardMode): Modifier =
+private fun canvasPointerHandler(state: PhotoScanWizardState, wizardMode: WizardMode): Modifier =
     Modifier.pointerInput(state, wizardMode) {
         awaitPointerEventScope {
             var isDragging = false
@@ -138,7 +82,9 @@ private fun canvasDragHandler(state: PhotoScanWizardState, wizardMode: WizardMod
             var isPhotoDrag = false
             var draggedCorner: Corner? = null
             var draggedBoxIndex = -1
+            var pressPos = Offset.Zero
             var lastDragPos = Offset.Zero
+            var totalMovement = 0f
 
             while (true) {
                 val event = awaitPointerEvent()
@@ -146,7 +92,9 @@ private fun canvasDragHandler(state: PhotoScanWizardState, wizardMode: WizardMod
 
                 when (event.type) {
                     PointerEventType.Press -> {
+                        pressPos = pos
                         lastDragPos = pos
+                        totalMovement = 0f
                         isDragging = true
 
                         if (wizardMode == WizardMode.NORMAL) {
@@ -177,19 +125,26 @@ private fun canvasDragHandler(state: PhotoScanWizardState, wizardMode: WizardMod
                     }
                     PointerEventType.Move -> {
                         if (isDragging) {
+                            totalMovement += (pos - lastDragPos).getDistance()
+
+                            // Update mouse position for 4-point creation preview
+                            if (wizardMode == WizardMode.FOUR_POINT) {
+                                val zoomController = state.zoomController.value
+                                val point =
+                                    zoomController.screenToImage(pos.x.toDouble(), pos.y.toDouble())
+                                state.updateCreationMousePosition(Point(point.x, point.y))
+                            }
+
                             val zoomController = state.zoomController.value
                             val currentBoxIndex = state.selectedBoxIndex.value
                             when {
                                 isCornerDrag && draggedCorner != null && currentBoxIndex >= 0 -> {
                                     val screenPos =
-                                        zoomController.screenToImage(
-                                            pos.x.toDouble(),
-                                            pos.y.toDouble(),
-                                        )
+                                        zoomController.screenToImage(pos.x.toDouble(), pos.y.toDouble())
                                     // Use withoutUndo variant — undo was saved on Press
                                     state.moveCornerWithoutUndo(
                                         currentBoxIndex,
-                                        draggedCorner!!,
+                                        draggedCorner,
                                         screenPos.x,
                                         screenPos.y,
                                     )
@@ -210,6 +165,41 @@ private fun canvasDragHandler(state: PhotoScanWizardState, wizardMode: WizardMod
                         }
                     }
                     PointerEventType.Release -> {
+                        if (isDragging) {
+                            val tapThreshold = 8f
+                            if (totalMovement < tapThreshold) {
+                                // Treat as tap — perform selection / 4-point placement
+                                val boundingBoxList = state.boundingBoxList.value
+                                val zoomController = state.zoomController.value
+                                when (wizardMode) {
+                                    WizardMode.FOUR_POINT -> {
+                                        val point = zoomController.screenToImage(
+                                            pressPos.x.toDouble(),
+                                            pressPos.y.toDouble(),
+                                        )
+                                        state.addFourPoint(Point(point.x, point.y))
+                                    }
+                                    else -> {
+                                        // Only do tap selection if this wasn't already a
+                                        // corner/box drag that started on Press
+                                        if (!isCornerDrag && !isPhotoDrag) {
+                                            val cornerHit = findCornerHit(pressPos, boundingBoxList, zoomController)
+                                            if (cornerHit != null) {
+                                                state.selectBox(cornerHit.first)
+                                                state.selectCorner(cornerHit.second)
+                                            } else {
+                                                val boxHit = findBoxHit(pressPos, boundingBoxList, zoomController)
+                                                if (boxHit >= 0) {
+                                                    state.selectBox(boxHit)
+                                                } else {
+                                                    state.deselectAll()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         isDragging = false
                         isCornerDrag = false
                         isPhotoDrag = false

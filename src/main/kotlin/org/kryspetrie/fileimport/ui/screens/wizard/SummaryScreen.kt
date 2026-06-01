@@ -112,7 +112,7 @@ private fun SummaryTopAppBar(
     onClearAll: () -> Unit,
 ) {
     TopAppBar(
-        title = { Text("Photo Summary — $photoCount photo(s)") },
+        title = { Text("Crop & Rotate") },
         actions = {
             OutlinedButton(onClick = onRotateAllCCW, modifier = Modifier.height(32.dp)) {
                 Icon(Icons.AutoMirrored.Filled.RotateLeft, null, Modifier.size(16.dp))

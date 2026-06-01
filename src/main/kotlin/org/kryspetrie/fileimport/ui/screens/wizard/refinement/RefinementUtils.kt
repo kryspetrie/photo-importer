@@ -6,15 +6,12 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEvent
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.type
+
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.Corner
+
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 
 /** Transform an image-space point to screen-space coordinates. */
@@ -177,39 +174,4 @@ internal fun DrawScope.drawRefinementBox(box: BoundingBox, selected: Corner?, zo
         }
 }
 
-/** Handle arrow-key events for refinement screen: move selected corner or pan. */
-internal fun handleRefinementKeyEvent(
-    event: KeyEvent,
-    selectedCorner: Corner?,
-    onMoveSelectedCorner: (dx: Double, dy: Double) -> Unit,
-    onPan: (dx: Double, dy: Double) -> Unit,
-): Boolean {
-    if (event.type != KeyEventType.KeyDown) return false
 
-    val cornerDelta = 10.0
-    val panDelta = 50.0
-
-    return when (event.key) {
-        Key.DirectionUp -> {
-            if (selectedCorner != null) onMoveSelectedCorner(0.0, -cornerDelta)
-            else onPan(0.0, panDelta)
-            true
-        }
-        Key.DirectionDown -> {
-            if (selectedCorner != null) onMoveSelectedCorner(0.0, cornerDelta)
-            else onPan(0.0, -panDelta)
-            true
-        }
-        Key.DirectionLeft -> {
-            if (selectedCorner != null) onMoveSelectedCorner(-cornerDelta, 0.0)
-            else onPan(panDelta, 0.0)
-            true
-        }
-        Key.DirectionRight -> {
-            if (selectedCorner != null) onMoveSelectedCorner(cornerDelta, 0.0)
-            else onPan(-panDelta, 0.0)
-            true
-        }
-        else -> false
-    }
-}

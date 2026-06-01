@@ -65,7 +65,7 @@ fun CompletionScreen(
                 tint = MaterialTheme.colorScheme.primary,
             )
 
-            Text("Export Complete", style = MaterialTheme.typography.headlineMedium)
+            Text("Complete", style = MaterialTheme.typography.headlineMedium)
 
             // Export details card
             Card(modifier = Modifier.fillMaxWidth(0.6f)) {

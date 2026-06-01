@@ -28,6 +28,7 @@ internal fun RefinementControls(
     onPrevious: () -> Unit,
     onNext: () -> Unit,
     onDeselect: () -> Unit,
+    refocus: () -> Unit = {},
 ) {
     Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -41,7 +42,10 @@ internal fun RefinementControls(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(
-                    onClick = onPrevious,
+                    onClick = {
+                        onPrevious()
+                        refocus()
+                    },
                     enabled = totalCount > 1,
                     modifier = Modifier.size(32.dp),
                 ) {
@@ -52,7 +56,10 @@ internal fun RefinementControls(
                     style = MaterialTheme.typography.titleMedium,
                 )
                 IconButton(
-                    onClick = onNext,
+                    onClick = {
+                        onNext()
+                        refocus()
+                    },
                     enabled = totalCount > 1,
                     modifier = Modifier.size(32.dp),
                 ) {
@@ -71,7 +78,13 @@ internal fun RefinementControls(
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
-                    OutlinedButton(onClick = onDeselect, modifier = Modifier.height(32.dp)) {
+                    OutlinedButton(
+                        onClick = {
+                            onDeselect()
+                            refocus()
+                        },
+                        modifier = Modifier.height(32.dp),
+                    ) {
                         Text("Deselect", style = MaterialTheme.typography.labelSmall)
                     }
                 } else {

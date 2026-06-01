@@ -45,7 +45,7 @@ data class BoundingBoxList(val boxes: List<BoundingBox> = emptyList()) {
     fun findCornerAtPoint(point: Point, bufferRadius: Double = 20.0): Pair<BoundingBox, Corner>? {
         for (box in boxes) {
             for (corner in Corner.entries) {
-                val cornerPoint = box.corners.toList()[corner.ordinal]
+                val cornerPoint = box.corners.forCorner(corner)
                 if (point.distanceTo(cornerPoint) <= bufferRadius) {
                     return Pair(box, corner)
                 }

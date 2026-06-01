@@ -1,7 +1,9 @@
 package org.kryspetrie.fileimport.application
 
 import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.util.Locale
 import javax.imageio.IIOImage
 import javax.imageio.ImageIO
@@ -9,6 +11,21 @@ import javax.imageio.ImageWriteParam
 import javax.imageio.plugins.jpeg.JPEGImageWriteParam
 import javax.inject.Inject
 import javax.inject.Singleton
+import org.apache.commons.imaging.Imaging
+import org.apache.commons.imaging.common.RationalNumber
+import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata
+import org.apache.commons.imaging.formats.jpeg.JpegPhotoshopMetadata
+import org.apache.commons.imaging.formats.jpeg.exif.ExifRewriter
+import org.apache.commons.imaging.formats.jpeg.iptc.IptcConstants
+import org.apache.commons.imaging.formats.jpeg.iptc.IptcRecord
+import org.apache.commons.imaging.formats.jpeg.iptc.IptcTypes
+import org.apache.commons.imaging.formats.jpeg.iptc.JpegIptcRewriter
+import org.apache.commons.imaging.formats.jpeg.iptc.PhotoshopApp13Data
+import org.apache.commons.imaging.formats.tiff.constants.ExifTagConstants
+import org.apache.commons.imaging.formats.tiff.constants.MicrosoftTagConstants
+import org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputDirectory
+import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
@@ -120,8 +137,8 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
                 val resolvedPath = resolveFilenameConflict(File(destinationPath), fileName)
                 val outputFile = File(resolvedPath)
 
-                // Write the image with metadata
-                writeImageWithMetadata(finalImage, outputFile, photo.configuration)
+                // Write the image with metadata — pass source file for EXIF baseline reading
+                writeImageWithMetadata(finalImage, outputFile, photo.configuration, sourceFile)
 
                 exportedFiles.add(
                     ExportedFile(
@@ -149,6 +166,7 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
      * Exports a single photo with the given configuration.
      *
      * @param sourceImage The source scanned image
+     * @param sourceFile The original source file (for EXIF metadata reading). May be null if unavailable.
      * @param detectedPhoto The photo to export with corner positions and configuration
      * @param destinationPath Destination folder for the exported image
      * @param baseFileName Base filename (without extension)
@@ -160,6 +178,7 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
         detectedPhoto: DetectedPhoto,
         destinationPath: String,
         baseFileName: String,
+        sourceFile: File? = null,
         marginFraction: Double = 0.02,
     ): SingleExportResult {
         return try {
@@ -186,8 +205,8 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
             val resolvedPath = resolveFilenameConflict(File(destinationPath), "$baseFileName.jpg")
             val outputFile = File(resolvedPath)
 
-            // Write the image with metadata
-            writeImageWithMetadata(finalImage, outputFile, detectedPhoto.configuration)
+            // Write the image with metadata — pass source file for EXIF baseline reading
+            writeImageWithMetadata(finalImage, outputFile, detectedPhoto.configuration, sourceFile)
 
             SingleExportResult(
                 success = true,
@@ -207,20 +226,27 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
     }
 
     /**
-     * Writes an image to file with EXIF metadata.
+     * Writes an image to file with EXIF and IPTC metadata.
+     *
+     * Writes the plain JPEG first, then layers on metadata:
+     * 1. EXIF (via [ExifRewriter]): Either copies existing EXIF from [sourceFile] and overlays
+     *    overrides, or starts fresh depending on [PhotoScanConfiguration.copyOriginalExif].
+     * 2. IPTC (via [JpegIptcRewriter]): Adds IPTC keywords for cross-platform/metadata compatibility.
      *
      * @param image The corrected image
      * @param outputFile Destination file
-     * @param config Photo configuration with metadata overrides
+     * @param config Photo configuration with metadata overrides and copyOriginalExif setting
+     * @param sourceFile The original scanned image file (for reading existing EXIF when copyOriginalExif=true)
      */
-    @Suppress("UnusedParameter")
     private fun writeImageWithMetadata(
         image: BufferedImage,
         outputFile: File,
         config: PhotoScanConfiguration,
+        sourceFile: File? = null,
     ) {
         outputFile.parentFile?.mkdirs()
 
+        // First, write the plain JPEG image
         val writer = ImageIO.getImageWritersByFormatName("jpg").next()
         val writeParam =
             JPEGImageWriteParam(Locale.US).apply {
@@ -228,8 +254,6 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
                 compressionQuality = jpegQuality
             }
 
-        // Write directly to file via ImageIO.createImageOutputStream(File)
-        // instead of ByteArrayOutputStream intermediate (avoids double-write)
         val fileOs = ImageIO.createImageOutputStream(outputFile)
         fileOs.use {
             writer.output = it
@@ -237,12 +261,354 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
         }
         writer.dispose()
 
-        // Note: Full EXIF writing with Apache Commons Imaging would require:
-        // 1. Reading the original EXIF data
-        // 2. Modifying the date tags based on config
-        // 3. Writing the EXIF back to the new image
-        // For now, we write the image and note that EXIF is preserved from the source
-        // when the source file is in the same directory
+        // If there are EXIF overrides or we need to force a fresh write, inject the EXIF
+        if (config.hasExifOverrides()) {
+            writeExifMetadata(outputFile, config, sourceFile)
+        }
+
+        // Write IPTC keywords if keywords are set (cross-platform, visible on macOS)
+        val keywordsValue = resolveKeywords(config)
+        if (keywordsValue != null) {
+            writeIptcKeywords(outputFile, keywordsValue)
+        }
+    }
+
+    /**
+     * Writes EXIF metadata into an existing JPEG file.
+     *
+     * Baseline strategy depends on [PhotoScanConfiguration.copyOriginalExif]:
+     * - **true** (default): Reads existing EXIF from [sourceFile] (the original scan) as a baseline,
+     *   then applies user overrides on top. This preserves scanner EXIF (make, model, scan date, etc.)
+     *   and only replaces the fields the user explicitly sets.
+     * - **false**: Starts with a fresh (empty) [TiffOutputSet] — only user-specified overrides
+     *   are written, and no scanner/source EXIF is carried forward.
+     *
+     * The output file is rewritten in-place with the updated EXIF.
+     *
+     * @param jpegFile The JPEG file to rewrite with EXIF data (modified in-place)
+     * @param config Configuration with EXIF override values and the copyOriginalExif flag
+     * @param sourceFile The original source file to read baseline EXIF from (may be null)
+     */
+    private fun writeExifMetadata(
+        jpegFile: File,
+        config: PhotoScanConfiguration,
+        sourceFile: File?,
+    ) {
+        try {
+            // Determine the baseline EXIF output set
+            val outputSet = if (config.copyOriginalExif) {
+                // Copy original EXIF from source file (or fall back to the just-written JPEG)
+                readExifOutputSet(sourceFile ?: jpegFile)
+            } else {
+                // Start fresh — no original EXIF is carried forward
+                TiffOutputSet()
+            }
+
+            // Apply user overrides on top of the baseline
+            applyExifOverrides(outputSet, config)
+
+            // Read the JPEG bytes we just wrote, then rewrite with the EXIF output set
+            val jpegBytes = jpegFile.readBytes()
+            val baos = ByteArrayOutputStream()
+            ExifRewriter().updateExifMetadataLossless(jpegBytes, baos, outputSet)
+            baos.close()
+
+            // Write the updated JPEG back to the file
+            FileOutputStream(jpegFile).use { fos ->
+                fos.write(baos.toByteArray())
+            }
+        } catch (e: Exception) {
+            // EXIF writing is best-effort — if it fails, the JPEG is still valid without EXIF overrides
+            System.err.println("[PhotoScanExportService] Warning: Failed to write EXIF metadata: ${e.message}")
+        }
+    }
+
+    /**
+     * Reads EXIF metadata from a file and returns a mutable [TiffOutputSet].
+     * If the file has no EXIF data, returns a fresh (empty) output set.
+     *
+     * @param file The source image file to read EXIF from
+     * @return A TiffOutputSet suitable for modification
+     */
+    private fun readExifOutputSet(file: File): TiffOutputSet {
+        return try {
+            val metadata = Imaging.getMetadata(file)
+            if (metadata is JpegImageMetadata) {
+                val exif = metadata.exif
+                exif?.outputSet ?: TiffOutputSet()
+            } else {
+                TiffOutputSet()
+            }
+        } catch (_: Exception) {
+            TiffOutputSet()
+        }
+    }
+
+    /**
+     * Applies EXIF override values from [config] to the [outputSet].
+     *
+     * Only non-null/non-empty fields are applied; null fields preserve the original EXIF values.
+     *
+     * @param outputSet The TiffOutputSet to modify
+     * @param config Configuration with EXIF override values
+     */
+    private fun applyExifOverrides(outputSet: TiffOutputSet, config: PhotoScanConfiguration) {
+        try {
+            // Ensure required directories exist
+            val rootDir = outputSet.getOrCreateRootDirectory()
+            val exifDir = outputSet.getOrCreateExifDirectory()
+
+            // --- IFD0 (root) tags ---
+
+            // ImageDescription (0x010E)
+            val description = config.description ?: config.notes.ifBlank { null }
+            if (!description.isNullOrBlank()) {
+                rootDir.removeField(TiffTagConstants.TIFF_TAG_IMAGE_DESCRIPTION)
+                rootDir.add(TiffTagConstants.TIFF_TAG_IMAGE_DESCRIPTION, description)
+            }
+
+            // Make (0x010F)
+            if (!config.cameraMake.isNullOrBlank()) {
+                rootDir.removeField(TiffTagConstants.TIFF_TAG_MAKE)
+                rootDir.add(TiffTagConstants.TIFF_TAG_MAKE, config.cameraMake)
+            }
+
+            // Model (0x0110)
+            if (!config.cameraModel.isNullOrBlank()) {
+                rootDir.removeField(TiffTagConstants.TIFF_TAG_MODEL)
+                rootDir.add(TiffTagConstants.TIFF_TAG_MODEL, config.cameraModel)
+            }
+
+            // --- Exif SubIFD tags ---
+
+            // DateTimeOriginal (0x9003) — format: "YYYY:MM:DD HH:MM:SS"
+            val dateOriginal = resolveDateOriginal(config)
+            if (dateOriginal != null) {
+                exifDir.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL)
+                exifDir.add(ExifTagConstants.EXIF_TAG_DATE_TIME_ORIGINAL, dateOriginal)
+                // Also set DateTimeDigitized (0x9004) to match
+                exifDir.removeField(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED)
+                exifDir.add(ExifTagConstants.EXIF_TAG_DATE_TIME_DIGITIZED, dateOriginal)
+            }
+
+            // LensModel (0xA434)
+            if (!config.lensModel.isNullOrBlank()) {
+                exifDir.removeField(ExifTagConstants.EXIF_TAG_LENS_MODEL)
+                exifDir.add(ExifTagConstants.EXIF_TAG_LENS_MODEL, config.lensModel)
+            }
+
+            // FocalLength (0x920A) — stored as RationalNumber in mm
+            if (!config.focalLength.isNullOrBlank()) {
+                val focalLengthMm = parseFocalLength(config.focalLength)
+                if (focalLengthMm != null) {
+                    exifDir.removeField(ExifTagConstants.EXIF_TAG_FOCAL_LENGTH)
+                    val rational = RationalNumber.valueOf(focalLengthMm)
+                    exifDir.add(ExifTagConstants.EXIF_TAG_FOCAL_LENGTH, rational)
+                }
+            }
+
+            // FNumber (0x829D) — stored as RationalNumber (aperture value)
+            if (!config.aperture.isNullOrBlank()) {
+                val fNumber = parseAperture(config.aperture)
+                if (fNumber != null) {
+                    exifDir.removeField(ExifTagConstants.EXIF_TAG_FNUMBER)
+                    val rational = RationalNumber.valueOf(fNumber)
+                    exifDir.add(ExifTagConstants.EXIF_TAG_FNUMBER, rational)
+                }
+            }
+
+            // ExposureTime (0x829A) — stored as RationalNumber (e.g. 1/125)
+            if (!config.shutterSpeed.isNullOrBlank()) {
+                val rational = parseShutterSpeed(config.shutterSpeed)
+                if (rational != null) {
+                    exifDir.removeField(ExifTagConstants.EXIF_TAG_EXPOSURE_TIME)
+                    exifDir.add(ExifTagConstants.EXIF_TAG_EXPOSURE_TIME, rational)
+                }
+            }
+
+            // ISOSpeedRatings (0x8827) — stored as Short
+            if (!config.iso.isNullOrBlank()) {
+                val isoValue = config.iso.trim().toIntOrNull()
+                if (isoValue != null) {
+                    exifDir.removeField(ExifTagConstants.EXIF_TAG_ISO)
+                    exifDir.add(ExifTagConstants.EXIF_TAG_ISO, isoValue.toShort())
+                }
+            }
+
+            // XPKeywords (0x9C9D) — Windows keyword tag, stored as XP String (UTF-16LE)
+            // NOTE: XPKeywords is only read by Windows. macOS reads IPTC:Keywords instead,
+            // which we write separately in writeIptcKeywords(). We write both for cross-platform compat.
+            val exifKeywordsValue = resolveKeywords(config)
+            if (exifKeywordsValue != null) {
+                rootDir.removeField(MicrosoftTagConstants.EXIF_TAG_XPKEYWORDS)
+                rootDir.add(MicrosoftTagConstants.EXIF_TAG_XPKEYWORDS, exifKeywordsValue)
+            }
+        } catch (e: Exception) {
+            // Best effort — don't fail the export if EXIF writing has issues
+            System.err.println("[PhotoScanExportService] Warning: Error applying EXIF overrides: ${e.message}")
+        }
+    }
+
+    /**
+     * Writes IPTC keywords into an existing JPEG file using the Photoshop APP13 segment.
+     *
+     * IPTC:Keywords (record 2, dataset 25) is the cross-platform standard for keywords that
+     * macOS Preview, Photos.app, and Finder all read. This supplements [MicrosoftTagConstants.EXIF_TAG_XPKEYWORDS]
+     * which is Windows-only.
+     *
+     * If the JPEG already has IPTC data (e.g. from Photoshop), existing records are preserved
+     * and only the KEYWORDS records are replaced. Duplicate KEYWORDS records are removed first.
+     *
+     * @param jpegFile The JPEG file to rewrite with IPTC data (modified in-place)
+     * @param keywords Comma-separated keyword string (e.g. "vacation, beach, family")
+     */
+    private fun writeIptcKeywords(jpegFile: File, keywords: String) {
+        try {
+            val keywordList = keywords.split(",").map { it.trim() }.filter { it.isNotBlank() }
+
+            // Read existing IPTC data from the JPEG if present
+            val metadata = Imaging.getMetadata(jpegFile)
+            val existingRecords = if (metadata is JpegImageMetadata) {
+                val photoshop = metadata.photoshop
+                photoshop?.photoshopApp13Data?.records?.filterNotNull()?.toMutableList()
+                    ?: mutableListOf()
+            } else {
+                mutableListOf()
+            }
+
+            // Remove any existing KEYWORDS records (we'll replace them)
+            existingRecords.removeAll { it.iptcType == IptcTypes.KEYWORDS }
+
+            // Add new KEYWORDS records (one per keyword, per IPTC spec)
+            for (keyword in keywordList) {
+                existingRecords.add(IptcRecord(IptcTypes.KEYWORDS, keyword))
+            }
+
+            // Also add a DATE_CREATED record if not present and we can derive one
+            // (IPTC DateCreated is tag 2:30, separate from EXIF DateTimeOriginal)
+
+            // Build the Photoshop APP13 data block
+            val existingBlocks = if (metadata is JpegImageMetadata) {
+                metadata.photoshop?.photoshopApp13Data?.nonIptcBlocks?.filterNotNull()
+                    ?: emptyList()
+            } else {
+                emptyList()
+            }
+            val app13Data = PhotoshopApp13Data(existingRecords, existingBlocks)
+
+            // Rewrite the JPEG with the new IPTC data
+            val jpegBytes = jpegFile.readBytes()
+            val baos = ByteArrayOutputStream()
+            JpegIptcRewriter().writeIPTC(jpegBytes, baos, app13Data)
+            baos.close()
+
+            FileOutputStream(jpegFile).use { fos ->
+                fos.write(baos.toByteArray())
+            }
+        } catch (e: Exception) {
+            // IPTC writing is best-effort — don't fail the export
+            System.err.println("[PhotoScanExportService] Warning: Failed to write IPTC keywords: ${e.message}")
+        }
+    }
+
+    /**
+     * Resolves the keywords value from configuration, checking both the new [keywords] field
+     * and the legacy [tags] field.
+     *
+     * @return The resolved comma-separated keyword string, or null if no keywords set
+     */
+    private fun resolveKeywords(config: PhotoScanConfiguration): String? {
+        return if (!config.keywords.isNullOrBlank()) {
+            config.keywords
+        } else if (config.tags.isNotBlank()) {
+            config.tags
+        } else {
+            null
+        }
+    }
+
+    /**
+     * Resolves the DateTimeOriginal string from configuration fields.
+     *
+     * Priority: [originalDate] > [originalDateOverride] > derived from [year] only.
+     * Format returned: "YYYY:MM:DD HH:MM:SS" (EXIF format, colons in date part).
+     *
+     * @return EXIF-formatted date string, or null if no date override
+     */
+    private fun resolveDateOriginal(config: PhotoScanConfiguration): String? {
+        // originalDate takes priority (full date string)
+        if (!config.originalDate.isNullOrBlank()) {
+            return formatDateToExif(config.originalDate)
+        }
+        // Legacy originalDateOverride field
+        if (!config.originalDateOverride.isNullOrBlank()) {
+            return formatDateToExif(config.originalDateOverride)
+        }
+        // Year-only override
+        if (!config.year.isNullOrBlank()) {
+            return "${config.year}:01:01 00:00:00"
+        }
+        if (!config.originalYearOverride.isNullOrBlank()) {
+            return "${config.originalYearOverride}:01:01 00:00:00"
+        }
+        return null
+    }
+
+    /**
+     * Converts a date string to EXIF format.
+     *
+     * Accepts "YYYY-MM-DD HH:MM:SS" or "YYYY-MM-DD" and converts to "YYYY:MM:DD HH:MM:SS".
+     */
+    private fun formatDateToExif(dateStr: String): String {
+        // Normalize: replace dashes in the date portion with colons
+        val parts = dateStr.trim().split(" ", limit = 2)
+        val datePart = parts[0].replace("-", ":")
+        val timePart = parts.getOrElse(1) { "00:00:00" }
+        return "$datePart $timePart"
+    }
+
+    /**
+     * Parses a focal length string (e.g. "50mm", "50", "24mm") to a floating-point value in mm.
+     */
+    private fun parseFocalLength(value: String): Double? {
+        return value.trim().removeSuffix("mm").removeSuffix("MM").trim().toDoubleOrNull()
+    }
+
+    /**
+     * Parses an aperture string (e.g. "f/2.8", "2.8", "F2.8") to a floating-point f-number.
+     */
+    private fun parseAperture(value: String): Double? {
+        val cleaned = value.trim().removePrefix("f/").removePrefix("F/").removePrefix("f").removePrefix("F")
+        return cleaned.toDoubleOrNull()
+    }
+
+    /**
+     * Parses a shutter speed string to a RationalNumber for EXIF ExposureTime.
+     *
+     * Accepts formats: "1/125" (fraction), "0.008" (decimal seconds), "125" (1/N).
+     */
+    private fun parseShutterSpeed(value: String): RationalNumber? {
+        val trimmed = value.trim()
+        // Fraction format: "1/125"
+        if (trimmed.contains("/")) {
+            val parts = trimmed.split("/")
+            if (parts.size == 2) {
+                val num = parts[0].toIntOrNull() ?: return null
+                val den = parts[1].toIntOrNull() ?: return null
+                if (den != 0) return RationalNumber(num, den)
+            }
+        }
+        // Decimal format: "0.008"
+        val decimal = trimmed.toDoubleOrNull()
+        if (decimal != null && decimal > 0) {
+            return RationalNumber.valueOf(decimal)
+        }
+        // Integer "1/N" format: "125" means 1/125
+        val intVal = trimmed.toIntOrNull()
+        if (intVal != null && intVal > 0) {
+            return RationalNumber(1, intVal)
+        }
+        return null
     }
 
     /**
@@ -395,8 +761,8 @@ constructor(private val perspectiveService: PerspectiveCorrectionService) {
     private fun rotateImage(image: BufferedImage, rotation: RotationAngle): BufferedImage {
         val radians = rotation.radians
 
-        val cos = kotlin.math.abs(kotlin.math.cos(radians)).toDouble()
-        val sin = kotlin.math.abs(kotlin.math.sin(radians)).toDouble()
+        val cos = kotlin.math.abs(kotlin.math.cos(radians))
+        val sin = kotlin.math.abs(kotlin.math.sin(radians))
 
         val newWidth: Int
         val newHeight: Int

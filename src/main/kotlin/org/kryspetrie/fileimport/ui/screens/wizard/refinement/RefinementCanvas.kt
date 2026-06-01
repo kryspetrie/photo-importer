@@ -2,7 +2,7 @@ package org.kryspetrie.fileimport.ui.screens.wizard.refinement
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusable
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -14,14 +14,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+
+
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.input.key.onKeyEvent
+
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -55,9 +55,6 @@ internal fun RefinementCanvas(
     val zoom = zoomController.zoom.toFloat()
     val panX = zoomController.panX.toFloat()
     val panY = zoomController.panY.toFloat()
-
-    // Focus requester for auto-focus on load (so keyboard works immediately)
-    val focusRequester = remember { FocusRequester() }
 
     // Throttled display state - only updates during dragging
     val displayBox by state.displayRefinementBox.collectAsState()
@@ -120,15 +117,13 @@ internal fun RefinementCanvas(
         }
     }
 
-    // Request focus when canvas is displayed (so keyboard works without clicking first)
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    // Request focus when canvas is displayed — handled by parent RefinementScreen
+
 
     Box(
         modifier =
             modifier
                 .background(Color.DarkGray)
-                .focusRequester(focusRequester) // For auto-focus
-                .focusable() // Required for keyboard events to work
                 .onSizeChanged { onCanvasSizeChanged(it) }
                 .pointerInput(state, box, zoom) {
                     // Pointer handler for corner drag and background pan
@@ -270,14 +265,6 @@ internal fun RefinementCanvas(
                             }
                         }
                     }
-                }
-                .onKeyEvent { event ->
-                    handleRefinementKeyEvent(
-                        event = event,
-                        selectedCorner = selectedCorner,
-                        onMoveSelectedCorner = { dx, dy -> state.moveSelectedCorner(dx, dy) },
-                        onPan = { dx, dy -> state.pan(dx, dy) },
-                    )
                 }
     ) {
         RefinementCanvasContent(

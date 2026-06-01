@@ -212,4 +212,53 @@ class PhotoConfigurationTest {
         val config = PhotoConfiguration(aspectRatio = 4.0 / 3.0)
         assertEquals(4.0 / 3.0, config.aspectRatio)
     }
+
+    // ==================== Metadata Fields ====================
+
+    @Test
+    fun `default configuration has empty metadata fields`() {
+        val config = PhotoConfiguration()
+        assertEquals("", config.description)
+        assertEquals("", config.keywords)
+        assertEquals("", config.originalDate)
+        assertEquals("", config.year)
+        assertEquals("", config.cameraModel)
+        assertEquals("", config.cameraMake)
+        assertFalse(config.hasMetadata())
+    }
+
+    @Test
+    fun `hasMetadata returns true when description is set`() {
+        val config = PhotoConfiguration(description = "Christmas morning")
+        assertTrue(config.hasMetadata())
+    }
+
+    @Test
+    fun `hasMetadata returns true when keywords is set`() {
+        val config = PhotoConfiguration(keywords = "vacation, family")
+        assertTrue(config.hasMetadata())
+    }
+
+    @Test
+    fun `hasMetadata returns true when originalDate is set`() {
+        val config = PhotoConfiguration(originalDate = "1995-06-15")
+        assertTrue(config.hasMetadata())
+    }
+
+    @Test
+    fun `hasMetadata returns true when camera fields are set`() {
+        val config = PhotoConfiguration(cameraModel = "EOS 5D")
+        assertTrue(config.hasMetadata())
+    }
+
+    @Test
+    fun `hasMetadata returns false when all fields are empty strings`() {
+        val config = PhotoConfiguration(
+            description = "",
+            keywords = "",
+            originalDate = "",
+            year = "",
+        )
+        assertFalse(config.hasMetadata())
+    }
 }

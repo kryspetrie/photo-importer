@@ -97,6 +97,121 @@ class PhotoScanConfigurationTest {
     }
 
     @Nested
+    @DisplayName("EXIF metadata fields")
+    inner class ExifMetadataFields {
+        @Test
+        fun `should have null EXIF overrides by default`() {
+            val config = PhotoScanConfiguration()
+
+            assertThat(config.description).isNull()
+            assertThat(config.keywords).isNull()
+            assertThat(config.originalDate).isNull()
+            assertThat(config.year).isNull()
+            assertThat(config.cameraMake).isNull()
+            assertThat(config.cameraModel).isNull()
+            assertThat(config.lensModel).isNull()
+            assertThat(config.focalLength).isNull()
+            assertThat(config.aperture).isNull()
+            assertThat(config.shutterSpeed).isNull()
+            assertThat(config.iso).isNull()
+        }
+
+        @Test
+        fun `should allow setting EXIF metadata overrides`() {
+            val config =
+                PhotoScanConfiguration(
+                    description = "A family portrait",
+                    keywords = "vacation, family",
+                    originalDate = "2024:06:15 12:30:00",
+                    year = "2024",
+                    cameraMake = "Nikon",
+                    cameraModel = "D850",
+                    lensModel = "AF-S Nikkor 50mm f/1.8",
+                    focalLength = "50",
+                    aperture = "2.8",
+                    shutterSpeed = "1/125",
+                    iso = "400",
+                )
+
+            assertThat(config.description).isEqualTo("A family portrait")
+            assertThat(config.keywords).isEqualTo("vacation, family")
+            assertThat(config.originalDate).isEqualTo("2024:06:15 12:30:00")
+            assertThat(config.year).isEqualTo("2024")
+            assertThat(config.cameraMake).isEqualTo("Nikon")
+            assertThat(config.cameraModel).isEqualTo("D850")
+            assertThat(config.lensModel).isEqualTo("AF-S Nikkor 50mm f/1.8")
+            assertThat(config.focalLength).isEqualTo("50")
+            assertThat(config.aperture).isEqualTo("2.8")
+            assertThat(config.shutterSpeed).isEqualTo("1/125")
+            assertThat(config.iso).isEqualTo("400")
+        }
+    }
+
+    @Nested
+    @DisplayName("hasExifOverrides")
+    inner class HasExifOverrides {
+        @Test
+        fun `should return false for default configuration`() {
+            val config = PhotoScanConfiguration()
+            assertThat(config.hasExifOverrides()).isFalse()
+        }
+
+        @Test
+        fun `should return true when description is set`() {
+            val config = PhotoScanConfiguration(description = "Photo")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+
+        @Test
+        fun `should return true when keywords is set`() {
+            val config = PhotoScanConfiguration(keywords = "vacation")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+
+        @Test
+        fun `should return true when originalDate is set`() {
+            val config = PhotoScanConfiguration(originalDate = "2024:06:15 12:30:00")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+
+        @Test
+        fun `should return true when cameraMake is set`() {
+            val config = PhotoScanConfiguration(cameraMake = "Canon")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+
+        @Test
+        fun `should return true when cameraModel is set`() {
+            val config = PhotoScanConfiguration(cameraModel = "EOS R5")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+
+        @Test
+        fun `should return true when focalLength is set`() {
+            val config = PhotoScanConfiguration(focalLength = "50mm")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+
+        @Test
+        fun `should return true when iso is set`() {
+            val config = PhotoScanConfiguration(iso = "200")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+
+        @Test
+        fun `should return true when legacy fields are set`() {
+            val config = PhotoScanConfiguration(originalDateOverride = "2024-01-15")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+
+        @Test
+        fun `should return true when tags are set`() {
+            val config = PhotoScanConfiguration(tags = "vacation")
+            assertThat(config.hasExifOverrides()).isTrue()
+        }
+    }
+
+    @Nested
     @DisplayName("copy")
     inner class Copy {
         @Test

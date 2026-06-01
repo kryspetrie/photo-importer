@@ -393,6 +393,23 @@ class BoundingBoxTest {
         assertEquals(10.0, updated!!.corners.topLeft.x - 70.0, 0.001)
     }
 
+    // Test forCorner: correct mapping regardless of Corner enum ordinal (was a bug)
+    @Test
+    fun forCornerReturnsCorrectPoint() {
+        val corners =
+            BoundingBoxCorners(
+                topLeft = Point(10.0, 20.0),
+                topRight = Point(110.0, 20.0),
+                bottomRight = Point(110.0, 120.0),
+                bottomLeft = Point(10.0, 120.0),
+            )
+
+        assertEquals(corners.topLeft, corners.forCorner(Corner.TOP_LEFT))
+        assertEquals(corners.topRight, corners.forCorner(Corner.TOP_RIGHT))
+        assertEquals(corners.bottomLeft, corners.forCorner(Corner.BOTTOM_LEFT))
+        assertEquals(corners.bottomRight, corners.forCorner(Corner.BOTTOM_RIGHT))
+    }
+
     // Test Point distanceTo
     @Test
     fun pointDistanceCalculation() {

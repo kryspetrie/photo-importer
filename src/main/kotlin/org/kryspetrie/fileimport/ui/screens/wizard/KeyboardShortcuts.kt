@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -33,17 +34,26 @@ import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanConstants
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
 
-/** Context for which shortcuts are available, used to show context-aware help. */
 /**
  * Modifier that adds keyboard shortcuts for the Photo Scan Wizard.
  *
- * Uses Compose [Key] constants for reliable cross-platform key detection instead of reflection.
+ * Includes [focusable] so that key events are delivered without requiring the user to click the
+ * canvas first.
  *
  * ## Keyboard Shortcuts
  *
  * ### Arrow Keys
- * - **Arrow Keys**: Move selected corner by 1px (or pan view if no corner selected)
- * - **Shift+Arrow Keys**: Move selected corner by 10px (or pan view faster if no corner selected)
+ * - **Arrow Keys**: Move selected corner by 10px (or pan view if no corner selected)
+ * - **Shift+Arrow Keys**: Move selected corner by 1px for fine control (or pan slower)
+ *
+ * ### Navigation
+ * - **Space**: Cycle to next photo/box; initial press selects the first one
+ * - **, (comma)**: Previous corner coordinate
+ * - **. (period)**: Next corner coordinate
+ * - **N**: Next corner (when one is selected) / Next box
+ * - **P**: Previous corner / Previous box
+ * - **Enter**: Confirm / Proceed to next step
+ * - **Escape**: Deselect / Exit current mode / Cancel operation
  *
  * ### Zoom
  * - **+**: Zoom in
@@ -52,7 +62,6 @@ import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
  *
  * ### Box Operations
  * - **Delete / Backspace**: Delete selected box
- * - **Escape**: Deselect / Exit current mode / Cancel operation
  *
  * ### Mode Switching
  * - **F**: Enter 4-point mode for manual box creation
@@ -62,14 +71,6 @@ import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
  * ### Undo/Redo
  * - **Ctrl+Z**: Undo last action
  * - **Ctrl+Shift+Z**: Redo
- *
- * ### Navigation
- * - **Enter**: Confirm / Proceed to next step
- * - **N**: Next corner (when selected) / Next box (in refinement)
- * - **P**: Previous corner (when selected) / Previous box (in refinement)
- *
- * ### Corner Cycling
- * - **N / P**: Cycle through corners (forward / backward) when a corner is selected
  *
  * @param wizardState The wizard state to manipulate
  * @param onProceed Callback when user wants to proceed (Enter key)
@@ -83,8 +84,10 @@ fun Modifier.withWizardKeyboardShortcuts(
     onCancel: (() -> Unit)? = null,
     onModeChange: ((WizardMode) -> Unit)? = null,
     context: ShortcutContext = ShortcutContext.CANVAS,
+    viewportCenterX: Double? = null,
+    viewportCenterY: Double? = null,
 ): Modifier =
-    this.onKeyEvent { keyEvent ->
+    this.focusable().onKeyEvent { keyEvent ->
         // Only handle key press events (not key release)
         if (keyEvent.type != KeyEventType.KeyDown) {
             return@onKeyEvent false
@@ -93,13 +96,13 @@ fun Modifier.withWizardKeyboardShortcuts(
         val isShiftPressed = keyEvent.isShiftPressed
         val isCtrlPressed = isCtrlPressed(keyEvent)
 
-        // Arrow keys handling — check if a corner is selected
+        // Arrow keys: Shift = fine (1px), no Shift = coarse (10px)
         val cornerDelta =
-            if (isShiftPressed) PhotoScanConstants.SHIFT_ARROW_KEY_STEP
-            else PhotoScanConstants.ARROW_KEY_STEP
+            if (isShiftPressed) PhotoScanConstants.ARROW_KEY_STEP
+            else PhotoScanConstants.SHIFT_ARROW_KEY_STEP
         val panDelta =
-            if (isShiftPressed) PhotoScanConstants.SHIFT_KEYBOARD_PAN_STEP
-            else PhotoScanConstants.KEYBOARD_PAN_STEP
+            if (isShiftPressed) PhotoScanConstants.KEYBOARD_PAN_STEP
+            else PhotoScanConstants.SHIFT_KEYBOARD_PAN_STEP
 
         // Canvas-only shortcuts (Overview & Refinement screens)
         if (context == ShortcutContext.CANVAS) {
@@ -163,11 +166,11 @@ fun Modifier.withWizardKeyboardShortcuts(
                 }
                 Key.Equals,
                 Key.Plus -> {
-                    wizardState.zoomIn()
+                    wizardState.zoomIn(viewportCenterX, viewportCenterY)
                     return@onKeyEvent true
                 }
                 Key.Minus -> {
-                    wizardState.zoomOut()
+                    wizardState.zoomOut(viewportCenterX, viewportCenterY)
                     return@onKeyEvent true
                 }
                 Key.Zero,
@@ -176,7 +179,8 @@ fun Modifier.withWizardKeyboardShortcuts(
                     return@onKeyEvent true
                 }
                 Key.N -> {
-                    // Context-aware: cycle corners forward when one is selected, otherwise next box
+                    // Context-aware: cycle corners forward when one is selected, otherwise
+                    // next box
                     if (wizardState.selectedCorner.value != null) {
                         cycleCorner(wizardState, reverse = false)
                     } else {
@@ -199,6 +203,43 @@ fun Modifier.withWizardKeyboardShortcuts(
                         if (count > 0 && current >= 0) {
                             wizardState.selectBox((current - 1 + count) % count)
                         }
+                    }
+                    return@onKeyEvent true
+                }
+                // Period/Comma: cycle corners (intuitive key positions: , < .)
+                Key.Period -> {
+                    // Next corner (same as N when corner selected)
+                    // If no corner selected, select first corner of selected box
+                    val corner = wizardState.selectedCorner.value
+                    if (corner != null) {
+                        cycleCorner(wizardState, reverse = false)
+                    } else if (wizardState.selectedBoxIndex.value >= 0) {
+                        cycleCorner(wizardState, reverse = false)
+                    }
+                    return@onKeyEvent true
+                }
+                Key.Comma -> {
+                    // Previous corner (same as P when corner selected)
+                    // If no corner selected, select last corner of selected box
+                    val corner = wizardState.selectedCorner.value
+                    if (corner != null) {
+                        cycleCorner(wizardState, reverse = true)
+                    } else if (wizardState.selectedBoxIndex.value >= 0) {
+                        cycleCorner(wizardState, reverse = true)
+                    }
+                    return@onKeyEvent true
+                }
+                // Space: cycle to next photo/box; first press selects the first one
+                Key.Spacebar -> {
+                    val current = wizardState.selectedBoxIndex.value
+                    val count = wizardState.boxCount()
+                    if (count == 0) return@onKeyEvent true // no boxes
+                    if (current < 0) {
+                        // Nothing selected yet — select the first box
+                        wizardState.selectBox(0)
+                    } else {
+                        // Advance to next box (wrapping)
+                        wizardState.selectBox((current + 1) % count)
                     }
                     return@onKeyEvent true
                 }
@@ -285,7 +326,7 @@ private fun cycleCorner(state: PhotoScanWizardState, reverse: Boolean = false) {
         val currentIndex = corners.indexOf(currentCorner)
         val nextIndex =
             if (reverse) {
-                (currentIndex - 1).coerceAtLeast(0)
+                (currentIndex - 1 + corners.size) % corners.size
             } else {
                 (currentIndex + 1) % corners.size
             }
@@ -332,18 +373,27 @@ fun KeyboardShortcutHelpDialog(
                 if (context == ShortcutContext.CANVAS) {
                     HorizontalDivider()
 
-                    // Selection section
+                    // Movement section
+                    ShortcutSection(title = "Corner Movement") {
+                        ShortcutRow("Arrow keys", "Move selected corner by 10px")
+                        ShortcutRow("Shift + Arrow keys", "Move selected corner by 1px (fine)")
+                    }
+
+                    HorizontalDivider()
+
+                    // Navigation section
                     ShortcutSection(title = "Selection") {
+                        ShortcutRow("Space", "Next photo/box (first press selects)")
+                        ShortcutRow(".", "Next corner coordinate")
+                        ShortcutRow(",", "Previous corner coordinate")
                         ShortcutRow("N", "Next corner / Next box")
                         ShortcutRow("P", "Previous corner / Previous box")
-                        ShortcutRow("Shift+Arrows", "Move corner 10px / Pan faster")
                     }
 
                     HorizontalDivider()
 
                     // Manipulation section
                     ShortcutSection(title = "Box Manipulation") {
-                        ShortcutRow("Arrow keys", "Move selected corner 1px / Pan view")
                         ShortcutRow("Delete", "Delete selected box")
                     }
 
@@ -363,13 +413,6 @@ fun KeyboardShortcutHelpDialog(
                         ShortcutRow("+ / -", "Zoom in / out")
                         ShortcutRow("0 or Home", "Fit to view")
                     }
-
-                    HorizontalDivider()
-
-                    // Refinement section
-                    ShortcutSection(title = "Refinement") {
-                        ShortcutRow(", / .", "Rotate -5\u00B0 / +5\u00B0")
-                    }
                 }
 
                 HorizontalDivider()
@@ -378,15 +421,6 @@ fun KeyboardShortcutHelpDialog(
                 ShortcutSection(title = "Undo/Redo") {
                     ShortcutRow("Ctrl+Z", "Undo")
                     ShortcutRow("Ctrl+Shift+Z", "Redo")
-                }
-
-                HorizontalDivider()
-
-                // Accessibility section — always shown
-                ShortcutSection(title = "Accessibility") {
-                    ShortcutRow("Tab", "Move focus between controls")
-                    ShortcutRow("Shift+Tab", "Move focus backward")
-                    ShortcutRow("Space / Enter", "Activate focused button")
                 }
             }
         },

@@ -34,6 +34,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,6 +76,11 @@ fun OverviewScreen(
     var showBoxRejectedMessage by remember { mutableStateOf(false) }
     var hasFittedToView by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Focus requester for auto-focus on load (so keyboard works immediately without clicking)
+    // Also used to re-grab focus after button clicks steal it from the canvas
+    val focusRequester = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
     // Fit view to image on initial load (only once, not on every resize)
     LaunchedEffect(containerSize, image) {
@@ -122,6 +129,7 @@ fun OverviewScreen(
                     wizardMode = wizardMode,
                     fourPointState = fourPointState,
                     zoomController = zoomController,
+                    focusRequester = focusRequester,
                     onContainerSizeChanged = { containerSize = it },
                     onBoxRejected = { showBoxRejectedMessage = true },
                     onToSummary = onToSummary,
@@ -137,6 +145,7 @@ fun OverviewScreen(
                     boxCount = boundingBoxList.size(),
                     onBack = onBack,
                     onToSummary = onToSummary,
+                    refocus = { focusRequester.requestFocus() },
                     viewportWidth = containerSize.width.toDouble(),
                     viewportHeight = containerSize.height.toDouble(),
                 )
@@ -161,7 +170,7 @@ private fun OverviewTopBar(
     onShowHelp: () -> Unit,
 ) {
     TopAppBar(
-        title = { Text("Bounding Box Overview", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        title = { Text("Select Photos", maxLines = 1, overflow = TextOverflow.Ellipsis) },
         actions = {
             // Mode indicator
             when (wizardMode) {
@@ -214,6 +223,7 @@ private fun ColumnScope.OverviewCanvasSection(
     wizardMode: WizardMode,
     fourPointState: FourPointState,
     zoomController: ZoomController,
+    focusRequester: FocusRequester,
     onContainerSizeChanged: (IntSize) -> Unit,
     onBoxRejected: () -> Unit,
     onToSummary: () -> Unit,
@@ -225,10 +235,13 @@ private fun ColumnScope.OverviewCanvasSection(
                 .weight(1f)
                 .background(Color.DarkGray)
                 .onSizeChanged { onContainerSizeChanged(it) }
+                .focusRequester(focusRequester)
                 .withWizardKeyboardShortcuts(
                     wizardState = state,
                     onProceed = onToSummary,
                     onCancel = onBack,
+                    viewportCenterX = containerSize.width.toDouble() / 2,
+                    viewportCenterY = containerSize.height.toDouble() / 2,
                 )
     ) {
         if (image != null && containerSize.width > 0) {

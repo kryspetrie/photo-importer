@@ -311,6 +311,76 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     val photoConfigurations: StateFlow<Map<String, PhotoConfiguration>> =
         _photoConfigurations.asStateFlow()
 
+    // ========== Metadata Screen Selection ==========
+
+    /** Indices of photos selected on the metadata screen. Used for multi-edit. */
+    private val _selectedMetadataIndices = MutableStateFlow<Set<Int>>(emptySet())
+    val selectedMetadataIndices: StateFlow<Set<Int>> = _selectedMetadataIndices.asStateFlow()
+
+    /** Toggles metadata selection for a photo index (for shift-click multi-select). */
+    fun toggleMetadataSelection(index: Int) {
+        val current = _selectedMetadataIndices.value
+        _selectedMetadataIndices.value =
+            if (index in current) current - index else current + index
+    }
+
+    /** Selects a single photo for metadata editing, replacing any previous selection. */
+    fun selectSingleMetadata(index: Int) {
+        _selectedMetadataIndices.value = setOf(index)
+    }
+
+    /** Selects all photos for metadata editing. */
+    fun selectAllMetadata() {
+        _selectedMetadataIndices.value =
+            (0 until _boundingBoxList.value.size()).toSet()
+    }
+
+    /** Deselects all photos on the metadata screen. */
+    fun deselectAllMetadata() {
+        _selectedMetadataIndices.value = emptySet()
+    }
+
+    /**
+     * Applies metadata fields to all selected photos on the metadata screen.
+     * Only non-empty fields are applied — empty fields are left unchanged on each photo.
+     */
+    fun applyMetadataToSelected(
+        description: String = "",
+        keywords: String = "",
+        originalDate: String = "",
+        year: String = "",
+        cameraModel: String = "",
+        cameraMake: String = "",
+        lensModel: String = "",
+        focalLength: String = "",
+        aperture: String = "",
+        shutterSpeed: String = "",
+        iso: String = "",
+    ) {
+        val indices = _selectedMetadataIndices.value
+        val list = _boundingBoxList.value
+        for (index in indices) {
+            if (index >= 0 && index < list.size()) {
+                val boxId = list.boxes[index].id
+                updatePhotoConfiguration(boxId) { existing ->
+                    existing.copy(
+                        description = if (description.isNotBlank()) description else existing.description,
+                        keywords = if (keywords.isNotBlank()) keywords else existing.keywords,
+                        originalDate = if (originalDate.isNotBlank()) originalDate else existing.originalDate,
+                        year = if (year.isNotBlank()) year else existing.year,
+                        cameraModel = if (cameraModel.isNotBlank()) cameraModel else existing.cameraModel,
+                        cameraMake = if (cameraMake.isNotBlank()) cameraMake else existing.cameraMake,
+                        lensModel = if (lensModel.isNotBlank()) lensModel else existing.lensModel,
+                        focalLength = if (focalLength.isNotBlank()) focalLength else existing.focalLength,
+                        aperture = if (aperture.isNotBlank()) aperture else existing.aperture,
+                        shutterSpeed = if (shutterSpeed.isNotBlank()) shutterSpeed else existing.shutterSpeed,
+                        iso = if (iso.isNotBlank()) iso else existing.iso,
+                    )
+                }
+            }
+        }
+    }
+
     // ========== Workflow ==========
 
     private val _currentStep = MutableStateFlow(WizardStep.IMPORT)
@@ -321,6 +391,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         OVERVIEW, // All boxes visible
         REFINEMENT, // Zoomed single box
         SUMMARY, // Correction options
+        METADATA, // EXIF metadata editing
         PROCESSING, // Export in progress
         COMPLETE, // Done — post-export completion page
     }
@@ -879,7 +950,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         if (index >= 0 && corner != null) {
             val list = _boundingBoxList.value
             val box = list.boxes[index]
-            val cornerPoint = box.corners.toList()[corner.ordinal]
+            val cornerPoint = box.corners.forCorner(corner)
 
             // Save for undo
             _undoRedoManager.push(box.id, box)
@@ -1030,6 +1101,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _currentStep.value = WizardStep.SUMMARY
     }
 
+    /** Goes to the metadata editing step. */
+    fun goToMetadata() {
+        _currentStep.value = WizardStep.METADATA
+    }
+
     /** Goes to processing step. */
     fun goToProcessing() {
         _currentStep.value = WizardStep.PROCESSING
@@ -1058,6 +1134,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _undoRedoVersion.value++
         _photoConfigurations.value = emptyMap()
         _zoomController.value = ZoomController()
+        // Reset metadata selection
+        _selectedMetadataIndices.value = emptySet()
         // Reset batch processing state
         _sourceFiles.value = emptyList()
         _currentImageIndex.value = 0
@@ -1082,6 +1160,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _undoRedoVersion.value++
         _photoConfigurations.value = emptyMap()
         _zoomController.value = ZoomController()
+        _selectedMetadataIndices.value = emptySet()
     }
 
     // ========== Utility ==========
@@ -1119,6 +1198,18 @@ data class PhotoConfiguration(
     val perspectiveCorrectionEnabled: Boolean = false,
     val rotationDegrees: Int = 0, // 0, 90, 180, or 270 (clockwise)
     val aspectRatio: Double = 0.0, // 0 = current, or specific ratio
+    // EXIF metadata overrides (applied on top of original image metadata)
+    val description: String = "",
+    val keywords: String = "", // comma-separated
+    val originalDate: String = "", // YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
+    val year: String = "", // extracted or overridden year
+    val cameraModel: String = "",
+    val cameraMake: String = "",
+    val lensModel: String = "",
+    val focalLength: String = "", // e.g. "50mm"
+    val aperture: String = "", // e.g. "f/2.8"
+    val shutterSpeed: String = "", // e.g. "1/125"
+    val iso: String = "", // e.g. "400"
 ) {
     /** Cycles rotation 90° clockwise: 0→90→180→270→0 */
     fun cycleRotationCW(): PhotoConfiguration = copy(rotationDegrees = (rotationDegrees + 90) % 360)
@@ -1126,4 +1217,18 @@ data class PhotoConfiguration(
     /** Cycles rotation 90° counter-clockwise: 0→270→180→90→0 */
     fun cycleRotationCCW(): PhotoConfiguration =
         copy(rotationDegrees = (rotationDegrees - 90 + 360) % 360)
+
+    /** Returns true if any metadata fields are non-empty. */
+    fun hasMetadata(): Boolean =
+        description.isNotBlank() ||
+            keywords.isNotBlank() ||
+            originalDate.isNotBlank() ||
+            year.isNotBlank() ||
+            cameraModel.isNotBlank() ||
+            cameraMake.isNotBlank() ||
+            lensModel.isNotBlank() ||
+            focalLength.isNotBlank() ||
+            aperture.isNotBlank() ||
+            shutterSpeed.isNotBlank() ||
+            iso.isNotBlank()
 }

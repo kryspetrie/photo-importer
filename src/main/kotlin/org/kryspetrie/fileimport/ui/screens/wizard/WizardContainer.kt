@@ -54,6 +54,7 @@ import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.SettingsPort
@@ -68,6 +69,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanConstants
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 import org.kryspetrie.fileimport.ui.components.isImageFile
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataScreen
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
 
@@ -202,24 +204,18 @@ private fun WizardStepContent(
                     scope.launch { settingsPort.saveSettings(newSettings) }
                 },
                 onImageSelected = { file, batchFiles ->
-                    scope.launch {
-                        // Initialize batch mode if multiple files selected
-                        if (batchFiles != null && batchFiles.size > 1) {
-                            state.initializeBatch(batchFiles)
-                        }
-                        loadImageAndDetect(
-                            state = state,
-                            file = file,
-                            detectorService = detectorService,
-                            cvAutoDetect = state.cvAutoDetectEnabled.value,
-                            appLogger = appLogger,
-                            dispatcherProvider = dispatcherProvider,
-                            isLoading = isLoading,
-                            onMessage = onMessage,
-                            onError = onError,
-                            onComplete = { state.goToOverview() },
-                        )
-                    }
+                    startNewImport(
+                        state,
+                        file,
+                        batchFiles,
+                        detectorService,
+                        appLogger,
+                        dispatcherProvider,
+                        isLoading,
+                        onMessage,
+                        onError,
+                        scope,
+                    )
                 },
                 onCancel = onCancel,
             )
@@ -255,7 +251,22 @@ private fun WizardStepContent(
                     image = image,
                     perspectiveService = perspectiveService,
                     onBack = { state.goToOverview() },
-                    onExport = {
+                    onExport = { state.goToMetadata() },
+                )
+            } else {
+                LoadingContent(message = "Loading image...")
+            }
+        }
+
+        PhotoScanWizardState.WizardStep.METADATA -> {
+            val image = state.image.collectAsState().value
+            if (image != null) {
+                MetadataScreen(
+                    state = state,
+                    image = image,
+                    perspectiveService = perspectiveService,
+                    onBack = { state.goToSummary() },
+                    onNext = {
                         scope.launch {
                             state.goToProcessing()
                             exportPhotos(
@@ -274,8 +285,6 @@ private fun WizardStepContent(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
                                     )
-                                    // Go to COMPLETE step — the completion screen will
-                                    // offer next actions based on batch state.
                                     state.goToComplete()
                                 },
                             )
@@ -310,91 +319,56 @@ private fun WizardStepContent(
                 onImportFile = {
                     val path = pickImageFile("Select Image File")
                     if (path != null) {
-                        val file = File(path)
-                        state.resetToImportStep()
-                        scope.launch {
-                            loadImageAndDetect(
-                                state = state,
-                                file = file,
-                                detectorService = detectorService,
-                                cvAutoDetect = state.cvAutoDetectEnabled.value,
-                                appLogger = appLogger,
-                                dispatcherProvider = dispatcherProvider,
-                                isLoading = isLoading,
-                                onMessage = onMessage,
-                                onError = onError,
-                                onComplete = { state.goToOverview() },
-                            )
-                        }
+                        startNewImport(
+                            state,
+                            File(path),
+                            null,
+                            detectorService,
+                            appLogger,
+                            dispatcherProvider,
+                            isLoading,
+                            onMessage,
+                            onError,
+                            scope,
+                        )
                     }
                 },
                 onImportFolder = {
                     val path = pickFolder("Select Source Folder")
                     if (path != null) {
                         val folder = File(path)
-                        val batchFiles =
-                            folder
-                                .listFiles { f -> f.isFile && isImageFile(f) }
-                                ?.sortedBy { it.name }
-                                ?.toList() ?: emptyList()
-                        state.resetToImportStep()
+                        val batchFiles = collectImageFiles(folder)
                         if (batchFiles.isNotEmpty()) {
-                            scope.launch {
-                                if (batchFiles.size > 1) state.initializeBatch(batchFiles)
-                                loadImageAndDetect(
-                                    state = state,
-                                    file = batchFiles.first(),
-                                    detectorService = detectorService,
-                                    cvAutoDetect = state.cvAutoDetectEnabled.value,
-                                    appLogger = appLogger,
-                                    dispatcherProvider = dispatcherProvider,
-                                    isLoading = isLoading,
-                                    onMessage = onMessage,
-                                    onError = onError,
-                                    onComplete = { state.goToOverview() },
-                                )
-                            }
-                        }
-                    }
-                },
-                onContinueToNextPhoto = {
-                    val nextFile = state.advanceToNextBatchFile()
-                    if (nextFile != null) {
-                        state.resetPerImageState()
-                        scope.launch {
-                            loadImageAndDetect(
-                                state = state,
-                                file = nextFile,
-                                detectorService = detectorService,
-                                cvAutoDetect = state.cvAutoDetectEnabled.value,
-                                appLogger = appLogger,
-                                dispatcherProvider = dispatcherProvider,
-                                isLoading = isLoading,
-                                onMessage = onMessage,
-                                onError = onError,
-                                onComplete = { state.goToOverview() },
+                            val batch = if (batchFiles.size > 1) batchFiles else null
+                            startNewImport(
+                                state,
+                                batchFiles.first(),
+                                batch,
+                                detectorService,
+                                appLogger,
+                                dispatcherProvider,
+                                isLoading,
+                                onMessage,
+                                onError,
+                                scope,
                             )
                         }
                     }
                 },
-                onCancelImport = { state.resetToImportStep() },
-                onOpenFolder = {
-                    try {
-                        val dir = java.io.File(exportDestination)
-                        if (dir.exists()) {
-                            if (java.awt.Desktop.isDesktopSupported()) {
-                                java.awt.Desktop.getDesktop().open(dir)
-                            }
-                        } else {
-                            dir.mkdirs()
-                            if (java.awt.Desktop.isDesktopSupported()) {
-                                java.awt.Desktop.getDesktop().open(dir)
-                            }
-                        }
-                    } catch (_: Exception) {
-                        // Best effort — if Desktop.open fails, just skip
-                    }
+                onContinueToNextPhoto = {
+                    continueToNextBatchPhoto(
+                        state,
+                        detectorService,
+                        appLogger,
+                        dispatcherProvider,
+                        isLoading,
+                        onMessage,
+                        onError,
+                        scope,
+                    )
                 },
+                onCancelImport = { state.resetToImportStep() },
+                onOpenFolder = { openExportFolder(exportDestination) },
             )
         }
     }
@@ -507,6 +481,99 @@ private suspend fun loadImageAndDetect(
 /**
  * Validates the export destination directory. Returns an error string if invalid, or null if valid.
  */
+/**
+ * Collects image files from the given folder, sorted by name. Returns an empty list if the folder
+ * contains no supported image files.
+ */
+private fun collectImageFiles(folder: File): List<File> {
+    return folder.listFiles { f -> f.isFile && isImageFile(f) }?.sortedBy { it.name }?.toList()
+        ?: emptyList()
+}
+
+/**
+ * Opens the export destination folder in the system file browser. Best-effort — silently skips on
+ * failure.
+ */
+private fun openExportFolder(exportDestination: String) {
+    try {
+        val dir = File(exportDestination)
+        if (!dir.exists()) dir.mkdirs()
+        if (java.awt.Desktop.isDesktopSupported()) {
+            java.awt.Desktop.getDesktop().open(dir)
+        }
+    } catch (_: Exception) {
+        // Best effort — if Desktop.open fails, just skip
+    }
+}
+
+/**
+ * Starts a new import from the given file, optionally with a batch of files for folder mode. Resets
+ * wizard state and launches the load+detect pipeline.
+ */
+private fun startNewImport(
+    state: PhotoScanWizardState,
+    file: File,
+    batchFiles: List<File>?,
+    detectorService: PhotoScanDetectorService,
+    appLogger: AppLogger,
+    dispatcherProvider: DispatcherProvider,
+    isLoading: (Boolean) -> Unit,
+    onMessage: (String) -> Unit,
+    onError: (String) -> Unit,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
+    state.resetToImportStep()
+    scope.launch {
+        if (batchFiles != null && batchFiles.size > 1) {
+            state.initializeBatch(batchFiles)
+        }
+        loadImageAndDetect(
+            state = state,
+            file = file,
+            detectorService = detectorService,
+            cvAutoDetect = state.cvAutoDetectEnabled.value,
+            appLogger = appLogger,
+            dispatcherProvider = dispatcherProvider,
+            isLoading = isLoading,
+            onMessage = onMessage,
+            onError = onError,
+            onComplete = { state.goToOverview() },
+        )
+    }
+}
+
+/**
+ * Continues to the next photo in a batch folder import. Advances the batch index, resets per-image
+ * state, and launches the load+detect pipeline for the next file.
+ */
+private fun continueToNextBatchPhoto(
+    state: PhotoScanWizardState,
+    detectorService: PhotoScanDetectorService,
+    appLogger: AppLogger,
+    dispatcherProvider: DispatcherProvider,
+    isLoading: (Boolean) -> Unit,
+    onMessage: (String) -> Unit,
+    onError: (String) -> Unit,
+    scope: kotlinx.coroutines.CoroutineScope,
+) {
+    val nextFile = state.advanceToNextBatchFile() ?: return
+    state.resetPerImageState()
+    scope.launch {
+        loadImageAndDetect(
+            state = state,
+            file = nextFile,
+            detectorService = detectorService,
+            cvAutoDetect = state.cvAutoDetectEnabled.value,
+            appLogger = appLogger,
+            dispatcherProvider = dispatcherProvider,
+            isLoading = isLoading,
+            onMessage = onMessage,
+            onError = onError,
+            onComplete = { state.goToOverview() },
+        )
+    }
+}
+
 private fun validateExportDestination(destinationPath: String): String? {
     val outputDir = File(destinationPath)
     return when {
@@ -552,6 +619,26 @@ private suspend fun exportSinglePhoto(
             "(${corrections.joinToString(", ").ifEmpty { "no corrections" }})",
     )
 
+    // Bridge PhotoConfiguration (wizard UI model) to PhotoScanConfiguration (domain export model)
+    // so that EXIF metadata overrides flow through the export pipeline.
+    val scanConfig = PhotoScanConfiguration(
+        originalDateOverride = config.originalDate.ifBlank { null },
+        originalYearOverride = config.year.ifBlank { null },
+        tags = config.keywords,
+        notes = config.description,
+        description = config.description.ifBlank { null },
+        keywords = config.keywords.ifBlank { null },
+        originalDate = config.originalDate.ifBlank { null },
+        year = config.year.ifBlank { null },
+        cameraMake = config.cameraMake.ifBlank { null },
+        cameraModel = config.cameraModel.ifBlank { null },
+        lensModel = config.lensModel.ifBlank { null },
+        focalLength = config.focalLength.ifBlank { null },
+        aperture = config.aperture.ifBlank { null },
+        shutterSpeed = config.shutterSpeed.ifBlank { null },
+        iso = config.iso.ifBlank { null },
+    )
+
     val detectedPhoto =
         DetectedPhoto(
             topLeft = PhotoCorner(box.corners.topLeft.x.toFloat(), box.corners.topLeft.y.toFloat()),
@@ -566,7 +653,10 @@ private suspend fun exportSinglePhoto(
                 ),
             applyPerspectiveCorrection = perspectiveEnabled,
             rotation = rotationFromDegrees(config.rotationDegrees),
+            configuration = scanConfig,
         )
+
+    val sourceFile = state.imageFile.value
 
     return withContext(dispatcherProvider.default) {
         try {
@@ -576,6 +666,7 @@ private suspend fun exportSinglePhoto(
                     detectedPhoto,
                     outputDir.absolutePath,
                     fileName,
+                    sourceFile = sourceFile,
                     marginFraction = marginFraction,
                 )
             ProcessedPhoto(
@@ -801,7 +892,7 @@ private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () ->
                 tint = MaterialTheme.colorScheme.primary,
             )
 
-            Text("Processing Photos", style = MaterialTheme.typography.headlineSmall)
+            Text("Exporting", style = MaterialTheme.typography.headlineSmall)
 
             LinearProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },

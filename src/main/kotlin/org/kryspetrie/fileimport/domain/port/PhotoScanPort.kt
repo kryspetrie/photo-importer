@@ -93,18 +93,20 @@ interface PhotoScanDetectorPort {
 interface PhotoScanExportPort {
 
     /**
-     * Exports a single photo with optional corrections.
+     * Exports a single photo with optional corrections and EXIF metadata preservation.
      *
      * This is the primary method for exporting individual photos from a scanned image. It handles:
      * - Axis-aligned cropping or perspective correction
      * - Rotation (CW_90, CCW_90, CW_180)
      * - Filename conflict resolution
+     * - EXIF metadata reading and writing
      * - Writing to destination folder
      *
      * @param sourceImage The source scanned image containing the photo
      * @param detectedPhoto The photo to export with corner positions and correction settings
      * @param destinationPath Folder where the exported photo will be saved
      * @param baseFileName Base filename (without extension) for the output
+     * @param sourceFile The original source file for EXIF baseline reading. May be null.
      * @return [PhotoScanSingleExportResult] with success status, path, and dimensions
      * @throws Exception If export fails due to processing errors or IO issues
      */
@@ -113,6 +115,7 @@ interface PhotoScanExportPort {
         detectedPhoto: DetectedPhoto,
         destinationPath: String,
         baseFileName: String,
+        sourceFile: java.io.File? = null,
     ): PhotoScanSingleExportResult
 
     /**

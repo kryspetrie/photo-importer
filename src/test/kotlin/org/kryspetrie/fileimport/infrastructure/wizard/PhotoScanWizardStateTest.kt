@@ -163,6 +163,65 @@ class PhotoScanWizardStateTest {
         assertEquals(50.0, movedBox.corners.topLeft.y, 0.01)
     }
 
+    // moveSelectedCorner must not jump to wrong corner position (ordinal mismatch bug)
+    @Test
+    fun `moveSelectedCorner moves BOTTOM_LEFT without jumping to BOTTOM_RIGHT`() {
+        val box =
+            BoundingBox(
+                corners =
+                    BoundingBoxCorners(
+                        topLeft = Point(50.0, 50.0),
+                        topRight = Point(200.0, 50.0),
+                        bottomRight = Point(200.0, 150.0),
+                        bottomLeft = Point(50.0, 150.0),
+                    )
+            )
+        state.addBox(box)
+        state.selectBox(0)
+        state.selectCorner(Corner.BOTTOM_LEFT)
+
+        // Move bottom-left right by 10px — it should stay at y=150, just shift x
+        state.moveSelectedCorner(10.0, 0.0)
+
+        val movedBox = state.boundingBoxList.value.boxes[0]
+        // BEFORE FIX: read bottomRight (200,150) as start, so bottomLeft jumped to (210, 150)
+        // Correct: should read bottomLeft (50,150), move to (60, 150)
+        assertEquals(60.0, movedBox.corners.bottomLeft.x, 0.01)
+        assertEquals(150.0, movedBox.corners.bottomLeft.y, 0.01)
+        // bottomRight should be unchanged
+        assertEquals(200.0, movedBox.corners.bottomRight.x, 0.01)
+        assertEquals(150.0, movedBox.corners.bottomRight.y, 0.01)
+    }
+
+    @Test
+    fun `moveSelectedCorner moves BOTTOM_RIGHT without jumping to BOTTOM_LEFT`() {
+        val box =
+            BoundingBox(
+                corners =
+                    BoundingBoxCorners(
+                        topLeft = Point(50.0, 50.0),
+                        topRight = Point(200.0, 50.0),
+                        bottomRight = Point(200.0, 150.0),
+                        bottomLeft = Point(50.0, 150.0),
+                    )
+            )
+        state.addBox(box)
+        state.selectBox(0)
+        state.selectCorner(Corner.BOTTOM_RIGHT)
+
+        // Move bottom-right up by 10px — it should stay at x=200, just shift y
+        state.moveSelectedCorner(0.0, -10.0)
+
+        val movedBox = state.boundingBoxList.value.boxes[0]
+        // BEFORE FIX: read bottomLeft (50,150) as start, so bottomRight jumped to (50, 140)
+        // Correct: should read bottomRight (200,150), move to (200, 140)
+        assertEquals(200.0, movedBox.corners.bottomRight.x, 0.01)
+        assertEquals(140.0, movedBox.corners.bottomRight.y, 0.01)
+        // bottomLeft should be unchanged
+        assertEquals(50.0, movedBox.corners.bottomLeft.x, 0.01)
+        assertEquals(150.0, movedBox.corners.bottomLeft.y, 0.01)
+    }
+
     // WS-14: Enter 4-point mode
     @Test
     fun `enter four point mode changes mode`() {

@@ -42,6 +42,7 @@ private fun ModeControlsRow(
     state: PhotoScanWizardState,
     wizardMode: WizardMode,
     boxCount: Int,
+    refocus: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -53,7 +54,10 @@ private fun ModeControlsRow(
         when (wizardMode) {
             WizardMode.FOUR_POINT -> {
                 Button(
-                    onClick = { state.exitFourPointMode() },
+                    onClick = {
+                        state.exitFourPointMode()
+                        refocus()
+                    },
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.tertiary
@@ -65,7 +69,10 @@ private fun ModeControlsRow(
             }
             else -> {
                 OutlinedButton(
-                    onClick = { state.enterFourPointMode() },
+                    onClick = {
+                        state.enterFourPointMode()
+                        refocus()
+                    },
                     modifier = Modifier.height(40.dp),
                 ) {
                     Icon(Icons.Default.GridOn, null, Modifier.size(18.dp))
@@ -79,7 +86,10 @@ private fun ModeControlsRow(
         when (wizardMode) {
             WizardMode.FOUR_POINT -> {
                 Button(
-                    onClick = { state.exitFourPointMode() },
+                    onClick = {
+                        state.exitFourPointMode()
+                        refocus()
+                    },
                     colors =
                         ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.secondary
@@ -91,7 +101,10 @@ private fun ModeControlsRow(
             }
             else -> {
                 OutlinedButton(
-                    onClick = { state.enterRectangleMode() },
+                    onClick = {
+                        state.enterRectangleMode()
+                        refocus()
+                    },
                     modifier = Modifier.height(40.dp),
                 ) {
                     Icon(Icons.Default.Add, null, Modifier.size(18.dp))
@@ -121,6 +134,7 @@ private fun ActionButtonsRow(
     boxCount: Int,
     onBack: () -> Unit,
     onToSummary: () -> Unit,
+    refocus: () -> Unit = {},
     viewportWidth: Double = 800.0,
     viewportHeight: Double = 600.0,
     modifier: Modifier = Modifier,
@@ -137,6 +151,7 @@ private fun ActionButtonsRow(
                     val prevIndex = (selectedBoxIndex - 1 + boxCount) % boxCount
                     state.selectBox(prevIndex)
                     state.fitToSelectedBox(viewportWidth, viewportHeight)
+                    refocus()
                 },
                 enabled = boxCount > 1,
                 modifier = Modifier.size(32.dp),
@@ -152,6 +167,7 @@ private fun ActionButtonsRow(
                     val nextIndex = (selectedBoxIndex + 1) % boxCount
                     state.selectBox(nextIndex)
                     state.fitToSelectedBox(viewportWidth, viewportHeight)
+                    refocus()
                 },
                 enabled = boxCount > 1,
                 modifier = Modifier.size(32.dp),
@@ -160,15 +176,24 @@ private fun ActionButtonsRow(
             }
 
             // Undo / Redo
-            IconButton(onClick = { state.undo() }, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = {
+                state.undo()
+                refocus()
+            }, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.size(18.dp))
             }
-            IconButton(onClick = { state.redo() }, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = {
+                state.redo()
+                refocus()
+            }, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.AutoMirrored.Filled.Redo, "Redo", Modifier.size(18.dp))
             }
 
             // Delete selected box
-            IconButton(onClick = { state.removeSelectedBox() }, modifier = Modifier.size(32.dp)) {
+            IconButton(onClick = {
+                state.removeSelectedBox()
+                refocus()
+            }, modifier = Modifier.size(32.dp)) {
                 Icon(Icons.Default.Delete, "Delete photo", tint = MaterialTheme.colorScheme.error)
             }
 
@@ -184,11 +209,15 @@ private fun ActionButtonsRow(
 
         Spacer(Modifier.weight(1f))
 
-        // Cancel and Continue buttons
-        OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) { Text("Cancel") }
+        // Back and Next buttons
+        OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Back")
+        }
 
         Button(onClick = onToSummary, enabled = boxCount > 0, modifier = Modifier.height(40.dp)) {
-            Text("Continue to Summary")
+            Text("Next")
             Spacer(Modifier.width(4.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
         }
@@ -208,6 +237,7 @@ fun OverviewControlsPanel(
     boxCount: Int,
     onBack: () -> Unit,
     onToSummary: () -> Unit,
+    refocus: () -> Unit = {},
     viewportWidth: Double = 800.0,
     viewportHeight: Double = 600.0,
 ) {
@@ -219,6 +249,7 @@ fun OverviewControlsPanel(
                 state = state,
                 wizardMode = wizardMode,
                 boxCount = boxCount,
+                refocus = refocus,
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -231,6 +262,7 @@ fun OverviewControlsPanel(
                 boxCount = boxCount,
                 onBack = onBack,
                 onToSummary = onToSummary,
+                refocus = refocus,
                 modifier = Modifier.fillMaxWidth(),
                 viewportWidth = viewportWidth,
                 viewportHeight = viewportHeight,
