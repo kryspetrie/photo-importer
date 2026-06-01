@@ -36,7 +36,11 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -65,6 +69,7 @@ import androidx.compose.ui.window.Popup
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
@@ -93,6 +98,8 @@ fun MetadataScreen(
     state: PhotoScanWizardState,
     image: BufferedImage,
     perspectiveService: PerspectiveCorrectionService,
+    metadataHistory: MetadataHistory,
+    onMetadataHistoryUpdate: (String, String) -> Unit,
     onBack: () -> Unit,
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
@@ -401,6 +408,8 @@ fun MetadataScreen(
                         photoConfigurations = photoConfigurations,
                         selectedIndices = selectedIndices,
                         isMultiEditMode = isMultiEditMode,
+                        metadataHistory = metadataHistory,
+                        onMetadataHistoryUpdate = onMetadataHistoryUpdate,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
@@ -422,6 +431,8 @@ private fun MetadataEditorPane(
     photoConfigurations: Map<String, PhotoConfiguration>,
     selectedIndices: Set<Int>,
     isMultiEditMode: Boolean,
+    metadataHistory: MetadataHistory,
+    onMetadataHistoryUpdate: (String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
@@ -489,6 +500,7 @@ private fun MetadataEditorPane(
                 placeholder = "Leave blank to keep existing...",
                 value = bufferedDescription,
                 onValueChange = { bufferedDescription = it },
+                suggestions = metadataHistory.description,
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -500,6 +512,7 @@ private fun MetadataEditorPane(
                     value = bufferedKeywords,
                     onValueChange = { bufferedKeywords = it },
                     modifier = Modifier.weight(2f),
+                    suggestions = metadataHistory.keywords,
                 )
                 MetadataField(
                     label = "Year",
@@ -508,6 +521,7 @@ private fun MetadataEditorPane(
                     onValueChange = { bufferedYear = it.filter { c -> c.isDigit() }.take(4) },
                     modifier = Modifier.weight(1f),
                     keyboardType = KeyboardType.Number,
+                    suggestions = metadataHistory.year,
                 )
             }
             MetadataField(
@@ -515,6 +529,7 @@ private fun MetadataEditorPane(
                 placeholder = "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
                 value = bufferedOriginalDate,
                 onValueChange = { bufferedOriginalDate = it },
+                suggestions = metadataHistory.originalDate,
             )
 
             AdvancedMetadataSection(
@@ -534,6 +549,8 @@ private fun MetadataEditorPane(
                 onShutterSpeedChange = { bufferedShutterSpeed = it },
                 iso = bufferedIso,
                 onIsoChange = { bufferedIso = it },
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
             )
         } else {
             // Single-select: immediate-edit fields
@@ -554,6 +571,8 @@ private fun MetadataEditorPane(
                 onValueChange = { newValue ->
                     state.updatePhotoConfiguration(box.id) { it.copy(description = newValue) }
                 },
+                suggestions = metadataHistory.description,
+                onCommit = { onMetadataHistoryUpdate("description", config.description) },
             )
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -567,6 +586,8 @@ private fun MetadataEditorPane(
                         state.updatePhotoConfiguration(box.id) { it.copy(keywords = newValue) }
                     },
                     modifier = Modifier.weight(2f),
+                    suggestions = metadataHistory.keywords,
+                    onCommit = { onMetadataHistoryUpdate("keywords", config.keywords) },
                 )
                 MetadataField(
                     label = "Year",
@@ -579,6 +600,8 @@ private fun MetadataEditorPane(
                     },
                     modifier = Modifier.weight(1f),
                     keyboardType = KeyboardType.Number,
+                    suggestions = metadataHistory.year,
+                    onCommit = { onMetadataHistoryUpdate("year", config.year) },
                 )
             }
             MetadataField(
@@ -588,6 +611,8 @@ private fun MetadataEditorPane(
                 onValueChange = { newValue ->
                     state.updatePhotoConfiguration(box.id) { it.copy(originalDate = newValue) }
                 },
+                suggestions = metadataHistory.originalDate,
+                onCommit = { onMetadataHistoryUpdate("originalDate", config.originalDate) },
             )
 
             AdvancedMetadataSection(
@@ -621,6 +646,8 @@ private fun MetadataEditorPane(
                 onIsoChange = { newValue ->
                     state.updatePhotoConfiguration(box.id) { it.copy(iso = newValue) }
                 },
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
             )
         }
     }
@@ -628,6 +655,7 @@ private fun MetadataEditorPane(
 
 /** A single metadata text field with label. */
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun MetadataField(
     label: String,
     placeholder: String,
@@ -636,17 +664,65 @@ private fun MetadataField(
     modifier: Modifier = Modifier,
     keyboardType: KeyboardType = KeyboardType.Text,
     singleLine: Boolean = true,
+    suggestions: List<String> = emptyList(),
+    onCommit: (() -> Unit)? = null,
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        placeholder = { Text(placeholder, style = MaterialTheme.typography.labelSmall) },
-        modifier = modifier.fillMaxWidth(),
-        singleLine = singleLine,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        textStyle = MaterialTheme.typography.bodyMedium,
-    )
+    if (suggestions.isNotEmpty()) {
+        // Use ExposedDropdownMenuBox for autocomplete suggestions
+        var expanded by remember { mutableStateOf(false) }
+        val filteredSuggestions = remember(suggestions, value) {
+            if (value.isBlank()) suggestions
+            else suggestions.filter { it.contains(value, ignoreCase = true) }
+        }
+
+        ExposedDropdownMenuBox(
+            expanded = expanded && filteredSuggestions.isNotEmpty(),
+            onExpandedChange = { expanded = it },
+            modifier = modifier,
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {
+                    onValueChange(it)
+                    expanded = true
+                },
+                label = { Text(label) },
+                placeholder = { Text(placeholder, style = MaterialTheme.typography.labelSmall) },
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+                singleLine = singleLine,
+                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                textStyle = MaterialTheme.typography.bodyMedium,
+            )
+            if (filteredSuggestions.isNotEmpty()) {
+                ExposedDropdownMenu(
+                    expanded = expanded && filteredSuggestions.isNotEmpty(),
+                    onDismissRequest = { expanded = false },
+                ) {
+                    filteredSuggestions.take(10).forEach { suggestion ->
+                        DropdownMenuItem(
+                            text = { Text(suggestion, style = MaterialTheme.typography.bodySmall) },
+                            onClick = {
+                                onValueChange(suggestion)
+                                expanded = false
+                                onCommit?.invoke()
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            label = { Text(label) },
+            placeholder = { Text(placeholder, style = MaterialTheme.typography.labelSmall) },
+            modifier = modifier.fillMaxWidth(),
+            singleLine = singleLine,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+            textStyle = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 /** Collapsible advanced camera metadata section. */
@@ -668,6 +744,8 @@ private fun AdvancedMetadataSection(
     onShutterSpeedChange: (String) -> Unit,
     iso: String,
     onIsoChange: (String) -> Unit,
+    metadataHistory: MetadataHistory = MetadataHistory(),
+    onMetadataHistoryUpdate: (String, String) -> Unit = { _, _ -> },
 ) {
     Column {
         OutlinedButton(
@@ -695,6 +773,8 @@ private fun AdvancedMetadataSection(
                         value = cameraMake,
                         onValueChange = onCameraMakeChange,
                         modifier = Modifier.weight(1f),
+                        suggestions = metadataHistory.cameraMake,
+                        onCommit = { onMetadataHistoryUpdate("cameraMake", cameraMake) },
                     )
                     MetadataField(
                         label = "Camera Model",
@@ -702,6 +782,8 @@ private fun AdvancedMetadataSection(
                         value = cameraModel,
                         onValueChange = onCameraModelChange,
                         modifier = Modifier.weight(1f),
+                        suggestions = metadataHistory.cameraModel,
+                        onCommit = { onMetadataHistoryUpdate("cameraModel", cameraModel) },
                     )
                 }
                 MetadataField(
@@ -709,6 +791,8 @@ private fun AdvancedMetadataSection(
                     placeholder = "24-70mm f/2.8L",
                     value = lensModel,
                     onValueChange = onLensModelChange,
+                    suggestions = metadataHistory.lensModel,
+                    onCommit = { onMetadataHistoryUpdate("lensModel", lensModel) },
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -720,6 +804,8 @@ private fun AdvancedMetadataSection(
                         value = focalLength,
                         onValueChange = onFocalLengthChange,
                         modifier = Modifier.weight(1f),
+                        suggestions = metadataHistory.focalLength,
+                        onCommit = { onMetadataHistoryUpdate("focalLength", focalLength) },
                     )
                     MetadataField(
                         label = "Aperture",
@@ -727,6 +813,8 @@ private fun AdvancedMetadataSection(
                         value = aperture,
                         onValueChange = onApertureChange,
                         modifier = Modifier.weight(1f),
+                        suggestions = metadataHistory.aperture,
+                        onCommit = { onMetadataHistoryUpdate("aperture", aperture) },
                     )
                 }
                 Row(
@@ -739,6 +827,8 @@ private fun AdvancedMetadataSection(
                         value = shutterSpeed,
                         onValueChange = onShutterSpeedChange,
                         modifier = Modifier.weight(1f),
+                        suggestions = metadataHistory.shutterSpeed,
+                        onCommit = { onMetadataHistoryUpdate("shutterSpeed", shutterSpeed) },
                     )
                     MetadataField(
                         label = "ISO",
@@ -747,6 +837,8 @@ private fun AdvancedMetadataSection(
                         onValueChange = onIsoChange,
                         modifier = Modifier.weight(1f),
                         keyboardType = KeyboardType.Number,
+                        suggestions = metadataHistory.iso,
+                        onCommit = { onMetadataHistoryUpdate("iso", iso) },
                     )
                 }
             }

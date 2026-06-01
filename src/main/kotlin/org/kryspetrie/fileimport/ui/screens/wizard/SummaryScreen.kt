@@ -69,6 +69,7 @@ fun SummaryScreen(
     perspectiveService: PerspectiveCorrectionService,
     onBack: () -> Unit,
     onExport: () -> Unit,
+    onSkipMetadata: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val boundingBoxList by state.boundingBoxList.collectAsState()
@@ -98,6 +99,7 @@ fun SummaryScreen(
                 photoCount = boundingBoxList.size(),
                 onBack = onBack,
                 onExport = onExport,
+                onSkipMetadata = onSkipMetadata,
             )
         },
     )

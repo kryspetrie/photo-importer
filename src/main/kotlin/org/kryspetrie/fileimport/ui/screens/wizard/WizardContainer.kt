@@ -120,6 +120,7 @@ fun WizardContainer(
             currentStep = currentStep,
             state = state,
             settingsPort = settingsPort,
+            settings = settings,
             detectorService = detectorService,
             exportService = exportService,
             perspectiveService = perspectiveService,
@@ -178,6 +179,7 @@ private fun WizardStepContent(
     currentStep: PhotoScanWizardState.WizardStep,
     state: PhotoScanWizardState,
     settingsPort: SettingsPort,
+    settings: AppSettings,
     detectorService: PhotoScanDetectorService,
     exportService: PhotoScanExportService,
     perspectiveService: PerspectiveCorrectionService,
@@ -252,6 +254,30 @@ private fun WizardStepContent(
                     perspectiveService = perspectiveService,
                     onBack = { state.goToOverview() },
                     onExport = { state.goToMetadata() },
+                    onSkipMetadata = {
+                        scope.launch {
+                            state.goToProcessing()
+                            exportPhotos(
+                                state = state,
+                                image = image,
+                                exportService = exportService,
+                                destinationPath = exportDestination,
+                                appLogger = appLogger,
+                                dispatcherProvider = dispatcherProvider,
+                                isLoading = isLoading,
+                                onMessage = onMessage,
+                                onError = onError,
+                                onProgress = onProgress,
+                                onComplete = { processedPhotos ->
+                                    appLogger.logOperationComplete(
+                                        OperationType.EXPORT_COMPLETE,
+                                        "Exported ${processedPhotos.size} photo(s) to $exportDestination",
+                                    )
+                                    state.goToComplete()
+                                },
+                            )
+                        }
+                    },
                 )
             } else {
                 LoadingContent(message = "Loading image...")
@@ -265,6 +291,14 @@ private fun WizardStepContent(
                     state = state,
                     image = image,
                     perspectiveService = perspectiveService,
+                    metadataHistory = settings.metadataHistory,
+                    onMetadataHistoryUpdate = { fieldKey, value ->
+                        scope.launch {
+                            val currentSettings = settingsPort.observeSettings().first()
+                            val updated = currentSettings.addMetadataHistory(fieldKey, value)
+                            settingsPort.saveSettings(updated)
+                        }
+                    },
                     onBack = { state.goToSummary() },
                     onNext = {
                         scope.launch {

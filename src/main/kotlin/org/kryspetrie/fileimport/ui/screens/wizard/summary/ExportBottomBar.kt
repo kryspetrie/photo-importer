@@ -22,12 +22,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Bottom bar with photo count, back button, and next button. */
+/** Bottom bar with photo count, back button, next button, and "Skip Metadata" button. */
 @Composable
 fun ExportBottomBar(
     photoCount: Int,
     onBack: () -> Unit,
     onExport: () -> Unit,
+    onSkipMetadata: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(tonalElevation = 4.dp, modifier = modifier.fillMaxWidth()) {
@@ -40,21 +41,40 @@ fun ExportBottomBar(
                 "$photoCount photo(s) ready",
                 style = MaterialTheme.typography.bodyMedium,
             )
-            ExportButtons(onBack = onBack, onExport = onExport, enabled = photoCount > 0)
+            ExportButtons(
+                onBack = onBack,
+                onExport = onExport,
+                onSkipMetadata = onSkipMetadata,
+                enabled = photoCount > 0,
+            )
         }
     }
 }
 
 @Composable
-private fun ExportButtons(onBack: () -> Unit, onExport: () -> Unit, enabled: Boolean) {
+private fun ExportButtons(
+    onBack: () -> Unit,
+    onExport: () -> Unit,
+    onSkipMetadata: (() -> Unit)?,
+    enabled: Boolean,
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onBack, modifier = Modifier.height(48.dp)) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text("Back")
         }
+        if (onSkipMetadata != null) {
+            OutlinedButton(
+                onClick = onSkipMetadata,
+                enabled = enabled,
+                modifier = Modifier.height(48.dp),
+            ) {
+                Text("Export Now")
+            }
+        }
         Button(onClick = onExport, enabled = enabled, modifier = Modifier.height(48.dp)) {
-            Text("Next")
+            Text("Metadata")
             Spacer(Modifier.width(4.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
         }
