@@ -14,6 +14,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 
 @DisplayName("PhotoScanExportService")
@@ -26,7 +27,7 @@ class PhotoScanExportServiceTest {
     @BeforeEach
     fun setup() {
         perspectiveService = PerspectiveCorrectionService()
-        service = PhotoScanExportService(perspectiveService)
+        service = PhotoScanExportService(perspectiveService, FaceRegionTransformer())
     }
 
     private fun createTestImage(width: Int, height: Int, color: Int): File {
@@ -255,8 +256,8 @@ class PhotoScanExportServiceTest {
     inner class ExifReadbackVerification {
 
         /**
-         * Helper: exports a single photo with EXIF config, then reads the exported file back
-         * using metadata-extractor to verify tags were actually written.
+         * Helper: exports a single photo with EXIF config, then reads the exported file back using
+         * metadata-extractor to verify tags were actually written.
          */
         private fun exportAndReadback(
             config: PhotoScanConfiguration,
@@ -268,19 +269,21 @@ class PhotoScanExportServiceTest {
             g.fillRect(0, 0, 200, 150)
             g.dispose()
 
-            val photo = createDetectedPhoto(0f, 0f, 200f, 0f, 200f, 150f, 0f, 150f)
-                .copy(applyPerspectiveCorrection = false, configuration = config)
+            val photo =
+                createDetectedPhoto(0f, 0f, 200f, 0f, 200f, 150f, 0f, 150f)
+                    .copy(applyPerspectiveCorrection = false, configuration = config)
 
             val destDir = File(tempDir, "exif_readback_${System.nanoTime()}")
             destDir.mkdirs()
 
-            val result = service.exportSinglePhoto(
-                img,
-                photo,
-                destDir.absolutePath,
-                "exif_test",
-                sourceFile = sourceFile,
-            )
+            val result =
+                service.exportSinglePhoto(
+                    img,
+                    photo,
+                    destDir.absolutePath,
+                    "exif_test",
+                    sourceFile = sourceFile,
+                )
 
             assertThat(result.success).isTrue()
             val exportedFile = File(result.destinationPath)
@@ -298,7 +301,8 @@ class PhotoScanExportServiceTest {
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
             assertThat(ifd0).isNotNull
             assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION)).isTrue
-            assertThat(ifd0.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION)).isEqualTo("A beautiful sunset")
+            assertThat(ifd0.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION))
+                .isEqualTo("A beautiful sunset")
         }
 
         @Test
@@ -437,18 +441,19 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("should write all EXIF fields at once and read them all back")
         fun shouldWriteAndReadAllFieldsAtOnce() {
-            val config = PhotoScanConfiguration(
-                description = "Summer vacation 1985",
-                cameraMake = "Nikon",
-                cameraModel = "FM2",
-                originalDate = "1985-07-20",
-                lensModel = "Nikkor 50mm f/1.4",
-                focalLength = "50",
-                aperture = "f/1.4",
-                shutterSpeed = "1/250",
-                iso = "100",
-                keywords = "summer, vacation, 1985",
-            )
+            val config =
+                PhotoScanConfiguration(
+                    description = "Summer vacation 1985",
+                    cameraMake = "Nikon",
+                    cameraModel = "FM2",
+                    originalDate = "1985-07-20",
+                    lensModel = "Nikkor 50mm f/1.4",
+                    focalLength = "50",
+                    aperture = "f/1.4",
+                    shutterSpeed = "1/250",
+                    iso = "100",
+                    keywords = "summer, vacation, 1985",
+                )
             val metadata = exportAndReadback(config)
 
             // Verify IFD0 fields
@@ -486,11 +491,9 @@ class PhotoScanExportServiceTest {
         @DisplayName("with copyOriginalExif=false, should not carry source EXIF into output")
         fun shouldNotCarrySourceExifWhenCopyDisabled() {
             // Create a source image with some EXIF (just the plain JPEG from ImageIO — no EXIF)
-            // Then export WITH copyOriginalExif=false. The output should have only overrides, no scanner EXIF.
-            val config = PhotoScanConfiguration(
-                cameraMake = "TestCamera",
-                copyOriginalExif = false,
-            )
+            // Then export WITH copyOriginalExif=false. The output should have only overrides, no
+            // scanner EXIF.
+            val config = PhotoScanConfiguration(cameraMake = "TestCamera", copyOriginalExif = false)
             val metadata = exportAndReadback(config)
 
             // The override we set should be present
@@ -498,8 +501,10 @@ class PhotoScanExportServiceTest {
             assertThat(ifd0).isNotNull
             assertThat(ifd0!!.getString(ExifIFD0Directory.TAG_MAKE)).isEqualTo("TestCamera")
 
-            // No scanner-model "Make" from source should leak through (this source has no EXIF anyway,
-            // but the test structure proves that copyOriginalExif=false starts with empty TiffOutputSet)
+            // No scanner-model "Make" from source should leak through (this source has no EXIF
+            // anyway,
+            // but the test structure proves that copyOriginalExif=false starts with empty
+            // TiffOutputSet)
         }
 
         @Test
@@ -509,10 +514,11 @@ class PhotoScanExportServiceTest {
             // but the test validates the code path of reading from sourceFile)
             val sourceFile = createTestImage(200, 200, 0x808080)
 
-            val config = PhotoScanConfiguration(
-                cameraMake = "MyCamera",  // Override just the Make
-                copyOriginalExif = true,
-            )
+            val config =
+                PhotoScanConfiguration(
+                    cameraMake = "MyCamera", // Override just the Make
+                    copyOriginalExif = true,
+                )
 
             val img = BufferedImage(200, 150, BufferedImage.TYPE_INT_RGB)
             val g = img.createGraphics()
@@ -520,16 +526,21 @@ class PhotoScanExportServiceTest {
             g.fillRect(0, 0, 200, 150)
             g.dispose()
 
-            val photo = createDetectedPhoto(0f, 0f, 200f, 0f, 200f, 150f, 0f, 150f)
-                .copy(applyPerspectiveCorrection = false, configuration = config)
+            val photo =
+                createDetectedPhoto(0f, 0f, 200f, 0f, 200f, 150f, 0f, 150f)
+                    .copy(applyPerspectiveCorrection = false, configuration = config)
 
             val destDir = File(tempDir, "exif_copy_test_${System.nanoTime()}")
             destDir.mkdirs()
 
-            val result = service.exportSinglePhoto(
-                img, photo, destDir.absolutePath, "exif_copy_test",
-                sourceFile = sourceFile,
-            )
+            val result =
+                service.exportSinglePhoto(
+                    img,
+                    photo,
+                    destDir.absolutePath,
+                    "exif_copy_test",
+                    sourceFile = sourceFile,
+                )
 
             assertThat(result.success).isTrue()
             val exportedFile = File(result.destinationPath)
@@ -545,12 +556,13 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("exported file should be a valid readable JPEG")
         fun exportedFileShouldBeValidJpeg() {
-            val config = PhotoScanConfiguration(
-                description = "test",
-                cameraMake = "Canon",
-                originalDate = "2020-01-15",
-                keywords = "test",
-            )
+            val config =
+                PhotoScanConfiguration(
+                    description = "test",
+                    cameraMake = "Canon",
+                    originalDate = "2020-01-15",
+                    keywords = "test",
+                )
 
             val img = BufferedImage(200, 150, BufferedImage.TYPE_INT_RGB)
             val g = img.createGraphics()
@@ -558,13 +570,15 @@ class PhotoScanExportServiceTest {
             g.fillRect(0, 0, 200, 150)
             g.dispose()
 
-            val photo = createDetectedPhoto(0f, 0f, 200f, 0f, 200f, 150f, 0f, 150f)
-                .copy(applyPerspectiveCorrection = false, configuration = config)
+            val photo =
+                createDetectedPhoto(0f, 0f, 200f, 0f, 200f, 150f, 0f, 150f)
+                    .copy(applyPerspectiveCorrection = false, configuration = config)
 
             val destDir = File(tempDir, "jpeg_valid_${System.nanoTime()}")
             destDir.mkdirs()
 
-            val result = service.exportSinglePhoto(img, photo, destDir.absolutePath, "validity_test")
+            val result =
+                service.exportSinglePhoto(img, photo, destDir.absolutePath, "validity_test")
             assertThat(result.success).isTrue()
 
             val exportedFile = File(result.destinationPath)
@@ -578,6 +592,475 @@ class PhotoScanExportServiceTest {
             // Should be readable by metadata-extractor without errors
             val metadata = ImageMetadataReader.readMetadata(exportedFile)
             assertThat(metadata).isNotNull
+        }
+    }
+
+    @Nested
+    @DisplayName("EXIF tri-state override behavior")
+    inner class TriStateOverrideTests {
+
+        @Test
+        @DisplayName("NULL_OUT for camera make should remove Make tag from output")
+        fun nullOutCameraMakeShouldRemoveMakeTag() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    cameraMake = "EPSON",
+                    overrideCameraMake = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            // When NULL_OUT is set, the Make tag should be removed — even though cameraMake =
+            // "EPSON"
+            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_MAKE)).isFalse()
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for camera model should remove Model tag from output")
+        fun nullOutCameraModelShouldRemoveModelTag() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    cameraModel = "Perfection V600",
+                    overrideCameraModel = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_MODEL)).isFalse()
+        }
+
+        @Test
+        @DisplayName("OVERRIDE for camera make should replace Make tag value")
+        fun overrideCameraMakeShouldReplaceMakeTag() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    cameraMake = "Nikon",
+                    overrideCameraMake = OverrideState.OVERRIDE,
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.getString(ExifIFD0Directory.TAG_MAKE)).isEqualTo("Nikon")
+        }
+
+        @Test
+        @DisplayName(
+            "KEEP_SOURCE (null override) should use legacy behavior — set Make if value provided"
+        )
+        fun keepSourceWithLegacyValueShouldSetMake() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    cameraMake = "Canon",
+                    // overrideCameraMake = null (default) → legacy behavior
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.getString(ExifIFD0Directory.TAG_MAKE)).isEqualTo("Canon")
+        }
+
+        @Test
+        @DisplayName("KEEP_SOURCE (null override) with blank value should not set Make")
+        fun keepSourceWithBlankValueShouldNotSetMake() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = false,
+                    cameraMake = "",
+                    // overrideCameraMake = null → legacy behavior, but value is blank
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            // No Make tag should be written when value is blank and no source EXIF to copy
+            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_MAKE)).isFalse()
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for ISO should remove ISO tag from output")
+        fun nullOutIsoShouldRemoveIsoTag() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    iso = "400",
+                    overrideIso = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_ISO_EQUIVALENT)).isFalse()
+        }
+
+        @Test
+        @DisplayName("OVERRIDE for ISO should set ISO value in output")
+        fun overrideIsoShouldSetIsoValue() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    iso = "200",
+                    overrideIso = OverrideState.OVERRIDE,
+                )
+            val metadata = exportAndReadback(config)
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.getInt(ExifSubIFDDirectory.TAG_ISO_EQUIVALENT)).isEqualTo(200)
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for description should remove ImageDescription from output")
+        fun nullOutDescriptionShouldRemoveImageDescription() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    description = "Some description",
+                    overrideDescription = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION)).isFalse()
+        }
+
+        @Test
+        @DisplayName("OVERRIDE for description should set ImageDescription in output")
+        fun overrideDescriptionShouldSetImageDescription() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    description = "My photo description",
+                    overrideDescription = OverrideState.OVERRIDE,
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION))
+                .isEqualTo("My photo description")
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for keywords should remove XPKeywords from output")
+        fun nullOutKeywordsShouldRemoveXPKeywords() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    keywords = "summer, vacation",
+                    overrideKeywords = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            // XPKeywords (0x9C9D) is in IFD0 root directory
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            // The tag should not be present when NULL_OUT
+            assertThat(ifd0!!.containsTag(0x9C9D)).isFalse()
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for date original should remove DateTimeOriginal from output")
+        fun nullOutDateOriginalShouldRemoveDateTimeOriginal() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    originalDate = "2024-01-15",
+                    overrideOriginalDate = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL)).isFalse()
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for GPS should remove GPS tags from output")
+        fun nullOutGpsShouldRemoveGpsTags() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    gpsLatitude = "42.2626",
+                    gpsLongitude = "-71.8023",
+                    overrideGps = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            // GPS directory should either not exist or have no GPS coordinate tags
+            val gpsDir =
+                metadata.getFirstDirectoryOfType(com.drew.metadata.exif.GpsDirectory::class.java)
+            // When NULL_OUT, even if we set coordinates, the export should not write GPS
+            if (gpsDir != null) {
+                assertThat(gpsDir.containsTag(com.drew.metadata.exif.GpsDirectory.TAG_LATITUDE))
+                    .isFalse()
+                assertThat(gpsDir.containsTag(com.drew.metadata.exif.GpsDirectory.TAG_LONGITUDE))
+                    .isFalse()
+            }
+        }
+
+        @Test
+        @DisplayName("OVERRIDE for GPS should write GPS coordinates to output")
+        fun overrideGpsShouldWriteGpsCoordinates() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    gpsLatitude = "42.2626",
+                    gpsLongitude = "-71.8023",
+                    overrideGps = OverrideState.OVERRIDE,
+                )
+            val metadata = exportAndReadback(config)
+
+            val gpsDir =
+                metadata.getFirstDirectoryOfType(com.drew.metadata.exif.GpsDirectory::class.java)
+            assertThat(gpsDir).isNotNull
+            assertThat(gpsDir!!.containsTag(com.drew.metadata.exif.GpsDirectory.TAG_LATITUDE))
+                .isTrue()
+            assertThat(gpsDir.containsTag(com.drew.metadata.exif.GpsDirectory.TAG_LONGITUDE))
+                .isTrue()
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for lens model should remove LensModel tag from output")
+        fun nullOutLensModelShouldRemoveLensModelTag() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    lensModel = "Nikkor 50mm f/1.4",
+                    overrideLensModel = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_LENS_MODEL)).isFalse()
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for focal length should remove FocalLength tag from output")
+        fun nullOutFocalLengthShouldRemoveFocalLengthTag() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    focalLength = "50mm",
+                    overrideFocalLength = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_FOCAL_LENGTH)).isFalse()
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for aperture should remove FNumber tag from output")
+        fun nullOutApertureShouldRemoveFNumberTag() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    aperture = "f/2.8",
+                    overrideAperture = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_FNUMBER)).isFalse()
+        }
+
+        @Test
+        @DisplayName("NULL_OUT for shutter speed should remove ExposureTime tag from output")
+        fun nullOutShutterSpeedShouldRemoveExposureTimeTag() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    shutterSpeed = "1/125",
+                    overrideShutterSpeed = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_EXPOSURE_TIME)).isFalse()
+        }
+
+        private fun exportAndReadback(
+            config: PhotoScanConfiguration,
+            sourceFile: File? = null,
+        ): com.drew.metadata.Metadata {
+            val img = BufferedImage(200, 150, BufferedImage.TYPE_INT_RGB)
+            val g = img.createGraphics()
+            g.color = java.awt.Color(0x40, 0x80, 0xC0)
+            g.fillRect(0, 0, 200, 150)
+            g.dispose()
+
+            val photo =
+                createDetectedPhoto(0f, 0f, 200f, 0f, 200f, 150f, 0f, 150f)
+                    .copy(applyPerspectiveCorrection = false, configuration = config)
+
+            val destDir = File(tempDir, "tri_state_test_${System.nanoTime()}")
+            destDir.mkdirs()
+
+            val result =
+                service.exportSinglePhoto(
+                    img,
+                    photo,
+                    destDir.absolutePath,
+                    "tri_state_test",
+                    sourceFile = sourceFile,
+                )
+
+            assertThat(result.success).isTrue()
+            val exportedFile = File(result.destinationPath)
+            assertThat(exportedFile).exists()
+
+            return ImageMetadataReader.readMetadata(exportedFile)
+        }
+
+        // ====== Backward Compatibility: null overrides use legacy string fields ======
+
+        @Test
+        @DisplayName("Legacy description field should write ImageDescription when override is null")
+        fun legacyDescriptionShouldWriteImageDescription() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = false,
+                    description = "Family vacation photo",
+                    // overrideDescription = null → legacy behavior
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION))
+                .isEqualTo("Family vacation photo")
+        }
+
+        @Test
+        @DisplayName("Legacy keywords field should write IPTC keywords when override is null")
+        fun legacyKeywordsShouldWriteIptcKeywords() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = false,
+                    keywords = "vacation, family",
+                    // overrideKeywords = null → legacy behavior
+                )
+            val metadata = exportAndReadback(config)
+
+            val iptc = metadata.getFirstDirectoryOfType(IptcDirectory::class.java)
+            assertThat(iptc).isNotNull
+            val keywords = iptc?.getStringArray(IptcDirectory.TAG_KEYWORDS)
+            assertThat(keywords).isNotNull
+            assertThat(keywords!!.toList()).containsExactly("vacation", "family")
+        }
+
+        @Test
+        @DisplayName(
+            "Legacy camera make and model fields should write tags when overrides are null"
+        )
+        fun legacyCameraFieldsShouldWriteTags() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = false,
+                    cameraMake = "Nikon",
+                    cameraModel = "D850",
+                    lensModel = "24-70mm f/2.8",
+                    // All override fields null → legacy behavior
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.getString(ExifIFD0Directory.TAG_MAKE)).isEqualTo("Nikon")
+            assertThat(ifd0.getString(ExifIFD0Directory.TAG_MODEL)).isEqualTo("D850")
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.getString(ExifSubIFDDirectory.TAG_LENS_MODEL))
+                .isEqualTo("24-70mm f/2.8")
+        }
+
+        @Test
+        @DisplayName("Legacy date field should write DateTimeOriginal when override is null")
+        fun legacyDateShouldWriteDateTimeOriginal() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = false,
+                    originalDate = "2024-01-15",
+                    // overrideOriginalDate = null → legacy behavior
+                )
+            val metadata = exportAndReadback(config)
+
+            val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
+            assertThat(subIfd).isNotNull
+            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL)).isTrue()
+        }
+
+        @Test
+        @DisplayName("Legacy GPS fields should write GPS tags when override is null")
+        fun legacyGpsShouldWriteGpsTags() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = false,
+                    gpsLatitude = "42.2626",
+                    gpsLongitude = "-71.8023",
+                    // overrideGps = null → legacy behavior
+                )
+            val metadata = exportAndReadback(config)
+
+            val gps =
+                metadata.getFirstDirectoryOfType(com.drew.metadata.exif.GpsDirectory::class.java)
+            assertThat(gps).isNotNull
+            assertThat(gps!!.containsTag(com.drew.metadata.exif.GpsDirectory.TAG_LATITUDE)).isTrue()
+            assertThat(gps.containsTag(com.drew.metadata.exif.GpsDirectory.TAG_LONGITUDE)).isTrue()
+        }
+
+        @Test
+        @DisplayName("All null overrides with blank values — no tags should be written")
+        fun allNullOverridesWithBlankValuesShouldWriteNothing() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = false
+                    // All string fields default to empty/blank, all overrides null → nothing
+                    // written
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_MAKE)).isFalse()
+            assertThat(ifd0.containsTag(ExifIFD0Directory.TAG_MODEL)).isFalse()
+            assertThat(ifd0.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION)).isFalse()
+        }
+
+        @Test
+        @DisplayName("Mix of OVERRIDE and legacy (null override) should work correctly")
+        fun mixOfOverrideAndLegacyShouldWorkCorrectly() {
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    cameraMake = "Canon",
+                    description = "Summer vacation",
+                    overrideDescription = OverrideState.OVERRIDE,
+                    cameraModel = "EOS 5D",
+                    overrideCameraModel = OverrideState.NULL_OUT,
+                )
+            val metadata = exportAndReadback(config)
+
+            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
+            assertThat(ifd0).isNotNull
+            assertThat(ifd0!!.getString(ExifIFD0Directory.TAG_MAKE)).isEqualTo("Canon")
+            assertThat(ifd0.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION))
+                .isEqualTo("Summer vacation")
+            assertThat(ifd0.containsTag(ExifIFD0Directory.TAG_MODEL)).isFalse()
         }
     }
 }

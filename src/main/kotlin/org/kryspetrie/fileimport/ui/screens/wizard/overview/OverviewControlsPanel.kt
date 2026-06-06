@@ -176,24 +176,33 @@ private fun ActionButtonsRow(
             }
 
             // Undo / Redo
-            IconButton(onClick = {
-                state.undo()
-                refocus()
-            }, modifier = Modifier.size(32.dp)) {
+            IconButton(
+                onClick = {
+                    state.undo()
+                    refocus()
+                },
+                modifier = Modifier.size(32.dp),
+            ) {
                 Icon(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.size(18.dp))
             }
-            IconButton(onClick = {
-                state.redo()
-                refocus()
-            }, modifier = Modifier.size(32.dp)) {
+            IconButton(
+                onClick = {
+                    state.redo()
+                    refocus()
+                },
+                modifier = Modifier.size(32.dp),
+            ) {
                 Icon(Icons.AutoMirrored.Filled.Redo, "Redo", Modifier.size(18.dp))
             }
 
             // Delete selected box
-            IconButton(onClick = {
-                state.removeSelectedBox()
-                refocus()
-            }, modifier = Modifier.size(32.dp)) {
+            IconButton(
+                onClick = {
+                    state.removeSelectedBox()
+                    refocus()
+                },
+                modifier = Modifier.size(32.dp),
+            ) {
                 Icon(Icons.Default.Delete, "Delete photo", tint = MaterialTheme.colorScheme.error)
             }
 

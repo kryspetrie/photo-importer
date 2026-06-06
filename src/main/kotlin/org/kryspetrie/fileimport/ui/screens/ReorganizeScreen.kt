@@ -36,6 +36,7 @@ import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.ReorganizeJournalSummary
 import org.kryspetrie.fileimport.domain.model.ReorganizeMode
+import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeActionBar
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizePreviewSection
@@ -160,10 +161,11 @@ fun ReorganizeScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        ChunkyScrollbar(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
             Text("Reorganize Library", style = MaterialTheme.typography.headlineSmall)
             Text(
                 "Apply folder and filename patterns to an existing media library.",
@@ -297,6 +299,7 @@ fun ReorganizeScreen(
                 onUndoRequest = { viewModel.showUndoConfirm = it },
                 onViewJournal = { viewModel.selectedJournal = it },
             )
+        }
         }
 
         // Bottom action bar

@@ -37,10 +37,7 @@ fun ExportBottomBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                "$photoCount photo(s) ready",
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            Text("$photoCount photo(s) ready", style = MaterialTheme.typography.bodyMedium)
             ExportButtons(
                 onBack = onBack,
                 onExport = onExport,

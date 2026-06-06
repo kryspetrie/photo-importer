@@ -53,6 +53,37 @@ fun AutoDetectCard(
 }
 
 @Composable
+fun SinglePhotoModeCard(
+    singlePhotoMode: Boolean,
+    onSinglePhotoModeChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors =
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            ),
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Single Photo mode", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    "Import one photo directly — skip multi-photo detection",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = singlePhotoMode, onCheckedChange = onSinglePhotoModeChange)
+        }
+    }
+}
+
+@Composable
 fun SourceSelectionSection(
     sourcePath: String,
     onSourcePathChange: (String) -> Unit,

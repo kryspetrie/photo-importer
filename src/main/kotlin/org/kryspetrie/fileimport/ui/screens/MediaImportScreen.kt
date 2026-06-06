@@ -50,6 +50,7 @@ import org.kryspetrie.fileimport.ui.screens.mediaimport.ImportHistorySection
 import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportActionBar
 import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportFlowStep
 import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportProgressView
+import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.screens.mediaimport.PreviewStructureDialog
 import org.kryspetrie.fileimport.ui.screens.mediaimport.SourceDestinationFields
 import org.kryspetrie.fileimport.ui.screens.mediaimport.WatchFolderStatusCard
@@ -376,10 +377,11 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
 
     // --- Main layout ---
     Column(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        ChunkyScrollbar(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
             Text("Import", style = MaterialTheme.typography.headlineSmall)
             SourceDestinationFields(
                 sourcePath = sourcePath,
@@ -441,6 +443,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                     onStartFlow = { withReview, mode -> startFlow(withReview, mode) },
                 )
             }
+        }
         }
     }
 }

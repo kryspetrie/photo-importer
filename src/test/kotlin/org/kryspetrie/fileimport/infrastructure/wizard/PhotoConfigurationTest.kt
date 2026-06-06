@@ -253,12 +253,85 @@ class PhotoConfigurationTest {
 
     @Test
     fun `hasMetadata returns false when all fields are empty strings`() {
-        val config = PhotoConfiguration(
-            description = "",
-            keywords = "",
-            originalDate = "",
-            year = "",
-        )
+        val config =
+            PhotoConfiguration(description = "", keywords = "", originalDate = "", year = "")
         assertFalse(config.hasMetadata())
+    }
+
+    // ==================== Location Fields ====================
+
+    @Test
+    fun `hasMetadata returns true when locationName is set`() {
+        val config = PhotoConfiguration(locationName = "Grandma's house")
+        assertTrue(config.hasMetadata())
+    }
+
+    @Test
+    fun `hasMetadata returns true when city is set`() {
+        val config = PhotoConfiguration(city = "Worcester")
+        assertTrue(config.hasMetadata())
+    }
+
+    @Test
+    fun `hasMetadata returns true when gpsLatitude and gpsLongitude are set`() {
+        val config = PhotoConfiguration(gpsLatitude = "42.2626", gpsLongitude = "-71.8023")
+        assertTrue(config.hasMetadata())
+        assertTrue(config.hasGpsCoordinates())
+    }
+
+    @Test
+    fun `hasGpsCoordinates returns false when only latitude is set`() {
+        val config = PhotoConfiguration(gpsLatitude = "42.2626")
+        assertFalse(config.hasGpsCoordinates())
+    }
+
+    @Test
+    fun `locationDisplay combines location name, city, state, country`() {
+        val config =
+            PhotoConfiguration(
+                locationName = "Grandma's house",
+                city = "Worcester",
+                state = "MA",
+                country = "United States",
+            )
+        assertEquals("Grandma's house, Worcester, MA, United States", config.locationDisplay())
+    }
+
+    @Test
+    fun `locationDisplay skips blank fields`() {
+        val config = PhotoConfiguration(city = "Worcester", state = "MA")
+        assertEquals("Worcester, MA", config.locationDisplay())
+    }
+
+    // ==================== Subject Fields ====================
+
+    @Test
+    fun `hasMetadata returns true when subjects is set`() {
+        val config = PhotoConfiguration(subjects = "Alice, Bob")
+        assertTrue(config.hasMetadata())
+    }
+
+    @Test
+    fun `subjectList parses comma-separated names`() {
+        val config = PhotoConfiguration(subjects = "Alice, Bob, Charlie")
+        assertEquals(listOf("Alice", "Bob", "Charlie"), config.subjectList())
+    }
+
+    @Test
+    fun `keywordList parses comma-separated keywords`() {
+        val config = PhotoConfiguration(keywords = "vacation, family, holiday")
+        assertEquals(listOf("vacation", "family", "holiday"), config.keywordList())
+    }
+
+    @Test
+    fun `withKeywordList joins list into comma-separated string`() {
+        val config = PhotoConfiguration().withKeywordList(listOf("vacation", "family", "holiday"))
+        assertEquals("vacation, family, holiday", config.keywords)
+    }
+
+    @Test
+    fun `hasMetadata returns true when faceRegions is non-empty`() {
+        val config = PhotoConfiguration(faceRegions = listOf(FaceRegion(name = "Alice")))
+        assertTrue(config.hasMetadata())
     }
 }

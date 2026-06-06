@@ -49,10 +49,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
+import org.kryspetrie.fileimport.application.FaceRegionTransformer
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.FaceRegionConfig
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RotationAngle
@@ -69,9 +71,9 @@ import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanConstants
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 import org.kryspetrie.fileimport.ui.components.isImageFile
-import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataScreen
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataScreen
 
 /**
  * Main container for the Photo Import Wizard. Manages the step-by-step workflow: Import → Overview
@@ -89,6 +91,7 @@ fun WizardContainer(
     appLogger: AppLogger = koinInject(),
     settingsPort: SettingsPort = koinInject(),
     dispatcherProvider: DispatcherProvider = koinInject(),
+    faceRegionTransformer: FaceRegionTransformer = koinInject(),
 ) {
     val state = remember { PhotoScanWizardState() }
     state.setLogger(appLogger)
@@ -126,6 +129,7 @@ fun WizardContainer(
             perspectiveService = perspectiveService,
             appLogger = appLogger,
             dispatcherProvider = dispatcherProvider,
+            faceRegionTransformer = faceRegionTransformer,
             scope = scope,
             isLoading = { isLoading = it },
             onMessage = { loadingMessage = it },
@@ -185,6 +189,7 @@ private fun WizardStepContent(
     perspectiveService: PerspectiveCorrectionService,
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
+    faceRegionTransformer: FaceRegionTransformer,
     scope: kotlinx.coroutines.CoroutineScope,
     isLoading: (Boolean) -> Unit,
     onMessage: (String) -> Unit,
@@ -253,7 +258,7 @@ private fun WizardStepContent(
                     image = image,
                     perspectiveService = perspectiveService,
                     onBack = { state.goToOverview() },
-                    onExport = { state.goToMetadata() },
+                    onExport = { state.goToQuickEdit() },
                     onSkipMetadata = {
                         scope.launch {
                             state.goToProcessing()
@@ -284,6 +289,84 @@ private fun WizardStepContent(
             }
         }
 
+        PhotoScanWizardState.WizardStep.QUICK_EDIT -> {
+            val image = state.image.collectAsState().value
+            if (image != null) {
+                QuickEditScreen(
+                    state = state,
+                    image = image,
+                    perspectiveService = perspectiveService,
+                    metadataHistory = settings.metadataHistory,
+                    onMetadataHistoryUpdate = { fieldKey, value ->
+                        scope.launch {
+                            val currentSettings = settingsPort.observeSettings().first()
+                            val updated = currentSettings.addMetadataHistory(fieldKey, value)
+                            settingsPort.saveSettings(updated)
+                        }
+                    },
+                    onMetadataHistoryRemove = { fieldKey, value ->
+                        scope.launch {
+                            val currentSettings = settingsPort.observeSettings().first()
+                            val updated = currentSettings.removeMetadataHistory(fieldKey, value)
+                            settingsPort.saveSettings(updated)
+                        }
+                    },
+                    onBack = { state.goToSummary() },
+                    onExport = {
+                        scope.launch {
+                            state.goToProcessing()
+                            exportPhotos(
+                                state = state,
+                                image = image,
+                                exportService = exportService,
+                                destinationPath = exportDestination,
+                                appLogger = appLogger,
+                                dispatcherProvider = dispatcherProvider,
+                                isLoading = isLoading,
+                                onMessage = onMessage,
+                                onError = onError,
+                                onProgress = onProgress,
+                                onComplete = { processedPhotos ->
+                                    appLogger.logOperationComplete(
+                                        OperationType.EXPORT_COMPLETE,
+                                        "Exported ${processedPhotos.size} photo(s) to $exportDestination",
+                                    )
+                                    state.goToComplete()
+                                },
+                            )
+                        }
+                    },
+                    onSkipToExport = {
+                        scope.launch {
+                            state.goToProcessing()
+                            exportPhotos(
+                                state = state,
+                                image = image,
+                                exportService = exportService,
+                                destinationPath = exportDestination,
+                                appLogger = appLogger,
+                                dispatcherProvider = dispatcherProvider,
+                                isLoading = isLoading,
+                                onMessage = onMessage,
+                                onError = onError,
+                                onProgress = onProgress,
+                                onComplete = { processedPhotos ->
+                                    appLogger.logOperationComplete(
+                                        OperationType.EXPORT_COMPLETE,
+                                        "Exported ${processedPhotos.size} photo(s) to $exportDestination",
+                                    )
+                                    state.goToComplete()
+                                },
+                            )
+                        }
+                    },
+                    faceRegionTransformer = faceRegionTransformer,
+                )
+            } else {
+                LoadingContent(message = "Loading image...")
+            }
+        }
+
         PhotoScanWizardState.WizardStep.METADATA -> {
             val image = state.image.collectAsState().value
             if (image != null) {
@@ -292,6 +375,7 @@ private fun WizardStepContent(
                     image = image,
                     perspectiveService = perspectiveService,
                     metadataHistory = settings.metadataHistory,
+                    faceRegionTransformer = faceRegionTransformer,
                     onMetadataHistoryUpdate = { fieldKey, value ->
                         scope.launch {
                             val currentSettings = settingsPort.observeSettings().first()
@@ -558,21 +642,43 @@ private fun startNewImport(
 ) {
     state.resetToImportStep()
     scope.launch {
+        val isSinglePhoto = state.singlePhotoMode.value && batchFiles == null
         if (batchFiles != null && batchFiles.size > 1) {
             state.initializeBatch(batchFiles)
         }
-        loadImageAndDetect(
-            state = state,
-            file = file,
-            detectorService = detectorService,
-            cvAutoDetect = state.cvAutoDetectEnabled.value,
-            appLogger = appLogger,
-            dispatcherProvider = dispatcherProvider,
-            isLoading = isLoading,
-            onMessage = onMessage,
-            onError = onError,
-            onComplete = { state.goToOverview() },
-        )
+        if (isSinglePhoto) {
+            // Single photo mode: load image, skip detection, go straight to Quick Edit
+            withContext(dispatcherProvider.io) {
+                try {
+                    isLoading(true)
+                    onMessage("Loading image...")
+                    val image = javax.imageio.ImageIO.read(file)
+                    if (image != null) {
+                        state.initializeSinglePhoto(image, file)
+                        isLoading(false)
+                    } else {
+                        isLoading(false)
+                        onError("Failed to load image: unsupported format")
+                    }
+                } catch (e: Exception) {
+                    isLoading(false)
+                    onError("Failed to load image: ${e.message}")
+                }
+            }
+        } else {
+            loadImageAndDetect(
+                state = state,
+                file = file,
+                detectorService = detectorService,
+                cvAutoDetect = state.cvAutoDetectEnabled.value,
+                appLogger = appLogger,
+                dispatcherProvider = dispatcherProvider,
+                isLoading = isLoading,
+                onMessage = onMessage,
+                onError = onError,
+                onComplete = { state.goToOverview() },
+            )
+        }
     }
 }
 
@@ -655,23 +761,55 @@ private suspend fun exportSinglePhoto(
 
     // Bridge PhotoConfiguration (wizard UI model) to PhotoScanConfiguration (domain export model)
     // so that EXIF metadata overrides flow through the export pipeline.
-    val scanConfig = PhotoScanConfiguration(
-        originalDateOverride = config.originalDate.ifBlank { null },
-        originalYearOverride = config.year.ifBlank { null },
-        tags = config.keywords,
-        notes = config.description,
-        description = config.description.ifBlank { null },
-        keywords = config.keywords.ifBlank { null },
-        originalDate = config.originalDate.ifBlank { null },
-        year = config.year.ifBlank { null },
-        cameraMake = config.cameraMake.ifBlank { null },
-        cameraModel = config.cameraModel.ifBlank { null },
-        lensModel = config.lensModel.ifBlank { null },
-        focalLength = config.focalLength.ifBlank { null },
-        aperture = config.aperture.ifBlank { null },
-        shutterSpeed = config.shutterSpeed.ifBlank { null },
-        iso = config.iso.ifBlank { null },
-    )
+    val scanConfig =
+        PhotoScanConfiguration(
+            originalDateOverride = config.originalDate.ifBlank { null },
+            originalYearOverride = config.year.ifBlank { null },
+            tags = config.keywords,
+            notes = config.description,
+            description = config.description.ifBlank { null },
+            keywords = config.keywords.ifBlank { null },
+            originalDate = config.originalDate.ifBlank { null },
+            year = config.year.ifBlank { null },
+            cameraMake = config.cameraMake.ifBlank { null },
+            cameraModel = config.cameraModel.ifBlank { null },
+            lensModel = config.lensModel.ifBlank { null },
+            focalLength = config.focalLength.ifBlank { null },
+            aperture = config.aperture.ifBlank { null },
+            shutterSpeed = config.shutterSpeed.ifBlank { null },
+            iso = config.iso.ifBlank { null },
+            locationName = config.locationName.ifBlank { null },
+            city = config.city.ifBlank { null },
+            state = config.state.ifBlank { null },
+            country = config.country.ifBlank { null },
+            gpsLatitude = config.gpsLatitude.ifBlank { null },
+            gpsLongitude = config.gpsLongitude.ifBlank { null },
+            subjects = config.subjects.ifBlank { null },
+            faceRegions =
+                config.faceRegions.map { fr ->
+                    org.kryspetrie.fileimport.domain.model.FaceRegionConfig(
+                        name = fr.name,
+                        type = fr.type,
+                        x = fr.x,
+                        y = fr.y,
+                        w = fr.w,
+                        h = fr.h,
+                    )
+                },
+            // EXIF override tri-states: map FieldOverride? → OverrideState?
+            overrideDescription = config.overrideDescription?.state?.toDomain(),
+            overrideKeywords = config.overrideKeywords?.state?.toDomain(),
+            overrideOriginalDate = config.overrideOriginalDate?.state?.toDomain(),
+            overrideYear = config.overrideYear?.state?.toDomain(),
+            overrideCameraMake = config.overrideCameraMake?.state?.toDomain(),
+            overrideCameraModel = config.overrideCameraModel?.state?.toDomain(),
+            overrideLensModel = config.overrideLensModel?.state?.toDomain(),
+            overrideFocalLength = config.overrideFocalLength?.state?.toDomain(),
+            overrideAperture = config.overrideAperture?.state?.toDomain(),
+            overrideShutterSpeed = config.overrideShutterSpeed?.state?.toDomain(),
+            overrideIso = config.overrideIso?.state?.toDomain(),
+            overrideGps = config.overrideGps?.state?.toDomain(),
+        )
 
     val detectedPhoto =
         DetectedPhoto(
@@ -951,3 +1089,15 @@ data class ProcessedPhoto(
     val dimensions: Pair<Int, Int>,
     val correctionsApplied: List<String>,
 )
+
+/** Maps wizard-layer OverrideState to domain-layer OverrideState. */
+private fun org.kryspetrie.fileimport.infrastructure.wizard.OverrideState.toDomain():
+    org.kryspetrie.fileimport.domain.model.OverrideState =
+    when (this) {
+        org.kryspetrie.fileimport.infrastructure.wizard.OverrideState.KEEP_SOURCE ->
+            org.kryspetrie.fileimport.domain.model.OverrideState.KEEP_SOURCE
+        org.kryspetrie.fileimport.infrastructure.wizard.OverrideState.OVERRIDE ->
+            org.kryspetrie.fileimport.domain.model.OverrideState.OVERRIDE
+        org.kryspetrie.fileimport.infrastructure.wizard.OverrideState.NULL_OUT ->
+            org.kryspetrie.fileimport.domain.model.OverrideState.NULL_OUT
+    }

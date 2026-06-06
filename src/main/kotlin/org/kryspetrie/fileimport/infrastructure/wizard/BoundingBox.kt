@@ -44,8 +44,10 @@ data class BoundingBoxCorners(
 ) {
     fun toList(): List<Point> = listOf(topLeft, topRight, bottomRight, bottomLeft)
 
-    /** Returns the [Point] for the given [Corner]. Unlike [toList][ordinal], this correctly maps
-     * each corner regardless of enum declaration order (which differs from toList order). */
+    /**
+     * Returns the [Point] for the given [Corner]. Unlike [toList][ordinal], this correctly maps
+     * each corner regardless of enum declaration order (which differs from toList order).
+     */
     fun forCorner(corner: Corner): Point =
         when (corner) {
             Corner.TOP_LEFT -> topLeft

@@ -272,6 +272,42 @@ data class PhotoScanProfile(
      * - User analytics
      */
     val useCount: Int = 0,
+
+    // -- EXIF override defaults for scanned photos --
+
+    /**
+     * Whether to default the camera make override to NULL_OUT for new photos.
+     *
+     * Scanners typically set Make to "EPSON", "Canon" (scanner, not camera), etc. This is almost
+     * always wrong metadata for a photographed/digitized print. Default: true — null out scanner
+     * make by default.
+     */
+    val nullOutScannerMake: Boolean = true,
+
+    /**
+     * Whether to default the camera model override to NULL_OUT for new photos.
+     *
+     * Scanner model (e.g. "Perfection V600") is not a camera model. Default: true — null out
+     * scanner model by default.
+     */
+    val nullOutScannerModel: Boolean = true,
+
+    /**
+     * Whether to default the date override to OVERRIDE (with user value) for new photos.
+     *
+     * Scanner dates are the scan date, not the photo date. Users typically want to override.
+     * Default: false — keep scanner date unless user explicitly overrides.
+     */
+    val autoOverrideDate: Boolean = false,
+
+    /**
+     * Whether to default GPS override to NULL_OUT when no coordinates are provided.
+     *
+     * Scanners don't have GPS, so the source EXIF won't have GPS either, but some workflows may
+     * inject GPS metadata that should be cleared. Default: true — null out GPS if no coordinates
+     * provided.
+     */
+    val nullOutGpsIfMissing: Boolean = true,
 ) {
     /**
      * Resolves the default destination to an absolute path.

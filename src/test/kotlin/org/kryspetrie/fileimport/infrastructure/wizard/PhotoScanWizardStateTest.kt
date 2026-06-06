@@ -1010,4 +1010,221 @@ class PhotoScanWizardStateTest {
         state.setExportMarginPercent(0.5)
         assertEquals(0.2, state.exportMarginPercent.value)
     }
+
+    // ==================== Face Region Tests ====================
+
+    private fun addSampleBox(): BoundingBox {
+        val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
+        state.addBox(box)
+        return box
+    }
+
+    @Test
+    fun `addFaceRegion creates default-sized region with name and type`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.5, 0.4)
+        val config = state.photoConfigurations.value[state.boxes[0].id]
+        assertNotNull(config)
+        assertEquals(1, config!!.faceRegions.size)
+        val region = config.faceRegions[0]
+        assertEquals("Alice", region.name)
+        assertEquals("Face", region.type)
+        assertEquals(0.5, region.x)
+        assertEquals(0.4, region.y)
+        assertEquals(FaceSize.DEFAULT.diameter, region.w)
+        assertEquals(FaceSize.DEFAULT.diameter, region.h)
+        assertEquals("Alice", config.subjects)
+    }
+
+    @Test
+    fun `addFaceRegion with type PET stores correct type`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Fido", 0.3, 0.5, RegionType.PET)
+        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        assertEquals("Pet", config.faceRegions[0].type)
+        assertEquals("Fido", config.subjects)
+    }
+
+    @Test
+    fun `addFaceRegion with type BODY stores correct type`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Torso", 0.3, 0.5, RegionType.BODY)
+        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        assertEquals("Body", config.faceRegions[0].type)
+    }
+
+    @Test
+    fun `addFaceRegion with type OBJECT stores correct type`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Car", 0.3, 0.5, RegionType.OBJECT)
+        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        assertEquals("Object", config.faceRegions[0].type)
+    }
+
+    @Test
+    fun `addFaceRegion auto-populates subjects with multiple names`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.3, 0.3)
+        state.addFaceRegion(0, "Bob", 0.6, 0.6, RegionType.PET)
+        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        assertEquals("Alice, Bob", config.subjects)
+        assertEquals(2, config.faceRegions.size)
+    }
+
+    @Test
+    fun `addFaceRegion coerces coordinates to 0-1 range`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Edge", 1.5, -0.3)
+        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        assertEquals(1.0, region.x)
+        assertEquals(0.0, region.y)
+    }
+
+    @Test
+    fun `addFaceRegion ignores invalid photoIndex`() {
+        addSampleBox()
+        state.addFaceRegion(-1, "Nope", 0.5, 0.5)
+        state.addFaceRegion(99, "Nope", 0.5, 0.5)
+        // No crash, no face regions added
+        assertTrue(state.photoConfigurations.value.isEmpty())
+    }
+
+    @Test
+    fun `removeFaceRegion removes region and updates subjects`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.3, 0.3)
+        state.addFaceRegion(0, "Bob", 0.6, 0.6)
+        val config0 = state.photoConfigurations.value[state.boxes[0].id]!!
+        assertEquals("Alice, Bob", config0.subjects)
+
+        state.removeFaceRegion(0, 0) // Remove Alice
+        val config1 = state.photoConfigurations.value[state.boxes[0].id]!!
+        assertEquals(1, config1.faceRegions.size)
+        assertEquals("Bob", config1.faceRegions[0].name)
+        assertEquals("Bob", config1.subjects)
+    }
+
+    @Test
+    fun `removeFaceRegion removes name from subjects`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.3, 0.3)
+        state.removeFaceRegion(0, 0)
+        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        assertEquals("", config.subjects)
+        assertEquals(0, config.faceRegions.size)
+    }
+
+    @Test
+    fun `updateFaceRegion changes position`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.updateFaceRegion(0, 0, x = 0.3, y = 0.7)
+        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        assertEquals(0.3, region.x)
+        assertEquals(0.7, region.y)
+        assertEquals("Alice", region.name) // unchanged
+    }
+
+    @Test
+    fun `updateFaceRegion coerces values to 0-1 range`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.updateFaceRegion(0, 0, x = 2.0, y = -1.0)
+        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        assertEquals(1.0, region.x)
+        assertEquals(0.0, region.y)
+    }
+
+    @Test
+    fun `updateFaceRegion preserves unchanged y when only x given`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.updateFaceRegion(0, 0, x = 0.3) // only change x
+        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        assertEquals(0.3, region.x)
+        assertEquals(0.5, region.y) // unchanged
+    }
+
+    @Test
+    fun `resizeFaceRegion changes size to preset diameter`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.resizeFaceRegion(0, 0, FaceSize.LARGE)
+        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        assertEquals(FaceSize.LARGE.diameter, region.w)
+        assertEquals(FaceSize.LARGE.diameter, region.h)
+        assertEquals(0.5, region.x) // position unchanged
+        assertEquals(0.5, region.y)
+    }
+
+    @Test
+    fun `clearAllFaceRegions removes all regions and clears subjects`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.3, 0.4)
+        state.addFaceRegion(0, "Bob", 0.6, 0.5)
+        assertEquals(2, state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions.size)
+        assertEquals("Alice, Bob", state.photoConfigurations.value[state.boxes[0].id]!!.subjects)
+        state.clearAllFaceRegions(0)
+        assertEquals(0, state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions.size)
+        assertEquals("", state.photoConfigurations.value[state.boxes[0].id]!!.subjects)
+    }
+
+    @Test
+    fun `moveFaceRegion offsets center position`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.moveFaceRegion(0, 0, dx = 0.1, dy = -0.2)
+        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        assertEquals(0.6, region.x)
+        assertEquals(0.3, region.y)
+        // w/h unchanged (default FaceSize.MEDIUM diameter)
+        assertEquals(FaceSize.DEFAULT.diameter, region.w)
+        assertEquals(FaceSize.DEFAULT.diameter, region.h)
+    }
+
+    @Test
+    fun `moveFaceRegion coerces to 0-1 range`() {
+        addSampleBox()
+        state.addFaceRegion(0, "Alice", 0.9, 0.1)
+        state.moveFaceRegion(0, 0, dx = 0.5, dy = -0.5)
+        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        assertEquals(1.0, region.x)
+        assertEquals(0.0, region.y)
+        // w/h unchanged
+        assertEquals(FaceSize.DEFAULT.diameter, region.w)
+        assertEquals(FaceSize.DEFAULT.diameter, region.h)
+    }
+
+    @Test
+    fun `RegionType fromMwgRs parses known types`() {
+        assertEquals(RegionType.FACE, RegionType.fromMwgRs("Face"))
+        assertEquals(RegionType.PET, RegionType.fromMwgRs("Pet"))
+        assertEquals(RegionType.BODY, RegionType.fromMwgRs("Body"))
+        assertEquals(RegionType.OBJECT, RegionType.fromMwgRs("Object"))
+    }
+
+    @Test
+    fun `RegionType fromMwgRs is case-insensitive and defaults to FACE`() {
+        assertEquals(RegionType.FACE, RegionType.fromMwgRs("face"))
+        assertEquals(RegionType.PET, RegionType.fromMwgRs("PET"))
+        assertEquals(RegionType.FACE, RegionType.fromMwgRs("Unknown"))
+        assertEquals(RegionType.FACE, RegionType.fromMwgRs(""))
+    }
+
+    @Test
+    fun `enterFaceSelectMode sets state correctly`() {
+        addSampleBox()
+        state.enterFaceSelectMode(0)
+        assertTrue(state.faceSelectMode.value)
+        assertEquals(0, state.faceSelectPhotoIndex.value)
+    }
+
+    @Test
+    fun `exitFaceSelectMode clears state`() {
+        addSampleBox()
+        state.enterFaceSelectMode(0)
+        state.exitFaceSelectMode()
+        assertFalse(state.faceSelectMode.value)
+        assertNull(state.faceSelectPhotoIndex.value)
+    }
 }

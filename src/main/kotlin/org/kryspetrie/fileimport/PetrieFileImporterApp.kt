@@ -166,6 +166,18 @@ fun main(args: Array<String>) {
                             onSettingsChange(currentSettings.value.copy(theme = AppTheme.SYSTEM))
                         },
                     )
+                    Separator()
+                    Item(
+                        "Clear Metadata History",
+                        onClick = {
+                            onSettingsChange(
+                                currentSettings.value.copy(
+                                    metadataHistory =
+                                        org.kryspetrie.fileimport.domain.model.MetadataHistory()
+                                )
+                            )
+                        },
+                    )
                 }
                 Menu("Help") {
                     Item("View Log File") { appLogger.openLogFileWithSystemViewer() }

@@ -33,6 +33,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.DuplicateScannerService
 import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateGroupCard
 import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateResolveConfirmDialog
 import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateResolvingProgress
@@ -107,10 +108,11 @@ fun DuplicateScannerScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        ChunkyScrollbar(modifier = Modifier.weight(1f)) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
             Text("Find Duplicates", style = MaterialTheme.typography.headlineSmall)
             Text(
                 "Scan an existing library to find duplicate files. " +
@@ -164,6 +166,7 @@ fun DuplicateScannerScreen(
                     onReset = { viewModel.reset() },
                 )
             }
+        }
         }
 
         // Duplicate group list (outside of scrollable area for better performance)

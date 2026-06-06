@@ -900,77 +900,77 @@ For each photo in bounding box list:
 
 | # | Task | Status |
 |---|------|--------|
-| 0.1 | Add Photo Scan / Single Photo mode selection UI | Pending |
-| 0.2 | Add CV auto-detection toggle (checkbox/switch) | Pending |
-| 0.3 | Add "4-Point" button to enter manual corner selection mode | Pending |
-| 0.4 | Implement 4-point selection workflow (click 1→4 points) | Pending |
-| 0.5 | Add visual feedback for point placement (numbered markers, lines) | Pending |
-| 0.6 | Handle cancel behavior (Escape, Backspace, cancel button) | Pending |
-| 0.7 | Add status indicator showing current point (e.g., "Point 2 of 4") | Pending |
-| 0.8 | Create quadrilateral from 4 points and add as bounding box | Pending |
-| 0.9 | Integrate 4-point with CV toggle (work together) | Pending |
-| 0.10 | Implement state/mode system (Normal, 4-Point, Add Box, Refinement) | Pending |
-| 0.11 | Add mode indicator in status bar | Pending |
-| 0.12 | Handle no-CV-results scenario (empty state, retry option) | Pending |
-| 0.13 | Handle image loading errors (corrupted, unsupported, memory) | Pending |
-| 0.14 | Implement 4-point quadrilateral validation (convex, minimum size) | Pending |
-| 0.15 | Implement help overlay (ⓘ icon, F1, ? key) | Pending |
-| 0.16 | Add Single Photo mode flow (simplified, no multi-box) | Pending |
-| 0.17 | Add F1 and ? keyboard shortcuts for help | Pending |
+| 0.1 | Add Photo Scan / Single Photo mode selection UI | ✅ |
+| 0.2 | Add CV auto-detection toggle (checkbox/switch) | ✅ |
+| 0.3 | Add "4-Point" button to enter manual corner selection mode | ✅ |
+| 0.4 | Implement 4-point selection workflow (click 1→4 points) | ✅ |
+| 0.5 | Add visual feedback for point placement (numbered markers, lines) | ✅ |
+| 0.6 | Handle cancel behavior (Escape, Backspace, cancel button) | ✅ |
+| 0.7 | Add status indicator showing current point (e.g., "Point 2 of 4") | ✅ |
+| 0.8 | Create quadrilateral from 4 points and add as bounding box | ✅ |
+| 0.9 | Integrate 4-point with CV toggle (work together) | ✅ |
+| 0.10 | Implement state/mode system (Normal, 4-Point, Add Box, Refinement) | ✅ |
+| 0.11 | Add mode indicator in status bar | ✅ |
+| 0.12 | Handle no-CV-results scenario (empty state, retry option) | ✅ |
+| 0.13 | Handle image loading errors (corrupted, unsupported, memory) | ✅ |
+| 0.14 | Implement 4-point quadrilateral validation (convex, minimum size) | ✅ |
+| 0.15 | Implement help overlay (ⓘ icon, F1, ? key) | ✅ |
+| 0.16 | Add Single Photo mode flow (simplified, no multi-box) | ✅ |
+| 0.17 | Add F1 and ? keyboard shortcuts for help | ✅ |
 
 ### Phase 1: Core UI Infrastructure
 
 | # | Task | Status |
 |---|------|--------|
-| 1.1 | Verify/create loading.webp resource | Pending |
-| 1.2 | Create bounding box overlay component | Pending |
-| 1.3 | Implement full-screen refinement view | Pending |
-| 1.4 | Add click-to-add bounding box logic (30% width, 3:2 ratio) | Pending |
-| 1.5 | Add minimum size validation (10% of image dimension) | Pending |
-| 1.6 | Add corner drag handles | Pending |
-| 1.7 | Implement zoom-to-box functionality (+20% margin) | Pending |
-| 1.8 | Add Previous/Next navigation | Pending |
-| 1.9 | Add keyboard shortcuts (arrows, Enter, Ctrl+Z) | Pending |
-| 1.10 | Implement undo/redo for corner movements | Pending |
-| 1.11 | Add drag-to-move bounding box (click interior) | Pending |
-| 1.12 | Add corner selection via click buffer (20px radius) | Pending |
-| 1.13 | Add arrow key movement for selected corner (1px/10px with shift) | Pending |
-| 1.14 | Add scroll wheel to expand/contract bounding box | Pending |
-| 1.15 | Add shift+scroll to rotate bounding box around center | Pending |
-| 1.16 | Add info icon (ⓘ) with interaction tooltip | Pending |
-| 1.17 | Add "← Back" button to return to overview from refinement | Pending |
-| 1.18 | Add delete functionality (Delete key, trash icon, context menu) | Pending |
-| 1.19 | Add zoom buttons (🔍+, ⛶ fit, 🔍-) in overview view | Pending |
-| 1.20 | Add zoom buttons in refinement view | Pending |
-| 1.21 | Implement scroll-to-zoom when not hovering over bounding box | Pending |
-| 1.22 | Ensure zoomed content stays within viewport (no overflow) | Pending |
-| 1.23 | Implement no selection by default on overview load | Pending |
-| 1.24 | Add click-outside-to-deselect behavior | Pending |
+| 1.1 | Verify/create loading.webp resource | ✅ |
+| 1.2 | Create bounding box overlay component | ✅ |
+| 1.3 | Implement full-screen refinement view | ✅ |
+| 1.4 | Add click-to-add bounding box logic (30% width, 3:2 ratio) | ✅ |
+| 1.5 | Add minimum size validation (10% of image dimension) | ✅ |
+| 1.6 | Add corner drag handles | ✅ |
+| 1.7 | Implement zoom-to-box functionality (+20% margin) | ✅ |
+| 1.8 | Add Previous/Next navigation | ✅ |
+| 1.9 | Add keyboard shortcuts (arrows, Enter, Ctrl+Z) | ✅ |
+| 1.10 | Implement undo/redo for corner movements | ✅ |
+| 1.11 | Add drag-to-move bounding box (click interior) | ✅ |
+| 1.12 | Add corner selection via click buffer (20px radius) | ✅ |
+| 1.13 | Add arrow key movement for selected corner (1px/10px with shift) | ✅ |
+| 1.14 | Add scroll wheel to expand/contract bounding box | ✅ |
+| 1.15 | Add shift+scroll to rotate bounding box around center | ✅ |
+| 1.16 | Add info icon (ⓘ) with interaction tooltip | ✅ |
+| 1.17 | Add "← Back" button to return to overview from refinement | ✅ |
+| 1.18 | Add delete functionality (Delete key, trash icon, context menu) | ✅ |
+| 1.19 | Add zoom buttons (🔍+, ⛶ fit, 🔍-) in overview view | ✅ |
+| 1.20 | Add zoom buttons in refinement view | ✅ |
+| 1.21 | Implement scroll-to-zoom when not hovering over bounding box | ✅ |
+| 1.22 | Ensure zoomed content stays within viewport (no overflow) | ✅ |
+| 1.23 | Implement no selection by default on overview load | ✅ |
+| 1.24 | Add click-outside-to-deselect behavior | ✅ |
 
 ### Phase 2: Summary & Corrections
 
 | # | Task | Status |
 |---|------|--------|
-| 2.1 | Create summary list view | Pending |
-| 2.2 | Add aspect ratio dropdown (Current, 1:1, 3:2, etc.) | Pending |
-| 2.3 | Auto-select closest aspect ratio to detected corners | Pending |
-| 2.4 | Add portrait/landscape orientation handling for aspect ratio | Pending |
-| 2.5 | Add perspective correction checkbox | Pending |
-| 2.6 | Add rotation correction checkbox | Pending |
-| 2.7 | Implement correction mutex logic | Pending |
-| 2.8 | Add rotate left/right buttons | Pending |
-| 2.9 | Implement rotation preview | Pending |
-| 2.10 | Implement bounding box expansion for perspective correction | Pending |
-| 2.11 | Add bulk change buttons (Apply Perspective to All, etc.) | Pending |
+| 2.1 | Create summary list view | ✅ |
+| 2.2 | Add aspect ratio dropdown (Current, 1:1, 3:2, etc.) | ✅ |
+| 2.3 | Auto-select closest aspect ratio to detected corners | ✅ |
+| 2.4 | Add portrait/landscape orientation handling for aspect ratio | ✅ |
+| 2.5 | Add perspective correction checkbox | ✅ |
+| 2.6 | Add rotation correction checkbox | ✅ |
+| 2.7 | Implement correction mutex logic | ✅ |
+| 2.8 | Add rotate left/right buttons | ✅ |
+| 2.9 | Implement rotation preview | ✅ |
+| 2.10 | Implement bounding box expansion for perspective correction | ✅ |
+| 2.11 | Add bulk change buttons (Apply Perspective to All, etc.) | ✅ |
 
 ### Phase 3: Processing & Export
 
 | # | Task | Status |
 |---|------|--------|
-| 3.1 | Implement perspective transform with aspect ratio output | Pending |
-| 3.2 | Implement rotation transform with bounding box expansion | Pending |
-| 3.3 | Add export with naming convention | Pending |
-| 3.4 | Add loading animation during processing | Pending |
+| 3.1 | Implement perspective transform with aspect ratio output | ✅ |
+| 3.2 | Implement rotation transform with bounding box expansion | ✅ |
+| 3.3 | Add export with naming convention | ✅ |
+| 3.4 | Add loading animation during processing | ✅ |
 
 ### Phase 4: Future (Not in Scope)
 

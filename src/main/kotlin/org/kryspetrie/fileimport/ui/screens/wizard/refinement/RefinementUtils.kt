@@ -6,12 +6,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.Corner
-
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 
 /** Transform an image-space point to screen-space coordinates. */
@@ -173,5 +171,3 @@ internal fun DrawScope.drawRefinementBox(box: BoundingBox, selected: Corner?, zo
             drawCircle(Color.White, r - 3f, pos)
         }
 }
-
-

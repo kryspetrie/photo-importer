@@ -5,6 +5,7 @@ import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.Serializable
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
@@ -25,6 +26,28 @@ enum class WizardMode {
 }
 
 /**
+ * Read-only summary of EXIF metadata read from the source file.
+ *
+ * Displayed in the MetadataScreen as "Source: ..." hints next to each field, so the user can see
+ * what the original file contains before deciding whether to Keep Source / Override / Null Out.
+ *
+ * All fields are nullable: null means the source file has no value for that tag.
+ */
+data class SourceExifSummary(
+    val cameraMake: String? = null,
+    val cameraModel: String? = null,
+    val lensModel: String? = null,
+    val focalLength: String? = null,
+    val aperture: String? = null,
+    val shutterSpeed: String? = null,
+    val iso: String? = null,
+    val description: String? = null,
+    val dateOriginal: String? = null,
+    val gpsLatitude: String? = null,
+    val gpsLongitude: String? = null,
+)
+
+/**
  * Central state container for the Photo Import Wizard. Manages all state including mode, bounding
  * boxes, zoom, and selection.
  */
@@ -41,6 +64,20 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     private val _cvAutoDetectEnabled = MutableStateFlow(true)
     val cvAutoDetectEnabled: StateFlow<Boolean> = _cvAutoDetectEnabled.asStateFlow()
+
+    fun setCvAutoDetectEnabled(enabled: Boolean) {
+        _cvAutoDetectEnabled.value = enabled
+    }
+
+    /**
+     * Whether single photo mode is active (skip multi-box detection, import one photo directly).
+     */
+    private val _singlePhotoMode = MutableStateFlow(false)
+    val singlePhotoMode: StateFlow<Boolean> = _singlePhotoMode.asStateFlow()
+
+    fun setSinglePhotoMode(enabled: Boolean) {
+        _singlePhotoMode.value = enabled
+    }
 
     private val _configuration = MutableStateFlow(ImportConfiguration())
     val configuration: StateFlow<ImportConfiguration> = _configuration.asStateFlow()
@@ -79,6 +116,15 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     private val _imageFile = MutableStateFlow<File?>(null)
     val imageFile: StateFlow<File?> = _imageFile.asStateFlow()
+
+    /** Read-only EXIF summary from the source file, for display in the metadata editor. */
+    private val _sourceExif = MutableStateFlow<SourceExifSummary?>(null)
+    val sourceExif: StateFlow<SourceExifSummary?> = _sourceExif.asStateFlow()
+
+    /** Sets the source EXIF summary (called after reading EXIF from the source file). */
+    fun setSourceExif(summary: SourceExifSummary?) {
+        _sourceExif.value = summary
+    }
 
     // ========== Batch Processing ==========
 
@@ -320,8 +366,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     /** Toggles metadata selection for a photo index (for shift-click multi-select). */
     fun toggleMetadataSelection(index: Int) {
         val current = _selectedMetadataIndices.value
-        _selectedMetadataIndices.value =
-            if (index in current) current - index else current + index
+        _selectedMetadataIndices.value = if (index in current) current - index else current + index
     }
 
     /** Selects a single photo for metadata editing, replacing any previous selection. */
@@ -331,8 +376,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     /** Selects all photos for metadata editing. */
     fun selectAllMetadata() {
-        _selectedMetadataIndices.value =
-            (0 until _boundingBoxList.value.size()).toSet()
+        _selectedMetadataIndices.value = (0 until _boundingBoxList.value.size()).toSet()
     }
 
     /** Deselects all photos on the metadata screen. */
@@ -341,8 +385,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     }
 
     /**
-     * Applies metadata fields to all selected photos on the metadata screen.
-     * Only non-empty fields are applied — empty fields are left unchanged on each photo.
+     * Applies metadata fields to all selected photos on the metadata screen. Only non-empty fields
+     * are applied — empty fields are left unchanged on each photo.
      */
     fun applyMetadataToSelected(
         description: String = "",
@@ -356,6 +400,13 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         aperture: String = "",
         shutterSpeed: String = "",
         iso: String = "",
+        locationName: String = "",
+        city: String = "",
+        state: String = "",
+        country: String = "",
+        gpsLatitude: String = "",
+        gpsLongitude: String = "",
+        subjects: String = "",
     ) {
         val indices = _selectedMetadataIndices.value
         val list = _boundingBoxList.value
@@ -364,22 +415,219 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
                 val boxId = list.boxes[index].id
                 updatePhotoConfiguration(boxId) { existing ->
                     existing.copy(
-                        description = if (description.isNotBlank()) description else existing.description,
+                        description =
+                            if (description.isNotBlank()) description else existing.description,
                         keywords = if (keywords.isNotBlank()) keywords else existing.keywords,
-                        originalDate = if (originalDate.isNotBlank()) originalDate else existing.originalDate,
+                        originalDate =
+                            if (originalDate.isNotBlank()) originalDate else existing.originalDate,
                         year = if (year.isNotBlank()) year else existing.year,
-                        cameraModel = if (cameraModel.isNotBlank()) cameraModel else existing.cameraModel,
-                        cameraMake = if (cameraMake.isNotBlank()) cameraMake else existing.cameraMake,
+                        cameraModel =
+                            if (cameraModel.isNotBlank()) cameraModel else existing.cameraModel,
+                        cameraMake =
+                            if (cameraMake.isNotBlank()) cameraMake else existing.cameraMake,
                         lensModel = if (lensModel.isNotBlank()) lensModel else existing.lensModel,
-                        focalLength = if (focalLength.isNotBlank()) focalLength else existing.focalLength,
+                        focalLength =
+                            if (focalLength.isNotBlank()) focalLength else existing.focalLength,
                         aperture = if (aperture.isNotBlank()) aperture else existing.aperture,
-                        shutterSpeed = if (shutterSpeed.isNotBlank()) shutterSpeed else existing.shutterSpeed,
+                        shutterSpeed =
+                            if (shutterSpeed.isNotBlank()) shutterSpeed else existing.shutterSpeed,
                         iso = if (iso.isNotBlank()) iso else existing.iso,
+                        locationName =
+                            if (locationName.isNotBlank()) locationName else existing.locationName,
+                        city = if (city.isNotBlank()) city else existing.city,
+                        state = if (state.isNotBlank()) state else existing.state,
+                        country = if (country.isNotBlank()) country else existing.country,
+                        gpsLatitude =
+                            if (gpsLatitude.isNotBlank()) gpsLatitude else existing.gpsLatitude,
+                        gpsLongitude =
+                            if (gpsLongitude.isNotBlank()) gpsLongitude else existing.gpsLongitude,
+                        subjects = if (subjects.isNotBlank()) subjects else existing.subjects,
                     )
                 }
             }
         }
     }
+
+    // ========== Face Selection ==========
+
+    /** Whether face selection mode is active (fullscreen overlay for clicking faces). */
+    private val _faceSelectMode = MutableStateFlow(false)
+    val faceSelectMode: StateFlow<Boolean> = _faceSelectMode.asStateFlow()
+
+    /** Index of the photo currently in face-select mode, or null if not active. */
+    private val _faceSelectPhotoIndex = MutableStateFlow<Int?>(null)
+    val faceSelectPhotoIndex: StateFlow<Int?> = _faceSelectPhotoIndex.asStateFlow()
+
+    /** Enters face selection mode for a given photo index. */
+    fun enterFaceSelectMode(photoIndex: Int) {
+        _faceSelectMode.value = true
+        _faceSelectPhotoIndex.value = photoIndex
+    }
+
+    /** Exits face selection mode. */
+    fun exitFaceSelectMode() {
+        _faceSelectMode.value = false
+        _faceSelectPhotoIndex.value = null
+    }
+
+    /**
+     * Adds a face region to the specified photo's configuration. Creates a default-sized bounding
+     * box centered at the given normalized coordinates.
+     *
+     * @param photoIndex Index of the photo in the bounding box list
+     * @param name Person's name for the face region
+     * @param x Center X as fraction of image width (0.0-1.0)
+     * @param y Center Y as fraction of image height (0.0-1.0)
+     */
+    fun addFaceRegion(
+        photoIndex: Int,
+        name: String,
+        x: Double,
+        y: Double,
+        type: RegionType = RegionType.FACE,
+        size: FaceSize = FaceSize.DEFAULT,
+    ) {
+        val list = _boundingBoxList.value
+        if (photoIndex < 0 || photoIndex >= list.size()) return
+        val boxId = list.boxes[photoIndex].id
+
+        val faceRegion =
+            FaceRegion(
+                name = name,
+                type = type.mwgRsValue,
+                x = x.coerceIn(0.0, 1.0),
+                y = y.coerceIn(0.0, 1.0),
+                w = size.diameter,
+                h = size.diameter,
+            )
+
+        updatePhotoConfiguration(boxId) { existing ->
+            val newRegions = existing.faceRegions + faceRegion
+            // Auto-populate subjects string with face region names
+            val names = newRegions.map { it.name }.filter { it.isNotBlank() }
+            val newSubjects = names.joinToString(", ")
+            existing.copy(faceRegions = newRegions, subjects = newSubjects)
+        }
+    }
+
+    /**
+     * Removes a face region by index from the specified photo's configuration.
+     *
+     * @param photoIndex Index of the photo in the bounding box list
+     * @param faceIndex Index of the face region within the photo's faceRegions list
+     */
+    fun removeFaceRegion(photoIndex: Int, faceIndex: Int) {
+        val list = _boundingBoxList.value
+        if (photoIndex < 0 || photoIndex >= list.size()) return
+        val boxId = list.boxes[photoIndex].id
+
+        updatePhotoConfiguration(boxId) { existing ->
+            if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
+                return@updatePhotoConfiguration existing
+            val removed = existing.faceRegions[faceIndex]
+            val newRegions = existing.faceRegions.filterIndexed { i, _ -> i != faceIndex }
+            // Remove the name from subjects string
+            val currentSubjects =
+                existing.subjects.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            val updatedSubjects = currentSubjects.filter { it != removed.name }
+            existing.copy(faceRegions = newRegions, subjects = updatedSubjects.joinToString(", "))
+        }
+    }
+
+    /**
+     * Removes all face regions from the specified photo's configuration and clears the derived
+     * subjects string.
+     *
+     * @param photoIndex Index of the photo in the bounding box list
+     */
+    fun clearAllFaceRegions(photoIndex: Int) {
+        val list = _boundingBoxList.value
+        if (photoIndex < 0 || photoIndex >= list.size()) return
+        val boxId = list.boxes[photoIndex].id
+
+        updatePhotoConfiguration(boxId) { existing ->
+            existing.copy(faceRegions = emptyList(), subjects = "")
+        }
+    }
+
+    /**
+     * Updates a face region's position at the given index (used for drag-to-move).
+     *
+     * @param photoIndex Index of the photo in the bounding box list
+     * @param faceIndex Index of the face region within the photo's faceRegions list
+     * @param x New center X (0.0-1.0), or null to keep current
+     * @param y New center Y (0.0-1.0), or null to keep current
+     */
+    fun updateFaceRegion(photoIndex: Int, faceIndex: Int, x: Double? = null, y: Double? = null) {
+        val list = _boundingBoxList.value
+        if (photoIndex < 0 || photoIndex >= list.size()) return
+        val boxId = list.boxes[photoIndex].id
+
+        updatePhotoConfiguration(boxId) { existing ->
+            if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
+                return@updatePhotoConfiguration existing
+            val old = existing.faceRegions[faceIndex]
+            val updated =
+                old.copy(x = x?.coerceIn(0.0, 1.0) ?: old.x, y = y?.coerceIn(0.0, 1.0) ?: old.y)
+            existing.copy(
+                faceRegions =
+                    existing.faceRegions.mapIndexed { i, r -> if (i == faceIndex) updated else r }
+            )
+        }
+    }
+
+    /**
+     * Changes a face region's size to one of the preset sizes.
+     *
+     * @param photoIndex Index of the photo in the bounding box list
+     * @param faceIndex Index of the face region within the photo's faceRegions list
+     * @param size The new preset size
+     */
+    fun resizeFaceRegion(photoIndex: Int, faceIndex: Int, size: FaceSize) {
+        val list = _boundingBoxList.value
+        if (photoIndex < 0 || photoIndex >= list.size()) return
+        val boxId = list.boxes[photoIndex].id
+
+        updatePhotoConfiguration(boxId) { existing ->
+            if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
+                return@updatePhotoConfiguration existing
+            val old = existing.faceRegions[faceIndex]
+            val updated = old.copy(w = size.diameter, h = size.diameter)
+            existing.copy(
+                faceRegions =
+                    existing.faceRegions.mapIndexed { i, r -> if (i == faceIndex) updated else r }
+            )
+        }
+    }
+
+    /**
+     * Moves a face region by offsetting its center position.
+     *
+     * @param photoIndex Index of the photo in the bounding box list
+     * @param faceIndex Index of the face region within the photo's faceRegions list
+     * @param dx X offset to add (in normalized coordinates)
+     * @param dy Y offset to add (in normalized coordinates)
+     */
+    fun moveFaceRegion(photoIndex: Int, faceIndex: Int, dx: Double, dy: Double) {
+        val list = _boundingBoxList.value
+        if (photoIndex < 0 || photoIndex >= list.size()) return
+        val boxId = list.boxes[photoIndex].id
+
+        updatePhotoConfiguration(boxId) { existing ->
+            if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
+                return@updatePhotoConfiguration existing
+            val old = existing.faceRegions[faceIndex]
+            val updated =
+                old.copy(x = (old.x + dx).coerceIn(0.0, 1.0), y = (old.y + dy).coerceIn(0.0, 1.0))
+            existing.copy(
+                faceRegions =
+                    existing.faceRegions.mapIndexed { i, r -> if (i == faceIndex) updated else r }
+            )
+        }
+    }
+
+    /** Minimum face region dimension as fraction of image size. */
+    private val MIN_FACE_REGION_SIZE = 0.03
 
     // ========== Workflow ==========
 
@@ -389,9 +637,10 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     enum class WizardStep {
         IMPORT, // Mode selection
         OVERVIEW, // All boxes visible
-        REFINEMENT, // Zoomed single box
-        SUMMARY, // Correction options
-        METADATA, // EXIF metadata editing
+        REFINEMENT, // Zoomed single box (redirects to OVERVIEW - inline refinement)
+        SUMMARY, // Crop & rotate grid view
+        QUICK_EDIT, // Combined rotation + metadata + location + subjects
+        METADATA, // EXIF metadata editing (legacy - superseded by QUICK_EDIT)
         PROCESSING, // Export in progress
         COMPLETE, // Done — post-export completion page
     }
@@ -415,9 +664,29 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _undoRedoVersion.value++
     }
 
-    /** Sets whether auto-detection is enabled. */
-    fun setCvAutoDetectEnabled(enabled: Boolean) {
-        _cvAutoDetectEnabled.value = enabled
+    /**
+     * Initializes single photo mode: loads the image, creates a single bounding box covering the
+     * entire image, and jumps directly to the Quick Edit step (skipping overview/detection).
+     */
+    fun initializeSinglePhoto(image: BufferedImage, file: File) {
+        _image.value = image
+        _imageFile.value = file
+        _singlePhotoMode.value = true
+
+        // Create a single bounding box covering the entire image
+        val w = image.width.toDouble()
+        val h = image.height.toDouble()
+        val fullBox =
+            BoundingBox.createRectangular(center = Point(w / 2, h / 2), width = w, height = h)
+        _boundingBoxList.value = BoundingBoxList(listOf(fullBox.select()))
+        _selectedBoxIndex.value = 0
+        _refinementBoxIndex.value = -1
+        _selectedCorner.value = null
+        _fourPointState.value = FourPointState.inactive()
+        _wizardMode.value = WizardMode.NORMAL
+        _currentStep.value = WizardStep.QUICK_EDIT
+        _undoRedoManager.clearAll()
+        _undoRedoVersion.value++
     }
 
     /** Sets the detected bounding boxes (from YOLO pipeline). */
@@ -962,6 +1231,41 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         }
     }
 
+    // ========== Box Scale/Rotate ==========
+
+    /** Expands or contracts the selected box by the given scale factor. Pushes to undo stack. */
+    fun expandSelectedBox(scaleFactor: Double) {
+        val index = _selectedBoxIndex.value
+        if (index >= 0) {
+            val list = _boundingBoxList.value
+            if (index < list.size()) {
+                val box = list.boxes[index]
+                _undoRedoManager.push(box.id, box)
+                val expanded = box.expand(scaleFactor)
+                if (!expanded.corners.wouldCreateInvalidShape()) {
+                    updateBox(index, expanded)
+                }
+            }
+        }
+    }
+
+    /**
+     * Rotates the selected box by the given angle in degrees around its center. Pushes to undo
+     * stack.
+     */
+    fun rotateSelectedBox(angleDegrees: Double) {
+        val index = _selectedBoxIndex.value
+        if (index >= 0) {
+            val list = _boundingBoxList.value
+            if (index < list.size()) {
+                val box = list.boxes[index]
+                _undoRedoManager.push(box.id, box)
+                val rotated = box.rotate(angleDegrees)
+                updateBox(index, rotated)
+            }
+        }
+    }
+
     // ========== Navigation ==========
 
     /** Navigates to the next box. */
@@ -1106,6 +1410,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _currentStep.value = WizardStep.METADATA
     }
 
+    /** Goes to the quick edit step (combined rotation + metadata + location). */
+    fun goToQuickEdit() {
+        _currentStep.value = WizardStep.QUICK_EDIT
+    }
+
     /** Goes to processing step. */
     fun goToProcessing() {
         _currentStep.value = WizardStep.PROCESSING
@@ -1123,6 +1432,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     fun resetToImportStep() {
         _image.value = null
         _imageFile.value = null
+        _singlePhotoMode.value = false
         _boundingBoxList.value = BoundingBoxList.empty()
         _selectedBoxIndex.value = -1
         _refinementBoxIndex.value = -1
@@ -1142,6 +1452,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _preProcessedCache.value = emptyMap()
         _preProcessCount.value = 0
         _preProcessing.value = false
+        _sourceExif.value = null
     }
 
     /**
@@ -1161,6 +1472,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _photoConfigurations.value = emptyMap()
         _zoomController.value = ZoomController()
         _selectedMetadataIndices.value = emptySet()
+        _sourceExif.value = null
     }
 
     // ========== Utility ==========
@@ -1193,7 +1505,35 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     }
 }
 
-/** Configuration for a photo in the summary screen. */
+/**
+ * Tri-state for per-field EXIF override behavior.
+ * - [KEEP_SOURCE]: Preserve the value from the source file (default)
+ * - [OVERRIDE]: Replace with a user-specified value
+ * - [NULL_OUT]: Explicitly remove the field from the output
+ */
+@Serializable
+enum class OverrideState {
+    KEEP_SOURCE,
+    OVERRIDE,
+    NULL_OUT,
+}
+
+/**
+ * A per-field EXIF override with state and optional value.
+ *
+ * When [state] is [OverrideState.KEEP_SOURCE], the field is preserved from the source image. When
+ * [state] is [OverrideState.OVERRIDE], [value] contains the replacement string. When [state] is
+ * [OverrideState.NULL_OUT], the field is explicitly removed from output EXIF.
+ *
+ * @param T The type of value (always String for EXIF fields)
+ */
+@Serializable
+data class FieldOverride(
+    val state: OverrideState = OverrideState.KEEP_SOURCE,
+    val value: String? = null,
+)
+
+@Serializable
 data class PhotoConfiguration(
     val perspectiveCorrectionEnabled: Boolean = false,
     val rotationDegrees: Int = 0, // 0, 90, 180, or 270 (clockwise)
@@ -1210,6 +1550,30 @@ data class PhotoConfiguration(
     val aperture: String = "", // e.g. "f/2.8"
     val shutterSpeed: String = "", // e.g. "1/125"
     val iso: String = "", // e.g. "400"
+    // Location metadata (IPTC Core + EXIF GPS)
+    val locationName: String = "", // e.g. "Grandma's house"
+    val city: String = "", // e.g. "Worcester"
+    val state: String = "", // e.g. "MA"
+    val country: String = "", // e.g. "United States"
+    val gpsLatitude: String = "", // decimal degrees, e.g. "42.2626"
+    val gpsLongitude: String = "", // decimal degrees, e.g. "-71.8023"
+    // Face/subject regions (MWG-RS structured, persisted as part of photo config)
+    val subjects: String = "", // comma-separated subject/person names, e.g. "Alice, Bob"
+    val faceRegions: List<FaceRegion> = emptyList(), // structured face regions with coordinates
+    // EXIF override tri-states — null = use legacy string field behavior (backward compat)
+    // When non-null, the FieldOverride.state determines: KEEP_SOURCE, OVERRIDE, or NULL_OUT
+    val overrideDescription: FieldOverride? = null,
+    val overrideKeywords: FieldOverride? = null,
+    val overrideOriginalDate: FieldOverride? = null,
+    val overrideYear: FieldOverride? = null,
+    val overrideCameraMake: FieldOverride? = null,
+    val overrideCameraModel: FieldOverride? = null,
+    val overrideLensModel: FieldOverride? = null,
+    val overrideFocalLength: FieldOverride? = null,
+    val overrideAperture: FieldOverride? = null,
+    val overrideShutterSpeed: FieldOverride? = null,
+    val overrideIso: FieldOverride? = null,
+    val overrideGps: FieldOverride? = null, // covers lat+lon together
 ) {
     /** Cycles rotation 90° clockwise: 0→90→180→270→0 */
     fun cycleRotationCW(): PhotoConfiguration = copy(rotationDegrees = (rotationDegrees + 90) % 360)
@@ -1230,5 +1594,88 @@ data class PhotoConfiguration(
             focalLength.isNotBlank() ||
             aperture.isNotBlank() ||
             shutterSpeed.isNotBlank() ||
-            iso.isNotBlank()
+            iso.isNotBlank() ||
+            locationName.isNotBlank() ||
+            city.isNotBlank() ||
+            state.isNotBlank() ||
+            country.isNotBlank() ||
+            gpsLatitude.isNotBlank() ||
+            gpsLongitude.isNotBlank() ||
+            subjects.isNotBlank() ||
+            faceRegions.isNotEmpty()
+
+    /** Parses the comma-separated keywords string into individual keyword strings. */
+    fun keywordList(): List<String> =
+        keywords.split(",").map { it.trim() }.filter { it.isNotBlank() }
+
+    /** Sets keywords from a list of individual keyword strings. */
+    fun withKeywordList(keywords: List<String>): PhotoConfiguration =
+        copy(keywords = keywords.joinToString(", "))
+
+    /** Returns subjects as a list of individual names. */
+    fun subjectList(): List<String> =
+        subjects.split(",").map { it.trim() }.filter { it.isNotBlank() }
+
+    /** Returns a human-readable location string, e.g. "Grandma's house, Worcester, MA" */
+    fun locationDisplay(): String =
+        listOf(locationName, city, state, country).filter { it.isNotBlank() }.joinToString(", ")
+
+    /** Returns true if there is GPS coordinate data. */
+    fun hasGpsCoordinates(): Boolean = gpsLatitude.isNotBlank() && gpsLongitude.isNotBlank()
+}
+
+/**
+ * Preset sizes for face regions. The [radius] value represents the circle radius as a fraction of
+ * image height (0.0-1.0). We store w=h=radius*2 in MWG-RS format (the bounding box of the circle),
+ * but display as a circle.
+ */
+enum class FaceSize(val displayName: String, val radius: Double) {
+    SMALL("S", 0.04),
+    MEDIUM("M", 0.07),
+    LARGE("L", 0.12);
+
+    /** The MWG-RS w/h values for this circle size (diameter of the circle). */
+    val diameter: Double
+        get() = radius * 2.0
+
+    companion object {
+        val DEFAULT = MEDIUM
+    }
+}
+
+/**
+ * A face region in MWG-RS format, stored normalized 0-1 relative to the photo image.
+ *
+ * @property name Person/subject name for this face region
+ * @property type Region type: "Face", "Pet", "Body", or "Object" (MWG-RS types)
+ * @property x Center X as fraction of image width (0.0-1.0)
+ * @property y Center Y as fraction of image height (0.0-1.0)
+ * @property w Width as fraction of image width (0.0-1.0) — for circular faces, equals diameter
+ * @property h Height as fraction of image height (0.0-1.0) — for circular faces, equals diameter
+ */
+@Serializable
+data class FaceRegion(
+    val name: String = "",
+    val type: String = "Face",
+    val x: Double = 0.0,
+    val y: Double = 0.0,
+    val w: Double = 0.0,
+    val h: Double = 0.0,
+)
+
+/**
+ * MWG-RS region types. Used to categorize what a region represents. See:
+ * https://web.archive.org/web/20180921201257/http://www.metadataworkinggroup.org/pdf/mwg_guidance.pdf
+ */
+enum class RegionType(val displayName: String, val mwgRsValue: String) {
+    FACE("Face", "Face"),
+    PET("Pet", "Pet"),
+    BODY("Body", "Body"),
+    OBJECT("Object", "Object");
+
+    companion object {
+        /** Parses a region type string, defaulting to FACE for unknown values. */
+        fun fromMwgRs(value: String): RegionType =
+            entries.find { it.mwgRsValue.equals(value, ignoreCase = true) } ?: FACE
+    }
 }

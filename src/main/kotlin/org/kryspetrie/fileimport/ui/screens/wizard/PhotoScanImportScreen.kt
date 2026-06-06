@@ -36,9 +36,11 @@ import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.AutoDetectCard
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.DestinationSelectionSection
+import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SinglePhotoModeCard
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SourceSelectionSection
 
 /** Import screen for the wizard - source selection and configuration. */
@@ -57,6 +59,7 @@ fun PhotoScanImportScreen(
     val scope = rememberCoroutineScope()
 
     val cvAutoDetectEnabled by state.cvAutoDetectEnabled.collectAsState()
+    val singlePhotoMode by state.singlePhotoMode.collectAsState()
 
     // Settings expanded state
     var settingsExpanded by remember { mutableStateOf(false) }
@@ -161,19 +164,26 @@ fun PhotoScanImportScreen(
 
     Scaffold(
         content = { paddingValues ->
-            Column(
+            ChunkyScrollbar(
                 modifier =
                     modifier
                         .fillMaxSize()
                         .padding(paddingValues)
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
                 // ── Auto-detect Option ──
                 AutoDetectCard(
                     cvAutoDetectEnabled = cvAutoDetectEnabled,
                     onCvAutoDetectChange = { state.setCvAutoDetectEnabled(it) },
+                )
+
+                // ── Single Photo Mode ──
+                SinglePhotoModeCard(
+                    singlePhotoMode = singlePhotoMode,
+                    onSinglePhotoModeChange = { state.setSinglePhotoMode(it) },
                 )
 
                 // ── Source Selection ──
@@ -214,7 +224,10 @@ fun PhotoScanImportScreen(
                 ) {
                     Icon(Icons.Default.Scanner, null, Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Import Photo Scan(s)", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        if (singlePhotoMode) "Import Single Photo" else "Import Photo Scan(s)",
+                        style = MaterialTheme.typography.titleMedium,
+                    )
                 }
 
                 // ── Custom Settings ──
@@ -225,6 +238,7 @@ fun PhotoScanImportScreen(
                     onSettingsExpandedChange = { settingsExpanded = it },
                 )
             }
+        }
         }
     )
 

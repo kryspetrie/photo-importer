@@ -40,11 +40,7 @@ fun OverviewCanvas(
     val selectedBoxIndex by state.selectedBoxIndex.collectAsState()
     val zoomController by state.zoomController.collectAsState()
 
-    Canvas(
-        modifier =
-            Modifier.fillMaxSize()
-                .then(canvasPointerHandler(state, wizardMode))
-    ) {
+    Canvas(modifier = Modifier.fillMaxSize().then(canvasPointerHandler(state, wizardMode))) {
         drawCanvasContent(
             image = image,
             boundingBoxList = boundingBoxList,
@@ -57,17 +53,17 @@ fun OverviewCanvas(
 }
 
 /**
- * Unified pointer handler for the overview canvas. Merges mouse position tracking, tap
- * selection, corner/box dragging, panning, and scroll-zoom into a single `awaitPointerEventScope`.
+ * Unified pointer handler for the overview canvas. Merges mouse position tracking, tap selection,
+ * corner/box dragging, panning, and scroll-zoom into a single `awaitPointerEventScope`.
  *
  * Why a single handler? Previously, `detectTapGestures` in a separate `pointerInput` consumed the
  * Press event, preventing the drag handler from ever seeing it. This meant corner drags and box
  * drags never started — the user could only pan (background drag) because the drag handler fell
- * through to the else branch on every move. The fix: handle everything in one event loop so
- * Press is seen by the same code that handles Move/Release.
+ * through to the else branch on every move. The fix: handle everything in one event loop so Press
+ * is seen by the same code that handles Move/Release.
  *
- * Tap detection: On Release, if the total movement distance is below a threshold (8px), we treat
- * it as a tap and perform selection/4-point placement. If movement exceeded the threshold, the
+ * Tap detection: On Release, if the total movement distance is below a threshold (8px), we treat it
+ * as a tap and perform selection/4-point placement. If movement exceeded the threshold, the
  * interaction was a drag (corner move, box move, or pan) and we skip the tap logic.
  *
  * Undo behavior: A single undo snapshot is saved on Press (before the drag starts). Move events use
@@ -140,7 +136,10 @@ private fun canvasPointerHandler(state: PhotoScanWizardState, wizardMode: Wizard
                             when {
                                 isCornerDrag && draggedCorner != null && currentBoxIndex >= 0 -> {
                                     val screenPos =
-                                        zoomController.screenToImage(pos.x.toDouble(), pos.y.toDouble())
+                                        zoomController.screenToImage(
+                                            pos.x.toDouble(),
+                                            pos.y.toDouble(),
+                                        )
                                     // Use withoutUndo variant — undo was saved on Press
                                     state.moveCornerWithoutUndo(
                                         currentBoxIndex,
@@ -173,22 +172,33 @@ private fun canvasPointerHandler(state: PhotoScanWizardState, wizardMode: Wizard
                                 val zoomController = state.zoomController.value
                                 when (wizardMode) {
                                     WizardMode.FOUR_POINT -> {
-                                        val point = zoomController.screenToImage(
-                                            pressPos.x.toDouble(),
-                                            pressPos.y.toDouble(),
-                                        )
+                                        val point =
+                                            zoomController.screenToImage(
+                                                pressPos.x.toDouble(),
+                                                pressPos.y.toDouble(),
+                                            )
                                         state.addFourPoint(Point(point.x, point.y))
                                     }
                                     else -> {
                                         // Only do tap selection if this wasn't already a
                                         // corner/box drag that started on Press
                                         if (!isCornerDrag && !isPhotoDrag) {
-                                            val cornerHit = findCornerHit(pressPos, boundingBoxList, zoomController)
+                                            val cornerHit =
+                                                findCornerHit(
+                                                    pressPos,
+                                                    boundingBoxList,
+                                                    zoomController,
+                                                )
                                             if (cornerHit != null) {
                                                 state.selectBox(cornerHit.first)
                                                 state.selectCorner(cornerHit.second)
                                             } else {
-                                                val boxHit = findBoxHit(pressPos, boundingBoxList, zoomController)
+                                                val boxHit =
+                                                    findBoxHit(
+                                                        pressPos,
+                                                        boundingBoxList,
+                                                        zoomController,
+                                                    )
                                                 if (boxHit >= 0) {
                                                     state.selectBox(boxHit)
                                                 } else {
@@ -209,10 +219,36 @@ private fun canvasPointerHandler(state: PhotoScanWizardState, wizardMode: Wizard
                     PointerEventType.Scroll -> {
                         val scrollDelta = event.changes.firstOrNull()?.scrollDelta
                         if (scrollDelta != null) {
-                            if (scrollDelta.y < 0) {
-                                state.zoomIn(pos.x.toDouble(), pos.y.toDouble())
-                            } else if (scrollDelta.y > 0) {
-                                state.zoomOut(pos.x.toDouble(), pos.y.toDouble())
+                            val isShiftHeld =
+                                java.awt.Toolkit.getDefaultToolkit()
+                                    .getLockingKeyState(java.awt.event.KeyEvent.VK_SHIFT)
+                            val boundingBoxList = state.boundingBoxList.value
+                            val zoomCtrl = state.zoomController.value
+                            val hoveredBoxIndex = findBoxHit(pos, boundingBoxList, zoomCtrl)
+                            when {
+                                isShiftHeld && hoveredBoxIndex >= 0 -> {
+                                    // Shift+scroll over box: rotate the box around its center
+                                    val rotationStep = 2.0 // degrees per scroll tick
+                                    state.selectBox(hoveredBoxIndex)
+                                    if (scrollDelta.y < 0) {
+                                        state.rotateSelectedBox(-rotationStep)
+                                    } else {
+                                        state.rotateSelectedBox(rotationStep)
+                                    }
+                                }
+                                hoveredBoxIndex >= 0 && state.selectedBoxIndex.value >= 0 -> {
+                                    // Scroll over box (no shift): expand/contract the selected box
+                                    val scaleFactor = if (scrollDelta.y < 0) 1.05 else 0.95
+                                    state.expandSelectedBox(scaleFactor)
+                                }
+                                else -> {
+                                    // Scroll on empty space: zoom
+                                    if (scrollDelta.y < 0) {
+                                        state.zoomIn(pos.x.toDouble(), pos.y.toDouble())
+                                    } else {
+                                        state.zoomOut(pos.x.toDouble(), pos.y.toDouble())
+                                    }
+                                }
                             }
                         }
                     }

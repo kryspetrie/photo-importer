@@ -14,18 +14,31 @@ import androidx.compose.runtime.Composable
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun RefinementTopBar(onDelete: () -> Unit, onUndo: () -> Unit, onRedo: () -> Unit, refocus: () -> Unit = {}) {
+internal fun RefinementTopBar(
+    onDelete: () -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    refocus: () -> Unit = {},
+) {
     TopAppBar(
         title = { Text("Refine Bounding Box") },
         actions = {
-            IconButton(onClick = {
-                onUndo()
-                refocus()
-            }) { Icon(Icons.Default.Undo, "Undo") }
-            IconButton(onClick = {
-                onRedo()
-                refocus()
-            }) { Icon(Icons.Default.Redo, "Redo") }
+            IconButton(
+                onClick = {
+                    onUndo()
+                    refocus()
+                }
+            ) {
+                Icon(Icons.Default.Undo, "Undo")
+            }
+            IconButton(
+                onClick = {
+                    onRedo()
+                    refocus()
+                }
+            ) {
+                Icon(Icons.Default.Redo, "Redo")
+            }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
             }

@@ -2,9 +2,11 @@ package org.kryspetrie.fileimport.di
 
 import org.koin.dsl.module
 import org.kryspetrie.fileimport.application.DuplicateScannerService
+import org.kryspetrie.fileimport.application.FaceRegionTransformer
 import org.kryspetrie.fileimport.application.ImportExecutor
 import org.kryspetrie.fileimport.application.ImportScanner
 import org.kryspetrie.fileimport.application.ImportService
+import org.kryspetrie.fileimport.application.LocationSearchService
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.application.ReorganizeService
@@ -13,6 +15,7 @@ import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.IdGenerator
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
@@ -30,6 +33,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.HashCacheAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.NamingAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.NominatimGeocodingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
@@ -58,6 +62,8 @@ val appModule = module {
     single<DispatcherProvider> { DefaultDispatcherProvider() }
 
     // ── Infrastructure ──────────────────────────────────────────────
+
+    single<GeocodingPort> { NominatimGeocodingAdapter(dispatcherProvider = get()) }
 
     single { ImportHistoryAdapter(dispatcherProvider = get()) }
     single { AppLogger() }
@@ -96,5 +102,10 @@ val appModule = module {
     single { PhotoScanDetectorService(modelResourcePort = get(), appLogger = getOrNull()) }
     single { ScanService(hybridCornerDetector = get()) }
     single { PerspectiveCorrectionService() }
-    single { PhotoScanExportService(get()) }
+    single { FaceRegionTransformer() }
+    single { PhotoScanExportService(get(), get()) }
+
+    // ── Location Search ─────────────────────────────────────────────
+
+    single { LocationSearchService(geocodingPort = get(), dispatcherProvider = get()) }
 }

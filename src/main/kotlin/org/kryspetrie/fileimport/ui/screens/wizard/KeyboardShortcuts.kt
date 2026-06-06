@@ -303,7 +303,7 @@ fun Modifier.withWizardKeyboardShortcuts(
     }
 
 /** Checks if Ctrl (or Cmd on macOS) is pressed using reflection for cross-platform support. */
-private fun isCtrlPressed(keyEvent: androidx.compose.ui.input.key.KeyEvent): Boolean {
+internal fun isCtrlPressed(keyEvent: androidx.compose.ui.input.key.KeyEvent): Boolean {
     return try {
         val nativeMethod = keyEvent.javaClass.getMethod("getNativeKeyEvent")
         val native = nativeMethod.invoke(keyEvent)

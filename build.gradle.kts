@@ -114,8 +114,17 @@ dependencies {
     }
 
     tasks.test {
-        useJUnitPlatform { excludeTags("UiComponentTest") }
+        useJUnitPlatform { excludeTags("UiComponentTest", "integration") }
         testLogging { showStandardStreams = true }
+    }
+
+    tasks.register<Test>("integrationTest") {
+        description = "Runs integration tests that make real network calls"
+        group = "verification"
+        useJUnitPlatform { includeTags("integration") }
+        testLogging { showStandardStreams = true }
+        classpath = sourceSets["test"].runtimeClasspath
+        testClassesDirs = sourceSets["test"].output.classesDirs
     }
 
     tasks.register<JavaExec>("generateIcons") {

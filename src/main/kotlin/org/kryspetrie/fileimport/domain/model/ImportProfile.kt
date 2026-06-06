@@ -386,8 +386,8 @@ data class AppSettings(
     /**
      * Recently used metadata values for photo scan.
      *
-     * Stores up to 10 previously entered values per field (description, keywords, year, etc.)
-     * to provide auto-suggestions when editing metadata for new photos.
+     * Stores up to 10 previously entered values per field (description, keywords, year, etc.) to
+     * provide auto-suggestions when editing metadata for new photos.
      */
     val metadataHistory: MetadataHistory = MetadataHistory(),
 ) {
@@ -478,6 +478,10 @@ data class AppSettings(
     /** Adds a metadata value to history and returns the updated settings. */
     fun addMetadataHistory(fieldKey: String, value: String): AppSettings =
         copy(metadataHistory = metadataHistory.addValue(fieldKey, value))
+
+    /** Removes a metadata value from history (for X-removal on keyword/subject suggestions). */
+    fun removeMetadataHistory(fieldKey: String, value: String): AppSettings =
+        copy(metadataHistory = metadataHistory.removeValue(fieldKey, value))
 }
 
 /**
@@ -625,10 +629,9 @@ enum class AppTheme {
 /**
  * Stores recently used metadata values for photo scan EXIF fields.
  *
- * Each field (description, keywords, year, etc.) maintains an MRU list of up to
- * [MAX_ENTRIES] unique values. When a user types or selects a value, it's added
- * to the front of the list (deduped). These values appear as suggestions in the
- * metadata editor dropdowns.
+ * Each field (description, keywords, year, etc.) maintains an MRU list of up to [MAX_ENTRIES]
+ * unique values. When a user types or selects a value, it's added to the front of the list
+ * (deduped). These values appear as suggestions in the metadata editor dropdowns.
  *
  * Persisted as part of [AppSettings] via [SettingsPort].
  */
@@ -645,22 +648,47 @@ data class MetadataHistory(
     val aperture: List<String> = emptyList(),
     val shutterSpeed: List<String> = emptyList(),
     val iso: List<String> = emptyList(),
+    // Location metadata history
+    val locationName: List<String> = emptyList(),
+    val city: List<String> = emptyList(),
+    val state: List<String> = emptyList(),
+    val country: List<String> = emptyList(),
+    // Subject/face region history
+    val subjects: List<String> = emptyList(),
 ) {
     companion object {
         const val MAX_ENTRIES = 10
 
         /** Field name keys for looking up and updating suggestion lists. */
-        val FIELD_KEYS: List<String> = listOf(
-            "description", "keywords", "originalDate", "year",
-            "cameraMake", "cameraModel", "lensModel",
-            "focalLength", "aperture", "shutterSpeed", "iso",
-        )
+        val FIELD_KEYS: List<String> =
+            listOf(
+                "description",
+                "keywords",
+                "originalDate",
+                "year",
+                "cameraMake",
+                "cameraModel",
+                "lensModel",
+                "focalLength",
+                "aperture",
+                "shutterSpeed",
+                "iso",
+                "locationName",
+                "city",
+                "state",
+                "country",
+                "subjects",
+            )
     }
 
-    /** Adds a value to the front of the specified field's list, deduping and capping at [MAX_ENTRIES]. */
+    /**
+     * Adds a value to the front of the specified field's list, deduping and capping at
+     * [MAX_ENTRIES].
+     */
     fun addValue(fieldKey: String, value: String): MetadataHistory {
         if (value.isBlank()) return this
-        val updated = (listOf(value) + getSuggestions(fieldKey).filter { it != value }).take(MAX_ENTRIES)
+        val updated =
+            (listOf(value) + getSuggestions(fieldKey).filter { it != value }).take(MAX_ENTRIES)
         return when (fieldKey) {
             "description" -> copy(description = updated)
             "keywords" -> copy(keywords = updated)
@@ -673,23 +701,62 @@ data class MetadataHistory(
             "aperture" -> copy(aperture = updated)
             "shutterSpeed" -> copy(shutterSpeed = updated)
             "iso" -> copy(iso = updated)
+            "locationName" -> copy(locationName = updated)
+            "city" -> copy(city = updated)
+            "state" -> copy(state = updated)
+            "country" -> copy(country = updated)
+            "subjects" -> copy(subjects = updated)
             else -> this
         }
     }
 
     /** Returns the suggestion list for the given field key. */
-    fun getSuggestions(fieldKey: String): List<String> = when (fieldKey) {
-        "description" -> description
-        "keywords" -> keywords
-        "originalDate" -> originalDate
-        "year" -> year
-        "cameraMake" -> cameraMake
-        "cameraModel" -> cameraModel
-        "lensModel" -> lensModel
-        "focalLength" -> focalLength
-        "aperture" -> aperture
-        "shutterSpeed" -> shutterSpeed
-        "iso" -> iso
-        else -> emptyList()
+    fun getSuggestions(fieldKey: String): List<String> =
+        when (fieldKey) {
+            "description" -> description
+            "keywords" -> keywords
+            "originalDate" -> originalDate
+            "year" -> year
+            "cameraMake" -> cameraMake
+            "cameraModel" -> cameraModel
+            "lensModel" -> lensModel
+            "focalLength" -> focalLength
+            "aperture" -> aperture
+            "shutterSpeed" -> shutterSpeed
+            "iso" -> iso
+            "locationName" -> locationName
+            "city" -> city
+            "state" -> state
+            "country" -> country
+            "subjects" -> subjects
+            else -> emptyList()
+        }
+
+    /**
+     * Removes a specific value from a field's suggestion list. Used for keyword/subject "X"
+     * removal: when user clicks X on a saved keyword, it's removed from suggestions permanently.
+     */
+    fun removeValue(fieldKey: String, value: String): MetadataHistory {
+        if (value.isBlank()) return this
+        val updated = getSuggestions(fieldKey).filter { it != value }
+        return when (fieldKey) {
+            "description" -> copy(description = updated)
+            "keywords" -> copy(keywords = updated)
+            "originalDate" -> copy(originalDate = updated)
+            "year" -> copy(year = updated)
+            "cameraMake" -> copy(cameraMake = updated)
+            "cameraModel" -> copy(cameraModel = updated)
+            "lensModel" -> copy(lensModel = updated)
+            "focalLength" -> copy(focalLength = updated)
+            "aperture" -> copy(aperture = updated)
+            "shutterSpeed" -> copy(shutterSpeed = updated)
+            "iso" -> copy(iso = updated)
+            "locationName" -> copy(locationName = updated)
+            "city" -> copy(city = updated)
+            "state" -> copy(state = updated)
+            "country" -> copy(country = updated)
+            "subjects" -> copy(subjects = updated)
+            else -> this
+        }
     }
 }

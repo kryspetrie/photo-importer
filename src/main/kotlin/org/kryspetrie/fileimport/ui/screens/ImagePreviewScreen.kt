@@ -78,6 +78,7 @@ import java.io.File
 import java.util.Locale
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
+import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.ThumbnailImage
 import org.kryspetrie.fileimport.ui.components.formatFileSize
 
@@ -666,8 +667,9 @@ private fun PreviewSidePane(
             Spacer(Modifier.height(12.dp))
 
             // Scrollable metadata area
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+            ChunkyScrollbar {
+                Column(
+                    modifier = Modifier,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 // Core metadata — always visible
@@ -703,6 +705,7 @@ private fun PreviewSidePane(
                         )
                     }
                 }
+            }
             }
         }
     }
