@@ -134,13 +134,15 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
     }
 
     var customConfig by remember { mutableStateOf(ImportConfiguration()) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Detect cameras on launch, then monitor for hot-plug events
     LaunchedEffect(Unit) {
         detectedDevices =
             try {
                 devicePort.detectDevices()
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                errorMessage = "Could not detect devices: ${e.message ?: "Unknown error"}"
                 emptyList()
             }
         devicePort.observeDeviceChanges().collect { event ->
@@ -160,7 +162,6 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
     var scanTotal by remember { mutableStateOf(0) }
     var scanCurrent by remember { mutableStateOf(0) }
     var indexProgress by remember { mutableStateOf(IndexProgress()) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
     var showClearCacheConfirm by remember { mutableStateOf(false) }
     val canStart =
         sourcePath.isNotBlank() &&
@@ -244,7 +245,8 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                         }
                     importService.indexFolder(destinationPath, true) {}
                     flowStep = MediaImportFlowStep.COMPLETE
-                } catch (_: Exception) {
+                } catch (e: Exception) {
+                    errorMessage = e.message ?: "Import failed"
                     importResult =
                         ImportResult(
                             totalFiles = toImport.size,
