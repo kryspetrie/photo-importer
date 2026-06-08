@@ -19,11 +19,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +75,7 @@ fun OverviewScreen(
 
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var showHelpDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showBoxRejectedMessage by remember { mutableStateOf(false) }
     var hasFittedToView by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -110,7 +113,7 @@ fun OverviewScreen(
                 wizardMode = wizardMode,
                 fourPointState = fourPointState,
                 selectedBoxIndex = selectedBoxIndex,
-                onDeleteSelected = { state.removeSelectedBox() },
+                onDeleteSelected = { showDeleteConfirmDialog = true },
                 onShowHelp = { showHelpDialog = true },
             )
         },
@@ -156,6 +159,28 @@ fun OverviewScreen(
     // Help dialog
     if (showHelpDialog) {
         KeyboardShortcutHelpDialog(onDismiss = { showHelpDialog = false })
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Delete Photo") },
+            text = { Text("Remove this photo box? This cannot be undone, but you can use Undo (Ctrl+Z) to restore it.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        state.removeSelectedBox()
+                        showDeleteConfirmDialog = false
+                    },
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 

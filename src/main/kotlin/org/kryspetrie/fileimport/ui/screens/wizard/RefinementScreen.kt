@@ -6,7 +6,13 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,11 +28,14 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.ZoomControls
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementCanvas
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementControls
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementTopBar
+import org.kryspetrie.fileimport.ui.screens.wizard.ShortcutContext
 
 /**
  * Refinement screen showing a zoomed view of a single bounding box for precise corner adjustment.
@@ -47,6 +56,8 @@ fun RefinementScreen(
     val boxCount by remember { derivedStateOf { boundingBoxList.size() } }
 
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    var showHelpDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
     // Get current box
@@ -70,13 +81,12 @@ fun RefinementScreen(
             RefinementTopBar(
                 onDelete = {
                     if (refinementBoxIndex >= 0) {
-                        state.removeBox(refinementBoxIndex)
-                        state.exitRefinement()
-                        onBack()
+                        showDeleteConfirmDialog = true
                     }
                 },
                 onUndo = { state.undo() },
                 onRedo = { state.redo() },
+                onShowHelp = { showHelpDialog = true },
                 refocus = { focusRequester.requestFocus() },
             )
         },
@@ -152,4 +162,38 @@ fun RefinementScreen(
             }
         },
     )
+
+    // Keyboard shortcut help dialog
+    if (showHelpDialog) {
+        KeyboardShortcutHelpDialog(
+            onDismiss = { showHelpDialog = false },
+            context = ShortcutContext.CANVAS,
+        )
+    }
+
+    // Delete confirmation dialog
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text("Delete Photo") },
+            text = {
+                Text("Remove this photo box? This cannot be undone, but you can use Undo (Ctrl+Z) to restore it.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        state.removeBox(refinementBoxIndex)
+                        state.exitRefinement()
+                        showDeleteConfirmDialog = false
+                        onBack()
+                    },
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
+            },
+        )
+    }
 }

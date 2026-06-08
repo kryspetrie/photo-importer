@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HourglassEmpty
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -244,9 +246,12 @@ private fun WizardStepContent(
         }
 
         PhotoScanWizardState.WizardStep.REFINEMENT -> {
-            // Refinement is now handled inline in Overview — redirect to Overview
-            state.goToOverview()
-            LoadingContent(message = "Redirecting...")
+            // Refinement is now handled inline in Overview — redirect immediately
+            LaunchedEffect(Unit) { state.goToOverview() }
+            // Don't render content while redirecting; the step will change on next frame
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
         }
 
         PhotoScanWizardState.WizardStep.SUMMARY -> {
@@ -429,6 +434,7 @@ private fun WizardStepContent(
                 hasMoreBatchImages = state.hasMoreBatchImages,
                 currentBatchIndex = state.currentImageIndex.value,
                 batchTotal = state.batchTotal,
+                skippedCount = state.skippedBatchIndices.value.size,
                 onDone = {
                     state.resetToImportStep()
                     onCancel()
@@ -1015,9 +1021,13 @@ private fun LoadingOverlay(message: String) {
 /**
  * In-progress processing screen. Shows a progress indicator and current file. Completion UI is on
  * the separate [CompletionScreen] at the COMPLETE wizard step.
+ *
+ * Canceling requires confirmation since it discards all export progress.
  */
 @Composable
 private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () -> Unit) {
+    var showCancelConfirm by remember { mutableStateOf(false) }
+
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1044,8 +1054,37 @@ private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () ->
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            OutlinedButton(onClick = onBack) { Text("Cancel") }
+            OutlinedButton(
+                onClick = { showCancelConfirm = true },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) {
+                Text("Cancel")
+            }
         }
+    }
+
+    // Cancel confirmation dialog
+    if (showCancelConfirm) {
+        AlertDialog(
+            onDismissRequest = { showCancelConfirm = false },
+            title = { Text("Cancel Export?") },
+            text = {
+                Text("Canceling will discard all progress and return to the import screen. Any photos already exported to disk will remain.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showCancelConfirm = false
+                        onBack()
+                    },
+                ) {
+                    Text("Cancel Export", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCancelConfirm = false }) { Text("Continue Export") }
+            },
+        )
     }
 }
 

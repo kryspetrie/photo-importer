@@ -3,6 +3,7 @@ package org.kryspetrie.fileimport.ui.screens
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.Job
 import org.kryspetrie.fileimport.domain.model.DeduplicationSettings
 import org.kryspetrie.fileimport.domain.model.DuplicateAction
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
@@ -26,10 +27,20 @@ class DuplicateScannerViewModel {
     var resolveProgress by mutableStateOf(0 to 0)
     var showResolveConfirm by mutableStateOf(false)
 
+    /** Active coroutine job for scan/resolve — used for cooperative cancellation. */
+    var activeJob: Job? = null
+
     // Dedup detection settings
     var enableHash by mutableStateOf(true)
     var enableExif by mutableStateOf(true)
     var enableSurf by mutableStateOf(false)
+
+    fun cancelOperation() {
+        activeJob?.cancel()
+        activeJob = null
+        step = ScanStep.SETUP
+        errorMessage = null
+    }
 
     fun reset() {
         step = ScanStep.SETUP

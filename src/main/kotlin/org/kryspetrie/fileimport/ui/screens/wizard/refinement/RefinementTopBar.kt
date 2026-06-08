@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.ui.screens.wizard.refinement
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Redo
 import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,6 +19,7 @@ internal fun RefinementTopBar(
     onDelete: () -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
+    onShowHelp: () -> Unit = {},
     refocus: () -> Unit = {},
 ) {
     TopAppBar(
@@ -41,6 +43,9 @@ internal fun RefinementTopBar(
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+            }
+            IconButton(onClick = onShowHelp) {
+                Icon(Icons.Default.Info, "Keyboard shortcuts")
             }
         },
     )

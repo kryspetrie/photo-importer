@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -33,11 +34,14 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -101,6 +105,9 @@ fun SummaryScreen(
     )
 }
 
+/**
+ * Top app bar with rotation controls and a destructive "Reset" button that requires confirmation.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SummaryTopAppBar(
@@ -109,6 +116,8 @@ private fun SummaryTopAppBar(
     onRotateAllCCW: () -> Unit,
     onClearAll: () -> Unit,
 ) {
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
+
     TopAppBar(
         title = { Text("Crop & Rotate") },
         actions = {
@@ -125,7 +134,7 @@ private fun SummaryTopAppBar(
             }
             Spacer(Modifier.width(4.dp))
             OutlinedButton(
-                onClick = onClearAll,
+                onClick = { showResetConfirmDialog = true },
                 modifier = Modifier.height(32.dp),
                 colors =
                     ButtonDefaults.outlinedButtonColors(
@@ -136,6 +145,29 @@ private fun SummaryTopAppBar(
             }
         },
     )
+
+    if (showResetConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showResetConfirmDialog = false },
+            title = { Text("Reset All Rotations?") },
+            text = {
+                Text("This will clear all rotation and correction settings for $photoCount photo(s). You can still use Undo after resetting.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClearAll()
+                        showResetConfirmDialog = false
+                    },
+                ) {
+                    Text("Reset", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResetConfirmDialog = false }) { Text("Cancel") }
+            },
+        )
+    }
 }
 
 /**

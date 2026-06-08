@@ -74,6 +74,7 @@ fun CompletionScreen(
     hasMoreBatchImages: Boolean,
     currentBatchIndex: Int,
     batchTotal: Int,
+    skippedCount: Int = 0,
     nextBatchFile: File? = null,
     onDone: () -> Unit,
     onImportFile: () -> Unit,
@@ -133,6 +134,13 @@ fun CompletionScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
+                        if (skippedCount > 0) {
+                            Text(
+                                "($skippedCount skipped as photo backs)",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                     }
                 }
             }
@@ -197,19 +205,32 @@ private fun BatchActions(
     }
 }
 
+/** Preview load state: loading, success, or error. */
+private sealed class PreviewState {
+    data object Loading : PreviewState()
+    data class Success(val image: BufferedImage) : PreviewState()
+    data class Error(val message: String) : PreviewState()
+}
+
 /** Shows a small preview of the next photo to be processed. Clicking opens fullscreen. */
 @Composable
 private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
-    var previewBitmap by remember { mutableStateOf<BufferedImage?>(null) }
+    var previewState by remember { mutableStateOf<PreviewState>(PreviewState.Loading) }
     var showFullscreen by remember { mutableStateOf(false) }
 
-    // Load preview thumbnail
+    // Load preview thumbnail asynchronously with error tracking
     LaunchedEffect(file.absolutePath) {
+        previewState = PreviewState.Loading
         withContext(Dispatchers.IO) {
             try {
-                previewBitmap = ImageIO.read(file)
-            } catch (_: Exception) {
-                previewBitmap = null
+                val image = ImageIO.read(file)
+                if (image != null) {
+                    previewState = PreviewState.Success(image)
+                } else {
+                    previewState = PreviewState.Error("Unsupported format")
+                }
+            } catch (e: Exception) {
+                previewState = PreviewState.Error(e.message ?: "Failed to load")
             }
         }
     }
@@ -219,8 +240,14 @@ private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
             modifier
                 .width(240.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .pointerHoverIcon(PointerIcon(Cursor(Cursor.HAND_CURSOR)))
-                .clickable { showFullscreen = true },
+                .then(
+                    if (previewState is PreviewState.Success) {
+                        Modifier.pointerHoverIcon(PointerIcon(Cursor(Cursor.HAND_CURSOR)))
+                            .clickable { showFullscreen = true }
+                    } else {
+                        Modifier
+                    }
+                ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
         shape = RoundedCornerShape(8.dp),
     ) {
@@ -239,46 +266,71 @@ private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
                         .background(Color.DarkGray),
                 contentAlignment = Alignment.Center,
             ) {
-                val img = previewBitmap
-                if (img != null) {
-                    Image(
-                        bitmap = img.toComposeImageBitmap(),
-                        contentDescription = "Next photo preview",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit,
-                    )
+                when (val state = previewState) {
+                    is PreviewState.Success -> {
+                        Image(
+                            bitmap = state.image.toComposeImageBitmap(),
+                            contentDescription = "Next photo preview",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
+                        )
 
-                    // Zoom hint overlay
-                    Surface(
-                        modifier =
-                            Modifier.align(Alignment.BottomEnd)
-                                .padding(4.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                        color = Color.Black.copy(alpha = 0.5f),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                        // Zoom hint overlay
+                        Surface(
+                            modifier =
+                                Modifier.align(Alignment.BottomEnd)
+                                    .padding(4.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                            color = Color.Black.copy(alpha = 0.5f),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.ZoomIn,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = Color.White,
+                                )
+                                Text(
+                                    "Click to enlarge",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White,
+                                )
+                            }
+                        }
+                    }
+                    is PreviewState.Error -> {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             Icon(
-                                Icons.Default.ZoomIn,
-                                contentDescription = null,
-                                modifier = Modifier.size(14.dp),
-                                tint = Color.White,
+                                Icons.Default.Close,
+                                contentDescription = "Error",
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.error,
                             )
                             Text(
-                                "Click to enlarge",
+                                "Could not load preview",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                            Text(
+                                state.message,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-                } else {
-                    Text(
-                        "Loading preview...",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    is PreviewState.Loading -> {
+                        Text(
+                            "Loading preview...",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
@@ -294,9 +346,9 @@ private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
     }
 
     // Fullscreen dialog
-    if (showFullscreen && previewBitmap != null) {
+    if (showFullscreen && previewState is PreviewState.Success) {
         FullscreenImageDialog(
-            image = previewBitmap!!,
+            image = (previewState as PreviewState.Success).image,
             fileName = file.name,
             onDismiss = { showFullscreen = false },
         )

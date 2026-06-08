@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.io.File
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.DuplicateScannerService
@@ -51,7 +52,7 @@ fun DuplicateScannerScreen(
     fun startScan() {
         viewModel.errorMessage = null
         viewModel.step = DuplicateScannerViewModel.ScanStep.SCANNING
-        scope.launch {
+        viewModel.activeJob = scope.launch {
             try {
                 val found =
                     scannerService.scanForDuplicates(
@@ -63,7 +64,9 @@ fun DuplicateScannerScreen(
                 viewModel.duplicates = found
                 viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
             } catch (e: Exception) {
-                viewModel.errorMessage = e.message ?: "Scan failed"
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    viewModel.errorMessage = e.message ?: "Scan failed"
+                }
                 viewModel.step = DuplicateScannerViewModel.ScanStep.SETUP
             }
         }
@@ -75,7 +78,7 @@ fun DuplicateScannerScreen(
             else null
         viewModel.showResolveConfirm = false
         viewModel.step = DuplicateScannerViewModel.ScanStep.RESOLVING
-        scope.launch {
+        viewModel.activeJob = scope.launch {
             try {
                 scannerService.resolveAll(
                     viewModel.duplicates,
@@ -87,7 +90,9 @@ fun DuplicateScannerScreen(
                 viewModel.duplicates = emptyList()
                 viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
             } catch (e: Exception) {
-                viewModel.errorMessage = "Resolve failed: ${e.message}"
+                if (e !is kotlinx.coroutines.CancellationException) {
+                    viewModel.errorMessage = "Resolve failed: ${e.message}"
+                }
                 viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
             }
         }
@@ -186,34 +191,37 @@ fun DuplicateScannerScreen(
             }
         }
 
-        // Bottom action bar
-        if (
-            viewModel.step == DuplicateScannerViewModel.ScanStep.SETUP ||
-                viewModel.step == DuplicateScannerViewModel.ScanStep.RESULTS
+        // Bottom action bar — always show (cancel during operations, actions during setup/results)
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (
-                    viewModel.step == DuplicateScannerViewModel.ScanStep.RESULTS &&
-                        viewModel.duplicates.isNotEmpty()
-                ) {
-                    OutlinedButton(
-                        onClick = { viewModel.reset() },
-                        modifier = Modifier.padding(end = 8.dp),
-                    ) {
-                        Text("Back")
-                    }
-                    Button(onClick = { viewModel.showResolveConfirm = true }) {
-                        Icon(Icons.Default.AutoFixHigh, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Resolve All (${viewModel.duplicates.size} groups)")
+            when (viewModel.step) {
+                DuplicateScannerViewModel.ScanStep.SCANNING,
+                DuplicateScannerViewModel.ScanStep.RESOLVING,
+                -> {
+                    OutlinedButton(onClick = { viewModel.cancelOperation() }) {
+                        Text("Cancel")
                     }
                 }
-                if (viewModel.step == DuplicateScannerViewModel.ScanStep.SETUP) {
+                DuplicateScannerViewModel.ScanStep.RESULTS -> {
+                    if (viewModel.duplicates.isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = { viewModel.reset() },
+                            modifier = Modifier.padding(end = 8.dp),
+                        ) {
+                            Text("Back")
+                        }
+                        Button(onClick = { viewModel.showResolveConfirm = true }) {
+                            Icon(Icons.Default.AutoFixHigh, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Resolve All (${viewModel.duplicates.size} groups)")
+                        }
+                    }
+                }
+                DuplicateScannerViewModel.ScanStep.SETUP -> {
                     Button(onClick = { startScan() }, enabled = viewModel.folderPath.isNotBlank()) {
                         Icon(Icons.Default.Search, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))

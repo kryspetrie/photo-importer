@@ -241,41 +241,83 @@ private fun ConflictResolutionField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth()) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         ConflictResolution.entries.forEach { r ->
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(
                     config.conflictResolution == r,
                     { onConfigChange(config.copy(conflictResolution = r)) },
                 )
-                Text(
-                    r.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        r.displayName,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        r.description,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
 }
+
+private val ConflictResolution.displayName: String
+    get() = when (this) {
+        ConflictResolution.RENAME -> "Rename"
+        ConflictResolution.SKIP -> "Skip"
+        ConflictResolution.REPLACE -> "Replace"
+        ConflictResolution.ASK_USER -> "Ask me"
+    }
+
+private val ConflictResolution.description: String
+    get() = when (this) {
+        ConflictResolution.RENAME -> "Add a number suffix to avoid conflicts (safest)"
+        ConflictResolution.SKIP -> "Don't import if a file with the same name exists"
+        ConflictResolution.REPLACE -> "Overwrite existing files (irreversible!)"
+        ConflictResolution.ASK_USER -> "Prompt for each conflict individually"
+    }
 
 @Composable
 private fun DateSourceField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth()) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         DateSource.entries.forEach { s ->
-            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(config.dateSource == s, { onConfigChange(config.copy(dateSource = s)) })
-                Text(
-                    s.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        s.displayName,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Text(
+                        s.description,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }
 }
+
+private val DateSource.displayName: String
+    get() = when (this) {
+        DateSource.EXIF_DATE -> "EXIF date taken"
+        DateSource.FILE_MODIFIED_DATE -> "File modified"
+        DateSource.FILE_CREATED_DATE -> "File created"
+    }
+
+private val DateSource.description: String
+    get() = when (this) {
+        DateSource.EXIF_DATE -> "Use photo capture date from EXIF metadata (falls back to file date)"
+        DateSource.FILE_MODIFIED_DATE -> "Use file's last modified timestamp"
+        DateSource.FILE_CREATED_DATE -> "Use file creation timestamp (may change when copying)"
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
