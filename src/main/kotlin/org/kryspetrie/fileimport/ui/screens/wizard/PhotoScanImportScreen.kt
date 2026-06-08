@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Scanner
 import androidx.compose.material3.Button
@@ -44,7 +42,6 @@ import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SinglePhotoModeCard
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SourceSelectionSection
 
 /** Import screen for the wizard - source selection and configuration. */
-@Suppress("UnusedParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PhotoScanImportScreen(
@@ -164,81 +161,76 @@ fun PhotoScanImportScreen(
 
     Scaffold(
         content = { paddingValues ->
-            ChunkyScrollbar(
-                modifier =
-                    modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-            ) {
+            ChunkyScrollbar(modifier = modifier.fillMaxSize().padding(paddingValues)) {
                 Column(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                // ── Auto-detect Option ──
-                AutoDetectCard(
-                    cvAutoDetectEnabled = cvAutoDetectEnabled,
-                    onCvAutoDetectChange = { state.setCvAutoDetectEnabled(it) },
-                )
+                    // ── Auto-detect Option ──
+                    AutoDetectCard(
+                        cvAutoDetectEnabled = cvAutoDetectEnabled,
+                        onCvAutoDetectChange = { state.setCvAutoDetectEnabled(it) },
+                    )
 
-                // ── Single Photo Mode ──
-                SinglePhotoModeCard(
-                    singlePhotoMode = singlePhotoMode,
-                    onSinglePhotoModeChange = { state.setSinglePhotoMode(it) },
-                )
+                    // ── Single Photo Mode ──
+                    SinglePhotoModeCard(
+                        singlePhotoMode = singlePhotoMode,
+                        onSinglePhotoModeChange = { state.setSinglePhotoMode(it) },
+                    )
 
-                // ── Source Selection ──
-                SourceSelectionSection(
-                    sourcePath = sourcePath,
-                    onSourcePathChange = { sourcePath = it },
-                    sourceFile = sourceFile,
-                )
+                    // ── Source Selection ──
+                    SourceSelectionSection(
+                        sourcePath = sourcePath,
+                        onSourcePathChange = { sourcePath = it },
+                        sourceFile = sourceFile,
+                    )
 
-                // ── Destination ──
-                DestinationSelectionSection(
-                    destinationPath = destinationPath,
-                    onDestinationPathChange = { destinationPath = it },
-                    destValid = destValid,
-                    destCanCreate = destCanCreate,
-                    destDirName = destDir?.name,
-                )
+                    // ── Destination ──
+                    DestinationSelectionSection(
+                        destinationPath = destinationPath,
+                        onDestinationPathChange = { destinationPath = it },
+                        destValid = destValid,
+                        destCanCreate = destCanCreate,
+                        destDirName = destDir?.name,
+                    )
 
-                // ── Export Settings ──
-                ExportSettingsCard(state = state)
+                    // ── Export Settings ──
+                    ExportSettingsCard(state = state)
 
-                // ── Import Photo Scans Button ──
-                Button(
-                    onClick = {
-                        firstImageFile?.let { file ->
-                            val batchFiles =
-                                if (sourceFile?.isDirectory == true) {
-                                    sourceFile
-                                        .listFiles { f -> f.isFile && isImageFile(f) }
-                                        ?.sortedBy { it.name }
-                                        ?.toList()
-                                } else null
-                            onImageSelected(file, batchFiles)
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    enabled = canStart,
-                ) {
-                    Icon(Icons.Default.Scanner, null, Modifier.size(20.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (singlePhotoMode) "Import Single Photo" else "Import Photo Scan(s)",
-                        style = MaterialTheme.typography.titleMedium,
+                    // ── Import Photo Scans Button ──
+                    Button(
+                        onClick = {
+                            firstImageFile?.let { file ->
+                                val batchFiles =
+                                    if (sourceFile?.isDirectory == true) {
+                                        sourceFile
+                                            .listFiles { f -> f.isFile && isImageFile(f) }
+                                            ?.sortedBy { it.name }
+                                            ?.toList()
+                                    } else null
+                                onImageSelected(file, batchFiles)
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        enabled = canStart,
+                    ) {
+                        Icon(Icons.Default.Scanner, null, Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (singlePhotoMode) "Import Single Photo" else "Import Photo Scan(s)",
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    }
+
+                    // ── Custom Settings ──
+                    PhotoScanSettingsSection(
+                        config = customConfig,
+                        onConfigChange = { customConfig = it },
+                        settingsExpanded = settingsExpanded,
+                        onSettingsExpandedChange = { settingsExpanded = it },
                     )
                 }
-
-                // ── Custom Settings ──
-                PhotoScanSettingsSection(
-                    config = customConfig,
-                    onConfigChange = { customConfig = it },
-                    settingsExpanded = settingsExpanded,
-                    onSettingsExpandedChange = { settingsExpanded = it },
-                )
             }
-        }
         }
     )
 

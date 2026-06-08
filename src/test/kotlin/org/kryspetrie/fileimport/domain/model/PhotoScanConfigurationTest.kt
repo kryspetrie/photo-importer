@@ -13,20 +13,19 @@ class PhotoScanConfigurationTest {
     @DisplayName("defaults")
     inner class Defaults {
         @Test
-        fun `should have null date overrides by default`() {
+        fun `should have empty date fields by default`() {
             val config = PhotoScanConfiguration()
 
-            assertThat(config.originalDateOverride).isNull()
-            assertThat(config.originalYearOverride).isNull()
-            assertThat(config.originalMonthOverride).isNull()
+            assertThat(config.originalDate).isEmpty()
+            assertThat(config.year).isEmpty()
         }
 
         @Test
-        fun `should have empty tags and notes by default`() {
+        fun `should have empty metadata fields by default`() {
             val config = PhotoScanConfiguration()
 
-            assertThat(config.tags).isEmpty()
-            assertThat(config.notes).isEmpty()
+            assertThat(config.keywords).isEmpty()
+            assertThat(config.description).isEmpty()
         }
     }
 
@@ -35,37 +34,24 @@ class PhotoScanConfigurationTest {
     inner class DateOverrides {
         @Test
         fun `should allow setting date override`() {
-            val config = PhotoScanConfiguration(originalDateOverride = "2024-01-15")
+            val config = PhotoScanConfiguration(originalDate = "2024-01-15")
 
-            assertThat(config.originalDateOverride).isEqualTo("2024-01-15")
+            assertThat(config.originalDate).isEqualTo("2024-01-15")
         }
 
         @Test
         fun `should allow setting year override`() {
-            val config = PhotoScanConfiguration(originalYearOverride = "2023")
+            val config = PhotoScanConfiguration(year = "2023")
 
-            assertThat(config.originalYearOverride).isEqualTo("2023")
+            assertThat(config.year).isEqualTo("2023")
         }
 
         @Test
-        fun `should allow setting month override`() {
-            val config = PhotoScanConfiguration(originalMonthOverride = "06")
+        fun `should allow setting all date fields together`() {
+            val config = PhotoScanConfiguration(originalDate = "2024-06-15", year = "2023")
 
-            assertThat(config.originalMonthOverride).isEqualTo("06")
-        }
-
-        @Test
-        fun `should allow setting all date overrides together`() {
-            val config =
-                PhotoScanConfiguration(
-                    originalDateOverride = "2024-06-15",
-                    originalYearOverride = "2023",
-                    originalMonthOverride = "03",
-                )
-
-            assertThat(config.originalDateOverride).isEqualTo("2024-06-15")
-            assertThat(config.originalYearOverride).isEqualTo("2023")
-            assertThat(config.originalMonthOverride).isEqualTo("03")
+            assertThat(config.originalDate).isEqualTo("2024-06-15")
+            assertThat(config.year).isEqualTo("2023")
         }
     }
 
@@ -73,26 +59,29 @@ class PhotoScanConfigurationTest {
     @DisplayName("metadata fields")
     inner class MetadataFields {
         @Test
-        fun `should allow setting tags`() {
-            val config = PhotoScanConfiguration(tags = "vacation, family, summer")
+        fun `should allow setting keywords`() {
+            val config = PhotoScanConfiguration(keywords = "vacation, family, summer")
 
-            assertThat(config.tags).isEqualTo("vacation, family, summer")
+            assertThat(config.keywords).isEqualTo("vacation, family, summer")
         }
 
         @Test
-        fun `should allow setting notes`() {
-            val config = PhotoScanConfiguration(notes = "Summer vacation 2024")
+        fun `should allow setting description`() {
+            val config = PhotoScanConfiguration(description = "Summer vacation 2024")
 
-            assertThat(config.notes).isEqualTo("Summer vacation 2024")
+            assertThat(config.description).isEqualTo("Summer vacation 2024")
         }
 
         @Test
-        fun `should allow setting both tags and notes`() {
+        fun `should allow setting both keywords and description`() {
             val config =
-                PhotoScanConfiguration(tags = "document, receipt", notes = "Important tax document")
+                PhotoScanConfiguration(
+                    keywords = "document, receipt",
+                    description = "Important tax document",
+                )
 
-            assertThat(config.tags).isEqualTo("document, receipt")
-            assertThat(config.notes).isEqualTo("Important tax document")
+            assertThat(config.keywords).isEqualTo("document, receipt")
+            assertThat(config.description).isEqualTo("Important tax document")
         }
     }
 
@@ -100,20 +89,20 @@ class PhotoScanConfigurationTest {
     @DisplayName("EXIF metadata fields")
     inner class ExifMetadataFields {
         @Test
-        fun `should have null EXIF overrides by default`() {
+        fun `should have empty EXIF overrides by default`() {
             val config = PhotoScanConfiguration()
 
-            assertThat(config.description).isNull()
-            assertThat(config.keywords).isNull()
-            assertThat(config.originalDate).isNull()
-            assertThat(config.year).isNull()
-            assertThat(config.cameraMake).isNull()
-            assertThat(config.cameraModel).isNull()
-            assertThat(config.lensModel).isNull()
-            assertThat(config.focalLength).isNull()
-            assertThat(config.aperture).isNull()
-            assertThat(config.shutterSpeed).isNull()
-            assertThat(config.iso).isNull()
+            assertThat(config.description).isEmpty()
+            assertThat(config.keywords).isEmpty()
+            assertThat(config.originalDate).isEmpty()
+            assertThat(config.year).isEmpty()
+            assertThat(config.cameraMake).isEmpty()
+            assertThat(config.cameraModel).isEmpty()
+            assertThat(config.lensModel).isEmpty()
+            assertThat(config.focalLength).isEmpty()
+            assertThat(config.aperture).isEmpty()
+            assertThat(config.shutterSpeed).isEmpty()
+            assertThat(config.iso).isEmpty()
         }
 
         @Test
@@ -199,15 +188,66 @@ class PhotoScanConfigurationTest {
         }
 
         @Test
-        fun `should return true when legacy fields are set`() {
-            val config = PhotoScanConfiguration(originalDateOverride = "2024-01-15")
+        fun `should return true when copyOriginalExif is false`() {
+            val config = PhotoScanConfiguration(copyOriginalExif = false)
             assertThat(config.hasExifOverrides()).isTrue()
+        }
+    }
+
+    @Nested
+    @DisplayName("convenience methods")
+    inner class ConvenienceMethods {
+        @Test
+        fun `keywordList should parse comma-separated keywords`() {
+            val config = PhotoScanConfiguration(keywords = "vacation, family, holiday")
+            assertThat(config.keywordList()).containsExactly("vacation", "family", "holiday")
         }
 
         @Test
-        fun `should return true when tags are set`() {
-            val config = PhotoScanConfiguration(tags = "vacation")
-            assertThat(config.hasExifOverrides()).isTrue()
+        fun `keywordList should trim whitespace`() {
+            val config = PhotoScanConfiguration(keywords = " vacation , family , holiday ")
+            assertThat(config.keywordList()).containsExactly("vacation", "family", "holiday")
+        }
+
+        @Test
+        fun `subjectList should parse comma-separated subjects`() {
+            val config = PhotoScanConfiguration(subjects = "Alice, Bob")
+            assertThat(config.subjectList()).containsExactly("Alice", "Bob")
+        }
+
+        @Test
+        fun `locationDisplay should join location fields`() {
+            val config =
+                PhotoScanConfiguration(
+                    locationName = "Grandma's house",
+                    city = "Worcester",
+                    state = "MA",
+                )
+            assertThat(config.locationDisplay()).isEqualTo("Grandma's house, Worcester, MA")
+        }
+
+        @Test
+        fun `hasGpsCoordinates should return true when both lat and lon are set`() {
+            val config = PhotoScanConfiguration(gpsLatitude = "42.2626", gpsLongitude = "-71.8023")
+            assertThat(config.hasGpsCoordinates()).isTrue()
+        }
+
+        @Test
+        fun `hasGpsCoordinates should return false when only lat is set`() {
+            val config = PhotoScanConfiguration(gpsLatitude = "42.2626")
+            assertThat(config.hasGpsCoordinates()).isFalse()
+        }
+
+        @Test
+        fun `cycleRotationCW should cycle 0 to 90`() {
+            val config = PhotoScanConfiguration(rotationDegrees = 0)
+            assertThat(config.cycleRotationCW().rotationDegrees).isEqualTo(90)
+        }
+
+        @Test
+        fun `cycleRotationCCW should cycle 0 to 270`() {
+            val config = PhotoScanConfiguration(rotationDegrees = 0)
+            assertThat(config.cycleRotationCCW().rotationDegrees).isEqualTo(270)
         }
     }
 
@@ -218,30 +258,28 @@ class PhotoScanConfigurationTest {
         fun `copy should preserve all fields`() {
             val original =
                 PhotoScanConfiguration(
-                    originalDateOverride = "2024-01-15",
-                    originalYearOverride = "2024",
-                    originalMonthOverride = "01",
-                    tags = "test, sample",
-                    notes = "Test note",
+                    originalDate = "2024-01-15",
+                    year = "2024",
+                    keywords = "test, sample",
+                    description = "Test note",
                 )
 
             val copy = original.copy()
 
-            assertThat(copy.originalDateOverride).isEqualTo(original.originalDateOverride)
-            assertThat(copy.originalYearOverride).isEqualTo(original.originalYearOverride)
-            assertThat(copy.originalMonthOverride).isEqualTo(original.originalMonthOverride)
-            assertThat(copy.tags).isEqualTo(original.tags)
-            assertThat(copy.notes).isEqualTo(original.notes)
+            assertThat(copy.originalDate).isEqualTo(original.originalDate)
+            assertThat(copy.year).isEqualTo(original.year)
+            assertThat(copy.keywords).isEqualTo(original.keywords)
+            assertThat(copy.description).isEqualTo(original.description)
         }
 
         @Test
         fun `copy with overrides should apply changes`() {
-            val original = PhotoScanConfiguration(tags = "original")
+            val original = PhotoScanConfiguration(keywords = "original")
 
-            val modified = original.copy(tags = "modified")
+            val modified = original.copy(keywords = "modified")
 
-            assertThat(original.tags).isEqualTo("original")
-            assertThat(modified.tags).isEqualTo("modified")
+            assertThat(original.keywords).isEqualTo("original")
+            assertThat(modified.keywords).isEqualTo("modified")
         }
     }
 }
@@ -356,15 +394,15 @@ class PhotoScanProfileConfigurationTest {
 
             assertThat(settings.enablePerspectiveCorrection).isTrue()
             assertThat(settings.enableRotationCorrection).isFalse()
-            assertThat(settings.perspectiveMode).isEqualTo(PerspectiveMode.AUTO)
+            assertThat(settings.correctionStrategy).isNull()
         }
 
         @Test
-        fun `all perspective modes are valid`() {
-            assertThat(PerspectiveMode.entries).hasSize(3)
-            assertThat(PerspectiveMode.AUTO).isNotNull()
-            assertThat(PerspectiveMode.MANUAL).isNotNull()
-            assertThat(PerspectiveMode.DISABLED).isNotNull()
+        fun `all correction strategies are valid`() {
+            assertThat(CorrectionStrategy.entries).hasSize(3)
+            assertThat(CorrectionStrategy.CROP).isNotNull()
+            assertThat(CorrectionStrategy.CROP_AND_ROTATE).isNotNull()
+            assertThat(CorrectionStrategy.PERSPECTIVE).isNotNull()
         }
 
         @Test
@@ -373,12 +411,12 @@ class PhotoScanProfileConfigurationTest {
                 CorrectionSettings(
                     enablePerspectiveCorrection = true,
                     enableRotationCorrection = true,
-                    perspectiveMode = PerspectiveMode.MANUAL,
+                    correctionStrategy = CorrectionStrategy.PERSPECTIVE,
                 )
 
             assertThat(settings.enablePerspectiveCorrection).isTrue()
             assertThat(settings.enableRotationCorrection).isTrue()
-            assertThat(settings.perspectiveMode).isEqualTo(PerspectiveMode.MANUAL)
+            assertThat(settings.correctionStrategy).isEqualTo(CorrectionStrategy.PERSPECTIVE)
         }
     }
 }

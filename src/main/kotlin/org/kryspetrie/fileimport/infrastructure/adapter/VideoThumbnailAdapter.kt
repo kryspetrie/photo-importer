@@ -107,7 +107,6 @@ object VideoThumbnailAdapter {
      * to the first frame (0 seconds) for very short videos. Results are cached to [cacheDir] on
      * disk.
      */
-    @Suppress("ReturnCount")
     private fun extractViaFfmpeg(
         videoFile: File,
         maxPx: Int,

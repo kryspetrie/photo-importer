@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.AspectRatio
 
 /** Unit tests for AspectRatioHandler. Tests AR-01 through AR-06 from the implementation plan. */
 class AspectRatioHandlerTest {
@@ -98,7 +99,7 @@ class AspectRatioHandlerTest {
     fun autoSelectClosestRatio() {
         // Detected ratio 1.5 (3:2)
         val selected = AspectRatioHandler.autoSelectClosest(1.5)
-        assertEquals(AspectRatioHandler.AspectRatio.RATIO_3_2, selected)
+        assertEquals(AspectRatio.LANDSCAPE_3_2, selected)
     }
 
     // AR-06b: Auto-select closest for other ratios
@@ -106,7 +107,7 @@ class AspectRatioHandlerTest {
     fun autoSelectClosestFor67Ratio() {
         // Detected ratio about 0.67 (2:3)
         val selected = AspectRatioHandler.autoSelectClosest(0.67)
-        assertEquals(AspectRatioHandler.AspectRatio.RATIO_2_3, selected)
+        assertEquals(AspectRatio.PORTRAIT_2_3, selected)
     }
 
     // AR-06c: Auto-select for nearly square
@@ -114,7 +115,7 @@ class AspectRatioHandlerTest {
     fun autoSelectForNearlySquare() {
         // Detected ratio 1.05 (close to 1:1)
         val selected = AspectRatioHandler.autoSelectClosest(1.05)
-        assertEquals(AspectRatioHandler.AspectRatio.SQUARE, selected)
+        assertEquals(AspectRatio.SQUARE, selected)
     }
 
     // Test isPortrait
@@ -149,21 +150,21 @@ class AspectRatioHandlerTest {
     @Test
     fun getLabelForRatioReturnsCurrentForZero() {
         val label = AspectRatioHandler.getLabelForRatio(0.0)
-        assertEquals("Current", label)
+        assertEquals("Original", label)
     }
 
     // Test getLabelForRatio for 3:2
     @Test
     fun getLabelForRatioReturns3To2For1Point5() {
         val label = AspectRatioHandler.getLabelForRatio(1.5)
-        assertEquals("3:2", label)
+        assertEquals("Landscape (3:2)", label)
     }
 
     // Test getLabelForRatio for 4:3
     @Test
     fun getLabelForRatioReturns4To3For1Point333() {
         val label = AspectRatioHandler.getLabelForRatio(1.333)
-        assertEquals("4:3", label)
+        assertEquals("Landscape (3:4)", label)
     }
 
     // Test getLabelForRatio for unknown ratio
@@ -180,41 +181,41 @@ class AspectRatioHandlerTest {
         val ratios = AspectRatioHandler.getAvailableRatios()
 
         assertTrue(ratios.size > 5)
-        assertTrue(ratios.any { it.first == 0.0 && it.second == "Current" })
-        assertTrue(ratios.any { it.first == 1.0 && it.second == "1:1" })
-        assertTrue(ratios.any { it.first == 1.5 && it.second == "3:2" })
+        assertTrue(ratios.any { it.first == 0.0 && it.second == "Original" })
+        assertTrue(ratios.any { it.first == 1.0 && it.second == "Square (1:1)" })
+        assertTrue(ratios.any { it.first == 1.5 && it.second == "Landscape (3:2)" })
     }
 
     // Test aspect ratio enum values
     @Test
     fun aspectRatioEnumValuesAreCorrect() {
-        assertEquals(0.0, AspectRatioHandler.AspectRatio.CURRENT.ratio)
-        assertEquals(1.0, AspectRatioHandler.AspectRatio.SQUARE.ratio)
-        assertEquals(4.0 / 3.0, AspectRatioHandler.AspectRatio.RATIO_4_3.ratio)
-        assertEquals(3.0 / 2.0, AspectRatioHandler.AspectRatio.RATIO_3_2.ratio)
-        assertEquals(5.0 / 4.0, AspectRatioHandler.AspectRatio.RATIO_5_4.ratio)
-        assertEquals(3.0 / 4.0, AspectRatioHandler.AspectRatio.RATIO_3_4.ratio)
-        assertEquals(2.0 / 3.0, AspectRatioHandler.AspectRatio.RATIO_2_3.ratio)
-        assertEquals(16.0 / 9.0, AspectRatioHandler.AspectRatio.RATIO_16_9.ratio)
+        assertEquals(0.0, AspectRatio.ORIGINAL.value)
+        assertEquals(1.0, AspectRatio.SQUARE.value)
+        assertEquals(4.0 / 3.0, AspectRatio.LANDSCAPE_3_4.value)
+        assertEquals(3.0 / 2.0, AspectRatio.LANDSCAPE_3_2.value)
+        assertEquals(5.0 / 4.0, AspectRatio.LANDSCAPE_5_4.value)
+        assertEquals(3.0 / 4.0, AspectRatio.PORTRAIT_4_3.value)
+        assertEquals(2.0 / 3.0, AspectRatio.PORTRAIT_2_3.value)
+        assertEquals(16.0 / 9.0, AspectRatio.WIDE_16_9.value)
     }
 
-    // Test aspect ratio labels
+    // Test aspect ratio display names
     @Test
-    fun aspectRatioLabelsAreCorrect() {
-        assertEquals("Current", AspectRatioHandler.AspectRatio.CURRENT.label)
-        assertEquals("1:1", AspectRatioHandler.AspectRatio.SQUARE.label)
-        assertEquals("4:3", AspectRatioHandler.AspectRatio.RATIO_4_3.label)
-        assertEquals("3:2", AspectRatioHandler.AspectRatio.RATIO_3_2.label)
+    fun aspectRatioDisplayNamesAreCorrect() {
+        assertEquals("Original", AspectRatio.ORIGINAL.displayName)
+        assertEquals("Square (1:1)", AspectRatio.SQUARE.displayName)
+        assertEquals("Landscape (3:4)", AspectRatio.LANDSCAPE_3_4.displayName)
+        assertEquals("Landscape (3:2)", AspectRatio.LANDSCAPE_3_2.displayName)
     }
 
     // Test isPortrait for enum
     @Test
     fun aspectRatioEnumIsPortraitWorks() {
-        assertFalse(AspectRatioHandler.AspectRatio.SQUARE.isPortrait())
-        assertFalse(AspectRatioHandler.AspectRatio.RATIO_3_2.isPortrait())
-        assertFalse(AspectRatioHandler.AspectRatio.RATIO_16_9.isPortrait())
-        assertTrue(AspectRatioHandler.AspectRatio.RATIO_3_4.isPortrait())
-        assertTrue(AspectRatioHandler.AspectRatio.RATIO_2_3.isPortrait())
+        assertFalse(AspectRatio.SQUARE.isPortrait())
+        assertFalse(AspectRatio.LANDSCAPE_3_2.isPortrait())
+        assertFalse(AspectRatio.WIDE_16_9.isPortrait())
+        assertTrue(AspectRatio.PORTRAIT_4_3.isPortrait())
+        assertTrue(AspectRatio.PORTRAIT_2_3.isPortrait())
     }
 
     // Test handling of CURRENT (0.0 ratio)

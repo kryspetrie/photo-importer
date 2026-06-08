@@ -12,6 +12,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.kryspetrie.fileimport.domain.model.ConflictResolution
 import org.kryspetrie.fileimport.domain.model.FileChangeType
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.JournalEntry
 import org.kryspetrie.fileimport.domain.model.ReorganizeJournal
@@ -54,8 +55,8 @@ class ReorganizeService(
         onProgress: (ReorganizeProgress) -> Unit = {},
     ): ReorganizePreview =
         withContext(dispatcherProvider.io) {
-            val rootDir = File(folderPath)
-            require(rootDir.exists() && rootDir.isDirectory) {
+            val rootDir = FilePath(folderPath)
+            require(rootDir.toFile().exists() && rootDir.toFile().isDirectory) {
                 "Folder does not exist: $folderPath"
             }
 
@@ -181,7 +182,6 @@ class ReorganizeService(
      * @param onProgress Progress callback
      * @return Result with counts and journal path for undo
      */
-    @Suppress("LoopWithTooManyJumpStatements")
     suspend fun execute(
         preview: ReorganizePreview,
         onProgress: (ReorganizeProgress) -> Unit = {},

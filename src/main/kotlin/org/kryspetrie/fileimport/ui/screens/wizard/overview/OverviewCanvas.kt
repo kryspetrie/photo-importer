@@ -17,16 +17,17 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import java.awt.image.BufferedImage
+import org.kryspetrie.fileimport.domain.model.DetectionMode
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.Corner
 import org.kryspetrie.fileimport.infrastructure.wizard.FourPointState
+import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
 import org.kryspetrie.fileimport.infrastructure.wizard.ZoomController
 
-@Suppress("UnusedParameter")
 @Composable
 fun OverviewCanvas(
     state: PhotoScanWizardState,
@@ -39,6 +40,7 @@ fun OverviewCanvas(
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val selectedBoxIndex by state.selectedBoxIndex.collectAsState()
     val zoomController by state.zoomController.collectAsState()
+    val photoConfigurations by state.photoConfigurations.collectAsState()
 
     Canvas(modifier = Modifier.fillMaxSize().then(canvasPointerHandler(state, wizardMode))) {
         drawCanvasContent(
@@ -48,6 +50,7 @@ fun OverviewCanvas(
             wizardMode = wizardMode,
             fourPointState = fourPointState,
             zoomController = zoomController,
+            photoConfigurations = photoConfigurations,
         )
     }
 }
@@ -266,6 +269,7 @@ private fun DrawScope.drawCanvasContent(
     wizardMode: WizardMode,
     fourPointState: FourPointState,
     zoomController: ZoomController,
+    photoConfigurations: Map<String, PhotoConfiguration>,
 ) {
     val scale = zoomController.zoom.toFloat()
     val panX = zoomController.panX.toFloat()
@@ -298,7 +302,9 @@ private fun DrawScope.drawCanvasContent(
     for (i in 0 until boundingBoxList.size()) {
         val box = boundingBoxList.boxes[i]
         val isSelected = i == selectedBoxIndex
-        drawBoundingBox(box, isSelected, scale, panX, panY)
+        val config = photoConfigurations[box.id]
+        val detectionMode = config?.detectionMode
+        drawBoundingBox(box, isSelected, scale, panX, panY, detectionMode)
     }
 
     // Draw 4-point state if active
@@ -370,6 +376,7 @@ fun DrawScope.drawBoundingBox(
     scale: Float,
     panX: Float,
     panY: Float,
+    detectionMode: DetectionMode? = null,
 ) {
     val outlineColor = if (isSelected) Color(0xFF2196F3) else Color(0xFF4CAF50)
     val fillColor = outlineColor.copy(alpha = 0.2f)
@@ -405,6 +412,22 @@ fun DrawScope.drawBoundingBox(
         val centerX = (tl.x + tr.x + bl.x + br.x) / 4
         val centerY = (tl.y + tr.y + bl.y + br.y) / 4
         drawCircle(outlineColor.copy(alpha = 0.5f), radius = 8f, center = Offset(centerX, centerY))
+    }
+
+    // Draw detection mode badge in top-left corner of the box
+    if (detectionMode != null) {
+        val badgeColor =
+            when (detectionMode) {
+                DetectionMode.COMPUTER_VISION -> Color(0xFF4CAF50) // Green
+                DetectionMode.BOUNDING_BOX -> Color(0xFF2196F3) // Blue
+                DetectionMode.PERSPECTIVE_CORRECTION -> Color(0xFFFF9800) // Orange
+                DetectionMode.HYBRID -> Color(0xFF9C27B0) // Purple
+            }
+        val badgeX = tl.x + 4f
+        val badgeY = tl.y + 4f
+        // Small colored dot indicating detection mode
+        drawCircle(badgeColor, radius = 5f, center = Offset(badgeX + 5f, badgeY + 5f))
+        drawCircle(Color.White, radius = 3f, center = Offset(badgeX + 5f, badgeY + 5f))
     }
 }
 

@@ -61,96 +61,147 @@ petrie-file-importer/
 ├── build-installers.sh              # Build native installer for current OS
 ├── photo-import.sh                  # Convenience launcher script
 ├── CONTRIBUTING.md                  # This file
+├── DEVELOPER_GUIDE.md               # Compose for backend developers
+├── QUICK_REFERENCE.md               # Fast answers for common tasks
 ├── README.md                        # User-facing documentation
+├── docs/ARCHITECTURE.md             # Full architecture reference
 └── src/
     ├── main/kotlin/org/kryspetrie/fileimport/
-    │   ├── PetrieFileImporterApp.kt          # Application entry point
-    │   ├── application/                       # Use cases & orchestration
-    │   │   ├── ImportService.kt               # Core import logic
-    │   │   ├── ReorganizeService.kt           # Library reorganization
-    │   │   ├── DuplicateScannerService.kt     # Standalone duplicate scanner
-    │   │   └── WatchFolderService.kt          # File system watcher
-    │   ├── cli/
-    │   │   └── PhotoImportCli.kt              # CLI interface (Clikt)
-    │   ├── di/
-    │   │   └── AppModule.kt                   # Koin dependency injection
+    │   ├── PetrieFileImporterApp.kt              # Application entry point
+    │   ├── application/                           # Use cases & orchestration
+    │   │   ├── ImportService.kt                   # Core import workflow
+    │   │   ├── ImportScanner.kt                   # Source directory scanning
+    │   │   ├── ImportExecutor.kt                   # File copy & verification
+    │   │   ├── ReorganizeService.kt               # Library reorganization
+    │   │   ├── DuplicateScannerService.kt           # Standalone duplicate scanner
+    │   │   ├── WatchFolderService.kt               # Auto-import from watched folder
+    │   │   ├── ScanService.kt                      # Photo scan orchestration
+    │   │   ├── PhotoScanExportService.kt            # Photo export pipeline
+    │   │   ├── PerspectiveCorrectionService.kt      # Homography correction (BoofCV)
+    │   │   ├── FaceRegionTransformer.kt            # Face region coordinate mapping
+    │   │   ├── LocationSearchService.kt            # Geocoding search
+    │   │   └── export/                             # Export sub-functions
+    │   │       ├── ExifMetadataWriter.kt
+    │   │       ├── FilenameResolver.kt
+    │   │       ├── ImageTransformer.kt
+    │   │       ├── IptcMetadataWriter.kt
+    │   │       └── XmpMetadataWriter.kt
+    │   ├── cli/                                    # CLI interface (Clikt)
+    │   │   ├── PhotoImportCli.kt
+    │   │   └── ReorganizeCommand.kt
+    │   ├── di/                                     # Dependency injection (Koin)
+    │   │   └── AppModule.kt                        # All service & port registrations
     │   ├── domain/
-    │   │   ├── model/                         # Data classes & enums
-    │   │   │   ├── ImageFile.kt               # Core file model + ImageFileType
-    │   │   │   ├── ImageMetadata.kt           # EXIF/video metadata
-    │   │   │   ├── ImportConfiguration.kt     # Settings, presets, placeholders
-    │   │   │   ├── ImportProfile.kt           # Profiles & AppSettings
-    │   │   │   ├── ImportResult.kt            # Import results & progress
-    │   │   │   ├── ReorganizeOperation.kt     # Reorganize models & journals
-    │   │   │   ├── DuplicateInfo.kt           # Duplicate detection models
-    │   │   │   ├── ImportHistory.kt           # Import log entries
-    │   │   │   ├── CameraDevice.kt            # Connected device model
-    │   │   │   └── HashCache.kt               # Cache entry model
-    │   │   └── port/                          # Interfaces (hex architecture)
-    │   │       ├── ImageRepositoryPort.kt     # File I/O operations
-    │   │       ├── NamingPort.kt              # Path/filename generation
-    │   │       ├── DeduplicationPort.kt       # Duplicate detection
-    │   │       ├── HashCachePort.kt           # Disk-backed hash cache
-    │   │       ├── DevicePort.kt              # Camera/device detection
-    │   │       └── SettingsPort.kt            # Settings persistence
-    │   ├── infrastructure/adapter/            # Port implementations
-    │   │   ├── ImageRepositoryAdapter.kt      # File scanning, hashing, copying
-    │   │   ├── NamingAdapter.kt               # Pattern-based naming
-    │   │   ├── DeduplicationAdapter.kt        # Hash, perceptual, SURF dedup
-    │   │   ├── HashCacheAdapter.kt            # SQLite-backed cache
-    │   │   ├── DeviceAdapter.kt               # OS-specific device detection
-    │   │   ├── SettingsAdapter.kt             # JSON settings persistence
-    │   │   ├── ImportHistoryAdapter.kt        # Import log persistence
-    │   │   ├── RawThumbnailExtractor.kt       # RAW file preview extraction
-    │   │   └── VideoThumbnailAdapter.kt       # FFmpeg video thumbnails
+    │   │   ├── model/                              # Pure Kotlin data classes & enums
+    │   │   │   ├── AppSettings.kt                  # User preferences & window state
+    │   │   │   ├── ImportConfiguration.kt           # Import settings & naming patterns
+    │   │   │   ├── ImageFile.kt                     # Core file model + ImageFileType
+    │   │   │   ├── PhotoScanConfiguration.kt        # Photo scan metadata overrides
+    │   │   │   ├── PhotoScanModels.kt               # DetectedPhoto, PhotoCorner
+    │   │   │   ├── PhotoScanExportModels.kt          # Export result types
+    │   │   │   ├── ProcessedImage.kt                # Domain image abstraction (no AWT)
+    │   │   │   ├── geometry/                        # BoundingBox, Point, Corner
+    │   │   │   └── ...                              # ~35 more model files
+    │   │   └── port/                               # Interfaces (hex architecture)
+    │   │       ├── ImageRepositoryPort.kt           # File scanning, copying, hashing
+    │   │       ├── SettingsPort.kt                  # JSON settings persistence
+    │   │       ├── NamingPort.kt                    # Path & filename generation
+    │   │       ├── DeduplicationPort.kt             # Duplicate detection strategies
+    │   │       ├── HashCachePort.kt                 # Disk-backed hash cache
+    │   │       ├── FileSystemPort.kt                # File system operations
+    │   │       ├── DevicePort.kt                    # Camera/device detection
+    │   │       ├── ImportHistoryPort.kt              # Import history persistence
+    │   │       ├── GeocodingPort.kt                 # Location search (Nominatim)
+    │   │       ├── PhotoScanDetectorPort.kt          # Photo detection in scans
+    │   │       ├── PhotoScanExportPort.kt             # Photo export with corrections
+    │   │       ├── ModelResourcePort.kt               # ONNX model loading
+    │   │       ├── DispatcherProvider.kt              # Coroutine dispatchers
+    │   │       ├── TimeProvider.kt                    # Time operations
+    │   │       └── IdGenerator.kt                     # Unique ID generation
+    │   ├── infrastructure/
+    │   │   ├── adapter/                            # Port implementations
+    │   │   │   ├── ImageRepositoryAdapter.kt         # File I/O, hashing, sidecars
+    │   │   │   ├── SettingsAdapter.kt               # JSON file persistence
+    │   │   │   ├── NamingAdapter.kt                 # Pattern-based naming
+    │   │   │   ├── DeduplicationAdapter.kt           # Hash, perceptual, SURF dedup
+    │   │   │   ├── HashCacheAdapter.kt              # SQLite-backed cache
+    │   │   │   ├── FileSystemAdapter.kt             # File system operations
+    │   │   │   ├── DeviceAdapter.kt                # OS-specific device detection
+    │   │   │   ├── ImportHistoryAdapter.kt           # JSON import history
+    │   │   │   ├── NominatimGeocodingAdapter.kt       # OSM geocoding API
+    │   │   │   ├── ClasspathModelResourceAdapter.kt    # ONNX model loading
+    │   │   │   ├── ProcessedImageAdapter.kt          # BufferedImage ↔ ProcessedImage
+    │   │   │   ├── Platform.kt                      # Cross-platform OS detection
+    │   │   │   └── ...                               # DefaultDispatcherProvider, etc.
+    │   │   ├── logging/
+    │   │   │   └── LoggingConfig.kt                 # AppLogger (SLF4J-based)
+    │   │   ├── photoscan/                            # Photo detection infrastructure
+    │   │   │   ├── HybridCornerDetector.kt           # Classical CV + ML hybrid
+    │   │   │   ├── PhotoScanDetectorService.kt       # YOLO/CV detection with fallbacks
+    │   │   │   ├── RectangleDetector.kt             # Edge-based rectangle detection
+    │   │   │   └── yolo/                             # YOLO neural network pipeline
+    │   │   └── wizard/                               # Photo Scan wizard UI state
+    │   │       ├── PhotoScanWizardState.kt           # Central wizard state
+    │   │       ├── BoundingBox.kt                    # Type aliases → domain.geometry
+    │   │       ├── PhotoConfiguration.kt             # Type alias → PhotoScanConfiguration
+    │   │       └── ...                                # WizardMode, ZoomController, etc.
     │   └── ui/
-    │       ├── PetrieFileImporterApp.kt       # Top-level app + tab navigation
-    │       ├── AppIcon.kt                     # Programmatic app icon
-    │       ├── theme/Theme.kt                 # Material 3 theming
-    │       ├── components/                    # Reusable UI components
-    │       │   ├── ThumbnailImage.kt          # Async thumbnail loader + cache
-    │       │   ├── PlaceholderHelpTooltip.kt  # Pattern placeholder help
-    │       │   └── DropTarget.kt              # Drag-and-drop utilities
-    │       └── screens/                       # Full-screen views
-    │           ├── ImportScreen.kt            # Main import flow
-    │           ├── ImagePreviewScreen.kt      # File selection with filters
-    │           ├── PreviewStructureScreen.kt  # Import dry-run preview
-    │           ├── DuplicateReviewScreen.kt   # Duplicate resolution UI
-    │           ├── ReorganizeScreen.kt        # Library reorganization
-    │           ├── DuplicateScannerScreen.kt  # Standalone duplicate finder
-    │           └── ImportProgressScreen.kt    # Progress display
-    └── test/kotlin/org/kryspetrie/fileimport/  # Mirrors main/ structure
-        ├── application/                       # Service-layer tests
-        ├── domain/model/                      # Model & business rule tests
-        ├── infrastructure/adapter/            # Adapter integration tests
-        └── ui/                                # UI logic tests
+    │       ├── PetrieFileImporterApp.kt              # Top-level app & tab navigation
+    │       ├── AppIcon.kt                           # Programmatic app icon
+    │       ├── theme/Theme.kt                       # Material 3 theming
+    │       ├── components/                          # Reusable UI components
+    │       │   ├── ThumbnailImage.kt                # Async thumbnail loader
+    │       │   ├── ThumbnailCache.kt                # In-memory thumbnail cache
+    │       │   ├── FileDialogs.kt                  # Cross-platform file dialogs
+    │       │   └── ...
+    │       └── screens/                              # Full-screen views & wizards
+    │           ├── MediaImportScreen.kt             # Main import flow
+    │           ├── wizard/                           # Photo Scan import wizard
+    │           │   ├── WizardContainer.kt            # Wizard orchestrator
+    │           │   ├── OverviewScreen.kt            # Photo overview & selection
+    │           │   ├── RefinementScreen.kt          # Corner adjustment
+    │           │   ├── SummaryScreen.kt             # Summary & export settings
+    │           │   ├── metadata/                    # Metadata editing
+    │           │   │   ├── MetadataScreen.kt
+    │           │   │   ├── MetadataEditState.kt     # Compose state holder
+    │           │   │   └── MetadataField.kt
+    │           │   └── ...
+    │           └── ...
+    └── test/kotlin/org/kryspetrie/fileimport/        # Mirrors main/ structure
+        ├── application/                             # Service-layer tests
+        ├── domain/model/                            # Model & business rule tests
+        ├── infrastructure/                          # Adapter & wizard tests
+        └── ui/                                      # UI logic tests
 ```
 
 ---
-
 ## Architecture
 
-This project follows **Hexagonal Architecture** (Ports and Adapters):
+This project follows **Hexagonal Architecture** (Ports and Adapters). See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full reference.
 
 ```
-┌─────────────────────────────────────────────┐
-│              UI Layer (Compose)              │  Screens, components, theme
-├─────────────────────────────────────────────┤
-│           Application Layer                 │  ImportService, ReorganizeService, etc.
-├─────────────────────────────────────────────┤
-│             Domain Layer                    │  Models, Ports (interfaces)
-├─────────────────────────────────────────────┤
-│          Infrastructure Layer               │  Adapters (implementations)
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                     UI Layer (Compose Desktop)                   │
+│  Screens · Wizards · Components · Theme                        │
+├─────────────────────────────────────────────────────────────────┤
+│                     Application Layer                            │
+│  ImportService · ReorganizeService · ScanService · etc.        │
+├─────────────────────────────────────────────────────────────────┤
+│                       Domain Layer                              │
+│  Models (data classes) · Ports (interfaces) · Business rules     │
+├─────────────────────────────────────────────────────────────────┤
+│                    Infrastructure Layer                          │
+│  Adapters implement ports · PhotoScan detection · Wizard state   │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### Key Principles
 
-- **Domain models** have no framework dependencies — they are plain Kotlin data classes.
-- **Ports** are interfaces in `domain/port/` that define what the application needs.
-- **Adapters** in `infrastructure/adapter/` implement those ports with real I/O.
-- **Application services** orchestrate ports to fulfill use cases.
-- **UI screens** call application services via Koin-injected dependencies.
+- **Domain models** have no framework dependencies — they are plain Kotlin data classes. No `java.awt` imports in domain.
+- **Ports** are interfaces in `domain/port/` that define what the application needs. Every port has a corresponding adapter.
+- **Adapters** in `infrastructure/` implement those ports with real I/O. The UI accesses adapters only through ports (via Koin DI).
+- **Application services** orchestrate ports to fulfill use cases. They don't import from the UI layer.
+- **UI screens** inject ports and services via `koinInject()`, never concrete adapters directly.
 
 ### Dependency Flow
 
@@ -160,7 +211,9 @@ UI → Application → Domain (models + ports)
           Infrastructure (adapters) implements ports
 ```
 
-Never import infrastructure classes from the domain layer. The UI layer may reference adapters only when registering them via Koin.
+**Never** import infrastructure classes from the domain layer. The UI layer accesses infrastructure only through domain ports (registered in `AppModule.kt`).
+
+A few pragmatic exceptions exist (e.g., `AppPaths`, `Platform`, `PhotoScanWizardState`) — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#boundary-exceptions) for details.
 
 ---
 

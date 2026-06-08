@@ -2,8 +2,6 @@ package org.kryspetrie.fileimport.infrastructure.adapter
 
 import java.net.HttpURLConnection
 import java.net.URLEncoder
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -16,10 +14,8 @@ import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 
-@Singleton
-class NominatimGeocodingAdapter
-@Inject
-constructor(private val dispatcherProvider: DispatcherProvider) : GeocodingPort {
+class NominatimGeocodingAdapter(private val dispatcherProvider: DispatcherProvider) :
+    GeocodingPort {
 
     private data class CacheEntry(val results: List<LocationResult>, val timestamp: Long)
 

@@ -42,9 +42,9 @@ class LocationSearchServiceTest {
     inner class SearchBehavior {
 
         @Test
-        @DisplayName("clearSearch resets all state")
-        fun clearSearchResetsState() {
-            service.clearSearch()
+        @DisplayName("clearResults resets all state")
+        fun clearResultsResetsState() {
+            service.clearResults()
             assertEquals(emptyList<LocationResult>(), service.searchResults.value)
             assertFalse(service.isSearching.value)
             assertNull(service.errorMessage.value)

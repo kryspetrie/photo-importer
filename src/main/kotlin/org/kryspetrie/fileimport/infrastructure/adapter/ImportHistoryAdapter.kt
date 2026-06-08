@@ -4,13 +4,15 @@ import java.io.File
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.kryspetrie.fileimport.domain.model.ImportFileDetail
 import org.kryspetrie.fileimport.domain.model.ImportHistoryEntry
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.ImportHistoryPort
 
 class ImportHistoryAdapter(
     private val historyDir: File = File(System.getProperty("user.home"), ".petrie-importer"),
     private val dispatcherProvider: DispatcherProvider,
-) {
+) : ImportHistoryPort {
     private val json = Json {
         prettyPrint = true
         ignoreUnknownKeys = true
@@ -22,12 +24,7 @@ class ImportHistoryAdapter(
         historyDir.mkdirs()
     }
 
-    /**
-     * Loads import history from disk.
-     *
-     * @return List of import history entries, newest first
-     */
-    suspend fun loadHistory(): List<ImportHistoryEntry> =
+    override suspend fun loadHistory(): List<ImportHistoryEntry> =
         withContext(dispatcherProvider.io) {
             try {
                 if (historyFile.exists()) {
@@ -38,16 +35,10 @@ class ImportHistoryAdapter(
             }
         }
 
-    /**
-     * Adds a new import history entry with full file details.
-     *
-     * @param entry Import history entry to save
-     * @param fileDetails Optional list of per-file details (merged into entry if provided)
-     */
-    suspend fun addEntry(
+    override suspend fun addEntry(
         entry: ImportHistoryEntry,
-        fileDetails: List<org.kryspetrie.fileimport.domain.model.ImportFileDetail>? = null,
-    ) =
+        fileDetails: List<ImportFileDetail>?,
+    ): Unit =
         withContext(dispatcherProvider.io) {
             try {
                 val history = loadHistory().toMutableList()
@@ -61,22 +52,17 @@ class ImportHistoryAdapter(
             } catch (_: Exception) {}
         }
 
-    /** Clears all import history. */
-    suspend fun clearHistory() =
+    override suspend fun clearHistory(): Unit =
         withContext(dispatcherProvider.io) {
             try {
                 historyFile.delete()
             } catch (_: Exception) {}
         }
 
-    /**
-     * Checks if a source has been fully imported to a destination.
-     *
-     * @param sourcePath Source directory path
-     * @param destinationPath Destination directory path
-     * @return True if source was fully imported without errors or skips
-     */
-    suspend fun isSourceFullyImported(sourcePath: String, destinationPath: String): Boolean {
+    override suspend fun isSourceFullyImported(
+        sourcePath: String,
+        destinationPath: String,
+    ): Boolean {
         return loadHistory().any { entry ->
             entry.sourcePath == sourcePath &&
                 entry.destinationPath == destinationPath &&
@@ -85,23 +71,11 @@ class ImportHistoryAdapter(
         }
     }
 
-    /**
-     * Gets detailed history for a specific import session.
-     *
-     * @param importId Import session ID
-     * @return Import entry with full file details or null
-     */
-    suspend fun getImportDetails(importId: String): ImportHistoryEntry? {
+    override suspend fun getImportDetails(importId: String): ImportHistoryEntry? {
         return loadHistory().find { it.id == importId }
     }
 
-    /**
-     * Searches import history by source or destination path.
-     *
-     * @param path Path to search for (matches source or destination)
-     * @return List of matching import entries
-     */
-    suspend fun searchByPath(path: String): List<ImportHistoryEntry> {
+    override suspend fun searchByPath(path: String): List<ImportHistoryEntry> {
         return loadHistory().filter {
             it.sourcePath.contains(path, ignoreCase = true) ||
                 it.destinationPath.contains(path, ignoreCase = true)

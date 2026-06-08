@@ -14,6 +14,8 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
+import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort

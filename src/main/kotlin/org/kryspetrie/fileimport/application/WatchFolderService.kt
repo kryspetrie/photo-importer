@@ -14,27 +14,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.ImageFileType
-import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
+import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.TimeProvider
-
-data class WatchFolderConfig(
-    val watchPath: String,
-    val destinationPath: String,
-    val profileName: String = "",
-    val configuration: ImportConfiguration = ImportConfiguration(),
-    val cooldownMs: Long = 5000,
-    val recursive: Boolean = true,
-)
-
-data class WatchFolderStatus(
-    val isWatching: Boolean = false,
-    val watchPath: String = "",
-    val lastEventTime: Long = 0,
-    val filesDetected: Int = 0,
-    val autoImportsPending: Int = 0,
-    val lastError: String? = null,
-)
 
 class WatchFolderService(
     private val importService: ImportService,

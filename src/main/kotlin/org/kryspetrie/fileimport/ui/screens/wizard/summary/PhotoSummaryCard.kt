@@ -28,8 +28,8 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 
 /**
- * Card showing summary and rotation options for a single detected photo. Warp-stretch is always
- * applied.
+ * Card showing summary and rotation/correction options for a single detected photo. Displays
+ * detection mode badge, correction strategy selector, and rotation controls.
  */
 @Composable
 fun PhotoSummaryCard(
@@ -67,6 +67,9 @@ fun PhotoSummaryCard(
         ) {
             PhotoCardHeader(box = box, index = index, config = config)
 
+            // Correction strategy selector per photo
+            CorrectionStrategyRow(config = config, onConfigChange = onConfigChange)
+
             PhotoCorrectionRow(
                 config = config,
                 onConfigChange = onConfigChange,
@@ -76,7 +79,7 @@ fun PhotoSummaryCard(
     }
 }
 
-/** Header row showing photo number, pixel dimensions, and current rotation state. */
+/** Header row showing photo number, detection mode badge, pixel dimensions, and rotation state. */
 @Composable
 private fun PhotoCardHeader(box: BoundingBox, index: Int, config: PhotoConfiguration) {
     Row(
@@ -84,7 +87,14 @@ private fun PhotoCardHeader(box: BoundingBox, index: Int, config: PhotoConfigura
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Photo ${index + 1}", style = MaterialTheme.typography.titleSmall)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Photo ${index + 1}", style = MaterialTheme.typography.titleSmall)
+            // Detection mode badge (only shown when a mode is set)
+            config.detectionMode?.let { mode -> DetectionModeBadge(mode = mode) }
+        }
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -105,9 +115,33 @@ private fun PhotoCardHeader(box: BoundingBox, index: Int, config: PhotoConfigura
     }
 }
 
-/**
- * Row with rotation button and delete button. Warp-stretch is always applied, no checkbox needed.
- */
+/** Row with correction strategy dropdown, allowing per-photo override. */
+@Composable
+private fun CorrectionStrategyRow(
+    config: PhotoConfiguration,
+    onConfigChange: (PhotoConfiguration) -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            "Correction:",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        CorrectionStrategyDropdown(
+            selectedStrategy = config.correctionStrategy,
+            onStrategyChange = { strategy ->
+                onConfigChange(config.copy(correctionStrategy = strategy))
+            },
+            modifier = Modifier.height(40.dp),
+        )
+    }
+}
+
+/** Row with rotation button and delete button. Warp-stretch is always applied. */
 @Composable
 private fun PhotoCorrectionRow(
     config: PhotoConfiguration,

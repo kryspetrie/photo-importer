@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.domain.model
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -16,7 +17,8 @@ class PhotoScanSettingsTest {
 
         assertTrue(settings.enablePerspectiveCorrection)
         assertFalse(settings.enableRotationCorrection)
-        assertEquals(PerspectiveMode.AUTO, settings.perspectiveMode)
+        // Default correctionStrategy is null (auto-detect)
+        assertNull(settings.correctionStrategy)
     }
 
     @Test
@@ -41,14 +43,15 @@ class PhotoScanSettingsTest {
     }
 
     @Test
-    fun `perspective mode can be set explicitly`() {
-        val autoMode = CorrectionSettings(perspectiveMode = PerspectiveMode.AUTO)
-        val manualMode = CorrectionSettings(perspectiveMode = PerspectiveMode.MANUAL)
-        val disabledMode = CorrectionSettings(perspectiveMode = PerspectiveMode.DISABLED)
+    fun `correction strategy can be set explicitly`() {
+        val autoMode = CorrectionSettings(correctionStrategy = null)
+        val perspectiveMode =
+            CorrectionSettings(correctionStrategy = CorrectionStrategy.PERSPECTIVE)
+        val cropMode = CorrectionSettings(correctionStrategy = CorrectionStrategy.CROP)
 
-        assertEquals(PerspectiveMode.AUTO, autoMode.perspectiveMode)
-        assertEquals(PerspectiveMode.MANUAL, manualMode.perspectiveMode)
-        assertEquals(PerspectiveMode.DISABLED, disabledMode.perspectiveMode)
+        assertNull(autoMode.correctionStrategy)
+        assertEquals(CorrectionStrategy.PERSPECTIVE, perspectiveMode.correctionStrategy)
+        assertEquals(CorrectionStrategy.CROP, cropMode.correctionStrategy)
     }
 
     // ==================== PhotoOutputFormat Tests ====================
@@ -179,22 +182,22 @@ class PhotoScanSettingsTest {
         }
     }
 
-    // ==================== PerspectiveMode Tests ====================
+    // ==================== CorrectionStrategy Tests ====================
 
     @Test
-    fun `all perspective modes have values`() {
-        assertEquals(0, PerspectiveMode.AUTO.ordinal)
-        assertEquals(1, PerspectiveMode.MANUAL.ordinal)
-        assertEquals(2, PerspectiveMode.DISABLED.ordinal)
+    fun `all correction strategies have values`() {
+        assertEquals(0, CorrectionStrategy.CROP.ordinal)
+        assertEquals(1, CorrectionStrategy.CROP_AND_ROTATE.ordinal)
+        assertEquals(2, CorrectionStrategy.PERSPECTIVE.ordinal)
     }
 
     @Test
-    fun `perspective modes can be iterated`() {
-        val modes = PerspectiveMode.entries
-        assertEquals(3, modes.size)
-        assertTrue(modes.contains(PerspectiveMode.AUTO))
-        assertTrue(modes.contains(PerspectiveMode.MANUAL))
-        assertTrue(modes.contains(PerspectiveMode.DISABLED))
+    fun `correction strategies can be iterated`() {
+        val strategies = CorrectionStrategy.entries
+        assertEquals(3, strategies.size)
+        assertTrue(strategies.contains(CorrectionStrategy.CROP))
+        assertTrue(strategies.contains(CorrectionStrategy.CROP_AND_ROTATE))
+        assertTrue(strategies.contains(CorrectionStrategy.PERSPECTIVE))
     }
 
     // ==================== Integration Tests ====================

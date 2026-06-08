@@ -10,8 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
@@ -44,7 +42,6 @@ import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeProgressSection
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeSettingsSection
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeUndoSection
 
-@Suppress("UnusedParameter")
 @Composable
 fun ReorganizeScreen(
     settings: AppSettings,
@@ -166,140 +163,144 @@ fun ReorganizeScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-            Text("Reorganize Library", style = MaterialTheme.typography.headlineSmall)
-            Text(
-                "Apply folder and filename patterns to an existing media library.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+                Text("Reorganize Library", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "Apply folder and filename patterns to an existing media library.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
 
-            // Folder selection
-            FolderSelectionField(
-                value = viewModel.folderPath,
-                onValueChange = { viewModel.folderPath = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = "Library Folder",
-                placeholder = "Select folder to reorganize...",
-                title = "Select Library Folder",
-                supportingText = {
-                    Text("Paste a path or browse", style = MaterialTheme.typography.labelSmall)
-                },
-            )
+                // Folder selection
+                FolderSelectionField(
+                    value = viewModel.folderPath,
+                    onValueChange = { viewModel.folderPath = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = "Library Folder",
+                    placeholder = "Select folder to reorganize...",
+                    title = "Select Library Folder",
+                    supportingText = {
+                        Text("Paste a path or browse", style = MaterialTheme.typography.labelSmall)
+                    },
+                )
 
-            // Operation mode selection
-            OutlinedCard(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Operation Mode", style = MaterialTheme.typography.labelMedium)
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                // Operation mode selection
+                OutlinedCard(Modifier.fillMaxWidth()) {
+                    Column(
+                        Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        ReorganizeMode.entries.forEach { mode ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(
-                                    viewModel.reorgMode == mode,
-                                    { viewModel.reorgMode = mode },
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Column {
-                                    Text(
-                                        when (mode) {
-                                            ReorganizeMode.MOVE -> "Move files"
-                                            ReorganizeMode.COPY -> "Copy files"
-                                        },
-                                        style = MaterialTheme.typography.bodySmall,
+                        Text("Operation Mode", style = MaterialTheme.typography.labelMedium)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        ) {
+                            ReorganizeMode.entries.forEach { mode ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(
+                                        viewModel.reorgMode == mode,
+                                        { viewModel.reorgMode = mode },
                                     )
-                                    Text(
-                                        when (mode) {
-                                            ReorganizeMode.MOVE ->
-                                                "Originals removed, moved to new locations"
-                                            ReorganizeMode.COPY ->
-                                                "Originals preserved, copies in new locations"
-                                        },
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Column {
+                                        Text(
+                                            when (mode) {
+                                                ReorganizeMode.MOVE -> "Move files"
+                                                ReorganizeMode.COPY -> "Copy files"
+                                            },
+                                            style = MaterialTheme.typography.bodySmall,
+                                        )
+                                        Text(
+                                            when (mode) {
+                                                ReorganizeMode.MOVE ->
+                                                    "Originals removed, moved to new locations"
+                                                ReorganizeMode.COPY ->
+                                                    "Originals preserved, copies in new locations"
+                                            },
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Rename only toggle
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(viewModel.renameOnly, { viewModel.renameOnly = it })
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    "Rename files only (don't move to subfolders)",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
+                // Rename only toggle
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(viewModel.renameOnly, { viewModel.renameOnly = it })
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Rename files only (don't move to subfolders)",
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
 
-            // Error
-            viewModel.errorMessage?.let {
-                OutlinedCard(Modifier.fillMaxWidth()) {
-                    Row(
-                        Modifier.padding(10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.Warning,
-                            null,
-                            Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.error,
-                        )
-                        Text(
-                            it,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                // Error
+                viewModel.errorMessage?.let {
+                    OutlinedCard(Modifier.fillMaxWidth()) {
+                        Row(
+                            Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.Warning,
+                                null,
+                                Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
                     }
                 }
-            }
 
-            // Progress states
-            if (
-                viewModel.step == ReorganizeViewModel.ReorgStep.SCANNING ||
-                    viewModel.step == ReorganizeViewModel.ReorgStep.EXECUTING ||
-                    viewModel.step == ReorganizeViewModel.ReorgStep.COMPLETE
-            ) {
-                ReorganizeProgressSection(
-                    step = viewModel.step,
-                    progress = viewModel.progress,
-                    result = viewModel.result,
-                    onReset = { viewModel.reset() },
+                // Progress states
+                if (
+                    viewModel.step == ReorganizeViewModel.ReorgStep.SCANNING ||
+                        viewModel.step == ReorganizeViewModel.ReorgStep.EXECUTING ||
+                        viewModel.step == ReorganizeViewModel.ReorgStep.COMPLETE
+                ) {
+                    ReorganizeProgressSection(
+                        step = viewModel.step,
+                        progress = viewModel.progress,
+                        result = viewModel.result,
+                        onReset = { viewModel.reset() },
+                    )
+                }
+
+                // Preview results
+                if (
+                    viewModel.step == ReorganizeViewModel.ReorgStep.PREVIEW &&
+                        viewModel.preview != null
+                ) {
+                    ReorganizePreviewSection(
+                        preview = viewModel.preview!!,
+                        folderPath = viewModel.folderPath,
+                        showFileChanges = viewModel.preview!!.changedFiles > 0,
+                    )
+                }
+
+                // Settings
+                ReorganizeSettingsSection(
+                    config = viewModel.config,
+                    onConfigChange = { viewModel.config = it },
+                    settingsExpanded = viewModel.settingsExpanded,
+                    onSettingsExpandedChange = { viewModel.settingsExpanded = it },
+                    renameOnly = viewModel.renameOnly,
+                )
+
+                // Undo journals
+                ReorganizeUndoSection(
+                    journals = viewModel.journals,
+                    onUndoRequest = { viewModel.showUndoConfirm = it },
+                    onViewJournal = { viewModel.selectedJournal = it },
                 )
             }
-
-            // Preview results
-            if (
-                viewModel.step == ReorganizeViewModel.ReorgStep.PREVIEW && viewModel.preview != null
-            ) {
-                ReorganizePreviewSection(
-                    preview = viewModel.preview!!,
-                    folderPath = viewModel.folderPath,
-                    showFileChanges = viewModel.preview!!.changedFiles > 0,
-                )
-            }
-
-            // Settings
-            ReorganizeSettingsSection(
-                config = viewModel.config,
-                onConfigChange = { viewModel.config = it },
-                settingsExpanded = viewModel.settingsExpanded,
-                onSettingsExpandedChange = { viewModel.settingsExpanded = it },
-                renameOnly = viewModel.renameOnly,
-            )
-
-            // Undo journals
-            ReorganizeUndoSection(
-                journals = viewModel.journals,
-                onUndoRequest = { viewModel.showUndoConfirm = it },
-                onViewJournal = { viewModel.selectedJournal = it },
-            )
-        }
         }
 
         // Bottom action bar

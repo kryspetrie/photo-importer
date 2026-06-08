@@ -21,56 +21,29 @@ enum class PhotoOutputFormat(val extension: String, val quality: Int, val descri
     TIFF("tiff", 100, "TIFF (Uncompressed)"),
 }
 
-/**
- * Aspect ratio preset for photo export.
- *
- * Provides common aspect ratios for cropping photos to standard print sizes.
- *
- * @property displayName User-friendly name
- * @property value The aspect ratio (width/height). 0 means "use original"
- * @property printSize Common print size with this ratio
- */
-@Serializable
-enum class AspectRatioPreset(val displayName: String, val value: Double, val printSize: String) {
-    ORIGINAL("Original", 0.0, "Use photo's original aspect ratio"),
-    SQUARE("Square (1:1)", 1.0, "4x4, 8x8, 12x12 inches"),
-    PORTRAIT_4_3("Portrait (4:3)", 3.0 / 4.0, "4x3, 8x6, 12x9 inches"),
-    LANDSCAPE_3_4("Landscape (3:4)", 4.0 / 3.0, "3x4, 6x8, 9x12 inches"),
-    PORTRAIT_2_3("Portrait (2:3)", 2.0 / 3.0, "2x3, 4x6, 8x12 inches"),
-    LANDSCAPE_3_2("Landscape (3:2)", 3.0 / 2.0, "3x2, 6x4, 12x8 inches"),
-    PORTRAIT_5_7("Portrait (5:7)", 5.0 / 7.0, "5x7, 10x14 inches"),
-    PORTRAIT_4_5("Portrait (4:5)", 4.0 / 5.0, "4x5, 8x10, 16x20 inches"),
-    WIDE_16_9("Wide (16:9)", 16.0 / 9.0, "Computer screens, TVs"),
-    PANORAMA_3_1("Panorama (3:1)", 3.0 / 1.0, "Wide prints, banners"),
-}
+/** Backward-compatible alias for [AspectRatio]. See [AspectRatio] for the unified enum. */
+typealias AspectRatioPreset = AspectRatio
 
 /**
  * Default correction settings for photo export.
  *
  * @property enablePerspectiveCorrection Automatically correct trapezoidal distortion
  * @property enableRotationCorrection Automatically fix scan rotation
- * @property perspectiveMode How to handle perspective correction
+ * @property correctionStrategy Override for the correction strategy. null = auto-detect from corner
+ *   geometry (see [determineCorrectionStrategy]), non-null = force a specific strategy regardless
+ *   of geometry. This maps to the former [PerspectiveMode]:
+ *     - AUTO → null
+ *     - MANUAL → [CorrectionStrategy.PERSPECTIVE]
+ *     - DISABLED → [CorrectionStrategy.CROP]
+ *
+ * @see CorrectionStrategy
  */
 @Serializable
 data class CorrectionSettings(
     val enablePerspectiveCorrection: Boolean = true,
     val enableRotationCorrection: Boolean = false,
-    val perspectiveMode: PerspectiveMode = PerspectiveMode.AUTO,
+    val correctionStrategy: CorrectionStrategy? = null,
 )
-
-/**
- * Perspective correction mode.
- *
- * @property AUTO Let the system decide based on detected corners
- * @property MANUAL User adjusts corners manually
- * @property DISABLED No perspective correction
- */
-@Serializable
-enum class PerspectiveMode {
-    AUTO,
-    MANUAL,
-    DISABLED,
-}
 
 /**
  * Represents a saved Photo Scan configuration profile.
@@ -421,7 +394,7 @@ data class PhotoScanProfile(
                     CorrectionSettings(
                         enablePerspectiveCorrection = true,
                         enableRotationCorrection = true,
-                        perspectiveMode = PerspectiveMode.AUTO,
+                        correctionStrategy = CorrectionStrategy.PERSPECTIVE,
                     ),
                 namingPattern = "{date}_{original}",
                 autoDetectEnabled = true,

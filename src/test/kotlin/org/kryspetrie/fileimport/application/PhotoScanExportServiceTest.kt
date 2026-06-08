@@ -14,8 +14,11 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.kryspetrie.fileimport.domain.model.FilePath
+import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 
 @DisplayName("PhotoScanExportService")
 class PhotoScanExportServiceTest {
@@ -94,7 +97,13 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportPhotos(sourceFile, source, photos, destDir.absolutePath, "test_photo")
+                service.exportPhotos(
+                    FilePath(sourceFile.absolutePath),
+                    source.toProcessedImage(),
+                    photos,
+                    destDir.absolutePath,
+                    "test_photo",
+                )
 
             assertThat(result).isNotNull
             assertThat(result).hasFieldOrProperty("success")
@@ -111,7 +120,13 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportPhotos(sourceFile, source, emptyList(), destDir.absolutePath, "empty")
+                service.exportPhotos(
+                    FilePath(sourceFile.absolutePath),
+                    source.toProcessedImage(),
+                    emptyList(),
+                    destDir.absolutePath,
+                    "empty",
+                )
 
             assertThat(result.success).isTrue()
             assertThat(result.exportedFiles).isEmpty()
@@ -130,7 +145,13 @@ class PhotoScanExportServiceTest {
             val destDir = File(tempDir, "error")
 
             val result =
-                service.exportPhotos(sourceFile, source, photos, destDir.absolutePath, "photo")
+                service.exportPhotos(
+                    FilePath(sourceFile.absolutePath),
+                    source.toProcessedImage(),
+                    photos,
+                    destDir.absolutePath,
+                    "photo",
+                )
 
             assertThat(result.success).isFalse()
             assertThat(result.errors).isNotEmpty()
@@ -144,7 +165,7 @@ class PhotoScanExportServiceTest {
         @DisplayName("zero margin returns same photo")
         fun zeroMarginReturnsSamePhoto() {
             val photo = createDetectedPhoto(10f, 10f, 110f, 10f, 110f, 110f, 10f, 110f)
-            val result = service.applyMargin(photo, 0.0)
+            val result = GeometryUtils.applyMargin(photo, 0.0)
             assertThat(result.topLeft.x).isEqualTo(photo.topLeft.x)
             assertThat(result.topLeft.y).isEqualTo(photo.topLeft.y)
             assertThat(result.bottomRight.x).isEqualTo(photo.bottomRight.x)
@@ -154,7 +175,7 @@ class PhotoScanExportServiceTest {
         @DisplayName("negative margin returns same photo")
         fun negativeMarginReturnsSamePhoto() {
             val photo = createDetectedPhoto(10f, 10f, 110f, 10f, 110f, 110f, 10f, 110f)
-            val result = service.applyMargin(photo, -0.05)
+            val result = GeometryUtils.applyMargin(photo, -0.05)
             assertThat(result.topLeft.x).isEqualTo(photo.topLeft.x)
         }
 
@@ -163,7 +184,7 @@ class PhotoScanExportServiceTest {
         fun twoPercentMarginPushesOutward() {
             // 100x100 square centered at (150, 150)
             val photo = createDetectedPhoto(100f, 100f, 200f, 100f, 200f, 200f, 100f, 200f)
-            val result = service.applyMargin(photo, 0.02)
+            val result = GeometryUtils.applyMargin(photo, 0.02)
 
             // Diagonal = sqrt(100^2 + 100^2) ≈ 141.4
             // marginPx = 0.02 * 141.4 ≈ 2.83
@@ -183,7 +204,7 @@ class PhotoScanExportServiceTest {
             val photo =
                 createDetectedPhoto(10f, 10f, 110f, 10f, 110f, 110f, 10f, 110f)
                     .copy(applyPerspectiveCorrection = false)
-            val result = service.applyMargin(photo, 0.02)
+            val result = GeometryUtils.applyMargin(photo, 0.02)
             assertThat(result.applyPerspectiveCorrection).isFalse()
         }
 
@@ -193,7 +214,7 @@ class PhotoScanExportServiceTest {
             val photo =
                 createDetectedPhoto(10f, 10f, 110f, 10f, 110f, 110f, 10f, 110f)
                     .copy(rotation = org.kryspetrie.fileimport.domain.model.RotationAngle.CW_90)
-            val result = service.applyMargin(photo, 0.02)
+            val result = GeometryUtils.applyMargin(photo, 0.02)
             assertThat(result.rotation)
                 .isEqualTo(org.kryspetrie.fileimport.domain.model.RotationAngle.CW_90)
         }
@@ -203,7 +224,7 @@ class PhotoScanExportServiceTest {
         fun equalMarginForSymmetricQuad() {
             // Perfect square: all corners equidistant from center
             val photo = createDetectedPhoto(100f, 100f, 200f, 100f, 200f, 200f, 100f, 200f)
-            val result = service.applyMargin(photo, 0.02)
+            val result = GeometryUtils.applyMargin(photo, 0.02)
 
             val tlExpansion =
                 kotlin.math.sqrt(
@@ -239,8 +260,8 @@ class PhotoScanExportServiceTest {
 
             val result =
                 service.exportPhotos(
-                    sourceFile,
-                    source,
+                    FilePath(sourceFile.absolutePath),
+                    source.toProcessedImage(),
                     photos,
                     destDir.absolutePath,
                     "bounded_photo",
@@ -278,11 +299,11 @@ class PhotoScanExportServiceTest {
 
             val result =
                 service.exportSinglePhoto(
-                    img,
+                    img.toProcessedImage(),
                     photo,
                     destDir.absolutePath,
                     "exif_test",
-                    sourceFile = sourceFile,
+                    sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
             assertThat(result.success).isTrue()
@@ -535,11 +556,11 @@ class PhotoScanExportServiceTest {
 
             val result =
                 service.exportSinglePhoto(
-                    img,
+                    img.toProcessedImage(),
                     photo,
                     destDir.absolutePath,
                     "exif_copy_test",
-                    sourceFile = sourceFile,
+                    sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
             assertThat(result.success).isTrue()
@@ -578,7 +599,12 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportSinglePhoto(img, photo, destDir.absolutePath, "validity_test")
+                service.exportSinglePhoto(
+                    img.toProcessedImage(),
+                    photo,
+                    destDir.absolutePath,
+                    "validity_test",
+                )
             assertThat(result.success).isTrue()
 
             val exportedFile = File(result.destinationPath)
@@ -911,11 +937,11 @@ class PhotoScanExportServiceTest {
 
             val result =
                 service.exportSinglePhoto(
-                    img,
+                    img.toProcessedImage(),
                     photo,
                     destDir.absolutePath,
                     "tri_state_test",
-                    sourceFile = sourceFile,
+                    sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
             assertThat(result.success).isTrue()

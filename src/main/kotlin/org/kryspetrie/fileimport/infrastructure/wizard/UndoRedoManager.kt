@@ -30,7 +30,6 @@ class UndoRedoManager<T>(private val maxSize: Int = 50) {
     /**
      * Undoes the last operation for a box. Returns the previous state if available, null otherwise.
      */
-    @Suppress("ReturnCount")
     fun undo(currentState: T, boxId: String): T? {
         val undoStack = undoStacks[boxId] ?: return null
         if (undoStack.isEmpty()) return null
@@ -49,7 +48,6 @@ class UndoRedoManager<T>(private val maxSize: Int = 50) {
      * Redoes the last undone operation for a box. Returns the restored state if available, null
      * otherwise.
      */
-    @Suppress("ReturnCount")
     fun redo(currentState: T, boxId: String): T? {
         val redoStack = redoStacks[boxId] ?: return null
         if (redoStack.isEmpty()) return null

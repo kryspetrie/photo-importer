@@ -54,16 +54,15 @@ import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
-import org.kryspetrie.fileimport.domain.model.FaceRegionConfig
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
-import org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
@@ -85,7 +84,7 @@ fun WizardContainer(
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
-    detectorService: PhotoScanDetectorService = koinInject(),
+    detectorService: PhotoScanDetectorPort = koinInject(),
     exportService: PhotoScanExportService = koinInject(),
     perspectiveService: PerspectiveCorrectionService = koinInject(),
     appLogger: AppLogger = koinInject(),
@@ -184,7 +183,7 @@ private fun WizardStepContent(
     state: PhotoScanWizardState,
     settingsPort: SettingsPort,
     settings: AppSettings,
-    detectorService: PhotoScanDetectorService,
+    detectorService: PhotoScanDetectorPort,
     exportService: PhotoScanExportService,
     perspectiveService: PerspectiveCorrectionService,
     appLogger: AppLogger,
@@ -473,6 +472,7 @@ private fun WizardStepContent(
                         }
                     }
                 },
+                nextBatchFile = state.peekNextBatchFile(),
                 onContinueToNextPhoto = {
                     continueToNextBatchPhoto(
                         state,
@@ -485,6 +485,10 @@ private fun WizardStepContent(
                         scope,
                     )
                 },
+                onSkipNextPhoto =
+                    if (state.hasMoreBatchImages) {
+                        { skipNextBatchPhoto(state) }
+                    } else null,
                 onCancelImport = { state.resetToImportStep() },
                 onOpenFolder = { openExportFolder(exportDestination) },
             )
@@ -507,7 +511,7 @@ private fun BoxScope.ErrorSnackbar(errorMessage: String?, onDismiss: () -> Unit)
 private suspend fun loadImageAndDetect(
     state: PhotoScanWizardState,
     file: File,
-    detectorService: PhotoScanDetectorService,
+    detectorService: PhotoScanDetectorPort,
     cvAutoDetect: Boolean,
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
@@ -531,9 +535,9 @@ private suspend fun loadImageAndDetect(
                 appLogger.logOperationStart(OperationType.IMAGE_DETECTION, "File: ${file.name}")
                 withContext(dispatcherProvider.default) {
                     onMessage("Detecting photo boundaries...")
-                    val detectedPhotos = detectorService.detectPhotos(image)
+                    val detectedPhotos = detectorService.detectPhotos(image.toProcessedImage())
 
-                    // Convert DetectedPhoto to BoundingBox
+                    // Convert DetectedPhoto to BoundingBox with per-photo detection config
                     val boxes =
                         detectedPhotos.map { photo ->
                             BoundingBox(
@@ -558,10 +562,18 @@ private suspend fun loadImageAndDetect(
                                     )
                             )
                         }
+                    // Carry detection mode from each DetectedPhoto into per-box configuration
+                    val configs =
+                        detectedPhotos.map { photo ->
+                            PhotoConfiguration(
+                                detectionMode = photo.detectionMode,
+                                perspectiveCorrectionEnabled = photo.applyPerspectiveCorrection,
+                            )
+                        }
 
                     withContext(Dispatchers.Main) {
                         if (boxes.isNotEmpty()) {
-                            state.setDetectedBoxes(boxes)
+                            state.setDetectedBoxes(boxes, configs)
                             appLogger.logOperationComplete(
                                 OperationType.IMAGE_DETECTION,
                                 "Detected ${boxes.size} photo(s)",
@@ -632,7 +644,7 @@ private fun startNewImport(
     state: PhotoScanWizardState,
     file: File,
     batchFiles: List<File>?,
-    detectorService: PhotoScanDetectorService,
+    detectorService: PhotoScanDetectorPort,
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
     isLoading: (Boolean) -> Unit,
@@ -688,7 +700,7 @@ private fun startNewImport(
  */
 private fun continueToNextBatchPhoto(
     state: PhotoScanWizardState,
-    detectorService: PhotoScanDetectorService,
+    detectorService: PhotoScanDetectorPort,
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
     isLoading: (Boolean) -> Unit,
@@ -696,7 +708,14 @@ private fun continueToNextBatchPhoto(
     onError: (String) -> Unit,
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
-    val nextFile = state.advanceToNextBatchFile() ?: return
+    // Auto-skip files that have been marked as "backs" of other photos
+    var nextFile = state.advanceToNextBatchFile()
+    while (
+        nextFile != null && state.skippedBatchIndices.value.contains(state.currentImageIndex.value)
+    ) {
+        nextFile = state.advanceToNextBatchFile()
+    }
+    if (nextFile == null) return
     state.resetPerImageState()
     scope.launch {
         loadImageAndDetect(
@@ -712,6 +731,16 @@ private fun continueToNextBatchPhoto(
             onComplete = { state.goToOverview() },
         )
     }
+}
+
+/**
+ * Skips the next photo in the batch by advancing the batch index without processing it. The user
+ * stays on the COMPLETE screen — the UI recomposes with an updated preview of the next photo and
+ * updated progress. This is for skipping photos that shouldn't be processed (e.g., the back of a
+ * physical photo).
+ */
+private fun skipNextBatchPhoto(state: PhotoScanWizardState) {
+    state.skipNextBatchFile()
 }
 
 private fun validateExportDestination(destinationPath: String): String? {
@@ -759,57 +788,8 @@ private suspend fun exportSinglePhoto(
             "(${corrections.joinToString(", ").ifEmpty { "no corrections" }})",
     )
 
-    // Bridge PhotoConfiguration (wizard UI model) to PhotoScanConfiguration (domain export model)
-    // so that EXIF metadata overrides flow through the export pipeline.
-    val scanConfig =
-        PhotoScanConfiguration(
-            originalDateOverride = config.originalDate.ifBlank { null },
-            originalYearOverride = config.year.ifBlank { null },
-            tags = config.keywords,
-            notes = config.description,
-            description = config.description.ifBlank { null },
-            keywords = config.keywords.ifBlank { null },
-            originalDate = config.originalDate.ifBlank { null },
-            year = config.year.ifBlank { null },
-            cameraMake = config.cameraMake.ifBlank { null },
-            cameraModel = config.cameraModel.ifBlank { null },
-            lensModel = config.lensModel.ifBlank { null },
-            focalLength = config.focalLength.ifBlank { null },
-            aperture = config.aperture.ifBlank { null },
-            shutterSpeed = config.shutterSpeed.ifBlank { null },
-            iso = config.iso.ifBlank { null },
-            locationName = config.locationName.ifBlank { null },
-            city = config.city.ifBlank { null },
-            state = config.state.ifBlank { null },
-            country = config.country.ifBlank { null },
-            gpsLatitude = config.gpsLatitude.ifBlank { null },
-            gpsLongitude = config.gpsLongitude.ifBlank { null },
-            subjects = config.subjects.ifBlank { null },
-            faceRegions =
-                config.faceRegions.map { fr ->
-                    org.kryspetrie.fileimport.domain.model.FaceRegionConfig(
-                        name = fr.name,
-                        type = fr.type,
-                        x = fr.x,
-                        y = fr.y,
-                        w = fr.w,
-                        h = fr.h,
-                    )
-                },
-            // EXIF override tri-states: map FieldOverride? → OverrideState?
-            overrideDescription = config.overrideDescription?.state?.toDomain(),
-            overrideKeywords = config.overrideKeywords?.state?.toDomain(),
-            overrideOriginalDate = config.overrideOriginalDate?.state?.toDomain(),
-            overrideYear = config.overrideYear?.state?.toDomain(),
-            overrideCameraMake = config.overrideCameraMake?.state?.toDomain(),
-            overrideCameraModel = config.overrideCameraModel?.state?.toDomain(),
-            overrideLensModel = config.overrideLensModel?.state?.toDomain(),
-            overrideFocalLength = config.overrideFocalLength?.state?.toDomain(),
-            overrideAperture = config.overrideAperture?.state?.toDomain(),
-            overrideShutterSpeed = config.overrideShutterSpeed?.state?.toDomain(),
-            overrideIso = config.overrideIso?.state?.toDomain(),
-            overrideGps = config.overrideGps?.state?.toDomain(),
-        )
+    // PhotoConfiguration is now a typealias for PhotoScanConfiguration — no bridge needed.
+    val scanConfig = config
 
     val detectedPhoto =
         DetectedPhoto(
@@ -834,12 +814,11 @@ private suspend fun exportSinglePhoto(
         try {
             val result =
                 exportService.exportSinglePhoto(
-                    image,
+                    image.toProcessedImage(),
                     detectedPhoto,
                     outputDir.absolutePath,
                     fileName,
-                    sourceFile = sourceFile,
-                    marginFraction = marginFraction,
+                    sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
             ProcessedPhoto(
                     originalFile = state.imageFile.value ?: File(""),
@@ -869,7 +848,6 @@ private suspend fun exportSinglePhoto(
     }
 }
 
-@Suppress("ReturnCount")
 private suspend fun exportPhotos(
     state: PhotoScanWizardState,
     image: BufferedImage,
@@ -981,17 +959,6 @@ private suspend fun exportPhotos(
     }
 }
 
-/** Converts degrees (0, 90, 180, 270) to RotationAngle. */
-private fun rotationFromDegrees(degrees: Int): RotationAngle {
-    return when (degrees) {
-        90 -> RotationAngle.CW_90
-        180 -> RotationAngle.CW_180
-        270 -> RotationAngle.CCW_90
-        -90 -> RotationAngle.CCW_90
-        else -> RotationAngle.NONE
-    }
-}
-
 @Composable
 private fun LoadingContent(message: String) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1089,15 +1056,3 @@ data class ProcessedPhoto(
     val dimensions: Pair<Int, Int>,
     val correctionsApplied: List<String>,
 )
-
-/** Maps wizard-layer OverrideState to domain-layer OverrideState. */
-private fun org.kryspetrie.fileimport.infrastructure.wizard.OverrideState.toDomain():
-    org.kryspetrie.fileimport.domain.model.OverrideState =
-    when (this) {
-        org.kryspetrie.fileimport.infrastructure.wizard.OverrideState.KEEP_SOURCE ->
-            org.kryspetrie.fileimport.domain.model.OverrideState.KEEP_SOURCE
-        org.kryspetrie.fileimport.infrastructure.wizard.OverrideState.OVERRIDE ->
-            org.kryspetrie.fileimport.domain.model.OverrideState.OVERRIDE
-        org.kryspetrie.fileimport.infrastructure.wizard.OverrideState.NULL_OUT ->
-            org.kryspetrie.fileimport.domain.model.OverrideState.NULL_OUT
-    }

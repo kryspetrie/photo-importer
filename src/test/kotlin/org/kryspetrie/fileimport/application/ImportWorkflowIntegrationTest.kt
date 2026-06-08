@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.domain.model.ConflictResolution
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
@@ -46,7 +47,11 @@ class ImportWorkflowIntegrationTest {
     private fun createTestFile(name: String, type: ImageFileType = ImageFileType.JPEG): ImageFile {
         val file = File(tempDir, name)
         file.writeText("test content for $name")
-        return ImageFile(file = file, fileType = type)
+        return ImageFile(
+            path = FilePath(file.absolutePath),
+            fileSize = file.length(),
+            fileType = type,
+        )
     }
 
     @Nested

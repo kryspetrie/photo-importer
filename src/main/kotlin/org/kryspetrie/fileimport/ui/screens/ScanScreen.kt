@@ -32,7 +32,6 @@ import org.kryspetrie.fileimport.ui.screens.scan.ScanImagePreview
 import org.kryspetrie.fileimport.ui.screens.scan.ScanPhotoList
 
 /** Screen for photo scan preview and editing. */
-@Suppress("UnusedParameter")
 @Composable
 fun ScanScreen(
     filepaths: List<String>,

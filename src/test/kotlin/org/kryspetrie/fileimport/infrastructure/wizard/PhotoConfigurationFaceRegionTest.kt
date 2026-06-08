@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.FaceRegion
 
 /** Tests for FaceRegion data class and PhotoConfiguration face region behavior. */
 @DisplayName("PhotoConfiguration Face Regions")

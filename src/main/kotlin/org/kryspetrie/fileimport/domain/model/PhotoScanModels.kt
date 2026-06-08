@@ -18,6 +18,17 @@ data class PhotoCorner(
     /** Y coordinate (vertical position from top) */
     val y: Float = 0f,
 ) {
+    /** Convert to percentage coordinates */
+    fun toPercent(imageWidth: Int, imageHeight: Int): PercentPoint =
+        PercentPoint.fromPixels(x, y, imageWidth, imageHeight)
+
+    /** Calculate distance to another corner */
+    fun distanceTo(other: PhotoCorner): Float {
+        val dx = other.x - x
+        val dy = other.y - y
+        return kotlin.math.sqrt(dx * dx + dy * dy)
+    }
+
     companion object {
         fun create(x: Int, y: Int): PhotoCorner = PhotoCorner(x = x.toFloat(), y = y.toFloat())
     }
@@ -97,7 +108,74 @@ data class DetectedPhoto(
 
     /** Rotation angle for the output image */
     val rotation: RotationAngle = RotationAngle.NONE,
+
+    /** Detection confidence (0.0-1.0). 1.0 for classical CV, YOLO provides actual scores. */
+    val confidence: Float = 1.0f,
+
+    /** How this photo was detected (CV, YOLO bounding box, YOLO pose, or hybrid). */
+    val detectionMode: DetectionMode = DetectionMode.COMPUTER_VISION,
 ) {
+    companion object {
+        /**
+         * Create a DetectedPhoto from YOLO pose model keypoints.
+         *
+         * YOLO keypoint order: kp0=LL, kp1=UL, kp2=UR, kp3=LR Screen coordinate mapping:
+         * LL→bottomLeft, UL→topLeft, UR→topRight, LR→bottomRight
+         *
+         * @param kp0 YOLO kp0 = LL (lower-left) → maps to bottomLeft
+         * @param kp1 YOLO kp1 = UL (upper-left) → maps to topLeft
+         * @param kp2 YOLO kp2 = UR (upper-right) → maps to topRight
+         * @param kp3 YOLO kp3 = LR (lower-right) → maps to bottomRight
+         * @param confidence Detection confidence (0.0-1.0)
+         * @param detectionMode How this photo was detected
+         * @param applyPerspectiveCorrection Whether to apply perspective correction
+         * @param rotation Rotation angle for the output image
+         * @param id Unique identifier
+         */
+        fun fromYoloKeypoints(
+            kp0: PhotoCorner, // LL → bottomLeft
+            kp1: PhotoCorner, // UL → topLeft
+            kp2: PhotoCorner, // UR → topRight
+            kp3: PhotoCorner, // LR → bottomRight
+            confidence: Float = 1.0f,
+            detectionMode: DetectionMode = DetectionMode.PERSPECTIVE_CORRECTION,
+            applyPerspectiveCorrection: Boolean = true,
+            rotation: RotationAngle = RotationAngle.NONE,
+            id: String = DomainDefaults.generateId(),
+        ): DetectedPhoto =
+            DetectedPhoto(
+                id = id,
+                topLeft = kp1,
+                topRight = kp2,
+                bottomLeft = kp0,
+                bottomRight = kp3,
+                applyPerspectiveCorrection = applyPerspectiveCorrection,
+                rotation = rotation,
+                confidence = confidence,
+                detectionMode = detectionMode,
+            )
+    }
+
+    /**
+     * Convert corners back to YOLO keypoint order: [LL, UL, UR, LR].
+     *
+     * Inverse of [fromYoloKeypoints]: kp0=LL=bottomLeft, kp1=UL=topLeft, kp2=UR=topRight,
+     * kp3=LR=bottomRight.
+     */
+    fun toYoloKeypoints(): List<PhotoCorner> =
+        listOf(
+            bottomLeft, // kp0: LL
+            topLeft, // kp1: UL
+            topRight, // kp2: UR
+            bottomRight, // kp3: LR
+        )
+
+    /**
+     * Returns corners in the standard TL, TR, BR, BL order as expected by
+     * [determineCorrectionStrategy] and other geometry utilities.
+     */
+    fun toListOfCorners(): List<PhotoCorner> = listOf(topLeft, topRight, bottomRight, bottomLeft)
+
     /** Get the width of the detected photo in pixels. */
     fun getWidth(): Int {
         return kotlin.math.abs(topRight.x.toInt() - topLeft.x.toInt())

@@ -5,14 +5,14 @@ import boofcv.factory.geo.FactoryMultiView
 import boofcv.struct.geo.AssociatedPair
 import georegression.struct.point.Point2D_F64
 import java.io.File
-import javax.inject.Inject
-import javax.inject.Singleton
 import org.apache.commons.imaging.Imaging
 import org.ejml.data.DMatrixRMaj
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
-import org.kryspetrie.fileimport.domain.model.FaceRegionConfig
-import org.kryspetrie.fileimport.domain.model.PhotoCorner
+import org.kryspetrie.fileimport.domain.model.FaceRegion
+import org.kryspetrie.fileimport.domain.model.FilePath
+import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.RotationAngle
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 
 /**
  * Transforms face region coordinates from a source image's XMP metadata to match cropped and
@@ -30,8 +30,34 @@ import org.kryspetrie.fileimport.domain.model.RotationAngle
  *
  * @see PerspectiveCorrectionService for the image warping that uses the backward homography
  */
-@Singleton
-class FaceRegionTransformer @Inject constructor() {
+class FaceRegionTransformer : FaceRegionTransformerPort {
+
+    /**
+     * Port implementation: transforms face regions using [FilePath]. Converts to [File] internally
+     * for Apache Commons Imaging XMP parsing.
+     */
+    override fun transformFaceRegionsFromSource(
+        sourceFile: FilePath,
+        detectedPhoto: DetectedPhoto,
+        outputWidth: Int,
+        outputHeight: Int,
+        sourceWidth: Int,
+        sourceHeight: Int,
+        marginFraction: Double,
+    ): List<FaceRegion> =
+        transformFaceRegionsFromSource(
+            sourceFile = sourceFile.toFile(),
+            detectedPhoto = detectedPhoto,
+            outputWidth = outputWidth,
+            outputHeight = outputHeight,
+            sourceWidth = sourceWidth,
+            sourceHeight = sourceHeight,
+            marginFraction = marginFraction,
+        )
+
+    /** Port implementation: reads face regions from XMP using [FilePath]. */
+    override fun readFaceRegionsFromXmp(file: FilePath): List<FaceRegion> =
+        readFaceRegionsFromXmp(file.toFile())
 
     /**
      * Reads face regions from a source image's XMP metadata and transforms them to match a specific
@@ -45,7 +71,7 @@ class FaceRegionTransformer @Inject constructor() {
         sourceWidth: Int,
         sourceHeight: Int,
         marginFraction: Double = 0.02,
-    ): List<FaceRegionConfig> {
+    ): List<FaceRegion> {
         val sourceRegions = readFaceRegionsFromXmp(sourceFile)
         if (sourceRegions.isEmpty()) return emptyList()
         return transformFaceRegions(
@@ -60,7 +86,7 @@ class FaceRegionTransformer @Inject constructor() {
     }
 
     /** Reads MWG-RS face regions from a JPEG file's XMP metadata. */
-    fun readFaceRegionsFromXmp(file: File): List<SourceFaceRegion> {
+    fun readFaceRegionsFromXmp(file: File): List<FaceRegion> {
         return try {
             val jpegBytes = file.readBytes()
             val xmpXml = Imaging.getXmpXml(jpegBytes) ?: return emptyList()
@@ -72,17 +98,18 @@ class FaceRegionTransformer @Inject constructor() {
 
     /** Transforms source face regions to output coordinates for a specific detected photo. */
     fun transformFaceRegions(
-        sourceRegions: List<SourceFaceRegion>,
+        sourceRegions: List<FaceRegion>,
         detectedPhoto: DetectedPhoto,
         outputWidth: Int,
         outputHeight: Int,
         sourceWidth: Int,
         sourceHeight: Int,
         marginFraction: Double = 0.02,
-    ): List<FaceRegionConfig> {
-        val result = mutableListOf<FaceRegionConfig>()
+    ): List<FaceRegion> {
+        val result = mutableListOf<FaceRegion>()
         val photo =
-            if (marginFraction > 0.0) applyMargin(detectedPhoto, marginFraction) else detectedPhoto
+            if (marginFraction > 0.0) GeometryUtils.applyMargin(detectedPhoto, marginFraction)
+            else detectedPhoto
         val forwardH: DMatrixRMaj? =
             if (photo.applyPerspectiveCorrection) {
                 computeForwardHomography(photo, outputWidth, outputHeight)
@@ -149,7 +176,7 @@ class FaceRegionTransformer @Inject constructor() {
                 getOutputDimensionsAfterRotation(outputWidth, outputHeight, photo.rotation)
 
             result.add(
-                FaceRegionConfig(
+                FaceRegion(
                     name = region.name,
                     type = region.type,
                     x = ((outMinX + outMaxX) / 2 / actualWidth).coerceIn(0.0, 1.0),
@@ -255,12 +282,13 @@ class FaceRegionTransformer @Inject constructor() {
      *
      * Supports both our own output format and Adobe Lightroom style.
      */
-    internal fun parseMwgRsRegions(xmpXml: String): List<SourceFaceRegion> {
-        val regions = mutableListOf<SourceFaceRegion>()
+    internal fun parseMwgRsRegions(xmpXml: String): List<FaceRegion> {
+        val regions = mutableListOf<FaceRegion>()
 
         // Strategy 1: Our output format — mwg-rs:Name, mwg-rs:Type, mwg-rs:Area on same element
         // The Area attribute can span multiple lines and ends with "/> (quote then self-closing
         // tag)
+        @Suppress("MaxLineLength")
         val ourFormatRegex =
             Regex(
                 """mwg-rs:Name\s*=\s*["']([^"']+)["'][\s\S]*?mwg-rs:Type\s*=\s*["']([^"']+)["'][\s\S]*?mwg-rs:Area\s*=\s*"([\s\S]+?)"\s*/>"""
@@ -318,7 +346,7 @@ class FaceRegionTransformer @Inject constructor() {
                         .find(element)
                         ?.groupValues
                         ?.get(1) ?: "Face"
-                regions.add(SourceFaceRegion(name = name, type = type, x = x, y = y, w = w, h = h))
+                regions.add(FaceRegion(name = name, type = type, x = x, y = y, w = w, h = h))
             }
         }
 
@@ -326,7 +354,7 @@ class FaceRegionTransformer @Inject constructor() {
     }
 
     /** Parses an area string like "x='0.3' y='0.4' w='0.15' h='0.2' unit='normalized'". */
-    internal fun parseAreaString(areaStr: String, name: String, type: String): SourceFaceRegion? {
+    internal fun parseAreaString(areaStr: String, name: String, type: String): FaceRegion? {
         val map = mutableMapOf<String, Double>()
         val parts = areaStr.split(Regex("\\s+"))
         for (part in parts) {
@@ -339,46 +367,7 @@ class FaceRegionTransformer @Inject constructor() {
         val y = map["y"] ?: return null
         val w = map["w"] ?: 0.1
         val h = map["h"] ?: 0.1
-        return SourceFaceRegion(name = name, type = type, x = x, y = y, w = w, h = h)
-    }
-
-    /** Applies margin to detected photo corners, same logic as PhotoScanExportService. */
-    internal fun applyMargin(photo: DetectedPhoto, marginFraction: Double): DetectedPhoto {
-        if (marginFraction <= 0.0) return photo
-        val corners =
-            listOf(
-                photo.topLeft.x.toDouble() to photo.topLeft.y.toDouble(),
-                photo.topRight.x.toDouble() to photo.topRight.y.toDouble(),
-                photo.bottomRight.x.toDouble() to photo.bottomRight.y.toDouble(),
-                photo.bottomLeft.x.toDouble() to photo.bottomLeft.y.toDouble(),
-            )
-        val cx = corners.map { it.first }.average()
-        val cy = corners.map { it.second }.average()
-        val diag1 = distance(corners[0], corners[2])
-        val diag2 = distance(corners[1], corners[3])
-        val diagonal = maxOf(diag1, diag2)
-        if (diagonal <= 0.0) return photo
-        val marginPx = marginFraction * diagonal
-        val expanded =
-            corners.map { (x, y) ->
-                val dx = x - cx
-                val dy = y - cy
-                val dist = kotlin.math.sqrt(dx * dx + dy * dy)
-                if (dist > 0) (x + (marginPx / dist) * dx) to (y + (marginPx / dist) * dy)
-                else x to y
-            }
-        return photo.copy(
-            topLeft = PhotoCorner(expanded[0].first.toFloat(), expanded[0].second.toFloat()),
-            topRight = PhotoCorner(expanded[1].first.toFloat(), expanded[1].second.toFloat()),
-            bottomRight = PhotoCorner(expanded[2].first.toFloat(), expanded[2].second.toFloat()),
-            bottomLeft = PhotoCorner(expanded[3].first.toFloat(), expanded[3].second.toFloat()),
-        )
-    }
-
-    private fun distance(a: Pair<Double, Double>, b: Pair<Double, Double>): Double {
-        val dx = b.first - a.first
-        val dy = b.second - a.second
-        return kotlin.math.sqrt(dx * dx + dy * dy)
+        return FaceRegion(name = name, type = type, x = x, y = y, w = w, h = h)
     }
 
     internal fun isPointInPhoto(
@@ -394,13 +383,3 @@ class FaceRegionTransformer @Inject constructor() {
             srcY <= bounds.maxY + tolerance
     }
 }
-
-/** A face region read from source image XMP, in source-normalized coordinates (0-1). */
-data class SourceFaceRegion(
-    val name: String,
-    val type: String = "Face",
-    val x: Double,
-    val y: Double,
-    val w: Double = 0.15,
-    val h: Double = 0.20,
-)

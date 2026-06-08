@@ -17,6 +17,7 @@ import java.io.FileOutputStream
 import java.time.ZoneId
 import kotlinx.coroutines.withContext
 import org.apache.commons.codec.digest.DigestUtils
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
@@ -31,7 +32,7 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
     ImageRepositoryPort {
     private val supportedExtensions = ImageFileType.supportedExtensions()
 
-    override suspend fun scanDirectory(directory: File, recursive: Boolean): List<ImageFile> =
+    override suspend fun scanDirectory(directory: FilePath, recursive: Boolean): List<ImageFile> =
         withContext(dispatcherProvider.io) {
             val mediaFiles = mutableListOf<ImageFile>()
             val allFiles = mutableMapOf<String, MutableList<File>>()
@@ -42,12 +43,14 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
                     if (file.isDirectory && recursive) {
                         scan(file)
                     } else if (supportedExtensions.contains(file.extension.lowercase())) {
-                        mediaFiles.add(ImageFile(file = file))
+                        mediaFiles.add(
+                            ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
+                        )
                     }
                 }
                 allFiles[dir.absolutePath] = dirFiles.filter { it.isFile }.toMutableList()
             }
-            scan(directory)
+            scan(directory.toFile())
 
             // Build lookup map by (directory, lowercased baseName) for O(1) sidecar matching
             val sidecarLookup = mutableMapOf<Pair<String, String>, MutableList<File>>()
@@ -62,12 +65,12 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
 
             mediaFiles.map { media ->
                 val dirPath = media.file.parentFile?.absolutePath ?: return@map media
-                val baseName = media.file.nameWithoutExtension.lowercase()
-                val sidecars =
-                    sidecarLookup[dirPath to baseName]?.filter {
-                        it.absolutePath != media.file.absolutePath
-                    } ?: emptyList()
-                if (sidecars.isNotEmpty()) media.copy(sidecars = sidecars) else media
+                val baseName = media.path.nameWithoutExtension.lowercase()
+                val sidecarFiles =
+                    sidecarLookup[dirPath to baseName]
+                        ?.filter { it.absolutePath != media.filePath }
+                        ?.map { FilePath(it.absolutePath) } ?: emptyList()
+                if (sidecarFiles.isNotEmpty()) media.copy(sidecars = sidecarFiles) else media
             }
         }
 
@@ -279,16 +282,17 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
 
     override suspend fun copyFile(
         source: ImageFile,
-        destination: File,
+        destination: FilePath,
         onProgress: (Long, Long) -> Unit,
     ): Boolean =
         withContext(dispatcherProvider.io) {
             try {
-                destination.parentFile?.mkdirs()
+                val destFile = destination.toFile()
+                destFile.parentFile?.mkdirs()
                 val totalBytes = source.fileSize
                 var copiedBytes = 0L
                 java.io.FileInputStream(source.file).channel.use { srcChannel ->
-                    java.io.FileOutputStream(destination).channel.use { dstChannel ->
+                    java.io.FileOutputStream(destFile).channel.use { dstChannel ->
                         var position = 0L
                         while (position < totalBytes) {
                             val transferred =
@@ -310,18 +314,19 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
             }
         }
 
-    override suspend fun verifyCopy(source: ImageFile, destination: File): Boolean =
+    override suspend fun verifyCopy(source: ImageFile, destination: FilePath): Boolean =
         withContext(dispatcherProvider.io) {
             try {
                 // Use the stored hash from the source ImageFile if available,
                 // avoiding a redundant re-read of the source file
+                val destFile = destination.toFile()
                 val sourceHash =
                     source.hash
                         ?: FileInputStream(source.file).buffered(HASH_BUFFER_SIZE).use {
                             DigestUtils.md5Hex(it)
                         }
                 val destHash =
-                    FileInputStream(destination).buffered(HASH_BUFFER_SIZE).use {
+                    FileInputStream(destFile).buffered(HASH_BUFFER_SIZE).use {
                         DigestUtils.md5Hex(it)
                     }
                 sourceHash == destHash
@@ -339,7 +344,7 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
             }
         }
 
-    override suspend fun fileExists(file: File): Boolean = file.exists()
+    override suspend fun fileExists(file: FilePath): Boolean = file.toFile().exists()
 
     override fun getSupportedExtensions(): Set<String> = supportedExtensions
 }

@@ -29,7 +29,6 @@ object RawThumbnailExtractor {
      * This is far more efficient than scanning 20MB of bytes for JPEG markers. metadata-extractor
      * already parses the file structure and knows where the thumbnail lives.
      */
-    @Suppress("ReturnCount")
     private fun extractViaMetadataExtractor(file: File): BufferedImage? {
         val metadata: Metadata
         try {

@@ -102,7 +102,6 @@ fun ScanImagePreview(
 }
 
 /** Draw corner indicators on the photo. */
-@Suppress("UnusedParameter")
 @Composable
 fun DrawCorners(
     tlX: Float,

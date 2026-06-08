@@ -1,10 +1,10 @@
 package org.kryspetrie.fileimport.ui.screens
 
-import java.io.File
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ReorganizeMapping
 import org.kryspetrie.fileimport.domain.model.ReorganizePreview
@@ -20,9 +20,9 @@ class DryRunPreviewTest {
         @Test
         @DisplayName("should filter mappings to only changed files")
         fun shouldFilterToChangedOnly() {
-            val file1 = ImageFile(file = File("/photos/a.jpg"))
-            val file2 = ImageFile(file = File("/photos/b.jpg"))
-            val file3 = ImageFile(file = File("/photos/c.jpg"))
+            val file1 = ImageFile(path = FilePath("/photos/a.jpg"))
+            val file2 = ImageFile(path = FilePath("/photos/b.jpg"))
+            val file3 = ImageFile(path = FilePath("/photos/c.jpg"))
 
             val mappings =
                 listOf(
@@ -58,7 +58,7 @@ class DryRunPreviewTest {
         @Test
         @DisplayName("should produce empty list when no files changed")
         fun shouldProduceEmptyWhenNoChanges() {
-            val file = ImageFile(file = File("/photos/a.jpg"))
+            val file = ImageFile(path = FilePath("/photos/a.jpg"))
             val mappings =
                 listOf(
                     ReorganizeMapping(
@@ -81,7 +81,7 @@ class DryRunPreviewTest {
             val rootPath = "/photos"
             val mapping =
                 ReorganizeMapping(
-                    file = ImageFile(file = File("/photos/subfolder/image.jpg")),
+                    file = ImageFile(path = FilePath("/photos/subfolder/image.jpg")),
                     currentPath = "/photos/subfolder/image.jpg",
                     newPath = "/photos/2024/January/image.jpg",
                     newFileName = "image.jpg",
@@ -98,7 +98,7 @@ class DryRunPreviewTest {
         @Test
         @DisplayName("should identify conflicts in preview")
         fun shouldIdentifyConflicts() {
-            val file = ImageFile(file = File("/photos/a.jpg"))
+            val file = ImageFile(path = FilePath("/photos/a.jpg"))
             val mappings =
                 listOf(
                     ReorganizeMapping(
@@ -257,10 +257,10 @@ class DryRunPreviewTest {
         wouldConflict: Boolean = false,
     ): FileStructurePreview {
         return FileStructurePreview(
-            sourceFile = ImageFile(file = File(sourcePath)),
+            sourceFile = ImageFile(path = FilePath(sourcePath)),
             destinationPath = destPath,
             folderPath = folderPath,
-            fileName = File(destPath).name,
+            fileName = FilePath(destPath).name,
             wouldConflict = wouldConflict,
         )
     }

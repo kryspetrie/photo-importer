@@ -104,7 +104,6 @@ class RectangleDetectorTest {
         assertTrue(results.isEmpty(), "Empty image should produce no detections")
     }
 
-    @Suppress("ReturnCount")
     private fun cornersMatch(
         detected: List<RectangleDetector.Point>,
         truth: List<PhotoCorner>,

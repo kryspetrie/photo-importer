@@ -12,7 +12,7 @@ class ReorganizeOperationTest {
     @DisplayName("ReorganizeMapping should derive relative paths")
     fun mappingShouldDeriveRelativePaths() {
         val file = File("/photos/2024/IMG_001.jpg")
-        val imageFile = ImageFile(file = file)
+        val imageFile = ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
         val mapping =
             ReorganizeMapping(
                 file = imageFile,
@@ -29,7 +29,7 @@ class ReorganizeOperationTest {
     @DisplayName("ReorganizePreview should track changes")
     fun previewShouldTrackChanges() {
         val file = File("/photos/photo.jpg")
-        val imageFile = ImageFile(file = file)
+        val imageFile = ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
         val changed =
             ReorganizeMapping(
                 file = imageFile,

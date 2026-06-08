@@ -169,7 +169,6 @@ class ImportService(
     }
 
     /** Apply RAW+JPEG pair filtering based on config. */
-    @Suppress("ReturnCount")
     fun applyPairFilter(images: List<ImageFile>, config: ImportConfiguration): List<ImageFile> {
         if (config.rawJpegPairMode == RawJpegPairMode.IMPORT_BOTH) return images
 

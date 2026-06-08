@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.domain.model
 
-import java.io.File
 import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -10,11 +9,11 @@ import org.junit.jupiter.api.Test
 
 @DisplayName("ImageFile")
 class ImageFileTest {
-    private lateinit var testFile: File
+    private var testPath: FilePath = FilePath("")
 
     @BeforeEach
     fun setup() {
-        testFile = File("test.jpg")
+        testPath = FilePath("test.jpg")
     }
 
     @Nested
@@ -24,13 +23,13 @@ class ImageFileTest {
         @DisplayName("should create with default values")
         fun shouldCreateWithDefaults() {
             // GIVEN
-            val file = File("photo.jpg")
+            val path = FilePath("photo.jpg")
 
             // WHEN
-            val imageFile = ImageFile(file = file)
+            val imageFile = ImageFile(path = path)
 
             // THEN
-            assertThat(imageFile.file).isEqualTo(file)
+            assertThat(imageFile.path).isEqualTo(path)
             assertThat(imageFile.fileName).isEqualTo("photo.jpg")
             assertThat(imageFile.isSelected).isFalse()
             assertThat(imageFile.importStatus).isEqualTo(ImportStatus.PENDING)
@@ -49,7 +48,7 @@ class ImageFileTest {
 
             // WHEN
             val imageFile =
-                ImageFile(file = testFile, hash = "abc123", metadata = metadata, isSelected = true)
+                ImageFile(path = testPath, hash = "abc123", metadata = metadata, isSelected = true)
 
             // THEN
             assertThat(imageFile.hash).isEqualTo("abc123")
@@ -67,7 +66,7 @@ class ImageFileTest {
             // GIVEN
             val dateTime = LocalDateTime.of(2024, 3, 20, 14, 45)
             val imageFile =
-                ImageFile(file = testFile, metadata = ImageMetadata(dateTimeOriginal = dateTime))
+                ImageFile(path = testPath, metadata = ImageMetadata(dateTimeOriginal = dateTime))
 
             // WHEN
             val dateTaken = imageFile.dateTaken
@@ -82,7 +81,7 @@ class ImageFileTest {
             // GIVEN
             val imageFile =
                 ImageFile(
-                    file = testFile,
+                    path = testPath,
                     metadata = ImageMetadata(dateTimeOriginal = LocalDateTime.of(2024, 6, 15, 0, 0)),
                 )
 
@@ -97,7 +96,7 @@ class ImageFileTest {
         @DisplayName("should return Unknown when no metadata")
         fun shouldReturnUnknownWhenNoMetadata() {
             // GIVEN
-            val imageFile = ImageFile(file = testFile)
+            val imageFile = ImageFile(path = testPath)
 
             // WHEN
             val formatted = imageFile.dateTakenFormatted

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.domain.model.ConflictResolution
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
@@ -49,7 +50,13 @@ class ImportServiceTest {
     ): ImageFile {
         val file = File(tempDir, "$name.$extension")
         file.writeText("test content for $name")
-        return ImageFile(file = file, metadata = metadata, hash = "hash_$name", fileType = type)
+        return ImageFile(
+            path = FilePath(file.absolutePath),
+            fileSize = file.length(),
+            metadata = metadata,
+            hash = "hash_$name",
+            fileType = type,
+        )
     }
 
     @Nested
@@ -169,7 +176,12 @@ class ImportServiceTest {
         fun shouldExecuteImport() = runTest {
             val sourceFile = File(tempDir, "source.jpg")
             sourceFile.writeText("image data")
-            val image = ImageFile(file = sourceFile, hash = "abc")
+            val image =
+                ImageFile(
+                    path = FilePath(sourceFile.absolutePath),
+                    fileSize = sourceFile.length(),
+                    hash = "abc",
+                )
             val config = ImportConfiguration(verifyAfterCopy = false)
             val destDir = File(tempDir, "dest")
             destDir.mkdirs()
@@ -191,7 +203,8 @@ class ImportServiceTest {
         fun shouldHandleCopyFailure() = runTest {
             val sourceFile = File(tempDir, "fail.jpg")
             sourceFile.writeText("data")
-            val image = ImageFile(file = sourceFile)
+            val image =
+                ImageFile(path = FilePath(sourceFile.absolutePath), fileSize = sourceFile.length())
             val config = ImportConfiguration(verifyAfterCopy = false)
 
             whenever(namingPort.generateFolderPath(any(), any(), any()))
@@ -213,7 +226,8 @@ class ImportServiceTest {
             val sourceFile = File(tempDir, "src/existing.jpg")
             sourceFile.parentFile.mkdirs()
             sourceFile.writeText("source")
-            val image = ImageFile(file = sourceFile)
+            val image =
+                ImageFile(path = FilePath(sourceFile.absolutePath), fileSize = sourceFile.length())
             val config =
                 ImportConfiguration(
                     conflictResolution = ConflictResolution.SKIP,

@@ -46,19 +46,8 @@ data class PercentPoint(val x: Double, val y: Double) {
  * @property x X coordinate in pixels
  * @property y Y coordinate in pixels
  */
-data class PixelPoint(val x: Float, val y: Float) {
-    /** Convert to percentage coordinates */
-    fun toPercent(imageWidth: Int, imageHeight: Int): PercentPoint {
-        return PercentPoint.fromPixels(x, y, imageWidth, imageHeight)
-    }
-
-    /** Calculate distance to another point */
-    fun distanceTo(other: PixelPoint): Float {
-        val dx = other.x - x
-        val dy = other.y - y
-        return sqrt(dx * dx + dy * dy)
-    }
-}
+/** Backward-compatible alias — [PhotoCorner] is the canonical pixel-coordinate point. */
+typealias PixelPoint = PhotoCorner
 
 /**
  * Bounding box corners as percentages of image dimensions.
@@ -211,51 +200,6 @@ enum class CornerType {
     BOTTOM_RIGHT,
     CENTER, // For dragging entire bounding box
 }
-
-/** Processing mode for photo extraction. */
-enum class ProcessingMode {
-    /** Crop to axis-aligned bounding rectangle */
-    CROP_ONLY,
-
-    /** Rotate to correct orientation, then crop */
-    ROTATE_ONLY,
-
-    /** Apply 4-point perspective correction */
-    PERSPECTIVE_CORRECTION,
-}
-
-/** Aspect ratio presets for output images. */
-enum class AspectRatio(val width: Int?, val height: Int?) {
-    RATIO_2_3(2, 3),
-    RATIO_4_3(4, 3),
-    RATIO_16_9(16, 9),
-    RATIO_16_10(16, 10),
-    RATIO_1_1(1, 1),
-    DEFAULT(null, null);
-
-    val ratio: Double?
-        get() =
-            if (width != null && height != null && height != 0) width.toDouble() / height else null
-
-    fun toDisplayString(): String =
-        when (this) {
-            RATIO_2_3 -> "2:3"
-            RATIO_4_3 -> "4:3"
-            RATIO_16_9 -> "16:9"
-            RATIO_16_10 -> "16:10"
-            RATIO_1_1 -> "1:1"
-            DEFAULT -> "Default"
-        }
-}
-
-/** Configuration for photo processing. */
-@Serializable
-data class PhotoProcessingConfig(
-    val mode: ProcessingMode = ProcessingMode.PERSPECTIVE_CORRECTION,
-    val aspectRatio: AspectRatio = AspectRatio.DEFAULT,
-    val perspectiveCorrectionEnabled: Boolean = true,
-    val rotationDegrees: Double = 0.0, // Auto-calculated or manual override
-)
 
 /** Precision level for original date. */
 enum class OriginalDatePrecision {

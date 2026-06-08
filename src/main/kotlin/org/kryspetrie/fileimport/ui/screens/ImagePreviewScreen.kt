@@ -28,8 +28,6 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.ArrowDownward
@@ -668,44 +666,42 @@ private fun PreviewSidePane(
 
             // Scrollable metadata area
             ChunkyScrollbar {
-                Column(
-                    modifier = Modifier,
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                // Core metadata — always visible
-                Text(
-                    image.fileName,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                MetadataRow("Path", image.file.parent.orEmpty())
-                MetadataRow("Type", image.fileType.displayName)
-                MetadataRow("Size", formatFileSize(image.fileSize))
-                MetadataRow("Date", image.dateTakenFormatted)
-                image.metadata?.let { m ->
-                    m.cameraModel.takeIf { it.isNotBlank() }?.let { MetadataRow("Camera", it) }
-                    m.lensInfo.takeIf { it != "Unknown" }?.let { MetadataRow("Lens", it) }
-                    if (m.imageWidth != null && m.imageHeight != null) {
-                        MetadataRow("Dimensions", "${m.imageWidth} \u00D7 ${m.imageHeight}")
+                Column(modifier = Modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // Core metadata — always visible
+                    Text(
+                        image.fileName,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    MetadataRow("Path", image.file.parent.orEmpty())
+                    MetadataRow("Type", image.fileType.displayName)
+                    MetadataRow("Size", formatFileSize(image.fileSize))
+                    MetadataRow("Date", image.dateTakenFormatted)
+                    image.metadata?.let { m ->
+                        m.cameraModel.takeIf { it.isNotBlank() }?.let { MetadataRow("Camera", it) }
+                        m.lensInfo.takeIf { it != "Unknown" }?.let { MetadataRow("Lens", it) }
+                        if (m.imageWidth != null && m.imageHeight != null) {
+                            MetadataRow("Dimensions", "${m.imageWidth} \u00D7 ${m.imageHeight}")
+                        }
+                        m.durationFormatted?.let { MetadataRow("Duration", it) }
+                        m.videoCodec?.let { MetadataRow("Codec", it) }
+                        m.frameRate?.let { MetadataRow("Frame Rate", "%.1f fps".format(it)) }
                     }
-                    m.durationFormatted?.let { MetadataRow("Duration", it) }
-                    m.videoCodec?.let { MetadataRow("Codec", it) }
-                    m.frameRate?.let { MetadataRow("Frame Rate", "%.1f fps".format(it)) }
-                }
 
-                // Collapsible full details section
-                image.metadata?.let { m ->
-                    val detailEntries = buildDetailEntries(m, image.fileType.isVideo)
-                    if (detailEntries.isNotEmpty()) {
-                        Spacer(Modifier.height(4.dp))
-                        CollapsibleExifSection(
-                            entries = detailEntries,
-                            title = if (image.fileType.isVideo) "Video Details" else "EXIF Details",
-                        )
+                    // Collapsible full details section
+                    image.metadata?.let { m ->
+                        val detailEntries = buildDetailEntries(m, image.fileType.isVideo)
+                        if (detailEntries.isNotEmpty()) {
+                            Spacer(Modifier.height(4.dp))
+                            CollapsibleExifSection(
+                                entries = detailEntries,
+                                title =
+                                    if (image.fileType.isVideo) "Video Details" else "EXIF Details",
+                            )
+                        }
                     }
                 }
-            }
             }
         }
     }

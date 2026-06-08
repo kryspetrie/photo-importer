@@ -1,7 +1,5 @@
 package org.kryspetrie.fileimport.application
 
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -13,30 +11,28 @@ import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
+import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 
-@Singleton
-class LocationSearchService
-@Inject
-constructor(
+class LocationSearchService(
     private val geocodingPort: GeocodingPort,
     private val dispatcherProvider: DispatcherProvider,
-) {
+) : LocationSearchPort {
 
     private val _searchResults = MutableStateFlow<List<LocationResult>>(emptyList())
-    val searchResults: StateFlow<List<LocationResult>> = _searchResults
+    override val searchResults: StateFlow<List<LocationResult>> = _searchResults
 
     private val _isSearching = MutableStateFlow(false)
-    val isSearching: StateFlow<Boolean> = _isSearching
+    override val isSearching: StateFlow<Boolean> = _isSearching
 
     private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage
+    override val errorMessage: StateFlow<String?> = _errorMessage
 
     private val scope = CoroutineScope(SupervisorJob() + dispatcherProvider.default)
     private var searchJob: Job? = null
 
-    fun search(query: String) {
+    override fun search(query: String) {
         if (query.isBlank() || query.length < 2) {
-            clearSearch()
+            clearResults()
             return
         }
 
@@ -59,7 +55,7 @@ constructor(
             }
     }
 
-    fun clearSearch() {
+    override fun clearResults() {
         searchJob?.cancel()
         searchJob = null
         _searchResults.value = emptyList()

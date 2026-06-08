@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.domain.model
 
-import java.io.File
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -11,9 +10,9 @@ class DuplicateInfoTest {
     @Test
     @DisplayName("should store primary and duplicate images")
     fun shouldStorePrimaryAndDuplicates() {
-        val primary = ImageFile(file = File("primary.jpg"))
-        val dup1 = ImageFile(file = File("dup1.jpg"))
-        val dup2 = ImageFile(file = File("dup2.jpg"))
+        val primary = ImageFile(path = FilePath("primary.jpg"))
+        val dup1 = ImageFile(path = FilePath("dup1.jpg"))
+        val dup2 = ImageFile(path = FilePath("dup2.jpg"))
 
         val info =
             DuplicateInfo(

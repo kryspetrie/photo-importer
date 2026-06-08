@@ -327,7 +327,6 @@ class RectangleDetector(
         return contours
     }
 
-    @Suppress("LoopWithTooManyJumpStatements")
     private fun traceContour(
         data: java.awt.image.WritableRaster,
         visited: Array<BooleanArray>,
@@ -371,7 +370,6 @@ class RectangleDetector(
 
     // ===== Step 5: Polygon approximation + quadrilateral extraction =====
 
-    @Suppress("UnusedParameter", "LoopWithTooManyJumpStatements", "ReturnCount")
     private fun approximateToQuadrilateral(
         contour: List<Point>,
         imageW: Int,
@@ -453,7 +451,6 @@ class RectangleDetector(
         ) / len
     }
 
-    @Suppress("ReturnCount")
     private fun extractBestQuad(points: List<Point>): List<Point> {
         if (points.size == 4) return points
 
@@ -588,7 +585,6 @@ class RectangleDetector(
      * while still filtering out obviously non-rectangular shapes (e.g., triangles, pentagons,
      * highly skewed quads).
      */
-    @Suppress("ReturnCount")
     private fun hasValidAngles(corners: List<Point>): Boolean {
         if (corners.size != 4) return false
         for (i in corners.indices) {
@@ -605,7 +601,6 @@ class RectangleDetector(
 
     // ===== Step 6: Filtering =====
 
-    @Suppress("ReturnCount")
     private fun filterQuadrilateral(quad: DetectedQuadrilateral, expectedCount: Int?): Boolean {
         // Aspect ratio filter
         if (quad.aspectRatio > maxAspectRatio || quad.aspectRatio < 1f / maxAspectRatio) {

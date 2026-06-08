@@ -213,7 +213,6 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
  * @see NavigationBar Material Design bottom navigation
  * @see Surface Material Design surface container with background color
  */
-@Suppress("UnusedParameter")
 @Composable
 fun PetrieFileImporterApp(
     /**
@@ -359,7 +358,8 @@ fun PetrieFileImporterApp(
                                     )
                                     processedPhotos.forEach { photo ->
                                         println(
-                                            "  - ${photo.outputPath} (${photo.dimensions.first}x${photo.dimensions.second})"
+                                            "  - ${photo.outputPath}" +
+                                                " (${photo.dimensions.first}x${photo.dimensions.second})"
                                         )
                                     }
                                     // Switch back to Import tab after completion

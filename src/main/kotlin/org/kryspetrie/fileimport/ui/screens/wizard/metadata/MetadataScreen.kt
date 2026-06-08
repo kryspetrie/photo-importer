@@ -6,8 +6,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,35 +18,26 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Pets
-import androidx.compose.material.icons.filled.Undo
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -82,47 +71,37 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Popup
 import java.awt.image.BufferedImage
-import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
-import org.kryspetrie.fileimport.application.LocationSearchService
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
-import org.kryspetrie.fileimport.domain.model.DetectedPhoto
-import org.kryspetrie.fileimport.domain.model.ImageFile
+import org.kryspetrie.fileimport.domain.model.FaceRegion
+import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
-import org.kryspetrie.fileimport.domain.model.PhotoCorner
-import org.kryspetrie.fileimport.domain.model.RotationAngle
+import org.kryspetrie.fileimport.domain.model.OverrideState
+import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
+import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
-import org.kryspetrie.fileimport.infrastructure.wizard.FaceRegion
 import org.kryspetrie.fileimport.infrastructure.wizard.FaceSize
-import org.kryspetrie.fileimport.infrastructure.wizard.FieldOverride
-import org.kryspetrie.fileimport.infrastructure.wizard.OverrideState
-import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.RegionType
-import org.kryspetrie.fileimport.ui.screens.wizard.FaceSelectorOverlay
 import org.kryspetrie.fileimport.infrastructure.wizard.SourceExifSummary
+import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
+import org.kryspetrie.fileimport.ui.screens.wizard.FaceSelectorOverlay
+import org.kryspetrie.fileimport.ui.screens.wizard.boxToDetectedPhoto
+import org.kryspetrie.fileimport.ui.screens.wizard.cropAndRotateBoundingBox
+import org.kryspetrie.fileimport.ui.screens.wizard.regionTypeIcon
 
 /**
  * Metadata screen for editing EXIF metadata to apply to exported photos.
@@ -155,7 +134,7 @@ fun MetadataScreen(
     modifier: Modifier = Modifier,
     faceRegionTransformer: org.kryspetrie.fileimport.application.FaceRegionTransformer? = null,
 ) {
-    val locationSearchService: LocationSearchService = koinInject()
+    val locationSearchService: LocationSearchPort = koinInject()
     val geocodingPort: GeocodingPort = koinInject()
     val dispatcherProvider: DispatcherProvider = koinInject()
     val imageRepository: ImageRepositoryPort = koinInject()
@@ -175,36 +154,13 @@ fun MetadataScreen(
     }
 
     // Read source EXIF when entering the metadata screen (only once per source file)
-    LaunchedEffect(state.imageFile.collectAsState().value) {
-        val file = state.imageFile.value
-        if (file != null && sourceExif == null) {
-            try {
-                val meta =
-                    withContext(dispatcherProvider.io) {
-                        imageRepository.getMetadata(ImageFile(file = file))
-                    }
-                if (meta != null) {
-                    state.setSourceExif(
-                        SourceExifSummary(
-                            cameraMake = meta.make,
-                            cameraModel = meta.model,
-                            lensModel = meta.lensModel,
-                            focalLength = meta.focalLength?.let { "${it}mm" },
-                            aperture = meta.aperture?.let { "f/$it" },
-                            shutterSpeed = meta.shutterSpeed,
-                            iso = meta.iso?.toString(),
-                            description = meta.description,
-                            dateOriginal = meta.dateTimeOriginal?.toString(),
-                            gpsLatitude = meta.latitude?.toString(),
-                            gpsLongitude = meta.longitude?.toString(),
-                        )
-                    )
-                }
-            } catch (_: Exception) {
-                // Source EXIF read failed — leave sourceExif as null, UI will show no hints
-            }
-        }
-    }
+    LoadSourceExifEffect(
+        imageFile = state.imageFile.value,
+        sourceExif = sourceExif,
+        state = state,
+        imageRepository = imageRepository,
+        dispatcherProvider = dispatcherProvider,
+    )
 
     // Multi-edit mode: when true, checkboxes appear and clicking toggles selection
     var isMultiEditMode by remember { mutableStateOf(false) }
@@ -252,7 +208,7 @@ fun MetadataScreen(
                             boxToDetectedPhoto(box, perspectiveEnabled, config.rotationDegrees)
                         val marginedPhoto =
                             if (marginFraction > 0.0) {
-                                faceRegionTransformer.applyMargin(detectedPhoto, marginFraction)
+                                GeometryUtils.applyMargin(detectedPhoto, marginFraction)
                             } else detectedPhoto
                         // preRotationWidth/Height: compute from corrected image (before rotation)
                         val corrected = perspectiveService.correctPerspective(image, marginedPhoto)
@@ -346,7 +302,9 @@ fun MetadataScreen(
                         TextField(
                             value = faceNameInput,
                             onValueChange = { faceNameInput = it },
-                            placeholder = { Text("Name…", style = MaterialTheme.typography.bodySmall) },
+                            placeholder = {
+                                Text("Name…", style = MaterialTheme.typography.bodySmall)
+                            },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             textStyle = MaterialTheme.typography.bodyMedium,
@@ -780,17 +738,7 @@ private fun MetadataEditorPane(
     val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
 
     // Buffered values for multi-edit
-    var bufferedDescription by remember { mutableStateOf("") }
-    var bufferedKeywords by remember { mutableStateOf("") }
-    var bufferedOriginalDate by remember { mutableStateOf("") }
-    var bufferedYear by remember { mutableStateOf("") }
-    var bufferedCameraModel by remember { mutableStateOf("") }
-    var bufferedCameraMake by remember { mutableStateOf("") }
-    var bufferedLensModel by remember { mutableStateOf("") }
-    var bufferedFocalLength by remember { mutableStateOf("") }
-    var bufferedAperture by remember { mutableStateOf("") }
-    var bufferedShutterSpeed by remember { mutableStateOf("") }
-    var bufferedIso by remember { mutableStateOf("") }
+    val editState = remember { MetadataEditState() }
     var showAdvanced by remember { mutableStateOf(false) }
 
     // Focus requesters for Tab navigation (single-select mode)
@@ -812,567 +760,379 @@ private fun MetadataEditorPane(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-        if (isMultiSelect) {
-            // Multi-edit header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+            if (isMultiSelect) {
+                // Multi-edit header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "${selectedIndices.size} photo(s) selected",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Button(
+                        onClick = { state.applyMetadataToSelected(editState) },
+                        modifier = Modifier.height(32.dp),
+                    ) {
+                        Text(
+                            "Apply to ${selectedIndices.size} Photo(s)",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
+                }
+
                 Text(
-                    "${selectedIndices.size} photo(s) selected",
+                    "Only filled fields will be applied. Leave blank to keep existing values.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+
+                MetadataField(
+                    label = "Description",
+                    placeholder = "Leave blank to keep existing...",
+                    value = editState.description,
+                    onValueChange = { editState.description = it },
+                    suggestions = metadataHistory.description,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    MetadataField(
+                        label = "Keywords",
+                        placeholder = "vacation, family, holiday",
+                        value = editState.keywords,
+                        onValueChange = { editState.keywords = it },
+                        modifier = Modifier.weight(2f),
+                        suggestions = metadataHistory.keywords,
+                    )
+                    MetadataField(
+                        label = "Year",
+                        placeholder = "1995",
+                        value = editState.year,
+                        onValueChange = { editState.year = it.filter { c -> c.isDigit() }.take(4) },
+                        modifier = Modifier.weight(1f),
+                        keyboardType = KeyboardType.Number,
+                        suggestions = metadataHistory.year,
+                    )
+                }
+                MetadataField(
+                    label = "Original Date",
+                    placeholder = "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
+                    value = editState.originalDate,
+                    onValueChange = { editState.originalDate = it },
+                    suggestions = metadataHistory.originalDate,
+                )
+
+                AdvancedMetadataSection(
+                    showAdvanced = showAdvanced,
+                    onToggleAdvanced = { showAdvanced = !showAdvanced },
+                    cameraModel = editState.cameraModel,
+                    onCameraModelChange = { editState.cameraModel = it },
+                    cameraMake = editState.cameraMake,
+                    onCameraMakeChange = { editState.cameraMake = it },
+                    lensModel = editState.lensModel,
+                    onLensModelChange = { editState.lensModel = it },
+                    focalLength = editState.focalLength,
+                    onFocalLengthChange = { editState.focalLength = it },
+                    aperture = editState.aperture,
+                    onApertureChange = { editState.aperture = it },
+                    shutterSpeed = editState.shutterSpeed,
+                    onShutterSpeedChange = { editState.shutterSpeed = it },
+                    iso = editState.iso,
+                    onIsoChange = { editState.iso = it },
+                    metadataHistory = metadataHistory,
+                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    sourceExif = sourceExif,
+                )
+            } else {
+                // Single-select: immediate-edit fields
+                val selectedIndex = selectedIndices.first()
+                val box = boundingBoxList.boxes[selectedIndex]
+                val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+
+                Text(
+                    "Photo ${selectedIndex + 1}",
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
-                Button(
-                    onClick = {
-                        state.applyMetadataToSelected(
-                            description = bufferedDescription,
-                            keywords = bufferedKeywords,
-                            originalDate = bufferedOriginalDate,
-                            year = bufferedYear,
-                            cameraModel = bufferedCameraModel,
-                            cameraMake = bufferedCameraMake,
-                            lensModel = bufferedLensModel,
-                            focalLength = bufferedFocalLength,
-                            aperture = bufferedAperture,
-                            shutterSpeed = bufferedShutterSpeed,
-                            iso = bufferedIso,
-                        )
+
+                MetadataField(
+                    label = "Description",
+                    placeholder = "Photo description...",
+                    value = config.description,
+                    onValueChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(description = newValue) }
                     },
-                    modifier = Modifier.height(32.dp),
+                    suggestions = metadataHistory.description,
+                    onCommit = { onMetadataHistoryUpdate("description", config.description) },
+                    fieldIncluded = config.overrideDescription != OverrideState.NULL_OUT,
+                    onFieldIncludedChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideDescription =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    focusRequester = descriptionFocusRequester,
+                    sourceHint = sourceExif?.description,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text(
-                        "Apply to ${selectedIndices.size} Photo(s)",
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
-
-            Text(
-                "Only filled fields will be applied. Leave blank to keep existing values.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            MetadataField(
-                label = "Description",
-                placeholder = "Leave blank to keep existing...",
-                value = bufferedDescription,
-                onValueChange = { bufferedDescription = it },
-                suggestions = metadataHistory.description,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                MetadataField(
-                    label = "Keywords",
-                    placeholder = "vacation, family, holiday",
-                    value = bufferedKeywords,
-                    onValueChange = { bufferedKeywords = it },
-                    modifier = Modifier.weight(2f),
-                    suggestions = metadataHistory.keywords,
-                )
-                MetadataField(
-                    label = "Year",
-                    placeholder = "1995",
-                    value = bufferedYear,
-                    onValueChange = { bufferedYear = it.filter { c -> c.isDigit() }.take(4) },
-                    modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Number,
-                    suggestions = metadataHistory.year,
-                )
-            }
-            MetadataField(
-                label = "Original Date",
-                placeholder = "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
-                value = bufferedOriginalDate,
-                onValueChange = { bufferedOriginalDate = it },
-                suggestions = metadataHistory.originalDate,
-            )
-
-            AdvancedMetadataSection(
-                showAdvanced = showAdvanced,
-                onToggleAdvanced = { showAdvanced = !showAdvanced },
-                cameraModel = bufferedCameraModel,
-                onCameraModelChange = { bufferedCameraModel = it },
-                cameraMake = bufferedCameraMake,
-                onCameraMakeChange = { bufferedCameraMake = it },
-                lensModel = bufferedLensModel,
-                onLensModelChange = { bufferedLensModel = it },
-                focalLength = bufferedFocalLength,
-                onFocalLengthChange = { bufferedFocalLength = it },
-                aperture = bufferedAperture,
-                onApertureChange = { bufferedAperture = it },
-                shutterSpeed = bufferedShutterSpeed,
-                onShutterSpeedChange = { bufferedShutterSpeed = it },
-                iso = bufferedIso,
-                onIsoChange = { bufferedIso = it },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                sourceExif = sourceExif,
-            )
-        } else {
-            // Single-select: immediate-edit fields
-            val selectedIndex = selectedIndices.first()
-            val box = boundingBoxList.boxes[selectedIndex]
-            val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-
-            Text(
-                "Photo ${selectedIndex + 1}",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
-
-            MetadataField(
-                label = "Description",
-                placeholder = "Photo description...",
-                value = config.description,
-                onValueChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(description = newValue) }
-                },
-                suggestions = metadataHistory.description,
-                onCommit = { onMetadataHistoryUpdate("description", config.description) },
-                overrideState = config.overrideDescription?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideDescription =
-                                FieldOverride(
-                                    state = newState,
-                                    value = it.description.ifBlank { null },
-                                )
-                        )
-                    }
-                },
-                focusRequester = descriptionFocusRequester,
-                sourceHint = sourceExif?.description,
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                MetadataField(
-                    label = "Keywords",
-                    placeholder = "vacation, family, holiday",
-                    value = config.keywords,
-                    onValueChange = { newValue ->
-                        state.updatePhotoConfiguration(box.id) { it.copy(keywords = newValue) }
-                    },
-                    modifier = Modifier.weight(2f),
-                    suggestions = metadataHistory.keywords,
-                    onCommit = { onMetadataHistoryUpdate("keywords", config.keywords) },
-                    overrideState = config.overrideKeywords?.state ?: OverrideState.KEEP_SOURCE,
-                    onOverrideChange = { newState ->
-                        state.updatePhotoConfiguration(box.id) {
-                            it.copy(
-                                overrideKeywords =
-                                    FieldOverride(
-                                        state = newState,
-                                        value = it.keywords.ifBlank { null },
-                                    )
-                            )
-                        }
-                    },
-                    focusRequester = keywordsFocusRequester,
-                    sourceHint = null, // Keywords not typically in source EXIF
-                )
-                MetadataField(
-                    label = "Year",
-                    placeholder = "1995",
-                    value = config.year,
-                    onValueChange = { newValue ->
-                        state.updatePhotoConfiguration(box.id) {
-                            it.copy(year = newValue.filter { c -> c.isDigit() }.take(4))
-                        }
-                    },
-                    modifier = Modifier.weight(1f),
-                    keyboardType = KeyboardType.Number,
-                    suggestions = metadataHistory.year,
-                    onCommit = { onMetadataHistoryUpdate("year", config.year) },
-                    overrideState = config.overrideYear?.state ?: OverrideState.KEEP_SOURCE,
-                    onOverrideChange = { newState ->
-                        state.updatePhotoConfiguration(box.id) {
-                            it.copy(
-                                overrideYear =
-                                    FieldOverride(
-                                        state = newState,
-                                        value = it.year.ifBlank { null },
-                                    )
-                            )
-                        }
-                    },
-                    focusRequester = yearFocusRequester,
-                    sourceHint = sourceExif?.dateOriginal?.take(4),
-                )
-            }
-            MetadataField(
-                label = "Original Date",
-                placeholder = "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
-                value = config.originalDate,
-                onValueChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(originalDate = newValue) }
-                },
-                suggestions = metadataHistory.originalDate,
-                onCommit = { onMetadataHistoryUpdate("originalDate", config.originalDate) },
-                overrideState = config.overrideOriginalDate?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideOriginalDate =
-                                FieldOverride(
-                                    state = newState,
-                                    value = it.originalDate.ifBlank { null },
-                                )
-                        )
-                    }
-                },
-                focusRequester = originalDateFocusRequester,
-                sourceHint = sourceExif?.dateOriginal,
-            )
-
-            // ═══ Subjects & Faces section ═══
-            SubjectsFacesSection(
-                subjects = config.subjects,
-                faceRegions = config.faceRegions,
-                onSubjectsChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(subjects = newValue) }
-                },
-                onRemoveFaceRegion = { faceIndex ->
-                    state.removeFaceRegion(selectedIndex, faceIndex)
-                },
-                onSelectFaces = { onSelectFaces(selectedIndex) },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                subjectInputFocusRequester = subjectInputFocusRequester,
-            )
-
-            // ═══ Location & GPS section ═══
-            LocationSection(
-                locationName = config.locationName,
-                onLocationNameChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(locationName = newValue) }
-                },
-                city = config.city,
-                onCityChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(city = newValue) }
-                },
-                stateVal = config.state,
-                onStateChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(state = newValue) }
-                },
-                country = config.country,
-                onCountryChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(country = newValue) }
-                },
-                gpsLatitude = config.gpsLatitude,
-                onGpsLatitudeChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(gpsLatitude = newValue) }
-                },
-                gpsLongitude = config.gpsLongitude,
-                onGpsLongitudeChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(gpsLongitude = newValue) }
-                },
-                overrideGps = config.overrideGps?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideGpsChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(overrideGps = FieldOverride(state = newState, value = null))
-                    }
-                },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                sourceExif = sourceExif,
-                onSearchLocation =
-                    if (onSearchLocation != null) {
-                        { onSearchLocation!!(selectedIndex) }
-                    } else null,
-            )
-
-            AdvancedMetadataSection(
-                showAdvanced = showAdvanced,
-                onToggleAdvanced = { showAdvanced = !showAdvanced },
-                cameraModel = config.cameraModel,
-                onCameraModelChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(cameraModel = newValue) }
-                },
-                cameraMake = config.cameraMake,
-                onCameraMakeChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(cameraMake = newValue) }
-                },
-                lensModel = config.lensModel,
-                onLensModelChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(lensModel = newValue) }
-                },
-                focalLength = config.focalLength,
-                onFocalLengthChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(focalLength = newValue) }
-                },
-                aperture = config.aperture,
-                onApertureChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(aperture = newValue) }
-                },
-                shutterSpeed = config.shutterSpeed,
-                onShutterSpeedChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(shutterSpeed = newValue) }
-                },
-                iso = config.iso,
-                onIsoChange = { newValue ->
-                    state.updatePhotoConfiguration(box.id) { it.copy(iso = newValue) }
-                },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                // Override tri-states
-                overrideCameraMake = config.overrideCameraMake?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideCameraMakeChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideCameraMake =
-                                FieldOverride(
-                                    state = newState,
-                                    value = it.cameraMake.ifBlank { null },
-                                )
-                        )
-                    }
-                },
-                overrideCameraModel =
-                    config.overrideCameraModel?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideCameraModelChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideCameraModel =
-                                FieldOverride(
-                                    state = newState,
-                                    value = it.cameraModel.ifBlank { null },
-                                )
-                        )
-                    }
-                },
-                overrideLensModel = config.overrideLensModel?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideLensModelChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideLensModel =
-                                FieldOverride(
-                                    state = newState,
-                                    value = it.lensModel.ifBlank { null },
-                                )
-                        )
-                    }
-                },
-                overrideFocalLength =
-                    config.overrideFocalLength?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideFocalLengthChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideFocalLength =
-                                FieldOverride(
-                                    state = newState,
-                                    value = it.focalLength.ifBlank { null },
-                                )
-                        )
-                    }
-                },
-                overrideAperture = config.overrideAperture?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideApertureChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideAperture =
-                                FieldOverride(
-                                    state = newState,
-                                    value = it.aperture.ifBlank { null },
-                                )
-                        )
-                    }
-                },
-                overrideShutterSpeed =
-                    config.overrideShutterSpeed?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideShutterSpeedChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideShutterSpeed =
-                                FieldOverride(
-                                    state = newState,
-                                    value = it.shutterSpeed.ifBlank { null },
-                                )
-                        )
-                    }
-                },
-                overrideIso = config.overrideIso?.state ?: OverrideState.KEEP_SOURCE,
-                onOverrideIsoChange = { newState ->
-                    state.updatePhotoConfiguration(box.id) {
-                        it.copy(
-                            overrideIso =
-                                FieldOverride(state = newState, value = it.iso.ifBlank { null })
-                        )
-                    }
-                },
-                cameraModelFocusRequester = cameraModelFocusRequester,
-                cameraMakeFocusRequester = cameraMakeFocusRequester,
-                lensModelFocusRequester = lensModelFocusRequester,
-                focalLengthFocusRequester = focalLengthFocusRequester,
-                apertureFocusRequester = apertureFocusRequester,
-                shutterSpeedFocusRequester = shutterSpeedFocusRequester,
-                isoFocusRequester = isoFocusRequester,
-                sourceExif = sourceExif,
-            )
-        }
-    }
-    }
-}
-
-/** A single metadata text field with label. */
-@Composable
-@OptIn(ExperimentalMaterial3Api::class)
-private fun MetadataField(
-    label: String,
-    placeholder: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    keyboardType: KeyboardType = KeyboardType.Text,
-    singleLine: Boolean = true,
-    suggestions: List<String> = emptyList(),
-    onCommit: (() -> Unit)? = null,
-    overrideState: OverrideState? = null,
-    onOverrideChange: ((OverrideState) -> Unit)? = null,
-    focusRequester: FocusRequester? = null,
-    sourceHint: String? = null,
-) {
-    val focusManager = LocalFocusManager.current
-
-    // Show source hint below the field when: field is in KEEP_SOURCE mode (default), or OVERRIDE
-    // Don't show when NULL_OUT (user explicitly removed field)
-    val showSourceHint =
-        sourceHint != null && sourceHint.isNotBlank() && overrideState != OverrideState.NULL_OUT
-
-    Column(modifier = modifier) {
-        if (suggestions.isNotEmpty()) {
-            // Use ExposedDropdownMenuBox for autocomplete suggestions
-            var expanded by remember { mutableStateOf(false) }
-            val filteredSuggestions =
-                remember(suggestions, value) {
-                    if (value.isBlank()) suggestions
-                    else suggestions.filter { it.contains(value, ignoreCase = true) }
-                }
-
-            ExposedDropdownMenuBox(
-                expanded = expanded && filteredSuggestions.isNotEmpty(),
-                onExpandedChange = { expanded = it },
-            ) {
-                OutlinedTextField(
-                    value = value,
-                    onValueChange = {
-                        onValueChange(it)
-                        expanded = true
-                    },
-                    label = { Text(label) },
-                    placeholder = {
-                        Text(placeholder, style = MaterialTheme.typography.labelSmall)
-                    },
-                    modifier =
-                        Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                            .fillMaxWidth()
-                            .then(
-                                if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                                else Modifier
-                            ),
-                    singleLine = singleLine,
-                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-                    keyboardActions =
-                        if (focusRequester != null) {
-                            KeyboardActions(
-                                onNext = { focusManager.moveFocus(FocusDirection.Down) },
-                                onDone = { focusManager.moveFocus(FocusDirection.Down) },
-                            )
-                        } else KeyboardActions(),
-                    textStyle =
-                        if (overrideState == OverrideState.NULL_OUT)
-                            MaterialTheme.typography.bodyMedium.copy(
-                                textDecoration =
-                                    androidx.compose.ui.text.style.TextDecoration.LineThrough
-                            )
-                        else MaterialTheme.typography.bodyMedium,
-                    enabled = overrideState != OverrideState.NULL_OUT,
-                    trailingIcon =
-                        if (overrideState != null && onOverrideChange != null) {
-                            {
-                                OverrideIndicator(
-                                    state = overrideState,
-                                    onStateChange = onOverrideChange,
-                                    modifier = Modifier.size(24.dp),
+                    MetadataField(
+                        label = "Keywords",
+                        placeholder = "vacation, family, holiday",
+                        value = config.keywords,
+                        onValueChange = { newValue ->
+                            state.updatePhotoConfiguration(box.id) { it.copy(keywords = newValue) }
+                        },
+                        modifier = Modifier.weight(2f),
+                        suggestions = metadataHistory.keywords,
+                        onCommit = { onMetadataHistoryUpdate("keywords", config.keywords) },
+                        fieldIncluded = config.overrideKeywords != OverrideState.NULL_OUT,
+                        onFieldIncludedChange = { included ->
+                            state.updatePhotoConfiguration(box.id) {
+                                it.copy(
+                                    overrideKeywords =
+                                        if (included) OverrideState.KEEP_SOURCE
+                                        else OverrideState.NULL_OUT
                                 )
                             }
+                        },
+                        focusRequester = keywordsFocusRequester,
+                        sourceHint = null, // Keywords not typically in source EXIF
+                    )
+                    MetadataField(
+                        label = "Year",
+                        placeholder = "1995",
+                        value = config.year,
+                        onValueChange = { newValue ->
+                            state.updatePhotoConfiguration(box.id) {
+                                it.copy(year = newValue.filter { c -> c.isDigit() }.take(4))
+                            }
+                        },
+                        modifier = Modifier.weight(1f),
+                        keyboardType = KeyboardType.Number,
+                        suggestions = metadataHistory.year,
+                        onCommit = { onMetadataHistoryUpdate("year", config.year) },
+                        fieldIncluded = config.overrideYear != OverrideState.NULL_OUT,
+                        onFieldIncludedChange = { included ->
+                            state.updatePhotoConfiguration(box.id) {
+                                it.copy(
+                                    overrideYear =
+                                        if (included) OverrideState.KEEP_SOURCE
+                                        else OverrideState.NULL_OUT
+                                )
+                            }
+                        },
+                        focusRequester = yearFocusRequester,
+                        sourceHint = sourceExif?.dateOriginal?.take(4),
+                    )
+                }
+                MetadataField(
+                    label = "Original Date",
+                    placeholder = "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
+                    value = config.originalDate,
+                    onValueChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(originalDate = newValue) }
+                    },
+                    suggestions = metadataHistory.originalDate,
+                    onCommit = { onMetadataHistoryUpdate("originalDate", config.originalDate) },
+                    fieldIncluded = config.overrideOriginalDate != OverrideState.NULL_OUT,
+                    onFieldIncludedChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideOriginalDate =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    focusRequester = originalDateFocusRequester,
+                    sourceHint = sourceExif?.dateOriginal,
+                )
+
+                // ═══ Subjects & Faces section ═══
+                SubjectsFacesSection(
+                    subjects = config.subjects,
+                    faceRegions = config.faceRegions,
+                    onSubjectsChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(subjects = newValue) }
+                    },
+                    onRemoveFaceRegion = { faceIndex ->
+                        state.removeFaceRegion(selectedIndex, faceIndex)
+                    },
+                    onSelectFaces = { onSelectFaces(selectedIndex) },
+                    metadataHistory = metadataHistory,
+                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    subjectInputFocusRequester = subjectInputFocusRequester,
+                )
+
+                // ═══ Location & GPS section ═══
+                LocationSection(
+                    locationName = config.locationName,
+                    onLocationNameChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(locationName = newValue) }
+                    },
+                    city = config.city,
+                    onCityChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(city = newValue) }
+                    },
+                    stateVal = config.state,
+                    onStateChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(state = newValue) }
+                    },
+                    country = config.country,
+                    onCountryChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(country = newValue) }
+                    },
+                    gpsLatitude = config.gpsLatitude,
+                    onGpsLatitudeChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(gpsLatitude = newValue) }
+                    },
+                    gpsLongitude = config.gpsLongitude,
+                    onGpsLongitudeChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(gpsLongitude = newValue) }
+                    },
+                    overrideGps = config.overrideGps != OverrideState.NULL_OUT,
+                    onOverrideGpsChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideGps =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    metadataHistory = metadataHistory,
+                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    sourceExif = sourceExif,
+                    onSearchLocation =
+                        if (onSearchLocation != null) {
+                            { onSearchLocation!!(selectedIndex) }
                         } else null,
                 )
-                if (filteredSuggestions.isNotEmpty()) {
-                    ExposedDropdownMenu(
-                        expanded = expanded && filteredSuggestions.isNotEmpty(),
-                        onDismissRequest = { expanded = false },
-                    ) {
-                        filteredSuggestions.take(10).forEach { suggestion ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(suggestion, style = MaterialTheme.typography.bodySmall)
-                                },
-                                onClick = {
-                                    onValueChange(suggestion)
-                                    expanded = false
-                                    onCommit?.invoke()
-                                },
+
+                AdvancedMetadataSection(
+                    showAdvanced = showAdvanced,
+                    onToggleAdvanced = { showAdvanced = !showAdvanced },
+                    cameraModel = config.cameraModel,
+                    onCameraModelChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(cameraModel = newValue) }
+                    },
+                    cameraMake = config.cameraMake,
+                    onCameraMakeChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(cameraMake = newValue) }
+                    },
+                    lensModel = config.lensModel,
+                    onLensModelChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(lensModel = newValue) }
+                    },
+                    focalLength = config.focalLength,
+                    onFocalLengthChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(focalLength = newValue) }
+                    },
+                    aperture = config.aperture,
+                    onApertureChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(aperture = newValue) }
+                    },
+                    shutterSpeed = config.shutterSpeed,
+                    onShutterSpeedChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(shutterSpeed = newValue) }
+                    },
+                    iso = config.iso,
+                    onIsoChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(iso = newValue) }
+                    },
+                    metadataHistory = metadataHistory,
+                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    // Override tri-states
+                    overrideCameraMake = config.overrideCameraMake != OverrideState.NULL_OUT,
+                    onOverrideCameraMakeChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideCameraMake =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
                             )
                         }
-                    }
-                }
+                    },
+                    overrideCameraModel = config.overrideCameraModel != OverrideState.NULL_OUT,
+                    onOverrideCameraModelChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideCameraModel =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideLensModel = config.overrideLensModel != OverrideState.NULL_OUT,
+                    onOverrideLensModelChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideLensModel =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideFocalLength = config.overrideFocalLength != OverrideState.NULL_OUT,
+                    onOverrideFocalLengthChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideFocalLength =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideAperture = config.overrideAperture != OverrideState.NULL_OUT,
+                    onOverrideApertureChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideAperture =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideShutterSpeed = config.overrideShutterSpeed != OverrideState.NULL_OUT,
+                    onOverrideShutterSpeedChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideShutterSpeed =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideIso = config.overrideIso != OverrideState.NULL_OUT,
+                    onOverrideIsoChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideIso =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    cameraModelFocusRequester = cameraModelFocusRequester,
+                    cameraMakeFocusRequester = cameraMakeFocusRequester,
+                    lensModelFocusRequester = lensModelFocusRequester,
+                    focalLengthFocusRequester = focalLengthFocusRequester,
+                    apertureFocusRequester = apertureFocusRequester,
+                    shutterSpeedFocusRequester = shutterSpeedFocusRequester,
+                    isoFocusRequester = isoFocusRequester,
+                    sourceExif = sourceExif,
+                )
             }
-        } else {
-            OutlinedTextField(
-                value = value,
-                onValueChange = onValueChange,
-                label = { Text(label) },
-                placeholder = { Text(placeholder, style = MaterialTheme.typography.labelSmall) },
-                modifier =
-                    Modifier.fillMaxWidth()
-                        .then(
-                            if (focusRequester != null) Modifier.focusRequester(focusRequester)
-                            else Modifier
-                        ),
-                singleLine = singleLine,
-                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-                keyboardActions =
-                    if (focusRequester != null) {
-                        KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) },
-                            onDone = { focusManager.moveFocus(FocusDirection.Down) },
-                        )
-                    } else KeyboardActions(),
-                textStyle =
-                    if (overrideState == OverrideState.NULL_OUT)
-                        MaterialTheme.typography.bodyMedium.copy(
-                            textDecoration =
-                                androidx.compose.ui.text.style.TextDecoration.LineThrough
-                        )
-                    else MaterialTheme.typography.bodyMedium,
-                enabled = overrideState != OverrideState.NULL_OUT,
-                trailingIcon =
-                    if (overrideState != null && onOverrideChange != null) {
-                        {
-                            OverrideIndicator(
-                                state = overrideState,
-                                onStateChange = onOverrideChange,
-                                modifier = Modifier.size(24.dp),
-                            )
-                        }
-                    } else null,
-            )
-        }
-        if (showSourceHint) {
-            Text(
-                text = "Source: $sourceHint",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.padding(start = 8.dp, top = 1.dp),
-            )
         }
     }
 }
@@ -1398,21 +1158,21 @@ private fun AdvancedMetadataSection(
     onIsoChange: (String) -> Unit,
     metadataHistory: MetadataHistory = MetadataHistory(),
     onMetadataHistoryUpdate: (String, String) -> Unit = { _, _ -> },
-    // Override tri-states (null = no indicator)
-    overrideCameraMake: OverrideState? = null,
-    onOverrideCameraMakeChange: ((OverrideState) -> Unit)? = null,
-    overrideCameraModel: OverrideState? = null,
-    onOverrideCameraModelChange: ((OverrideState) -> Unit)? = null,
-    overrideLensModel: OverrideState? = null,
-    onOverrideLensModelChange: ((OverrideState) -> Unit)? = null,
-    overrideFocalLength: OverrideState? = null,
-    onOverrideFocalLengthChange: ((OverrideState) -> Unit)? = null,
-    overrideAperture: OverrideState? = null,
-    onOverrideApertureChange: ((OverrideState) -> Unit)? = null,
-    overrideShutterSpeed: OverrideState? = null,
-    onOverrideShutterSpeedChange: ((OverrideState) -> Unit)? = null,
-    overrideIso: OverrideState? = null,
-    onOverrideIsoChange: ((OverrideState) -> Unit)? = null,
+    // Override checkboxes (null = no checkbox shown)
+    overrideCameraMake: Boolean? = null,
+    onOverrideCameraMakeChange: ((Boolean) -> Unit)? = null,
+    overrideCameraModel: Boolean? = null,
+    onOverrideCameraModelChange: ((Boolean) -> Unit)? = null,
+    overrideLensModel: Boolean? = null,
+    onOverrideLensModelChange: ((Boolean) -> Unit)? = null,
+    overrideFocalLength: Boolean? = null,
+    onOverrideFocalLengthChange: ((Boolean) -> Unit)? = null,
+    overrideAperture: Boolean? = null,
+    onOverrideApertureChange: ((Boolean) -> Unit)? = null,
+    overrideShutterSpeed: Boolean? = null,
+    onOverrideShutterSpeedChange: ((Boolean) -> Unit)? = null,
+    overrideIso: Boolean? = null,
+    onOverrideIsoChange: ((Boolean) -> Unit)? = null,
     cameraModelFocusRequester: FocusRequester? = null,
     cameraMakeFocusRequester: FocusRequester? = null,
     lensModelFocusRequester: FocusRequester? = null,
@@ -1447,8 +1207,8 @@ private fun AdvancedMetadataSection(
                         modifier = Modifier.weight(1f),
                         suggestions = metadataHistory.cameraMake,
                         onCommit = { onMetadataHistoryUpdate("cameraMake", cameraMake) },
-                        overrideState = overrideCameraMake,
-                        onOverrideChange = onOverrideCameraMakeChange,
+                        fieldIncluded = overrideCameraMake,
+                        onFieldIncludedChange = onOverrideCameraMakeChange,
                         focusRequester = cameraMakeFocusRequester,
                         sourceHint = sourceExif?.cameraMake,
                     )
@@ -1460,8 +1220,8 @@ private fun AdvancedMetadataSection(
                         modifier = Modifier.weight(1f),
                         suggestions = metadataHistory.cameraModel,
                         onCommit = { onMetadataHistoryUpdate("cameraModel", cameraModel) },
-                        overrideState = overrideCameraModel,
-                        onOverrideChange = onOverrideCameraModelChange,
+                        fieldIncluded = overrideCameraModel,
+                        onFieldIncludedChange = onOverrideCameraModelChange,
                         focusRequester = cameraModelFocusRequester,
                         sourceHint = sourceExif?.cameraModel,
                     )
@@ -1473,8 +1233,8 @@ private fun AdvancedMetadataSection(
                     onValueChange = onLensModelChange,
                     suggestions = metadataHistory.lensModel,
                     onCommit = { onMetadataHistoryUpdate("lensModel", lensModel) },
-                    overrideState = overrideLensModel,
-                    onOverrideChange = onOverrideLensModelChange,
+                    fieldIncluded = overrideLensModel,
+                    onFieldIncludedChange = onOverrideLensModelChange,
                     focusRequester = lensModelFocusRequester,
                     sourceHint = sourceExif?.lensModel,
                 )
@@ -1490,8 +1250,8 @@ private fun AdvancedMetadataSection(
                         modifier = Modifier.weight(1f),
                         suggestions = metadataHistory.focalLength,
                         onCommit = { onMetadataHistoryUpdate("focalLength", focalLength) },
-                        overrideState = overrideFocalLength,
-                        onOverrideChange = onOverrideFocalLengthChange,
+                        fieldIncluded = overrideFocalLength,
+                        onFieldIncludedChange = onOverrideFocalLengthChange,
                         focusRequester = focalLengthFocusRequester,
                         sourceHint = sourceExif?.focalLength,
                     )
@@ -1503,8 +1263,8 @@ private fun AdvancedMetadataSection(
                         modifier = Modifier.weight(1f),
                         suggestions = metadataHistory.aperture,
                         onCommit = { onMetadataHistoryUpdate("aperture", aperture) },
-                        overrideState = overrideAperture,
-                        onOverrideChange = onOverrideApertureChange,
+                        fieldIncluded = overrideAperture,
+                        onFieldIncludedChange = onOverrideApertureChange,
                         focusRequester = apertureFocusRequester,
                         sourceHint = sourceExif?.aperture,
                     )
@@ -1521,8 +1281,8 @@ private fun AdvancedMetadataSection(
                         modifier = Modifier.weight(1f),
                         suggestions = metadataHistory.shutterSpeed,
                         onCommit = { onMetadataHistoryUpdate("shutterSpeed", shutterSpeed) },
-                        overrideState = overrideShutterSpeed,
-                        onOverrideChange = onOverrideShutterSpeedChange,
+                        fieldIncluded = overrideShutterSpeed,
+                        onFieldIncludedChange = onOverrideShutterSpeedChange,
                         focusRequester = shutterSpeedFocusRequester,
                         sourceHint = sourceExif?.shutterSpeed,
                     )
@@ -1535,8 +1295,8 @@ private fun AdvancedMetadataSection(
                         keyboardType = KeyboardType.Number,
                         suggestions = metadataHistory.iso,
                         onCommit = { onMetadataHistoryUpdate("iso", iso) },
-                        overrideState = overrideIso,
-                        onOverrideChange = onOverrideIsoChange,
+                        fieldIncluded = overrideIso,
+                        onFieldIncludedChange = onOverrideIsoChange,
                         focusRequester = isoFocusRequester,
                         sourceHint = sourceExif?.iso,
                     )
@@ -1561,8 +1321,8 @@ private fun LocationSection(
     onGpsLatitudeChange: (String) -> Unit,
     gpsLongitude: String,
     onGpsLongitudeChange: (String) -> Unit,
-    overrideGps: OverrideState = OverrideState.KEEP_SOURCE,
-    onOverrideGpsChange: ((OverrideState) -> Unit)? = null,
+    overrideGps: Boolean = true,
+    onOverrideGpsChange: ((Boolean) -> Unit)? = null,
     onSearchLocation: (() -> Unit)? = null,
     metadataHistory: MetadataHistory = MetadataHistory(),
     onMetadataHistoryUpdate: (String, String) -> Unit = { _, _ -> },
@@ -1584,7 +1344,7 @@ private fun LocationSection(
             Icon(Icons.Default.LocationOn, null, Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
             Text("Location & GPS", style = MaterialTheme.typography.labelSmall)
-            if (overrideGps == OverrideState.NULL_OUT) {
+            if (!overrideGps) {
                 Spacer(Modifier.width(4.dp))
                 Text(
                     "(GPS nulled)",
@@ -1658,10 +1418,7 @@ private fun LocationSection(
                 Text(
                     "Enter decimal degrees (e.g. 42.2626, -71.8023). Negative = South/West.",
                     style = MaterialTheme.typography.bodySmall,
-                    color =
-                        if (overrideGps == OverrideState.NULL_OUT)
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -1677,20 +1434,20 @@ private fun LocationSection(
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         textStyle =
-                            if (overrideGps == OverrideState.NULL_OUT)
+                            if (!overrideGps)
                                 MaterialTheme.typography.bodyMedium.copy(
                                     textDecoration =
                                         androidx.compose.ui.text.style.TextDecoration.LineThrough
                                 )
                             else MaterialTheme.typography.bodyMedium,
-                        enabled = overrideGps != OverrideState.NULL_OUT,
+                        enabled = overrideGps,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         trailingIcon =
                             if (onOverrideGpsChange != null) {
                                 {
-                                    OverrideIndicator(
-                                        state = overrideGps,
-                                        onStateChange = onOverrideGpsChange,
+                                    OverrideCheckbox(
+                                        included = overrideGps,
+                                        onIncludedChange = onOverrideGpsChange,
                                         modifier = Modifier.size(24.dp),
                                     )
                                 }
@@ -1706,20 +1463,20 @@ private fun LocationSection(
                         modifier = Modifier.weight(1f),
                         singleLine = true,
                         textStyle =
-                            if (overrideGps == OverrideState.NULL_OUT)
+                            if (!overrideGps)
                                 MaterialTheme.typography.bodyMedium.copy(
                                     textDecoration =
                                         androidx.compose.ui.text.style.TextDecoration.LineThrough
                                 )
                             else MaterialTheme.typography.bodyMedium,
-                        enabled = overrideGps != OverrideState.NULL_OUT,
+                        enabled = overrideGps,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     )
                 }
                 if (
                     sourceExif != null &&
                         (sourceExif.gpsLatitude != null || sourceExif.gpsLongitude != null) &&
-                        overrideGps != OverrideState.NULL_OUT
+                        overrideGps
                 ) {
                     val gpsHint =
                         listOfNotNull(
@@ -1982,111 +1739,3 @@ private fun SubjectsFacesSection(
         }
     }
 }
-
-/**
- * Crops the bounding box region from the source image, applies perspective correction
- * (warp-stretch, always on), then rotates according to the [PhotoConfiguration].
- */
-private fun cropAndRotateBoundingBox(
-    image: BufferedImage,
-    box: BoundingBox,
-    config: PhotoConfiguration,
-    perspectiveService: PerspectiveCorrectionService,
-): BufferedImage? {
-    return try {
-        val detectedPhoto = boxToDetectedPhoto(box)
-        val corrected = perspectiveService.correctPerspective(image, detectedPhoto)
-        if (config.rotationDegrees != 0) {
-            rotateBufferedImage(corrected, rotationFromDegrees(config.rotationDegrees))
-        } else {
-            corrected
-        }
-    } catch (_: Exception) {
-        null
-    }
-}
-
-/** Rotates a [BufferedImage] by the given [RotationAngle]. */
-private fun rotateBufferedImage(image: BufferedImage, rotation: RotationAngle): BufferedImage {
-    if (rotation == RotationAngle.NONE) return image
-    val newWidth: Int
-    val newHeight: Int
-    when (rotation) {
-        RotationAngle.CW_90,
-        RotationAngle.CCW_90 -> {
-            newWidth = image.height
-            newHeight = image.width
-        }
-        else -> {
-            newWidth = image.width
-            newHeight = image.height
-        }
-    }
-    val rotated =
-        BufferedImage(
-            newWidth.coerceAtLeast(1),
-            newHeight.coerceAtLeast(1),
-            BufferedImage.TYPE_INT_RGB,
-        )
-    val graphics = rotated.createGraphics()
-    graphics.background = java.awt.Color.BLACK
-    when (rotation) {
-        RotationAngle.CW_90 -> {
-            graphics.translate(newWidth, 0)
-            graphics.rotate(Math.PI / 2)
-        }
-        RotationAngle.CCW_90 -> {
-            graphics.translate(0, newHeight)
-            graphics.rotate(-Math.PI / 2)
-        }
-        RotationAngle.CW_180 -> {
-            graphics.translate(newWidth / 2.0, newHeight / 2.0)
-            graphics.rotate(Math.PI)
-            graphics.translate(-image.width / 2.0, -image.height / 2.0)
-        }
-        RotationAngle.NONE -> {
-            // No rotation
-        }
-    }
-    graphics.drawImage(image, 0, 0, null)
-    graphics.dispose()
-    return rotated
-}
-
-/** Converts degrees (0, 90, 180, 270) to RotationAngle. */
-private fun rotationFromDegrees(degrees: Int): RotationAngle {
-    return when (degrees) {
-        90 -> RotationAngle.CW_90
-        180 -> RotationAngle.CW_180
-        270 -> RotationAngle.CCW_90
-        -90 -> RotationAngle.CCW_90
-        else -> RotationAngle.NONE
-    }
-}
-
-/** Converts a [BoundingBox] to a [DetectedPhoto] for perspective correction. */
-private fun boxToDetectedPhoto(
-    box: BoundingBox,
-    applyPerspectiveCorrection: Boolean = true,
-    rotationDegrees: Int = 0,
-): DetectedPhoto {
-    return DetectedPhoto(
-        topLeft = PhotoCorner(box.corners.topLeft.x.toFloat(), box.corners.topLeft.y.toFloat()),
-        topRight = PhotoCorner(box.corners.topRight.x.toFloat(), box.corners.topRight.y.toFloat()),
-        bottomLeft =
-            PhotoCorner(box.corners.bottomLeft.x.toFloat(), box.corners.bottomLeft.y.toFloat()),
-        bottomRight =
-            PhotoCorner(box.corners.bottomRight.x.toFloat(), box.corners.bottomRight.y.toFloat()),
-        applyPerspectiveCorrection = applyPerspectiveCorrection,
-        rotation = rotationFromDegrees(rotationDegrees),
-    )
-}
-
-/** Returns an appropriate Material icon for the given [RegionType]. */
-private fun regionTypeIcon(type: RegionType): androidx.compose.ui.graphics.vector.ImageVector =
-    when (type) {
-        RegionType.FACE -> Icons.Default.Face
-        RegionType.PET -> Icons.Default.Pets
-        RegionType.BODY -> Icons.Default.Accessibility
-        RegionType.OBJECT -> Icons.Default.Category
-    }

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.RegionType
 
 /**
  * Unit tests for PhotoScanWizardState. Tests state transitions, box management, configuration, and
@@ -643,7 +644,7 @@ class PhotoScanWizardStateTest {
         val file = java.io.File("/test/img1.jpg")
         val boxes = listOf(BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0))
 
-        state.putPreProcessed(0, PhotoScanWizardState.PreProcessedImage(file, sampleImage, boxes))
+        state.putPreProcessed(0, PreProcessedImage(file, sampleImage, boxes))
 
         assertEquals(1, state.preProcessCount.value)
         val cached = state.preProcessedCache.value[0]
@@ -669,8 +670,8 @@ class PhotoScanWizardStateTest {
         // Set up batch and cache second image
         val files = listOf(file1, file2)
         state.initializeBatch(files)
-        state.putPreProcessed(0, PhotoScanWizardState.PreProcessedImage(file1, sampleImage, boxes1))
-        state.putPreProcessed(1, PhotoScanWizardState.PreProcessedImage(file2, image2, boxes2))
+        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, boxes1))
+        state.putPreProcessed(1, PreProcessedImage(file2, image2, boxes2))
 
         // Switch to second image
         val result = state.switchToImage(1)
@@ -691,10 +692,7 @@ class PhotoScanWizardStateTest {
         val files = listOf(file1, java.io.File("/test/img2.jpg"))
         state.initializeBatch(files)
         // Only cache first image, not second
-        state.putPreProcessed(
-            0,
-            PhotoScanWizardState.PreProcessedImage(file1, sampleImage, emptyList()),
-        )
+        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
 
         val result = state.switchToImage(1)
         assertFalse(result)
@@ -713,11 +711,8 @@ class PhotoScanWizardStateTest {
 
         val files = listOf(file1, file2)
         state.initializeBatch(files)
-        state.putPreProcessed(
-            0,
-            PhotoScanWizardState.PreProcessedImage(file1, sampleImage, emptyList()),
-        )
-        state.putPreProcessed(1, PhotoScanWizardState.PreProcessedImage(file2, image2, emptyList()))
+        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
+        state.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
 
         // Navigate forward
         assertTrue(state.nextImage())
@@ -739,10 +734,7 @@ class PhotoScanWizardStateTest {
 
         val files = listOf(file1, file2)
         state.initializeBatch(files)
-        state.putPreProcessed(
-            0,
-            PhotoScanWizardState.PreProcessedImage(file1, sampleImage, emptyList()),
-        )
+        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
 
         // Next image not ready yet (not cached)
         assertFalse(state.isNextImageReady)
@@ -750,7 +742,7 @@ class PhotoScanWizardStateTest {
         assertFalse(state.isPrevImageReady)
 
         // Cache second image
-        state.putPreProcessed(1, PhotoScanWizardState.PreProcessedImage(file2, image2, emptyList()))
+        state.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
 
         // Now next image is ready
         assertTrue(state.isNextImageReady)
@@ -764,10 +756,7 @@ class PhotoScanWizardStateTest {
         val file1 = java.io.File("/test/img1.jpg")
         state.initializeWithImage(sampleImage, file1)
         state.initializeBatch(listOf(file1, java.io.File("/test/img2.jpg")))
-        state.putPreProcessed(
-            0,
-            PhotoScanWizardState.PreProcessedImage(file1, sampleImage, emptyList()),
-        )
+        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
         state.setPreProcessing(true)
 
         state.resetToImportStep()
@@ -805,11 +794,8 @@ class PhotoScanWizardStateTest {
 
         val files = listOf(file1, file2)
         state.initializeBatch(files)
-        state.putPreProcessed(
-            0,
-            PhotoScanWizardState.PreProcessedImage(file1, sampleImage, listOf(box)),
-        )
-        state.putPreProcessed(1, PhotoScanWizardState.PreProcessedImage(file2, image2, emptyList()))
+        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, listOf(box)))
+        state.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
 
         // Switch to second image — should clear configurations
         state.switchToImage(1)

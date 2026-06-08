@@ -22,7 +22,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.application.DuplicateAction
+import org.kryspetrie.fileimport.domain.model.DuplicateAction
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
 import org.kryspetrie.fileimport.ui.components.formatFileSize
 

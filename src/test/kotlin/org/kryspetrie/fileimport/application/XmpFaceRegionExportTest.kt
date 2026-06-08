@@ -12,8 +12,10 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.kryspetrie.fileimport.domain.model.FaceRegionConfig
+import org.kryspetrie.fileimport.domain.model.FaceRegion
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 
 /**
  * Integration tests for XMP face region (MWG-RS) writing in PhotoScanExportService.
@@ -86,11 +88,11 @@ class XmpFaceRegionExportTest {
 
         val result =
             service.exportSinglePhoto(
-                img,
+                img.toProcessedImage(),
                 photo,
                 destDir.absolutePath,
                 "xmp_face_test",
-                sourceFile = sourceFile,
+                sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
             )
 
         assertThat(result.success).isTrue()
@@ -114,7 +116,13 @@ class XmpFaceRegionExportTest {
         val destDir = File(tempDir, "xmp_bytes_test_${System.nanoTime()}")
         destDir.mkdirs()
 
-        val result = service.exportSinglePhoto(img, photo, destDir.absolutePath, "xmp_bytes_test")
+        val result =
+            service.exportSinglePhoto(
+                img.toProcessedImage(),
+                photo,
+                destDir.absolutePath,
+                "xmp_bytes_test",
+            )
 
         assertThat(result.success).isTrue()
         val exportedFile = File(result.destinationPath)
@@ -134,7 +142,7 @@ class XmpFaceRegionExportTest {
                 PhotoScanConfiguration(
                     faceRegions =
                         listOf(
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Alice",
                                 type = "Face",
                                 x = 0.3,
@@ -162,7 +170,7 @@ class XmpFaceRegionExportTest {
                 PhotoScanConfiguration(
                     faceRegions =
                         listOf(
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Alice",
                                 type = "Face",
                                 x = 0.3,
@@ -170,7 +178,7 @@ class XmpFaceRegionExportTest {
                                 w = 0.15,
                                 h = 0.20,
                             ),
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Bob",
                                 type = "Face",
                                 x = 0.7,
@@ -213,7 +221,7 @@ class XmpFaceRegionExportTest {
                 PhotoScanConfiguration(
                     faceRegions =
                         listOf(
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Buddy",
                                 type = "Pet",
                                 x = 0.5,
@@ -238,7 +246,7 @@ class XmpFaceRegionExportTest {
                 PhotoScanConfiguration(
                     faceRegions =
                         listOf(
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Carol",
                                 type = "Face",
                                 x = 0.123456,
@@ -265,7 +273,7 @@ class XmpFaceRegionExportTest {
                 PhotoScanConfiguration(
                     faceRegions =
                         listOf(
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Alice & Bob",
                                 type = "Face",
                                 x = 0.5,
@@ -297,7 +305,7 @@ class XmpFaceRegionExportTest {
                     subjects = "Alice",
                     faceRegions =
                         listOf(
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Alice",
                                 type = "Face",
                                 x = 0.3,
@@ -326,7 +334,7 @@ class XmpFaceRegionExportTest {
                     subjects = "Alice",
                     faceRegions =
                         listOf(
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Alice",
                                 type = "Face",
                                 x = 0.3,
@@ -358,7 +366,7 @@ class XmpFaceRegionExportTest {
                     subjects = "Alice, Bob",
                     faceRegions =
                         listOf(
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Alice",
                                 type = "Face",
                                 x = 0.3,
@@ -366,7 +374,7 @@ class XmpFaceRegionExportTest {
                                 w = 0.15,
                                 h = 0.20,
                             ),
-                            FaceRegionConfig(
+                            FaceRegion(
                                 name = "Bob",
                                 type = "Face",
                                 x = 0.7,
@@ -390,7 +398,13 @@ class XmpFaceRegionExportTest {
             val destDir = File(tempDir, "full_export_test_${System.nanoTime()}")
             destDir.mkdirs()
 
-            val result = service.exportSinglePhoto(img, photo, destDir.absolutePath, "full_export")
+            val result =
+                service.exportSinglePhoto(
+                    img.toProcessedImage(),
+                    photo,
+                    destDir.absolutePath,
+                    "full_export",
+                )
 
             assertThat(result.success).isTrue()
             val exportedFile = File(result.destinationPath)

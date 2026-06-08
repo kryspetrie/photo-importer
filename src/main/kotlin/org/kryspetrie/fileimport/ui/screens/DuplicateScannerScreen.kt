@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Search
@@ -41,7 +39,6 @@ import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateResultsVie
 import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateScanSetup
 import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateScanningProgress
 
-@Suppress("UnusedParameter")
 @Composable
 fun DuplicateScannerScreen(
     settings: AppSettings,
@@ -113,60 +110,60 @@ fun DuplicateScannerScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-            Text("Find Duplicates", style = MaterialTheme.typography.headlineSmall)
-            Text(
-                "Scan an existing library to find duplicate files. " +
-                    "Duplicates can be resolved automatically or reviewed individually.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            // Setup section (folder + detection methods + error)
-            if (viewModel.step == DuplicateScannerViewModel.ScanStep.SETUP) {
-                DuplicateScanSetup(
-                    folderPath = viewModel.folderPath,
-                    onFolderPathChange = { viewModel.folderPath = it },
-                    enableHash = viewModel.enableHash,
-                    onEnableHashChange = { viewModel.enableHash = it },
-                    enableExif = viewModel.enableExif,
-                    onEnableExifChange = { viewModel.enableExif = it },
-                    enableSurf = viewModel.enableSurf,
-                    onEnableSurfChange = { viewModel.enableSurf = it },
-                    errorMessage = viewModel.errorMessage,
+                Text("Find Duplicates", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    "Scan an existing library to find duplicate files. " +
+                        "Duplicates can be resolved automatically or reviewed individually.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-            }
 
-            // Scanning progress
-            if (viewModel.step == DuplicateScannerViewModel.ScanStep.SCANNING) {
-                DuplicateScanningProgress(
-                    phase = viewModel.scanProgress.phase,
-                    current = viewModel.scanProgress.current,
-                    total = viewModel.scanProgress.total,
-                )
-            }
+                // Setup section (folder + detection methods + error)
+                if (viewModel.step == DuplicateScannerViewModel.ScanStep.SETUP) {
+                    DuplicateScanSetup(
+                        folderPath = viewModel.folderPath,
+                        onFolderPathChange = { viewModel.folderPath = it },
+                        enableHash = viewModel.enableHash,
+                        onEnableHashChange = { viewModel.enableHash = it },
+                        enableExif = viewModel.enableExif,
+                        onEnableExifChange = { viewModel.enableExif = it },
+                        enableSurf = viewModel.enableSurf,
+                        onEnableSurfChange = { viewModel.enableSurf = it },
+                        errorMessage = viewModel.errorMessage,
+                    )
+                }
 
-            // Resolving progress
-            if (viewModel.step == DuplicateScannerViewModel.ScanStep.RESOLVING) {
-                DuplicateResolvingProgress(
-                    current = viewModel.resolveProgress.first,
-                    total = viewModel.resolveProgress.second,
-                )
-            }
+                // Scanning progress
+                if (viewModel.step == DuplicateScannerViewModel.ScanStep.SCANNING) {
+                    DuplicateScanningProgress(
+                        phase = viewModel.scanProgress.phase,
+                        current = viewModel.scanProgress.current,
+                        total = viewModel.scanProgress.total,
+                    )
+                }
 
-            // Results (summary + strategy + heading)
-            if (viewModel.step == DuplicateScannerViewModel.ScanStep.RESULTS) {
-                DuplicateResultsView(
-                    duplicates = viewModel.duplicates,
-                    totalDupeFiles = viewModel.totalDupeFiles,
-                    totalWastedBytes = viewModel.totalWastedBytes,
-                    resolveAction = viewModel.resolveAction,
-                    onResolveActionChange = { viewModel.resolveAction = it },
-                    moveToTrash = viewModel.moveToTrash,
-                    onMoveToTrashChange = { viewModel.moveToTrash = it },
-                    onReset = { viewModel.reset() },
-                )
+                // Resolving progress
+                if (viewModel.step == DuplicateScannerViewModel.ScanStep.RESOLVING) {
+                    DuplicateResolvingProgress(
+                        current = viewModel.resolveProgress.first,
+                        total = viewModel.resolveProgress.second,
+                    )
+                }
+
+                // Results (summary + strategy + heading)
+                if (viewModel.step == DuplicateScannerViewModel.ScanStep.RESULTS) {
+                    DuplicateResultsView(
+                        duplicates = viewModel.duplicates,
+                        totalDupeFiles = viewModel.totalDupeFiles,
+                        totalWastedBytes = viewModel.totalWastedBytes,
+                        resolveAction = viewModel.resolveAction,
+                        onResolveActionChange = { viewModel.resolveAction = it },
+                        moveToTrash = viewModel.moveToTrash,
+                        onMoveToTrashChange = { viewModel.moveToTrash = it },
+                        onReset = { viewModel.reset() },
+                    )
+                }
             }
-        }
         }
 
         // Duplicate group list (outside of scrollable area for better performance)

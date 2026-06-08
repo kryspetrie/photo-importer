@@ -4,8 +4,6 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.concurrent.ConcurrentLinkedQueue
-import javax.inject.Inject
-import javax.inject.Singleton
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.Platform
@@ -26,10 +24,7 @@ import org.slf4j.LoggerFactory
  * - Linux: ~/.local/share/PetrieImageImporter/logs/
  * - Windows: %APPDATA%/PetrieImageImporter/logs/
  */
-@Singleton
-class AppLogger
-@Inject
-constructor(private val timeProvider: TimeProvider = DefaultTimeProvider()) {
+class AppLogger(private val timeProvider: TimeProvider = DefaultTimeProvider()) {
 
     private val logger: Logger = LoggerFactory.getLogger(AppLogger::class.java)
 

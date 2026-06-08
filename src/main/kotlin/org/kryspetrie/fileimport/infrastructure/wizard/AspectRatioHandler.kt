@@ -1,24 +1,13 @@
 package org.kryspetrie.fileimport.infrastructure.wizard
 
+import kotlin.math.abs
+import org.kryspetrie.fileimport.domain.model.AspectRatio
+
 /**
  * Handles aspect ratio selection and flipping based on detected photo orientation. Ensures aspect
  * ratio is applied in the correct direction for portrait/landscape photos.
  */
 object AspectRatioHandler {
-
-    /** Standard aspect ratios with their display labels. */
-    enum class AspectRatio(val ratio: Double, val label: String) {
-        CURRENT(0.0, "Current"),
-        SQUARE(1.0, "1:1"),
-        RATIO_4_3(4.0 / 3.0, "4:3"),
-        RATIO_3_2(3.0 / 2.0, "3:2"),
-        RATIO_5_4(5.0 / 4.0, "5:4"),
-        RATIO_3_4(3.0 / 4.0, "3:4"),
-        RATIO_2_3(2.0 / 3.0, "2:3"),
-        RATIO_16_9(16.0 / 9.0, "16:9");
-
-        fun isPortrait(): Boolean = ratio < 1.0
-    }
 
     /**
      * Gets the output aspect ratio based on detected orientation and selected ratio. Flips the
@@ -30,7 +19,6 @@ object AspectRatioHandler {
      * @param threshold Threshold for square detection (default 0.1)
      * @return The effective output ratio to use
      */
-    @Suppress("ReturnCount")
     fun getOutputAspectRatio(
         detectedWidth: Double,
         detectedHeight: Double,
@@ -44,7 +32,7 @@ object AspectRatioHandler {
 
         // Handle square detection
         val aspectRatio = detectedWidth / detectedHeight
-        if (kotlin.math.abs(aspectRatio - 1.0) < threshold) {
+        if (abs(aspectRatio - 1.0) < threshold) {
             return 1.0 // Always 1:1 for square
         }
 
@@ -70,7 +58,7 @@ object AspectRatioHandler {
         threshold: Double = 0.1,
     ): Boolean {
         val aspectRatio = detectedWidth / detectedHeight
-        if (kotlin.math.abs(aspectRatio - 1.0) < threshold) {
+        if (abs(aspectRatio - 1.0) < threshold) {
             return false // Treat as landscape for square
         }
         return detectedHeight > detectedWidth
@@ -79,7 +67,7 @@ object AspectRatioHandler {
     /** Determines if detected box is square (within threshold). */
     fun isSquare(detectedWidth: Double, detectedHeight: Double, threshold: Double = 0.1): Boolean {
         val aspectRatio = detectedWidth / detectedHeight
-        return kotlin.math.abs(aspectRatio - 1.0) < threshold
+        return abs(aspectRatio - 1.0) < threshold
     }
 
     /**
@@ -94,25 +82,25 @@ object AspectRatioHandler {
             return AspectRatio.SQUARE
         }
 
-        // Find closest standard ratio (excluding CURRENT)
+        // Find closest standard ratio (excluding ORIGINAL)
         return AspectRatio.entries
-            .filter { it !== AspectRatio.CURRENT }
-            .minByOrNull { kotlin.math.abs(it.ratio - detectedAspectRatio) }
-            ?: AspectRatio.RATIO_3_2 // Default to 3:2
+            .filter { it !== AspectRatio.ORIGINAL }
+            .minByOrNull { abs(it.value - detectedAspectRatio) }
+            ?: AspectRatio.LANDSCAPE_3_2 // Default to 3:2
     }
 
     /** Gets the display label for a ratio value. */
     fun getLabelForRatio(ratio: Double): String {
-        if (ratio == 0.0) return AspectRatio.CURRENT.label
+        if (ratio == 0.0) return AspectRatio.ORIGINAL.displayName
 
         return AspectRatio.entries
-            .filter { it !== AspectRatio.CURRENT }
-            .minByOrNull { kotlin.math.abs(it.ratio - ratio) }
-            ?.label ?: "${ratio.toInt()}:${(1.0 / ratio * 100).toInt()}"
+            .filter { it !== AspectRatio.ORIGINAL }
+            .minByOrNull { abs(it.value - ratio) }
+            ?.displayName ?: "${ratio.toInt()}:${(1.0 / ratio * 100).toInt()}"
     }
 
     /** Returns all available aspect ratio options as pairs of (ratio, label). */
     fun getAvailableRatios(): List<Pair<Double, String>> {
-        return AspectRatio.entries.map { Pair(it.ratio, it.label) }
+        return AspectRatio.entries.map { Pair(it.value, it.displayName) }
     }
 }

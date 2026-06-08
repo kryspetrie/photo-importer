@@ -1,7 +1,5 @@
 package org.kryspetrie.fileimport.domain.model
 
-import java.io.File
-
 /**
  * Export result containing paths and metadata of exported images.
  *
@@ -42,7 +40,7 @@ data class PhotoScanSingleExportResult(
  * @property fileSize Size of the exported file in bytes
  */
 data class PhotoScanExportedFile(
-    val sourceFile: File,
+    val sourceFile: FilePath,
     val destinationPath: String,
     val photoId: String,
     val width: Int,

@@ -5,8 +5,6 @@ package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.hoverable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,7 +42,6 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.kryspetrie.fileimport.infrastructure.adapter.Platform
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -66,6 +62,7 @@ import kotlinx.coroutines.withContext
 import org.jetbrains.skia.Image as SkiaImage
 import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.infrastructure.adapter.Platform
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Map preset views — predefined locations for quick navigation
@@ -178,9 +175,7 @@ class TileCache(private val maxTiles: Int = 150) {
 // Disk tile cache
 // ──────────────────────────────────────────────────────────────────────────────
 
-class DiskTileCache(
-    cacheDir: File = File(Platform.cacheDir, "map-tiles")
-) {
+class DiskTileCache(cacheDir: File = File(Platform.cacheDir, "map-tiles")) {
     private val cacheDir: File
     /** Maximum age in milliseconds before a cached tile is considered stale (7 days). */
     private val maxAgeMs: Long = 7L * 24 * 60 * 60 * 1000
@@ -299,10 +294,12 @@ class TileLoader(
     }
 
     private fun fetchTile(z: Int, x: Int, y: Int): ImageBitmap? {
-        val urlStr = when (mapStyle) {
-            MapStyle.STREET -> "https://tile.openstreetmap.org/$z/$x/$y.png"
-            MapStyle.SATELLITE -> "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/$z/$y/$x"
-        }
+        val urlStr =
+            when (mapStyle) {
+                MapStyle.STREET -> "https://tile.openstreetmap.org/$z/$x/$y.png"
+                MapStyle.SATELLITE ->
+                    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/$z/$y/$x"
+            }
         return try {
             val url = URL(urlStr)
             val conn =
@@ -324,6 +321,39 @@ class TileLoader(
         }
     }
 
+    /**
+     * Prefetch tiles at adjacent zoom levels (zoom-1 and zoom+1) covering the same geographic
+     * viewport. These tiles are loaded at lower priority — after the visible tiles are already
+     * cached — so zoom transitions feel instant.
+     *
+     * @param centerLat Center latitude of current view
+     * @param centerLon Center longitude of current view
+     * @param zoom Current zoom level
+     * @param viewWidth Viewport width in pixels
+     * @param viewHeight Viewport height in pixels
+     * @param tileSize Source tile size (default 256)
+     * @param scope Coroutine scope to launch background fetches
+     */
+    fun prefetchAdjacentZoomTiles(
+        centerLat: Double,
+        centerLon: Double,
+        zoom: Int,
+        viewWidth: Int,
+        viewHeight: Int,
+        tileSize: Int = 256,
+        scope: CoroutineScope,
+    ) {
+        val adjacentZooms = listOfNotNull(zoom - 1, zoom + 1).filter { it in 2..18 }
+        for (adjZoom in adjacentZooms) {
+            val tiles = visibleTiles(centerLat, centerLon, adjZoom, viewWidth, viewHeight, tileSize)
+            for ((z, x, y) in tiles) {
+                val key = "${mapStyle.name.lowercase()}/$z/$x/$y"
+                if (cache.get(key) != null) continue
+                scope.launch { loadTile(z, x, y) }
+            }
+        }
+    }
+
     /** Clear memory cache when switching map styles. */
     fun clearMemoryCache() {
         cache.clear()
@@ -331,9 +361,9 @@ class TileLoader(
 
     companion object {
         /**
-         * Tiles are scaled up by this factor for display.
-         * Higher values = fewer tiles needed per viewport (blurrier but less network data).
-         * 4 = each 256px tile renders at 1024px display pixels.
+         * Tiles are scaled up by this factor for display. Higher values = fewer tiles needed per
+         * viewport (blurrier but less network data). 4 = each 256px tile renders at 1024px display
+         * pixels.
          */
         const val TILE_SCALE = 4
     }
@@ -350,8 +380,8 @@ class TileLoader(
  * improve load times. At zoom 5 with 4× scaling, the Eastern US needs only ~2 tiles instead of
  * ~20+, at the cost of slightly blurrier text.
  *
- * The map also supports predefined view presets (e.g. "Eastern US") for quick navigation,
- * floating zoom overlay buttons, and switching between street map and satellite imagery.
+ * The map also supports predefined view presets (e.g. "Eastern US") for quick navigation, floating
+ * zoom overlay buttons, and switching between street map and satellite imagery.
  *
  * @param modifier Layout modifier
  * @param initialLat Starting latitude
@@ -433,6 +463,16 @@ fun OsmMapView(
             if (tileLoader.cache.get(key) != null) continue
             launch { if (tileLoader.loadTile(z, x, y) != null) renderVersion++ }
         }
+        // Prefetch adjacent zoom levels so zoom transitions are instant
+        tileLoader.prefetchAdjacentZoomTiles(
+            centerLat,
+            centerLon,
+            zoom,
+            viewWidth,
+            viewHeight,
+            sourceTileSize,
+            this,
+        )
     }
 
     val maxZoom = 18
@@ -441,8 +481,7 @@ fun OsmMapView(
         // ── Canvas map ──────────────────────────────────────────────────
         Canvas(
             modifier =
-                Modifier
-                    .fillMaxSize()
+                Modifier.fillMaxSize()
                     .pointerInput(zoom) {
                         awaitPointerEventScope {
                             while (true) {
@@ -486,7 +525,8 @@ fun OsmMapView(
                                                 )
                                             zoom = newZoom
                                             onZoomChanged(newZoom)
-                                            // After zoom, adjust center so pointer stays at same screen position
+                                            // After zoom, adjust center so pointer stays at same
+                                            // screen position
                                             val (newPointerPx, newPointerPy) =
                                                 MapTileRenderer.latLonToPixelOffset(
                                                     pointerLat,
@@ -521,7 +561,8 @@ fun OsmMapView(
                         detectDragGestures { change, dragAmount ->
                             change.consume()
                             val n = 2.0.pow(zoom)
-                            // Scale drag by 1/TILE_SCALE since displayed pixels map to more world-space
+                            // Scale drag by 1/TILE_SCALE since displayed pixels map to more
+                            // world-space
                             val pixelSize = 360.0 / (n * sourceTileSize * TileLoader.TILE_SCALE)
                             val lonShift = -dragAmount.x * pixelSize
                             val latShift = dragAmount.y * pixelSize * cos(Math.toRadians(centerLat))
@@ -540,7 +581,8 @@ fun OsmMapView(
                                     zoom,
                                     sourceTileSize,
                                 )
-                            // Convert screen offset to world pixel offset (accounting for tile scale)
+                            // Convert screen offset to world pixel offset (accounting for tile
+                            // scale)
                             val clickWorldPx =
                                 centerPx + (offset.x.toDouble() - vW / 2.0) / TileLoader.TILE_SCALE
                             val clickWorldPy =
@@ -638,8 +680,16 @@ fun OsmMapView(
                         result.latitude == selectedResult.latitude &&
                         result.longitude == selectedResult.longitude
                 if (isSelected)
-                    drawCircle(color = Color.Yellow, radius = 14f, center = Offset(screenX, screenY))
-                drawCircle(color = Color(0xFF2196F3), radius = 8f, center = Offset(screenX, screenY))
+                    drawCircle(
+                        color = Color.Yellow,
+                        radius = 14f,
+                        center = Offset(screenX, screenY),
+                    )
+                drawCircle(
+                    color = Color(0xFF2196F3),
+                    radius = 8f,
+                    center = Offset(screenX, screenY),
+                )
                 drawCircle(color = Color.White, radius = 4f, center = Offset(screenX, screenY))
                 val label = result.name.take(20)
                 val textLayout =
@@ -679,7 +729,10 @@ fun OsmMapView(
                 Color(0xB3000000.toInt()),
                 topLeft = Offset(size.width - zoomLayout.size.width.toFloat() - 46f, 6f),
                 size =
-                    Size(zoomLayout.size.width.toFloat() + 12f, zoomLayout.size.height.toFloat() + 4f),
+                    Size(
+                        zoomLayout.size.width.toFloat() + 12f,
+                        zoomLayout.size.height.toFloat() + 4f,
+                    ),
             )
             drawText(
                 textLayoutResult = zoomLayout,
@@ -687,10 +740,11 @@ fun OsmMapView(
             )
 
             // Attribution — adjust based on map style
-            val attrText = when (mapStyle) {
-                MapStyle.STREET -> "© OpenStreetMap"
-                MapStyle.SATELLITE -> "© Esri"
-            }
+            val attrText =
+                when (mapStyle) {
+                    MapStyle.STREET -> "© OpenStreetMap"
+                    MapStyle.SATELLITE -> "© Esri"
+                }
             val attrLayout =
                 textMeasurer.measure(
                     attrText,
@@ -704,19 +758,17 @@ fun OsmMapView(
 
         // ── Floating zoom + style overlay ────────────────────────────────
         Column(
-            modifier =
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(end = 8.dp, top = 8.dp),
+            modifier = Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 8.dp),
             horizontalAlignment = Alignment.End,
         ) {
             // Map style toggle
             FloatingActionButton(
                 onClick = {
-                    mapStyle = when (mapStyle) {
-                        MapStyle.STREET -> MapStyle.SATELLITE
-                        MapStyle.SATELLITE -> MapStyle.STREET
-                    }
+                    mapStyle =
+                        when (mapStyle) {
+                            MapStyle.STREET -> MapStyle.SATELLITE
+                            MapStyle.SATELLITE -> MapStyle.STREET
+                        }
                 },
                 modifier = Modifier.size(36.dp),
                 shape = CircleShape,

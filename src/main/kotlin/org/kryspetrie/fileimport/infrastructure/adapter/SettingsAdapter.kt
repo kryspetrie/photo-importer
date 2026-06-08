@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImportProfile
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
@@ -115,12 +116,12 @@ class SettingsAdapter(
 
     override suspend fun getAllProfiles(): List<ImportProfile> = loadSettings().profiles
 
-    override suspend fun exportProfile(profile: ImportProfile, file: File) {
-        file.writeText(json.encodeToString(profile))
+    override suspend fun exportProfile(profile: ImportProfile, file: FilePath) {
+        file.toFile().writeText(json.encodeToString(profile))
     }
 
-    override suspend fun importProfile(file: File): ImportProfile =
-        json.decodeFromString<ImportProfile>(file.readText())
+    override suspend fun importProfile(file: FilePath): ImportProfile =
+        json.decodeFromString<ImportProfile>(file.toFile().readText())
 
     override suspend fun resetToDefaults() {
         saveSettings(AppSettings())

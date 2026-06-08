@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.kryspetrie.fileimport.domain.model.PhotoBounds
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
 
@@ -39,7 +40,7 @@ class HybridCornerDetectorTest {
     @Test
     fun `photo-scan-01 finds the primary photo`() {
         hybrid.targetPhotoCount = 2
-        val detected = hybrid.detectPhotos(img01)
+        val detected = hybrid.detectPhotos(img01.toProcessedImage())
 
         assert(detected.size == 2) { "Expected 2 detections, got ${detected.size}" }
 
@@ -56,7 +57,7 @@ class HybridCornerDetectorTest {
     @Test
     fun `photo-scan-02 finds all three photos`() {
         hybrid.targetPhotoCount = 3
-        val detected = hybrid.detectPhotos(img02)
+        val detected = hybrid.detectPhotos(img02.toProcessedImage())
 
         assert(detected.size >= 3) { "Expected >= 3 detections, got ${detected.size}" }
 

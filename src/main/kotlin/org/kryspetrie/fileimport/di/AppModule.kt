@@ -15,12 +15,19 @@ import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.IdGenerator
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
+import org.kryspetrie.fileimport.domain.port.ImportHistoryPort
+import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
 import org.kryspetrie.fileimport.domain.port.NamingPort
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
+import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
+import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.ClasspathModelResourceAdapter
@@ -29,6 +36,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvide
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultIdGenerator
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DeviceAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.HashCacheAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
@@ -55,6 +63,7 @@ val appModule = module {
     single<NamingPort> { NamingAdapter() }
     single<DeduplicationPort> { DeduplicationAdapter(dispatcherProvider = get()) }
     single<HashCachePort> { HashCacheAdapter(dispatcherProvider = get(), timeProvider = get()) }
+    single<FileSystemPort> { FileSystemAdapter() }
     single<DevicePort> { DeviceAdapter(dispatcherProvider = get()) }
     single<ModelResourcePort> { ClasspathModelResourceAdapter() }
     single<TimeProvider> { DefaultTimeProvider() }
@@ -65,7 +74,7 @@ val appModule = module {
 
     single<GeocodingPort> { NominatimGeocodingAdapter(dispatcherProvider = get()) }
 
-    single { ImportHistoryAdapter(dispatcherProvider = get()) }
+    single<ImportHistoryPort> { ImportHistoryAdapter(dispatcherProvider = get()) }
     single { AppLogger() }
 
     // ── Application Services ────────────────────────────────────────
@@ -99,13 +108,20 @@ val appModule = module {
 
     single { RectangleDetector() }
     single { HybridCornerDetector(rectangleDetector = get()) }
+    single<PhotoScanDetectorPort> { get<PhotoScanDetectorService>() }
     single { PhotoScanDetectorService(modelResourcePort = get(), appLogger = getOrNull()) }
-    single { ScanService(hybridCornerDetector = get()) }
+    single { ScanService(photoDetector = get()) }
+    single<PerspectiveCorrectionPort> { PerspectiveCorrectionService() }
     single { PerspectiveCorrectionService() }
+    single<FaceRegionTransformerPort> { FaceRegionTransformer() }
     single { FaceRegionTransformer() }
+    single<PhotoScanExportPort> { get<PhotoScanExportService>() }
     single { PhotoScanExportService(get(), get()) }
 
     // ── Location Search ─────────────────────────────────────────────
 
+    single<LocationSearchPort> {
+        LocationSearchService(geocodingPort = get(), dispatcherProvider = get())
+    }
     single { LocationSearchService(geocodingPort = get(), dispatcherProvider = get()) }
 }

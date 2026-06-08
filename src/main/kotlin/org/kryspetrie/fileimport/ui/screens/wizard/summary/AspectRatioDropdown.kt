@@ -16,7 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.ui.screens.wizard.AspectRatio
+import org.kryspetrie.fileimport.domain.model.AspectRatio
 
 /**
  * Dropdown for selecting a photo aspect ratio, auto-selecting the closest match when set to 0.0.

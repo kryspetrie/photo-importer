@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.FaceRegion
 
 /**
  * Unit tests for PhotoConfiguration.

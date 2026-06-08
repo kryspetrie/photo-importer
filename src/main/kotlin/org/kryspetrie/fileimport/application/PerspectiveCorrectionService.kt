@@ -5,11 +5,13 @@ import boofcv.factory.geo.FactoryMultiView
 import boofcv.struct.geo.AssociatedPair
 import georegression.struct.point.Point2D_F64
 import java.awt.image.BufferedImage
-import javax.inject.Inject
-import javax.inject.Singleton
 import kotlin.math.sqrt
 import org.ejml.data.DMatrixRMaj
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.ProcessedImage
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
+import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 
 /**
  * Perspective correction service using BoofCV for homography computation.
@@ -26,8 +28,21 @@ import org.kryspetrie.fileimport.domain.model.DetectedPhoto
  * libraries are not reliably bundled across platforms (macOS, Linux, Windows). BoofCV is pure Java
  * and already a project dependency.
  */
-@Singleton
-class PerspectiveCorrectionService @Inject constructor() {
+class PerspectiveCorrectionService : PerspectiveCorrectionPort {
+
+    /**
+     * Corrects the perspective of a detected photo, using domain-level [ProcessedImage].
+     *
+     * Converts to/from [BufferedImage] internally, keeping AWT out of the domain layer.
+     */
+    override fun correctPerspective(
+        sourceImage: ProcessedImage,
+        detectedPhoto: DetectedPhoto,
+    ): ProcessedImage {
+        val bufferedSource = sourceImage.toBufferedImage()
+        val result = correctPerspective(bufferedSource, detectedPhoto)
+        return result.toProcessedImage()
+    }
 
     /**
      * Corrects the perspective of a detected photo in the source image.
@@ -139,7 +154,10 @@ class PerspectiveCorrectionService @Inject constructor() {
     /**
      * Calculates the ideal output dimensions for the detected photo based on its corner positions.
      */
-    fun calculateOutputDimensions(detectedPhoto: DetectedPhoto): Pair<Int, Int> {
+    /**
+     * Calculates the ideal output dimensions for the detected photo based on its corner positions.
+     */
+    override fun calculateOutputDimensions(detectedPhoto: DetectedPhoto): Pair<Int, Int> {
         val tl = Point2D_F64(detectedPhoto.topLeft.x.toDouble(), detectedPhoto.topLeft.y.toDouble())
         val tr =
             Point2D_F64(detectedPhoto.topRight.x.toDouble(), detectedPhoto.topRight.y.toDouble())
@@ -166,13 +184,13 @@ class PerspectiveCorrectionService @Inject constructor() {
     }
 
     /** Returns the aspect ratio (width / height) of the detected photo. */
-    fun calculateAspectRatio(detectedPhoto: DetectedPhoto): Float {
+    override fun calculateAspectRatio(detectedPhoto: DetectedPhoto): Float {
         val (w, h) = calculateOutputDimensions(detectedPhoto)
         return w.toFloat() / h.toFloat()
     }
 
     /** Checks if the detected photo's corners form a valid (convex) quadrilateral. */
-    fun isValidQuadrilateral(detectedPhoto: DetectedPhoto): Boolean {
+    override fun isValidQuadrilateral(detectedPhoto: DetectedPhoto): Boolean {
         val corners =
             listOf(
                 Point2D_F64(detectedPhoto.topLeft.x.toDouble(), detectedPhoto.topLeft.y.toDouble()),

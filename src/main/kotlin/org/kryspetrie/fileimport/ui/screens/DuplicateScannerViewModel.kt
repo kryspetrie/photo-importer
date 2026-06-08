@@ -3,10 +3,10 @@ package org.kryspetrie.fileimport.ui.screens
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.kryspetrie.fileimport.application.DuplicateAction
-import org.kryspetrie.fileimport.application.ScanProgress
 import org.kryspetrie.fileimport.domain.model.DeduplicationSettings
+import org.kryspetrie.fileimport.domain.model.DuplicateAction
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
+import org.kryspetrie.fileimport.domain.model.ScanProgress
 
 class DuplicateScannerViewModel {
     enum class ScanStep {

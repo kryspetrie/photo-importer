@@ -41,15 +41,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
-import org.kryspetrie.fileimport.domain.model.DetectedPhoto
-import org.kryspetrie.fileimport.domain.model.PhotoCorner
-import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
@@ -271,107 +267,4 @@ private fun PhotoTile(
             }
         }
     }
-}
-
-/**
- * Crops the bounding box region from the source image, applies perspective correction
- * (warp-stretch, always on), then rotates according to the [PhotoConfiguration].
- */
-private fun cropAndRotateBoundingBox(
-    image: BufferedImage,
-    box: BoundingBox,
-    config: PhotoConfiguration,
-    perspectiveService: PerspectiveCorrectionService,
-): BufferedImage? {
-    return try {
-        // Always apply perspective/warp-stretch correction
-        val detectedPhoto = boxToDetectedPhoto(box)
-        val corrected = perspectiveService.correctPerspective(image, detectedPhoto)
-
-        // Apply rotation if configured
-        if (config.rotationDegrees != 0) {
-            rotateBufferedImage(corrected, rotationFromDegrees(config.rotationDegrees))
-        } else {
-            corrected
-        }
-    } catch (_: Exception) {
-        null
-    }
-}
-
-/** Rotates a [BufferedImage] by the given [RotationAngle]. */
-private fun rotateBufferedImage(image: BufferedImage, rotation: RotationAngle): BufferedImage {
-    if (rotation == RotationAngle.NONE) return image
-
-    val newWidth: Int
-    val newHeight: Int
-
-    when (rotation) {
-        RotationAngle.CW_90,
-        RotationAngle.CCW_90 -> {
-            newWidth = image.height
-            newHeight = image.width
-        }
-        else -> {
-            newWidth = image.width
-            newHeight = image.height
-        }
-    }
-
-    val rotated =
-        BufferedImage(
-            newWidth.coerceAtLeast(1),
-            newHeight.coerceAtLeast(1),
-            BufferedImage.TYPE_INT_RGB,
-        )
-
-    val graphics = rotated.createGraphics()
-    graphics.background = java.awt.Color.BLACK
-
-    when (rotation) {
-        RotationAngle.CW_90 -> {
-            graphics.translate(newWidth, 0)
-            graphics.rotate(Math.PI / 2)
-        }
-        RotationAngle.CCW_90 -> {
-            graphics.translate(0, newHeight)
-            graphics.rotate(-Math.PI / 2)
-        }
-        RotationAngle.CW_180 -> {
-            graphics.translate(newWidth / 2.0, newHeight / 2.0)
-            graphics.rotate(Math.PI)
-            graphics.translate(-image.width / 2.0, -image.height / 2.0)
-        }
-        RotationAngle.NONE -> {
-            // No rotation
-        }
-    }
-
-    graphics.drawImage(image, 0, 0, null)
-    graphics.dispose()
-
-    return rotated
-}
-
-/** Converts degrees (0, 90, 180, 270) to RotationAngle. */
-private fun rotationFromDegrees(degrees: Int): RotationAngle {
-    return when (degrees) {
-        90 -> RotationAngle.CW_90
-        180 -> RotationAngle.CW_180
-        270 -> RotationAngle.CCW_90
-        -90 -> RotationAngle.CCW_90
-        else -> RotationAngle.NONE
-    }
-}
-
-/** Converts a [BoundingBox] to a [DetectedPhoto] for use with [PerspectiveCorrectionService]. */
-private fun boxToDetectedPhoto(box: BoundingBox): DetectedPhoto {
-    return DetectedPhoto(
-        topLeft = PhotoCorner(box.corners.topLeft.x.toFloat(), box.corners.topLeft.y.toFloat()),
-        topRight = PhotoCorner(box.corners.topRight.x.toFloat(), box.corners.topRight.y.toFloat()),
-        bottomLeft =
-            PhotoCorner(box.corners.bottomLeft.x.toFloat(), box.corners.bottomLeft.y.toFloat()),
-        bottomRight =
-            PhotoCorner(box.corners.bottomRight.x.toFloat(), box.corners.bottomRight.y.toFloat()),
-    )
 }

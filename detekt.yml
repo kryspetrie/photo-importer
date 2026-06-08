@@ -1,4 +1,14 @@
 # Detekt configuration for Petrie File Importer
+#
+# Global rules: these are intentionally disabled because they conflict with
+# idiomatic Kotlin patterns used throughout the project (early returns,
+# Compose callback parameters, geometric constants in domain code, etc.).
+# See CONTRIBUTING.md for the coding style rationale.
+#
+# Rules that remain active are enforced at the default level. Individual
+# @Suppress annotations should only exist for truly unavoidable cases
+# (type casts, platform API constraints, etc.) and must include a comment
+# explaining why.
 
 build:
   maxIssues: 999999
@@ -6,6 +16,26 @@ build:
 style:
   WildcardImport:
     active: true
+  # Disabled: Compose callbacks and override methods often require parameters
+  # that may not be used. Kotlin's _ prefix convention is insufficient for
+  # Detekt without additional configuration, and @Composable override methods
+  # cannot rename parameters.
+  UnusedParameter:
+    active: false
+  # Disabled: Geometric and arithmetic constants (e.g., bounding box thresholds,
+  # coordinate multipliers) are ubiquitous in domain code and self-documenting
+  # in context. Named constants would add noise without improving clarity.
+  MagicNumber:
+    active: false
+  # Disabled: early returns are idiomatic Kotlin and improve readability.
+  # Multiple return points make control flow clearer than nested conditions.
+  ReturnCount:
+    active: false
+  # Disabled: Loops with multiple break/continue/return points are common in
+  # image processing and algorithm code. Refactoring to reduce jump statements
+  # often harms readability.
+  LoopWithTooManyJumpStatements:
+    active: false
 
 potential-bugs:
   UnreachableCode:

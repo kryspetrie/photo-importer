@@ -1,6 +1,7 @@
 package org.kryspetrie.fileimport.ui.screens.scan
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -8,19 +9,18 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataField
 
 @Composable
 fun EditPhotoDialog(
@@ -28,56 +28,46 @@ fun EditPhotoDialog(
     onClose: () -> Unit,
     onConfigChange: (PhotoScanConfiguration) -> Unit,
 ) {
-    var originalDate by remember {
-        mutableStateOf(photo.configuration.originalDateOverride.orEmpty())
-    }
-    var originalYear by remember {
-        mutableStateOf(photo.configuration.originalYearOverride.orEmpty())
-    }
-    var originalMonth by remember {
-        mutableStateOf(photo.configuration.originalMonthOverride.orEmpty())
-    }
-    var tags by remember { mutableStateOf(photo.configuration.tags) }
-    var notes by remember { mutableStateOf(photo.configuration.notes) }
+    val editState = remember { MetadataEditState().apply { loadFrom(photo.configuration) } }
 
     AlertDialog(
         onDismissRequest = onClose,
         title = { Text("Edit Photo") },
         text = {
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-                OutlinedTextField(
-                    value = originalDate,
-                    onValueChange = { originalDate = it },
-                    label = { Text("Original Date") },
-                    placeholder = { Text("YYYY-MM-DD HH:MM:SS") },
+                MetadataField(
+                    label = "Description",
+                    placeholder = "Photo description...",
+                    value = editState.description,
+                    onValueChange = { editState.description = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = originalYear,
-                    onValueChange = { originalYear = it },
-                    label = { Text("Year") },
-                    placeholder = { Text("YYYY") },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = originalMonth,
-                    onValueChange = { originalMonth = it },
-                    label = { Text("Month") },
-                    placeholder = { Text("MM") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = tags,
-                    onValueChange = { tags = it },
-                    label = { Text("Tags (comma-separated)") },
-                    placeholder = { Text("tag1, tag2") },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
-                    label = { Text("Notes") },
-                    placeholder = { Text("Additional notes") },
+                    horizontalArrangement =
+                        androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                ) {
+                    MetadataField(
+                        label = "Keywords",
+                        placeholder = "vacation, family, holiday",
+                        value = editState.keywords,
+                        onValueChange = { editState.keywords = it },
+                        modifier = Modifier.weight(2f),
+                    )
+                    MetadataField(
+                        label = "Year",
+                        placeholder = "1995",
+                        value = editState.year,
+                        onValueChange = { editState.year = it.filter { c -> c.isDigit() }.take(4) },
+                        modifier = Modifier.weight(1f),
+                        keyboardType = KeyboardType.Number,
+                    )
+                }
+                MetadataField(
+                    label = "Original Date",
+                    placeholder = "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
+                    value = editState.originalDate,
+                    onValueChange = { editState.originalDate = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -116,18 +106,7 @@ fun EditPhotoDialog(
         confirmButton = {
             Button(
                 onClick = {
-                    val newConfig =
-                        photo.configuration.copy(
-                            originalDateOverride =
-                                if (originalDate.isNotBlank()) originalDate else null,
-                            originalYearOverride =
-                                if (originalYear.isNotBlank()) originalYear else null,
-                            originalMonthOverride =
-                                if (originalMonth.isNotBlank()) originalMonth else null,
-                            tags = tags,
-                            notes = notes,
-                        )
-                    onConfigChange(newConfig)
+                    onConfigChange(editState.applyToConfig(photo.configuration))
                     onClose()
                 }
             ) {

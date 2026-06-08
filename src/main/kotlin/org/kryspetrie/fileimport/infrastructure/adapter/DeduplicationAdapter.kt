@@ -165,7 +165,6 @@ class DeduplicationAdapter(private val dispatcherProvider: DispatcherProvider) :
      * Extracts SURF descriptors using subsampled image read to avoid loading full-resolution
      * images. Uses ImageIO ImageReadParam with source subsampling for memory-efficient loading.
      */
-    @Suppress("ReturnCount")
     private fun extractSurfDescriptors(file: File): List<TupleDesc_F64> {
         try {
             val original = readSubsampled(file, SURF_MAX_DIMENSION) ?: return emptyList()
@@ -186,7 +185,6 @@ class DeduplicationAdapter(private val dispatcherProvider: DispatcherProvider) :
      * Reads an image with subsampling when its dimensions exceed maxDim, avoiding loading the
      * full-resolution image into memory.
      */
-    @Suppress("ReturnCount")
     private fun readSubsampled(file: File, maxDim: Int): BufferedImage? {
         try {
             val readers =
@@ -273,7 +271,6 @@ class DeduplicationAdapter(private val dispatcherProvider: DispatcherProvider) :
      * validation with Lowe's ratio test (0.7) for O(n log n) matching instead of brute-force
      * O(n×m).
      */
-    @Suppress("ReturnCount")
     private fun countSurfMatches(descA: List<TupleDesc_F64>, descB: List<TupleDesc_F64>): Int {
         if (descA.isEmpty() || descB.isEmpty()) return 0
         try {
@@ -359,7 +356,6 @@ class DeduplicationAdapter(private val dispatcherProvider: DispatcherProvider) :
      * Scales down an image using imgscalr's Scalr.resize with balanced quality/speed. Replaces
      * hand-rolled Graphics2D scaling that lacked anti-aliasing.
      */
-    @Suppress("ReturnCount")
     private fun scaleDown(img: BufferedImage, maxDim: Int): BufferedImage {
         if (img.width <= maxDim && img.height <= maxDim) return img
         try {
@@ -438,7 +434,7 @@ class DeduplicationAdapter(private val dispatcherProvider: DispatcherProvider) :
         return "${dateTaken}_${cameraModel}_${nameWithoutExtension.takeLast(4)}"
     }
 
-    @Suppress("ReturnCount", "NestedBlockDepth")
+    @Suppress("NestedBlockDepth")
     override suspend fun getDuplicateType(
         image1: ImageFile,
         image2: ImageFile,

@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.domain.port
 
 import kotlinx.coroutines.flow.Flow
 import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImportProfile
 
 interface SettingsPort {
@@ -19,9 +20,9 @@ interface SettingsPort {
 
     suspend fun getAllProfiles(): List<ImportProfile>
 
-    suspend fun exportProfile(profile: ImportProfile, file: java.io.File)
+    suspend fun exportProfile(profile: ImportProfile, file: FilePath)
 
-    suspend fun importProfile(file: java.io.File): ImportProfile
+    suspend fun importProfile(file: FilePath): ImportProfile
 
     suspend fun resetToDefaults()
 }

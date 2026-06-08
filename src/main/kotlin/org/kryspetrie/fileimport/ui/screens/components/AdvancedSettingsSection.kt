@@ -26,11 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.kryspetrie.fileimport.application.WatchFolderConfig
 import org.kryspetrie.fileimport.application.WatchFolderService
-import org.kryspetrie.fileimport.application.WatchFolderStatus
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.RawJpegPairMode
+import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
+import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 import org.kryspetrie.fileimport.ui.components.SectionLabel
 
 @Composable

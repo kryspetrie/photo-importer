@@ -9,8 +9,13 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.kryspetrie.fileimport.domain.model.DeduplicationSettings
+import org.kryspetrie.fileimport.domain.model.DuplicateAction
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
+import org.kryspetrie.fileimport.domain.model.ResolvableDuplicate
+import org.kryspetrie.fileimport.domain.model.ScanProgress
+import org.kryspetrie.fileimport.domain.model.pickKeeper
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.HashCachePort
@@ -18,21 +23,6 @@ import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 
 private val SCAN_CONCURRENCY = Runtime.getRuntime().availableProcessors().coerceIn(2, 8)
-
-data class ScanProgress(
-    val phase: String = "",
-    val current: Int = 0,
-    val total: Int = 0,
-    val currentFile: String = "",
-)
-
-enum class DuplicateAction {
-    KEEP_HIGHEST_RES,
-    KEEP_RAW_OVER_JPEG,
-    KEEP_NEWEST,
-    KEEP_OLDEST,
-    KEEP_LARGEST,
-}
 
 class DuplicateScannerService(
     private val imageRepository: ImageRepositoryPort,
@@ -47,8 +37,10 @@ class DuplicateScannerService(
         settings: DeduplicationSettings,
         onProgress: (ScanProgress) -> Unit = {},
     ): List<DuplicateInfo> {
-        val rootDir = File(folderPath)
-        require(rootDir.exists() && rootDir.isDirectory) { "Folder does not exist: $folderPath" }
+        val rootDir = FilePath(folderPath)
+        require(rootDir.toFile().exists() && rootDir.toFile().isDirectory) {
+            "Folder does not exist: $folderPath"
+        }
 
         // Phase 1: Discover files
         onProgress(ScanProgress(phase = "Discovering files...", current = 0, total = 0))
@@ -114,8 +106,9 @@ class DuplicateScannerService(
     ): Int =
         withContext(dispatcherProvider.io) {
             val allImages = listOf(group.primaryImage) + group.duplicateImages
-            val keep = pickKeeper(allImages, action)
-            val toRemove = allImages.filter { it.id != keep.id }
+            val keepId = pickKeeper(allImages.map { it.toResolvableDuplicate() }, action)
+            val keep = allImages.first { it.id == keepId }
+            val toRemove = allImages.filter { it.id != keepId }
 
             var removed = 0
             for (image in toRemove) {
@@ -155,19 +148,13 @@ class DuplicateScannerService(
         return totalRemoved
     }
 
-    private fun pickKeeper(images: List<ImageFile>, action: DuplicateAction): ImageFile =
-        when (action) {
-            DuplicateAction.KEEP_HIGHEST_RES ->
-                images.maxByOrNull {
-                    (it.metadata?.imageWidth ?: 0).toLong() *
-                        (it.metadata?.imageHeight ?: 0).toLong()
-                } ?: images.first()
-            DuplicateAction.KEEP_RAW_OVER_JPEG ->
-                images.sortedByDescending { it.fileType.isRawFormat }.first()
-            DuplicateAction.KEEP_NEWEST ->
-                images.maxByOrNull { it.file.lastModified() } ?: images.first()
-            DuplicateAction.KEEP_OLDEST ->
-                images.minByOrNull { it.file.lastModified() } ?: images.first()
-            DuplicateAction.KEEP_LARGEST -> images.maxByOrNull { it.fileSize } ?: images.first()
-        }
+    private fun ImageFile.toResolvableDuplicate(): ResolvableDuplicate =
+        ResolvableDuplicate(
+            id = id,
+            pixelCount =
+                (metadata?.imageWidth ?: 0).toLong() * (metadata?.imageHeight ?: 0).toLong(),
+            isRawFormat = fileType.isRawFormat,
+            lastModifiedEpochMillis = file.lastModified(),
+            fileSize = fileSize,
+        )
 }

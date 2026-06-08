@@ -60,11 +60,11 @@ import androidx.compose.ui.window.Popup
 import java.awt.image.BufferedImage
 import kotlin.math.pow
 import kotlin.math.sqrt
-import org.kryspetrie.fileimport.infrastructure.wizard.FaceRegion
+import org.kryspetrie.fileimport.domain.model.FaceRegion
+import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.infrastructure.wizard.FaceSize
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.RegionType
 
 /** Color for each region type when drawn on the canvas. */
 private fun regionTypeColor(type: RegionType): Color =
@@ -76,7 +76,7 @@ private fun regionTypeColor(type: RegionType): Color =
     }
 
 /** Returns an appropriate Material icon for the given [RegionType]. */
-internal fun regionTypeIcon(type: RegionType): ImageVector =
+fun regionTypeIcon(type: RegionType): ImageVector =
     when (type) {
         RegionType.FACE -> Icons.Default.Face
         RegionType.PET -> Icons.Default.Pets
@@ -374,10 +374,14 @@ fun FaceSelectorOverlay(
                                         val bounds = imageDisplayBounds
                                         if (bounds.width > 0f && bounds.height > 0f) {
                                             val newX =
-                                                (dragStartNormX + dragTotalPixelDx.toDouble() / bounds.width.toDouble())
+                                                (dragStartNormX +
+                                                        dragTotalPixelDx.toDouble() /
+                                                            bounds.width.toDouble())
                                                     .coerceIn(0.0, 1.0)
                                             val newY =
-                                                (dragStartNormY + dragTotalPixelDy.toDouble() / bounds.height.toDouble())
+                                                (dragStartNormY +
+                                                        dragTotalPixelDy.toDouble() /
+                                                            bounds.height.toDouble())
                                                     .coerceIn(0.0, 1.0)
                                             state.updateFaceRegion(
                                                 idx,

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
@@ -71,7 +72,7 @@ class ReorganizeServiceTest {
         fun shouldGenerateMappingsWithMetadata() = runTest {
             val file = File(tempDir, "IMG_001.jpg")
             file.writeText("photo data")
-            val imageFile = ImageFile(file = file)
+            val imageFile = ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
             val metadata = ImageMetadata(dateTimeOriginal = LocalDateTime.of(2024, 6, 15, 10, 30))
             @Suppress("UnusedPrivateProperty")
             val enrichedFile = imageFile.copy(metadata = metadata)
@@ -99,7 +100,8 @@ class ReorganizeServiceTest {
             val sourceFile = File(tempDir, "original/IMG_001.jpg")
             sourceFile.parentFile.mkdirs()
             sourceFile.writeText("photo data")
-            val imageFile = ImageFile(file = sourceFile)
+            val imageFile =
+                ImageFile(path = FilePath(sourceFile.absolutePath), fileSize = sourceFile.length())
 
             val destPath = "${tempDir.absolutePath}/2024/IMG_001.jpg"
             val mapping =
@@ -137,7 +139,8 @@ class ReorganizeServiceTest {
             destFile.parentFile.mkdirs()
             destFile.writeText("already exists")
 
-            val imageFile = ImageFile(file = sourceFile)
+            val imageFile =
+                ImageFile(path = FilePath(sourceFile.absolutePath), fileSize = sourceFile.length())
             val mapping =
                 ReorganizeMapping(
                     file = imageFile,
@@ -166,7 +169,7 @@ class ReorganizeServiceTest {
         fun shouldNotMoveUnchanged() = runTest {
             val file = File(tempDir, "photo.jpg")
             file.writeText("data")
-            val imageFile = ImageFile(file = file)
+            val imageFile = ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
             val mapping =
                 ReorganizeMapping(
                     file = imageFile,

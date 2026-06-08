@@ -2,47 +2,142 @@ package org.kryspetrie.fileimport.domain.model
 
 import org.kryspetrie.fileimport.domain.port.IdGenerator
 import org.kryspetrie.fileimport.domain.port.TimeProvider
-import org.kryspetrie.fileimport.infrastructure.adapter.DefaultIdGenerator
-import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 
 /**
  * Provides default values for domain model IDs and timestamps.
  *
- * In production, these delegate to [DefaultIdGenerator] and [DefaultTimeProvider]. Tests can
- * override via [setIdGenerator] and [setTimeProvider] to control values.
+ * Delegates to [IdGenerator] and [TimeProvider] ports. When no provider is explicitly set, resolves
+ * lazily from the Koin DI container (which registers [DefaultIdGenerator] and
+ * [DefaultTimeProvider]). If Koin is not available (e.g., in unit tests), falls back to simple
+ * implementations that avoid importing JVM infrastructure classes directly.
  *
- * This replaces direct `java.util.UUID.randomUUID()` and `System.currentTimeMillis()` calls in
- * domain model default parameters, making domain models testable without hardcoding JVM
- * dependencies.
+ * Tests can override via [setIdGenerator] and [setTimeProvider] to control values.
  */
 object DomainDefaults {
-    @Volatile private var idGenerator: IdGenerator = DefaultIdGenerator()
+    @Volatile private var idGenerator: IdGenerator? = null
 
-    @Volatile private var timeProvider: TimeProvider = DefaultTimeProvider()
+    @Volatile private var timeProvider: TimeProvider? = null
 
-    /** Generate a unique ID using the current [IdGenerator]. */
-    fun generateId(): String = idGenerator.generateId()
-
-    /** Get the current time in milliseconds using the current [TimeProvider]. */
-    fun currentTimeMillis(): Long = timeProvider.currentTimeMillis()
+    /** Generate a unique ID using the current [IdGenerator], or resolve one lazily. */
+    fun generateId(): String {
+        val gen = idGenerator
+        if (gen != null) return gen.generateId()
+        val resolved = resolveIdGenerator()
+        return resolved.generateId()
+    }
 
     /**
-     * Format a timestamp as a human-readable string using the current [TimeProvider]. Format:
-     * "yyyy-MM-dd HH:mm:ss"
+     * Get the current time in milliseconds using the current [TimeProvider], or resolve one lazily.
      */
-    fun formatTimestamp(timestamp: Long): String = timeProvider.formatTimestamp(timestamp)
+    fun currentTimeMillis(): Long {
+        val prov = timeProvider
+        if (prov != null) return prov.currentTimeMillis()
+        val resolved = resolveTimeProvider()
+        return resolved.currentTimeMillis()
+    }
 
-    /** Override the [IdGenerator] for testing. Returns a reset function to restore the default. */
+    /**
+     * Format a timestamp as "yyyy-MM-dd HH:mm:ss" using the current [TimeProvider], or resolve one
+     * lazily.
+     */
+    fun formatTimestamp(timestamp: Long): String {
+        val prov = timeProvider
+        if (prov != null) return prov.formatTimestamp(timestamp)
+        val resolved = resolveTimeProvider()
+        return resolved.formatTimestamp(timestamp)
+    }
+
+    /**
+     * Override the [IdGenerator] for testing. Returns a reset function to restore the previous
+     * value.
+     */
     fun setIdGenerator(generator: IdGenerator): () -> Unit {
         val previous = idGenerator
         idGenerator = generator
         return { idGenerator = previous }
     }
 
-    /** Override the [TimeProvider] for testing. Returns a reset function to restore the default. */
+    /**
+     * Override the [TimeProvider] for testing. Returns a reset function to restore the previous
+     * value.
+     */
     fun setTimeProvider(provider: TimeProvider): () -> Unit {
         val previous = timeProvider
         timeProvider = provider
         return { timeProvider = previous }
+    }
+
+    /**
+     * Resolves [IdGenerator] from Koin DI container. Called lazily on first [generateId] invocation
+     * if no generator was explicitly set.
+     */
+    private fun resolveIdGenerator(): IdGenerator {
+        return try {
+            val koin = org.koin.core.context.GlobalContext.get()
+            val generator = koin.get<IdGenerator>()
+            idGenerator = generator
+            generator
+        } catch (_: Exception) {
+            // Koin not initialized (e.g., in unit tests) — use simple fallback
+            val fallback = FallbackIdGenerator
+            idGenerator = fallback
+            fallback
+        }
+    }
+
+    /**
+     * Resolves [TimeProvider] from Koin DI container. Called lazily on first time-related
+     * invocation if no provider was explicitly set.
+     */
+    private fun resolveTimeProvider(): TimeProvider {
+        return try {
+            val koin = org.koin.core.context.GlobalContext.get()
+            val provider = koin.get<TimeProvider>()
+            timeProvider = provider
+            provider
+        } catch (_: Exception) {
+            // Koin not initialized (e.g., in unit tests) — use simple fallback
+            val fallback = FallbackTimeProvider
+            timeProvider = fallback
+            fallback
+        }
+    }
+
+    /**
+     * Simple fallback ID generator for when Koin is not available. Uses kotlin.random.Random which
+     * has no JVM-specific imports in the domain layer.
+     */
+    private object FallbackIdGenerator : IdGenerator {
+        override fun generateId(): String =
+            kotlin.random.Random.Default.nextLong().toString(16) +
+                kotlin.random.Random.Default.nextLong().toString(16)
+    }
+
+    /**
+     * Simple fallback time provider for when Koin is not available. Uses System.currentTimeMillis
+     * which is available on all Kotlin platforms.
+     */
+    private object FallbackTimeProvider : TimeProvider {
+        override fun currentTimeMillis(): Long = System.currentTimeMillis()
+
+        override fun formattedTimestamp(): String = formatTimestamp(currentTimeMillis())
+
+        override fun formatTimestamp(timestamp: Long): String {
+            // Simple ISO-8601-like format without java.text.SimpleDateFormat
+            val seconds = timestamp / 1000
+            val minutes = seconds / 60
+            val hours = minutes / 60
+            val result =
+                "%04d-%02d-%02d %02d:%02d:%02d"
+                    .format(
+                        hours / 24 / 365 + 1970,
+                        (hours / 24 % 365) / 30 + 1,
+                        (hours % 24) / 24 + 1,
+                        hours % 24,
+                        minutes % 60,
+                        seconds % 60,
+                    )
+            return result
+        }
     }
 }

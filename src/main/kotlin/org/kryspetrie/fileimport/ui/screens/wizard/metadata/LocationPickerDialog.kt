@@ -46,9 +46,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
-import org.kryspetrie.fileimport.application.LocationSearchService
 import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
+import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 
 /**
  * Full-screen location picker with an OpenStreetMap map and search sidebar.
@@ -63,7 +63,7 @@ import org.kryspetrie.fileimport.domain.port.GeocodingPort
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationPickerDialog(
-    locationSearchService: LocationSearchService,
+    locationSearchService: LocationSearchPort,
     geocodingPort: GeocodingPort,
     dispatcherProvider: org.kryspetrie.fileimport.domain.port.DispatcherProvider,
     initialLat: Double = 39.0,
@@ -87,7 +87,7 @@ fun LocationPickerDialog(
     val errorMessage by locationSearchService.errorMessage.collectAsState()
     val coroutineScope = rememberCoroutineScope()
 
-    DisposableEffect(Unit) { onDispose { locationSearchService.clearSearch() } }
+    DisposableEffect(Unit) { onDispose { locationSearchService.clearResults() } }
 
     Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 8.dp) {
         Row(modifier = Modifier.fillMaxSize()) {

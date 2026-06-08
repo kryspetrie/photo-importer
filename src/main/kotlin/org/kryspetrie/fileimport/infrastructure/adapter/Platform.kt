@@ -40,7 +40,7 @@ object Platform {
      * @param file The file or directory to open
      * @return `true` if the file was opened successfully, `false` otherwise
      */
-    @Suppress("SpreadOperator", "ReturnCount")
+    @Suppress("SpreadOperator")
     fun openWithSystemViewer(file: java.io.File): Boolean {
         if (!file.exists()) return false
 
@@ -175,7 +175,7 @@ object Platform {
      * 2. System PATH (via `which`/`where`)
      * 3. null (FFmpeg unavailable)
      */
-    @Suppress("SpreadOperator", "ReturnCount")
+    @Suppress("SpreadOperator")
     fun resolveFfmpegPath(): String? {
         val binaryName = ffmpegBinaryName
 
@@ -235,7 +235,7 @@ object Platform {
      * @param mountPoint The device mount path (e.g., `/Volumes/SD_CARD`, `E:\`)
      * @return `true` if the ejection command succeeded, `false` otherwise
      */
-    @Suppress("SpreadOperator", "ReturnCount")
+    @Suppress("SpreadOperator")
     fun ejectDevice(mountPoint: String): Boolean {
         return try {
             val cmd =

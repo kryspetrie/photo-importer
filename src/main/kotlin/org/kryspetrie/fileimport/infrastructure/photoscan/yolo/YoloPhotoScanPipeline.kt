@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength", "ReturnCount")
+
 package org.kryspetrie.fileimport.infrastructure.photoscan.yolo
 
 import java.awt.image.BufferedImage
@@ -8,6 +10,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.DetectionMode
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 
@@ -1365,6 +1368,7 @@ class YoloPhotoScanPipeline(
         confidence: Float,
         imageWidth: Int,
         imageHeight: Int,
+        detectionMode: DetectionMode = DetectionMode.HYBRID,
     ): DetectedPhoto {
         val kpMap = keypoints.associateBy { it.name }
 
@@ -1379,6 +1383,8 @@ class YoloPhotoScanPipeline(
             bottomRight = bottomRight,
             bottomLeft = bottomLeft,
             applyPerspectiveCorrection = true,
+            confidence = confidence,
+            detectionMode = detectionMode,
         )
     }
 

@@ -75,7 +75,6 @@ private fun writeIco(file: File, images: List<BufferedImage>) {
     file.writeBytes(buf.array())
 }
 
-@Suppress("UnusedParameter")
 private fun generateIcns(sourcePng: File, outputIcns: File) {
     try {
         val iconsetDir = File(System.getProperty("java.io.tmpdir"), "petrie-icon.iconset")

@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.kryspetrie.fileimport.domain.model.ConflictResolution
 import org.kryspetrie.fileimport.domain.model.CopiedFile
 import org.kryspetrie.fileimport.domain.model.ErrorType
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.ImportError
@@ -42,7 +43,7 @@ class ImportExecutor(
      * @param onProgress Progress callback
      * @return ImportResult with statistics and detailed file information
      */
-    @Suppress("LoopWithTooManyJumpStatements", "NestedBlockDepth")
+    @Suppress("NestedBlockDepth")
     suspend fun executeImport(
         images: List<ImageFile>,
         destinationPath: String,
@@ -146,7 +147,7 @@ class ImportExecutor(
                 }
 
                 val copyResult =
-                    imageRepository.copyFile(image, destFile) { current, _ ->
+                    imageRepository.copyFile(image, FilePath(destFile.absolutePath)) { current, _ ->
                         importProgress.value =
                             importProgress.value.copy(copiedBytes = copiedBytes + current)
                     }
@@ -177,7 +178,7 @@ class ImportExecutor(
                 var hashMatches = false
                 if (configuration.verifyAfterCopy) {
                     hashVerified = true
-                    hashMatches = imageRepository.verifyCopy(image, destFile)
+                    hashMatches = imageRepository.verifyCopy(image, FilePath(destFile.absolutePath))
                     if (!hashMatches) {
                         errors.add(
                             ImportError(image, ErrorType.HASH_MISMATCH, "Hash verification failed")
@@ -218,12 +219,13 @@ class ImportExecutor(
                 if (configuration.importSidecars && image.sidecars.isNotEmpty()) {
                     for (sidecar in image.sidecars) {
                         try {
+                            val sidecarSrc = sidecar.toFile()
                             val sidecarDest =
                                 File(
                                     destFile.parentFile,
                                     "${destFile.nameWithoutExtension}.${sidecar.extension}",
                                 )
-                            sidecar.copyTo(sidecarDest, overwrite = true)
+                            sidecarSrc.copyTo(sidecarDest, overwrite = true)
                             sidecarFiles.add(sidecarDest.absolutePath)
                         } catch (_: Exception) {}
                     }
@@ -236,7 +238,7 @@ class ImportExecutor(
                         deletedCount++
                     }
                     if (configuration.importSidecars) {
-                        image.sidecars.forEach { it.delete() }
+                        image.sidecars.forEach { it.toFile().delete() }
                     }
                 }
 

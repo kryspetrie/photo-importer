@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,10 +35,11 @@ import org.kryspetrie.fileimport.domain.model.ImportResult
 import org.kryspetrie.fileimport.domain.model.IndexProgress
 import org.kryspetrie.fileimport.domain.port.DeviceEvent
 import org.kryspetrie.fileimport.domain.port.DevicePort
+import org.kryspetrie.fileimport.domain.port.ImportHistoryPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
-import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
+import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.screens.components.SettingsSection
 import org.kryspetrie.fileimport.ui.screens.mediaimport.ClearCacheConfirmDialog
 import org.kryspetrie.fileimport.ui.screens.mediaimport.DuplicateReviewDialog
@@ -50,7 +49,6 @@ import org.kryspetrie.fileimport.ui.screens.mediaimport.ImportHistorySection
 import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportActionBar
 import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportFlowStep
 import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportProgressView
-import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.screens.mediaimport.PreviewStructureDialog
 import org.kryspetrie.fileimport.ui.screens.mediaimport.SourceDestinationFields
 import org.kryspetrie.fileimport.ui.screens.mediaimport.WatchFolderStatusCard
@@ -68,7 +66,7 @@ internal fun configSummary(c: ImportConfiguration): String = buildString {
 fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit) {
     val importService = koinInject<ImportService>()
     val devicePort = koinInject<DevicePort>()
-    val historyAdapter = koinInject<ImportHistoryAdapter>()
+    val historyPort = koinInject<ImportHistoryPort>()
     val settingsPort = koinInject<SettingsPort>()
     val watchFolderService = koinInject<WatchFolderService>()
     val timeProvider = koinInject<TimeProvider>()
@@ -220,9 +218,9 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                             importProgress = it
                         }
                     importResult = result
-                    result.historyEntry?.let { entry -> historyAdapter.addEntry(entry) }
+                    result.historyEntry?.let { entry -> historyPort.addEntry(entry) }
                         ?: run {
-                            historyAdapter.addEntry(
+                            historyPort.addEntry(
                                 ImportHistoryEntry(
                                     timestamp = timeProvider.currentTimeMillis(),
                                     timestampString =
@@ -382,68 +380,70 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-            Text("Import", style = MaterialTheme.typography.headlineSmall)
-            SourceDestinationFields(
-                sourcePath = sourcePath,
-                onSourcePathChange = { sourcePath = it },
-                destinationPath = destinationPath,
-                onDestinationPathChange = { destinationPath = it },
-                sourceValid = sourceValid,
-                destValid = destValid,
-                destCanCreate = destCanCreate,
-                sourceDirName = sourceDir?.name,
-                destDirName = destDir?.name,
-            )
-            if (watchStatus.isWatching) {
-                WatchFolderStatusCard(
+                Text("Import", style = MaterialTheme.typography.headlineSmall)
+                SourceDestinationFields(
+                    sourcePath = sourcePath,
+                    onSourcePathChange = { sourcePath = it },
+                    destinationPath = destinationPath,
+                    onDestinationPathChange = { destinationPath = it },
+                    sourceValid = sourceValid,
+                    destValid = destValid,
+                    destCanCreate = destCanCreate,
+                    sourceDirName = sourceDir?.name,
+                    destDirName = destDir?.name,
+                )
+                if (watchStatus.isWatching) {
+                    WatchFolderStatusCard(
+                        watchStatus = watchStatus,
+                        onStopWatching = { watchFolderService.stopWatching() },
+                    )
+                }
+                errorMessage?.let { ErrorCard(message = it) }
+                MediaImportProgressView(
+                    flowStep = flowStep,
+                    scanCurrent = scanCurrent,
+                    scanTotal = scanTotal,
+                    scanProgress = scanProgress,
+                    indexProgress = indexProgress,
+                    importProgress = importProgress,
+                    importResult = importResult,
+                    importJob = importJob,
+                    destinationPath = destinationPath,
+                    onReset = { resetFlow() },
+                )
+                SettingsSection(
+                    expanded = settingsExpanded,
+                    onToggle = { settingsExpanded = !settingsExpanded },
+                    configuration = customConfig,
+                    onConfigChange = { customConfig = it },
+                    settings = settings,
+                    onSettingsChange = onSettingsChange,
+                    onClearCache = { showClearCacheConfirm = true },
+                    sourcePath = sourcePath,
+                    destinationPath = destinationPath,
+                    watchFolderService = watchFolderService,
                     watchStatus = watchStatus,
-                    onStopWatching = { watchFolderService.stopWatching() },
+                    scope = scope,
                 )
-            }
-            errorMessage?.let { ErrorCard(message = it) }
-            MediaImportProgressView(
-                flowStep = flowStep,
-                scanCurrent = scanCurrent,
-                scanTotal = scanTotal,
-                scanProgress = scanProgress,
-                indexProgress = indexProgress,
-                importProgress = importProgress,
-                importResult = importResult,
-                importJob = importJob,
-                destinationPath = destinationPath,
-                onReset = { resetFlow() },
-            )
-            SettingsSection(
-                expanded = settingsExpanded,
-                onToggle = { settingsExpanded = !settingsExpanded },
-                configuration = customConfig,
-                onConfigChange = { customConfig = it },
-                settings = settings,
-                onSettingsChange = onSettingsChange,
-                onClearCache = { showClearCacheConfirm = true },
-                sourcePath = sourcePath,
-                destinationPath = destinationPath,
-                watchFolderService = watchFolderService,
-                watchStatus = watchStatus,
-                scope = scope,
-            )
-            var historyExpanded by remember { mutableStateOf(false) }
-            var historyEntries by remember { mutableStateOf<List<ImportHistoryEntry>>(emptyList()) }
-            LaunchedEffect(flowStep) { historyEntries = historyAdapter.loadHistory() }
-            ImportHistorySection(
-                historyEntries = historyEntries,
-                expanded = historyExpanded,
-                onToggle = { historyExpanded = !historyExpanded },
-            )
-            if (flowStep == MediaImportFlowStep.SETUP) {
-                MediaImportActionBar(
-                    canStart = canStart,
-                    importMode = importMode,
-                    onImportModeChange = {},
-                    onStartFlow = { withReview, mode -> startFlow(withReview, mode) },
+                var historyExpanded by remember { mutableStateOf(false) }
+                var historyEntries by remember {
+                    mutableStateOf<List<ImportHistoryEntry>>(emptyList())
+                }
+                LaunchedEffect(flowStep) { historyEntries = historyPort.loadHistory() }
+                ImportHistorySection(
+                    historyEntries = historyEntries,
+                    expanded = historyExpanded,
+                    onToggle = { historyExpanded = !historyExpanded },
                 )
+                if (flowStep == MediaImportFlowStep.SETUP) {
+                    MediaImportActionBar(
+                        canStart = canStart,
+                        importMode = importMode,
+                        onImportModeChange = {},
+                        onStartFlow = { withReview, mode -> startFlow(withReview, mode) },
+                    )
+                }
             }
-        }
         }
     }
 }

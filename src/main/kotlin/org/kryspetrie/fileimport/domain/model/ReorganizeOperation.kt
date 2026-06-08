@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.domain.model
 
-import java.io.File
 import kotlinx.serialization.Serializable
 
 /**
@@ -32,18 +31,18 @@ data class ReorganizeMapping(
     val mode: ReorganizeMode = ReorganizeMode.MOVE,
 ) {
     val currentRelativePath: String
-        get() = file.file.name
+        get() = file.path.name
 
     val newRelativePath: String
-        get() = File(newPath).name
+        get() = FilePath(newPath).name
 
     /** Current parent directory */
-    val currentParent: String
-        get() = File(currentPath).parent
+    val currentParent: String?
+        get() = FilePath(currentPath).parent
 
     /** New parent directory */
-    val newParent: String
-        get() = File(newPath).parent
+    val newParent: String?
+        get() = FilePath(newPath).parent
 }
 
 /** Preview of reorganization operation before execution. */

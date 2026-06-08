@@ -5,6 +5,9 @@ import kotlin.math.max
 import kotlin.math.min
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
+import org.kryspetrie.fileimport.domain.model.ProcessedImage
+import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
+import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
 
 /**
  * Corner detector using edge-based classical computer vision.
@@ -40,7 +43,7 @@ import org.kryspetrie.fileimport.domain.model.PhotoCorner
 class HybridCornerDetector(
     private val rectangleDetector: RectangleDetector,
     private val wholeImageThreshold: Float = 0.80f,
-) {
+) : PhotoScanDetectorPort {
 
     /** Mutable target count. Set by callers who know the expected photo count. */
     var targetPhotoCount: Int? = null
@@ -51,14 +54,15 @@ class HybridCornerDetector(
      * @param image The scanned image
      * @return [DetectedPhoto] objects with corners ordered TL→TR→BR→BL.
      */
-    @Suppress("ReturnCount")
-    fun detectPhotos(image: BufferedImage): List<DetectedPhoto> {
+    override fun detectPhotos(image: ProcessedImage): List<DetectedPhoto> {
+        val bufferedImage = image.toBufferedImage()
         val imgWidth = image.width.toFloat()
         val imgHeight = image.height.toFloat()
         val imageArea = imgWidth * imgHeight
 
         // Step 1: Edge-based region proposals
-        val raw = rectangleDetector.detectRectangles(image, expectedCount = targetPhotoCount ?: 4)
+        val raw =
+            rectangleDetector.detectRectangles(bufferedImage, expectedCount = targetPhotoCount ?: 4)
         if (raw.isEmpty()) return emptyList()
 
         // Step 2: Whole-image filter — reject regions covering >80% of image (the "entire desk"
@@ -111,7 +115,7 @@ class HybridCornerDetector(
         val finalSet = if (afterAreaFilter.isEmpty()) afterNms else afterAreaFilter
 
         // Step 6: Build DetectedPhoto from each quadrilateral
-        return finalSet.map { quad -> buildDetectedPhoto(image, quad) }
+        return finalSet.map { quad -> buildDetectedPhoto(bufferedImage, quad) }
     }
 
     /**
@@ -191,7 +195,6 @@ class HybridCornerDetector(
     }
 
     /** Builds a DetectedPhoto from a quadrilateral. */
-    @Suppress("UnusedParameter")
     private fun buildDetectedPhoto(
         image: BufferedImage,
         quad: DetectedQuadrilateral,

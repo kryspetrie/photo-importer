@@ -32,7 +32,6 @@ import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 /**
  * High-performance refinement canvas using GraphicsLayer for zoom/pan and separate drawing layers.
  */
-@Suppress("UnusedParameter")
 @Composable
 internal fun RefinementCanvas(
     state: PhotoScanWizardState,

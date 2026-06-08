@@ -1,0 +1,61 @@
+package org.kryspetrie.fileimport.domain.port
+
+import org.kryspetrie.fileimport.domain.model.FilePath
+
+/**
+ * Port interface for file system I/O operations.
+ *
+ * This port abstracts all direct `java.io.File` operations behind a clean interface, keeping the
+ * domain and application layers free of JVM I/O infrastructure. Infrastructure adapters provide the
+ * actual file system access.
+ *
+ * ## Why?
+ *
+ * Previously, domain models like [ImageFile] held a `java.io.File` reference and application
+ * services called `file.lastModified()`, `file.delete()`, etc. directly. This violated hexagonal
+ * architecture because the domain layer depended on JVM-specific I/O classes.
+ *
+ * ## Usage
+ *
+ * ```kotlin
+ * // In application services:
+ * val fs: FileSystemPort = koinInject()
+ * val lastModified = fs.lastModified(filePath)
+ * val deleted = fs.delete(filePath)
+ *
+ * // In tests:
+ * val fs = InMemoryFileSystem()  // test double
+ * ```
+ *
+ * @see FilePath Domain value class representing file paths
+ * @see org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter Default implementation
+ */
+interface FileSystemPort {
+
+    /** Returns the last modification time in epoch milliseconds, or 0 if the file doesn't exist. */
+    suspend fun lastModified(path: FilePath): Long
+
+    /** Returns the file size in bytes, or 0 if the file doesn't exist. */
+    suspend fun length(path: FilePath): Long
+
+    /** Returns `true` if a file or directory exists at the given path. */
+    suspend fun exists(path: FilePath): Boolean
+
+    /** Deletes the file at the given path. Returns `true` if successful. */
+    suspend fun delete(path: FilePath): Boolean
+
+    /** Renames the file. Returns `true` if successful. */
+    suspend fun renameTo(source: FilePath, destination: FilePath): Boolean
+
+    /** Creates the directory at the given path, including any necessary parent directories. */
+    suspend fun mkdirs(path: FilePath): Boolean
+
+    /** Returns `true` if the path is a directory. */
+    suspend fun isDirectory(path: FilePath): Boolean
+
+    /** Lists files in a directory. Returns empty list if not a directory or doesn't exist. */
+    suspend fun listFiles(path: FilePath): List<FilePath>
+
+    /** Checks if a file can be written to. */
+    fun canWrite(path: FilePath): Boolean
+}

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.application.TestDispatcherProvider
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 
@@ -33,7 +34,7 @@ class ImageRepositoryAdapterTest {
             File(tempDir, "photo2.png").writeText("png data")
             File(tempDir, "readme.txt").writeText("text")
 
-            val files = adapter.scanDirectory(tempDir, recursive = false)
+            val files = adapter.scanDirectory(FilePath(tempDir.absolutePath), recursive = false)
 
             assertThat(files).hasSize(2)
             assertThat(files.map { it.fileName })
@@ -47,7 +48,7 @@ class ImageRepositoryAdapterTest {
             File(tempDir, "sub").mkdirs()
             File(tempDir, "sub/nested.jpg").writeText("nested")
 
-            val files = adapter.scanDirectory(tempDir, recursive = true)
+            val files = adapter.scanDirectory(FilePath(tempDir.absolutePath), recursive = true)
 
             assertThat(files).hasSize(2)
         }
@@ -59,7 +60,7 @@ class ImageRepositoryAdapterTest {
             File(tempDir, "sub").mkdirs()
             File(tempDir, "sub/nested.jpg").writeText("nested")
 
-            val files = adapter.scanDirectory(tempDir, recursive = false)
+            val files = adapter.scanDirectory(FilePath(tempDir.absolutePath), recursive = false)
 
             assertThat(files).hasSize(1)
             assertThat(files[0].fileName).isEqualTo("photo.jpg")
@@ -71,7 +72,7 @@ class ImageRepositoryAdapterTest {
             File(tempDir, "video.mp4").writeText("video data")
             File(tempDir, "movie.mov").writeText("movie data")
 
-            val files = adapter.scanDirectory(tempDir, recursive = false)
+            val files = adapter.scanDirectory(FilePath(tempDir.absolutePath), recursive = false)
 
             assertThat(files).hasSize(2)
             assertThat(files.any { it.fileType == ImageFileType.VIDEO_MP4 }).isTrue()
@@ -85,7 +86,7 @@ class ImageRepositoryAdapterTest {
             File(tempDir, "photo.nef").writeText("raw")
             File(tempDir, "photo.arw").writeText("raw")
 
-            val files = adapter.scanDirectory(tempDir, recursive = false)
+            val files = adapter.scanDirectory(FilePath(tempDir.absolutePath), recursive = false)
 
             assertThat(files).hasSize(3)
             assertThat(files.all { it.fileType.isRaw }).isTrue()
@@ -99,7 +100,7 @@ class ImageRepositoryAdapterTest {
             File(tempDir, "photo.thm").writeText("thumbnail sidecar")
             File(tempDir, "other.jpg").writeText("other photo")
 
-            val files = adapter.scanDirectory(tempDir, recursive = false)
+            val files = adapter.scanDirectory(FilePath(tempDir.absolutePath), recursive = false)
             val rawFile = files.find { it.fileType == ImageFileType.RAW_CR2 }
 
             assertThat(rawFile).isNotNull
@@ -114,7 +115,7 @@ class ImageRepositoryAdapterTest {
             File(tempDir, "photo.jpg").writeText("jpeg")
             File(tempDir, "photo.txt").writeText("text note")
 
-            val files = adapter.scanDirectory(tempDir, recursive = false)
+            val files = adapter.scanDirectory(FilePath(tempDir.absolutePath), recursive = false)
 
             assertThat(files).hasSize(1)
             assertThat(files[0].sidecars).isEmpty()
@@ -123,7 +124,7 @@ class ImageRepositoryAdapterTest {
         @Test
         @DisplayName("should return empty list for empty directory")
         fun shouldReturnEmptyForEmptyDir() = runTest {
-            val files = adapter.scanDirectory(tempDir, recursive = true)
+            val files = adapter.scanDirectory(FilePath(tempDir.absolutePath), recursive = true)
             assertThat(files).isEmpty()
         }
     }
@@ -136,7 +137,7 @@ class ImageRepositoryAdapterTest {
         fun shouldReturnConsistentHash() = runTest {
             val file = File(tempDir, "hashtest.jpg")
             file.writeText("consistent content")
-            val imageFile = ImageFile(file = file)
+            val imageFile = ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
 
             val hash1 = adapter.calculateFileHash(imageFile)
             val hash2 = adapter.calculateFileHash(imageFile)
@@ -153,8 +154,14 @@ class ImageRepositoryAdapterTest {
             val file2 = File(tempDir, "file2.jpg")
             file2.writeText("content B")
 
-            val hash1 = adapter.calculateFileHash(ImageFile(file = file1))
-            val hash2 = adapter.calculateFileHash(ImageFile(file = file2))
+            val hash1 =
+                adapter.calculateFileHash(
+                    ImageFile(path = FilePath(file1.absolutePath), fileSize = file1.length())
+                )
+            val hash2 =
+                adapter.calculateFileHash(
+                    ImageFile(path = FilePath(file2.absolutePath), fileSize = file2.length())
+                )
 
             assertThat(hash1).isNotEqualTo(hash2)
         }
@@ -170,7 +177,11 @@ class ImageRepositoryAdapterTest {
             src.writeText("image content")
             val dest = File(tempDir, "copy/dest.jpg")
 
-            val result = adapter.copyFile(ImageFile(file = src), dest)
+            val result =
+                adapter.copyFile(
+                    ImageFile(path = FilePath(src.absolutePath), fileSize = src.length()),
+                    FilePath(dest.absolutePath),
+                )
 
             assertThat(result).isTrue()
             assertThat(dest.exists()).isTrue()
@@ -185,7 +196,10 @@ class ImageRepositoryAdapterTest {
             val dest = File(tempDir, "progress_copy.jpg")
             val progressUpdates = mutableListOf<Pair<Long, Long>>()
 
-            adapter.copyFile(ImageFile(file = src), dest) { copied, total ->
+            adapter.copyFile(
+                ImageFile(path = FilePath(src.absolutePath), fileSize = src.length()),
+                FilePath(dest.absolutePath),
+            ) { copied, total ->
                 progressUpdates.add(copied to total)
             }
 
@@ -205,7 +219,11 @@ class ImageRepositoryAdapterTest {
             val dest = File(tempDir, "verified.jpg")
             dest.writeText("same content")
 
-            val result = adapter.verifyCopy(ImageFile(file = src), dest)
+            val result =
+                adapter.verifyCopy(
+                    ImageFile(path = FilePath(src.absolutePath), fileSize = src.length()),
+                    FilePath(dest.absolutePath),
+                )
 
             assertThat(result).isTrue()
         }
@@ -218,7 +236,11 @@ class ImageRepositoryAdapterTest {
             val dest = File(tempDir, "corrupt.jpg")
             dest.writeText("content B")
 
-            val result = adapter.verifyCopy(ImageFile(file = src), dest)
+            val result =
+                adapter.verifyCopy(
+                    ImageFile(path = FilePath(src.absolutePath), fileSize = src.length()),
+                    FilePath(dest.absolutePath),
+                )
 
             assertThat(result).isFalse()
         }
@@ -233,7 +255,10 @@ class ImageRepositoryAdapterTest {
             val file = File(tempDir, "deleteme.jpg")
             file.writeText("data")
 
-            val result = adapter.deleteFile(ImageFile(file = file))
+            val result =
+                adapter.deleteFile(
+                    ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
+                )
 
             assertThat(result).isTrue()
             assertThat(file.exists()).isFalse()

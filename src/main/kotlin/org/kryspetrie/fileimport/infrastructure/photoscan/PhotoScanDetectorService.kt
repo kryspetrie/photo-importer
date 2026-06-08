@@ -4,7 +4,12 @@ import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.DetectionMode
+import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
+import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
+import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloCornerRegressionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloDetectionService
@@ -31,7 +36,11 @@ class PhotoScanDetectorService(
     private val maxPhotos: Int = 4,
     private val modelResourcePort: ModelResourcePort? = null,
     private val appLogger: AppLogger? = null,
-) {
+) : PhotoScanDetectorPort {
+
+    /** Port implementation — delegates to the [BufferedImage] overload after conversion. */
+    override fun detectPhotos(image: ProcessedImage): List<DetectedPhoto> =
+        detectPhotos(image.toBufferedImage())
 
     private val cvDetector = HybridCornerDetector(rectangleDetector)
 
@@ -57,7 +66,9 @@ class PhotoScanDetectorService(
             "PhotoScanDetectorService: Using classical CV detection (YOLO models not available)"
         )
         cvDetector.targetPhotoCount = maxPhotos
-        return cvDetector.detectPhotos(image)
+        return cvDetector.detectPhotos(image.toProcessedImage()).map {
+            it.copy(detectionMode = DetectionMode.COMPUTER_VISION)
+        }
     }
 
     /**
@@ -81,7 +92,9 @@ class PhotoScanDetectorService(
     /** Detects photos using classical CV mode (regardless of YOLO availability). */
     fun detectPhotosCv(image: BufferedImage): List<DetectedPhoto> {
         cvDetector.targetPhotoCount = maxPhotos
-        return cvDetector.detectPhotos(image)
+        return cvDetector.detectPhotos(image.toProcessedImage()).map {
+            it.copy(detectionMode = DetectionMode.COMPUTER_VISION)
+        }
     }
 
     /** Returns true if YOLO models are available and loaded. */

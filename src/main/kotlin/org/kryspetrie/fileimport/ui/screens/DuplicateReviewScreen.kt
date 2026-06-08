@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
 import org.kryspetrie.fileimport.domain.model.DuplicateResolution
 
-@Suppress("UnusedParameter")
 @Composable
 fun DuplicateReviewScreen(
     duplicates: List<DuplicateInfo>,

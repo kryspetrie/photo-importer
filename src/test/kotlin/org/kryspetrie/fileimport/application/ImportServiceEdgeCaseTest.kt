@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.domain.model.ConflictResolution
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
@@ -44,7 +45,11 @@ class ImportServiceEdgeCaseTest {
     ): ImageFile {
         val file = File(tempDir, "$name.$extension")
         file.writeText("test content")
-        return ImageFile(file = file, fileType = type ?: ImageFileType.fromExtension(extension))
+        return ImageFile(
+            path = FilePath(file.absolutePath),
+            fileSize = file.length(),
+            fileType = type ?: ImageFileType.fromExtension(extension),
+        )
     }
 
     @Nested

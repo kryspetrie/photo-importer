@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.FaceRegion
+import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 
@@ -160,8 +162,7 @@ class FaceRegionTransformerTest {
         @Test
         @DisplayName("Face in quadrant transforms correctly")
         fun faceInQuadrant() {
-            val regions =
-                listOf(SourceFaceRegion(name = "Alice", x = 0.1, y = 0.1, w = 0.1, h = 0.1))
+            val regions = listOf(FaceRegion(name = "Alice", x = 0.1, y = 0.1, w = 0.1, h = 0.1))
             val photo = quadrantPhoto(perspectiveCorrection = false)
             val result =
                 transformer.transformFaceRegions(
@@ -182,7 +183,7 @@ class FaceRegionTransformerTest {
         @Test
         @DisplayName("Face outside photo is excluded")
         fun faceOutsideExcluded() {
-            val regions = listOf(SourceFaceRegion(name = "Bob", x = 0.8, y = 0.8, w = 0.1, h = 0.1))
+            val regions = listOf(FaceRegion(name = "Bob", x = 0.8, y = 0.8, w = 0.1, h = 0.1))
             val result =
                 transformer.transformFaceRegions(
                     regions,
@@ -199,8 +200,7 @@ class FaceRegionTransformerTest {
         @Test
         @DisplayName("Face at boundary edge included")
         fun faceAtBoundary() {
-            val regions =
-                listOf(SourceFaceRegion(name = "Edge", x = 0.5, y = 0.25, w = 0.05, h = 0.05))
+            val regions = listOf(FaceRegion(name = "Edge", x = 0.5, y = 0.25, w = 0.05, h = 0.05))
             val result =
                 transformer.transformFaceRegions(
                     regions,
@@ -221,8 +221,7 @@ class FaceRegionTransformerTest {
         @Test
         @DisplayName("CW_90 rotation transforms coordinates")
         fun cw90Rotation() {
-            val regions =
-                listOf(SourceFaceRegion(name = "Rotated", x = 0.3, y = 0.4, w = 0.1, h = 0.1))
+            val regions = listOf(FaceRegion(name = "Rotated", x = 0.3, y = 0.4, w = 0.1, h = 0.1))
             val photo = fullFramePhoto(rotation = RotationAngle.CW_90)
             val result =
                 transformer.transformFaceRegions(
@@ -247,8 +246,7 @@ class FaceRegionTransformerTest {
             // If we incorrectly passed post-rotation dims (300x400) as outputWidth/outputHeight,
             // the homography and rotation transform would be wrong.
             // The correct call passes 400x300 (pre-rotation) as outputWidth/outputHeight.
-            val regions =
-                listOf(SourceFaceRegion(name = "Test", x = 0.1, y = 0.1, w = 0.05, h = 0.05))
+            val regions = listOf(FaceRegion(name = "Test", x = 0.1, y = 0.1, w = 0.05, h = 0.05))
             val photo = quadrantPhoto(perspectiveCorrection = false, rotation = RotationAngle.CW_90)
 
             // CORRECT: pre-rotation dimensions (400x300)
@@ -380,7 +378,7 @@ class FaceRegionTransformerTest {
         @DisplayName("Zero margin returns same photo")
         fun zeroMargin() {
             val photo = fullFramePhoto()
-            val result = transformer.applyMargin(photo, 0.0)
+            val result = GeometryUtils.applyMargin(photo, 0.0)
             assertThat(result.topLeft.x).isEqualTo(photo.topLeft.x)
         }
 
@@ -388,7 +386,7 @@ class FaceRegionTransformerTest {
         @DisplayName("Positive margin expands corners")
         fun positiveMargin() {
             val photo = quadrantPhoto()
-            val result = transformer.applyMargin(photo, 0.02)
+            val result = GeometryUtils.applyMargin(photo, 0.02)
             assertThat(result.topLeft.x).isLessThan(photo.topLeft.x)
         }
     }

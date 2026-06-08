@@ -10,7 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.application.DuplicateAction
+import org.kryspetrie.fileimport.domain.model.DuplicateAction
 
 @Composable
 fun DuplicateResolveConfirmDialog(

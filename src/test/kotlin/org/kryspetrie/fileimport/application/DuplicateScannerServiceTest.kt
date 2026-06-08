@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.domain.model.DeduplicationSettings
+import org.kryspetrie.fileimport.domain.model.DuplicateAction
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
 import org.kryspetrie.fileimport.domain.model.DuplicateType
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
@@ -61,7 +63,9 @@ class DuplicateScannerServiceTest {
             val f = File(tempDir, "single.jpg")
             f.writeText("data")
             whenever(imageRepository.scanDirectory(any(), any()))
-                .thenReturn(listOf(ImageFile(file = f)))
+                .thenReturn(
+                    listOf(ImageFile(path = FilePath(f.absolutePath), fileSize = f.length()))
+                )
 
             val result = service.scanForDuplicates(tempDir.absolutePath, DeduplicationSettings())
 
@@ -81,12 +85,14 @@ class DuplicateScannerServiceTest {
             f2.writeText("low")
             val img1 =
                 ImageFile(
-                    file = f1,
+                    path = FilePath(f1.absolutePath),
+                    fileSize = f1.length(),
                     metadata = ImageMetadata(imageWidth = 4000, imageHeight = 3000),
                 )
             val img2 =
                 ImageFile(
-                    file = f2,
+                    path = FilePath(f2.absolutePath),
+                    fileSize = f2.length(),
                     metadata = ImageMetadata(imageWidth = 1920, imageHeight = 1080),
                 )
             val group = DuplicateInfo(img1, listOf(img2), DuplicateType.EXACT_HASH)
@@ -108,8 +114,18 @@ class DuplicateScannerServiceTest {
             rawFile.writeText("raw")
             val jpegFile = File(tempDir, "photo.jpg")
             jpegFile.writeText("jpeg")
-            val rawImg = ImageFile(file = rawFile, fileType = ImageFileType.RAW_CR2)
-            val jpegImg = ImageFile(file = jpegFile, fileType = ImageFileType.JPEG)
+            val rawImg =
+                ImageFile(
+                    path = FilePath(rawFile.absolutePath),
+                    fileSize = rawFile.length(),
+                    fileType = ImageFileType.RAW_CR2,
+                )
+            val jpegImg =
+                ImageFile(
+                    path = FilePath(jpegFile.absolutePath),
+                    fileSize = jpegFile.length(),
+                    fileType = ImageFileType.JPEG,
+                )
             val group = DuplicateInfo(jpegImg, listOf(rawImg), DuplicateType.EXACT_HASH)
 
             val trashDir = File(tempDir, "trash")
@@ -130,11 +146,16 @@ class DuplicateScannerServiceTest {
             f2.writeText("delete")
             val img1 =
                 ImageFile(
-                    file = f1,
+                    path = FilePath(f1.absolutePath),
+                    fileSize = f1.length(),
                     metadata = ImageMetadata(imageWidth = 4000, imageHeight = 3000),
                 )
             val img2 =
-                ImageFile(file = f2, metadata = ImageMetadata(imageWidth = 800, imageHeight = 600))
+                ImageFile(
+                    path = FilePath(f2.absolutePath),
+                    fileSize = f2.length(),
+                    metadata = ImageMetadata(imageWidth = 800, imageHeight = 600),
+                )
             val group = DuplicateInfo(img1, listOf(img2), DuplicateType.EXACT_HASH)
 
             service.resolveGroup(group, DuplicateAction.KEEP_HIGHEST_RES, null)
@@ -160,18 +181,28 @@ class DuplicateScannerServiceTest {
             f4.writeText("d")
             val img1 =
                 ImageFile(
-                    file = f1,
+                    path = FilePath(f1.absolutePath),
+                    fileSize = f1.length(),
                     metadata = ImageMetadata(imageWidth = 4000, imageHeight = 3000),
                 )
             val img2 =
-                ImageFile(file = f2, metadata = ImageMetadata(imageWidth = 800, imageHeight = 600))
+                ImageFile(
+                    path = FilePath(f2.absolutePath),
+                    fileSize = f2.length(),
+                    metadata = ImageMetadata(imageWidth = 800, imageHeight = 600),
+                )
             val img3 =
                 ImageFile(
-                    file = f3,
+                    path = FilePath(f3.absolutePath),
+                    fileSize = f3.length(),
                     metadata = ImageMetadata(imageWidth = 5000, imageHeight = 4000),
                 )
             val img4 =
-                ImageFile(file = f4, metadata = ImageMetadata(imageWidth = 640, imageHeight = 480))
+                ImageFile(
+                    path = FilePath(f4.absolutePath),
+                    fileSize = f4.length(),
+                    metadata = ImageMetadata(imageWidth = 640, imageHeight = 480),
+                )
 
             val groups =
                 listOf(

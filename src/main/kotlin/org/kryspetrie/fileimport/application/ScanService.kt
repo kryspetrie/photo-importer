@@ -7,7 +7,8 @@ import javax.imageio.ImageIO
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
+import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 
 /**
  * Orchestrates photo scan operations.
@@ -18,10 +19,9 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
  * for precise corners. Domain constraints (max 4 photos, similar dimensions, near-rectangular
  * corners) are applied to filter false positives.
  *
- * @param hybridCornerDetector Hybrid detector combining CV region proposals with ML corner
- *   refinement
+ * @param photoDetector Port for detecting photo regions in scanned images
  */
-class ScanService(private val hybridCornerDetector: HybridCornerDetector) {
+class ScanService(private val photoDetector: PhotoScanDetectorPort) {
 
     /**
      * Detects photos within a scanned image.
@@ -31,7 +31,6 @@ class ScanService(private val hybridCornerDetector: HybridCornerDetector) {
      *   CV detector to tune sensitivity (splitting/merging regions if count doesn't match).
      * @return List of detected photos with corner coordinates, ordered TL→TR→BR→BL.
      */
-    @Suppress("ReturnCount")
     fun detectPhotos(filePath: String, expectedCount: Int? = null): List<DetectedPhoto> {
         val imageFile = File(filePath)
         if (!imageFile.exists()) {
@@ -39,8 +38,7 @@ class ScanService(private val hybridCornerDetector: HybridCornerDetector) {
         }
         return try {
             val bufferedImage = ImageIO.read(imageFile) ?: return emptyList()
-            hybridCornerDetector.targetPhotoCount = expectedCount
-            hybridCornerDetector.detectPhotos(bufferedImage)
+            photoDetector.detectPhotos(bufferedImage.toProcessedImage())
         } catch (_: Exception) {
             emptyList()
         }
@@ -129,7 +127,6 @@ class ScanService(private val hybridCornerDetector: HybridCornerDetector) {
      * @param configuration Export configuration
      * @return Absolute path to the exported file
      */
-    @Suppress("UnusedParameter")
     fun exportPhoto(
         photoImage: BufferedImage,
         destinationPath: String,

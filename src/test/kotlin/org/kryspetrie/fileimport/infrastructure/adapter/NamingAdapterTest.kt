@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.infrastructure.adapter
 
-import java.io.File
 import java.time.LocalDateTime
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
@@ -22,7 +22,7 @@ class NamingAdapterTest {
         adapter = NamingAdapter()
         testImageFile =
             ImageFile(
-                file = File("/source/IMG_1234.jpg"),
+                path = FilePath("/source/IMG_1234.jpg"),
                 metadata =
                     ImageMetadata(
                         dateTimeOriginal = LocalDateTime.of(2024, 3, 15, 14, 30, 45),
@@ -156,7 +156,7 @@ class NamingAdapterTest {
         fun shouldResolveTypeForVideo() {
             val videoFile =
                 ImageFile(
-                    file = File("/source/VID_001.mp4"),
+                    path = FilePath("/source/VID_001.mp4"),
                     fileType = ImageFileType.VIDEO_MP4,
                     metadata =
                         ImageMetadata(
@@ -184,7 +184,7 @@ class NamingAdapterTest {
         fun shouldResolveDuration() {
             val videoFile =
                 ImageFile(
-                    file = File("/source/VID.mp4"),
+                    path = FilePath("/source/VID.mp4"),
                     fileType = ImageFileType.VIDEO_MP4,
                     metadata =
                         ImageMetadata(
@@ -206,7 +206,7 @@ class NamingAdapterTest {
         fun shouldResolveFpsAndCodec() {
             val videoFile =
                 ImageFile(
-                    file = File("/source/VID.mp4"),
+                    path = FilePath("/source/VID.mp4"),
                     fileType = ImageFileType.VIDEO_MP4,
                     metadata =
                         ImageMetadata(
@@ -236,7 +236,7 @@ class NamingAdapterTest {
             val images =
                 listOf(
                     testImageFile,
-                    testImageFile.copy(id = "test-2", file = File("/source/IMG_1235.jpg")),
+                    testImageFile.copy(id = "test-2", path = FilePath("/source/IMG_1235.jpg")),
                 )
 
             // WHEN

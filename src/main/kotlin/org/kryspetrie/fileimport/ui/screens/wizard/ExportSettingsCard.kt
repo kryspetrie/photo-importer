@@ -24,15 +24,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.screens.wizard.summary.CorrectionStrategyDropdown
 
 /**
- * Card with export settings for the photo scan import screen: perspective correction toggle and
- * margin slider.
+ * Card with export settings for the photo scan import screen: perspective correction toggle,
+ * correction strategy selector, and margin slider.
  */
 @Composable
 fun ExportSettingsCard(state: PhotoScanWizardState, modifier: Modifier = Modifier) {
     val perspectiveEnabled by state.perspectiveCorrectionEnabled.collectAsState()
     val marginPercent by state.exportMarginPercent.collectAsState()
+    val defaultStrategy by state.defaultCorrectionStrategy.collectAsState()
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -73,6 +75,32 @@ fun ExportSettingsCard(state: PhotoScanWizardState, modifier: Modifier = Modifie
                 Switch(
                     checked = perspectiveEnabled,
                     onCheckedChange = { state.setPerspectiveCorrectionEnabled(it) },
+                )
+            }
+
+            // Correction strategy selector
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    Icons.Default.CropFree,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Column {
+                    Text("Correction strategy", style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "How to handle skew and rotation when perspective correction is off",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                CorrectionStrategyDropdown(
+                    selectedStrategy = defaultStrategy,
+                    onStrategyChange = { state.setDefaultCorrectionStrategy(it) },
                 )
             }
 

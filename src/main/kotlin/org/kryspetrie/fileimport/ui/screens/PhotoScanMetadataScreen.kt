@@ -56,58 +56,10 @@ import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 
 /**
- * Photo Scan Metadata Screen.
+ * Photo Scan Metadata Screen (legacy — superseded by QuickEditScreen).
  *
- * Allows editing EXIF metadata overrides for each detected photo in a scan.
- *
- * ## Editable Fields
- * - Original Date Override
- * - Original Year Override
- * - Original Month Override
- * - Tags (comma-separated)
- * - Notes (free text)
- *
- * ## UI Layout
- *
- * ```
- * ┌─────────────────────────────────────────────────────────────┐
- * │  Photo Metadata                                    [3/10]   │
- * ├─────────────────────────────────────────────────────────────┤
- * │                                                             │
- * │  ┌──────────┐ ┌──────────┐ ┌──────────┐                    │
- * │  │ Photo 1  │ │ Photo 2* │ │ Photo 3  │  ← Select photo   │
- * │  │ ✓        │ │         │ │          │                    │
- * │  └──────────┘ └──────────┘ └──────────┘                    │
- * │                                                             │
- * │  ┌─ Metadata ─────────────────────────────────────────────┐│
- * │  │                                                         ││
- * │  │ Original Date:  [1995-06-15          ]                 ││
- * │  │                                                         ││
- * │  │ Year:          [1995                ]                  ││
- * │  │ Month:         [06                  ]                  ││
- * │  │                                                         ││
- * │  │ Tags:          [vacation, family    ]                  ││
- * │  │                                                         ││
- * │  │ Notes:                                                ││
- * │  │ ┌───────────────────────────────────────────────────┐ ││
- * │  │ │ Christmas morning, Grandma's house                │ ││
- * │  │ └───────────────────────────────────────────────────┘ ││
- * │  │                                                         ││
- * │  │ [Apply to All Photos]                                 ││
- * │  │                                                         ││
- * └─────────────────────────────────────────────────────────────┘│
- * │                                                             │
- * │  Image: scan_001.jpg                        [← Back] [Export →]│
- * └─────────────────────────────────────────────────────────────┘
- * ```
- *
- * @param photos List of detected photos
- * @param selectedPhotoId Currently selected photo ID
- * @param onPhotoSelect Callback when a photo is selected
- * @param onConfigurationChange Callback when metadata configuration changes
- * @param onApplyToAll Callback to apply current configuration to all photos
- * @param onBack Callback to go back to corner editing
- * @param onExport Callback to proceed to export
+ * Allows editing EXIF metadata overrides for each detected photo in a scan. This screen uses the
+ * old separate date/tags/notes fields. The QuickEditScreen now provides a more streamlined UX.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -202,11 +154,11 @@ fun PhotoScanMetadataScreen(
                         HorizontalDivider()
 
                         val photosWithDate =
-                            photos.count {
-                                it.configuration.originalDateOverride?.isNotBlank() == true
-                            }
-                        val photosWithTags = photos.count { it.configuration.tags.isNotBlank() }
-                        val photosWithNotes = photos.count { it.configuration.notes.isNotBlank() }
+                            photos.count { it.configuration.originalDate.isNotBlank() }
+                        val photosWithKeywords =
+                            photos.count { it.configuration.keywords.isNotBlank() }
+                        val photosWithDescription =
+                            photos.count { it.configuration.description.isNotBlank() }
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -214,8 +166,8 @@ fun PhotoScanMetadataScreen(
                         ) {
                             StatItem("Photos", "${photos.size}")
                             StatItem("With Date", "$photosWithDate")
-                            StatItem("With Tags", "$photosWithTags")
-                            StatItem("With Notes", "$photosWithNotes")
+                            StatItem("With Keywords", "$photosWithKeywords")
+                            StatItem("With Desc", "$photosWithDescription")
                         }
                     }
                 }
@@ -325,14 +277,10 @@ private fun MetadataForm(
     onConfigurationChange: (PhotoScanConfiguration) -> Unit,
     onApplyToAll: () -> Unit,
 ) {
-    var originalDate by
-        remember(configuration) { mutableStateOf(configuration.originalDateOverride.orEmpty()) }
-    var originalYear by
-        remember(configuration) { mutableStateOf(configuration.originalYearOverride.orEmpty()) }
-    var originalMonth by
-        remember(configuration) { mutableStateOf(configuration.originalMonthOverride.orEmpty()) }
-    var tags by remember(configuration) { mutableStateOf(configuration.tags) }
-    var notes by remember(configuration) { mutableStateOf(configuration.notes) }
+    var originalDate by remember(configuration) { mutableStateOf(configuration.originalDate) }
+    var year by remember(configuration) { mutableStateOf(configuration.year) }
+    var keywords by remember(configuration) { mutableStateOf(configuration.keywords) }
+    var description by remember(configuration) { mutableStateOf(configuration.description) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -354,9 +302,7 @@ private fun MetadataForm(
                     value = originalDate,
                     onValueChange = {
                         originalDate = it
-                        onConfigurationChange(
-                            configuration.copy(originalDateOverride = it.ifBlank { null })
-                        )
+                        onConfigurationChange(configuration.copy(originalDate = it))
                     },
                     label = { Text("Original Date") },
                     placeholder = { Text("YYYY-MM-DD") },
@@ -365,11 +311,11 @@ private fun MetadataForm(
                 )
 
                 OutlinedTextField(
-                    value = originalYear,
+                    value = year,
                     onValueChange = {
-                        originalYear = it.filter { c -> c.isDigit() }.take(4)
+                        year = it.filter { c -> c.isDigit() }.take(4)
                         onConfigurationChange(
-                            configuration.copy(originalYearOverride = it.ifBlank { null })
+                            configuration.copy(year = it.filter { c -> c.isDigit() }.take(4))
                         )
                     },
                     label = { Text("Year") },
@@ -378,46 +324,31 @@ private fun MetadataForm(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
-
-                OutlinedTextField(
-                    value = originalMonth,
-                    onValueChange = {
-                        originalMonth = it.filter { c -> c.isDigit() }.take(2)
-                        onConfigurationChange(
-                            configuration.copy(originalMonthOverride = it.ifBlank { null })
-                        )
-                    },
-                    label = { Text("Month") },
-                    placeholder = { Text("06") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                )
             }
 
-            // Tags
+            // Keywords
             OutlinedTextField(
-                value = tags,
+                value = keywords,
                 onValueChange = {
-                    tags = it
-                    onConfigurationChange(configuration.copy(tags = it))
+                    keywords = it
+                    onConfigurationChange(configuration.copy(keywords = it))
                 },
-                label = { Text("Tags") },
+                label = { Text("Keywords") },
                 placeholder = { Text("vacation, family, holiday") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                supportingText = { Text("Comma-separated tags") },
+                supportingText = { Text("Comma-separated keywords") },
             )
 
-            // Notes
+            // Description
             OutlinedTextField(
-                value = notes,
+                value = description,
                 onValueChange = {
-                    notes = it
-                    onConfigurationChange(configuration.copy(notes = it))
+                    description = it
+                    onConfigurationChange(configuration.copy(description = it))
                 },
-                label = { Text("Notes") },
-                placeholder = { Text("Additional notes about this photo...") },
+                label = { Text("Description") },
+                placeholder = { Text("Additional description about this photo...") },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 maxLines = 5,
@@ -437,10 +368,9 @@ private fun MetadataForm(
                 TextButton(
                     onClick = {
                         originalDate = ""
-                        originalYear = ""
-                        originalMonth = ""
-                        tags = ""
-                        notes = ""
+                        year = ""
+                        keywords = ""
+                        description = ""
                         onConfigurationChange(PhotoScanConfiguration())
                     },
                     colors =
@@ -476,9 +406,8 @@ private fun StatItem(label: String, value: String) {
 
 /** Checks if configuration has any overrides set. */
 private fun hasOverrides(config: PhotoScanConfiguration): Boolean {
-    return config.originalDateOverride?.isNotBlank() == true ||
-        config.originalYearOverride?.isNotBlank() == true ||
-        config.originalMonthOverride?.isNotBlank() == true ||
-        config.tags.isNotBlank() ||
-        config.notes.isNotBlank()
+    return config.originalDate.isNotBlank() ||
+        config.year.isNotBlank() ||
+        config.keywords.isNotBlank() ||
+        config.description.isNotBlank()
 }

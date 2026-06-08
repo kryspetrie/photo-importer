@@ -5,47 +5,15 @@ import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.serialization.Serializable
+import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
+import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 
 // Debug flag for performance timing - set to true to log timing data
 internal const val DEBUG_TIMING = false
-
-/** Wizard mode for the overview/refinement screens. */
-enum class WizardMode {
-    /** Default mode - select, move, zoom */
-    NORMAL,
-    /** 4-point bounding box creation mode */
-    FOUR_POINT,
-    /** Click-to-add rectangular box mode */
-    ADD_BOX,
-    /** Zoomed refinement of a single box */
-    REFINEMENT,
-}
-
-/**
- * Read-only summary of EXIF metadata read from the source file.
- *
- * Displayed in the MetadataScreen as "Source: ..." hints next to each field, so the user can see
- * what the original file contains before deciding whether to Keep Source / Override / Null Out.
- *
- * All fields are nullable: null means the source file has no value for that tag.
- */
-data class SourceExifSummary(
-    val cameraMake: String? = null,
-    val cameraModel: String? = null,
-    val lensModel: String? = null,
-    val focalLength: String? = null,
-    val aperture: String? = null,
-    val shutterSpeed: String? = null,
-    val iso: String? = null,
-    val description: String? = null,
-    val dateOriginal: String? = null,
-    val gpsLatitude: String? = null,
-    val gpsLongitude: String? = null,
-)
 
 /**
  * Central state container for the Photo Import Wizard. Manages all state including mode, bounding
@@ -109,6 +77,15 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _exportMarginPercent.value = percent.coerceIn(0.0, 0.2)
     }
 
+    /** Default correction strategy for photos that don't have an explicit per-photo strategy. */
+    private val _defaultCorrectionStrategy = MutableStateFlow<CorrectionStrategy?>(null)
+    val defaultCorrectionStrategy: StateFlow<CorrectionStrategy?> =
+        _defaultCorrectionStrategy.asStateFlow()
+
+    fun setDefaultCorrectionStrategy(strategy: CorrectionStrategy?) {
+        _defaultCorrectionStrategy.value = strategy
+    }
+
     // ========== Image ==========
 
     private val _image = MutableStateFlow<BufferedImage?>(null)
@@ -127,13 +104,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     }
 
     // ========== Batch Processing ==========
-
-    /** Result of pre-processing a single image (load + detect). */
-    data class PreProcessedImage(
-        val file: File,
-        val image: BufferedImage,
-        val boxes: List<BoundingBox>,
-    )
 
     /** List of all source image files for batch processing. Empty for single-image mode. */
     private val _sourceFiles = MutableStateFlow<List<File>>(emptyList())
@@ -183,7 +153,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     }
 
     /** Switches to a pre-processed image at the given index. Returns false if not cached yet. */
-    @Suppress("ReturnCount")
     fun switchToImage(index: Int): Boolean {
         if (index < 0 || index >= _sourceFiles.value.size) return false
         val cached = _preProcessedCache.value[index] ?: return false
@@ -235,6 +204,30 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         return _sourceFiles.value[nextIndex]
     }
 
+    /**
+     * Peeks at the next file in the batch without advancing the index. Returns null if there is no
+     * next file. Use this to preview the next photo before the user decides to continue or skip.
+     */
+    fun peekNextBatchFile(): File? {
+        val nextIndex = _currentImageIndex.value + 1
+        return if (nextIndex < _sourceFiles.value.size) _sourceFiles.value[nextIndex] else null
+    }
+
+    /**
+     * Skips the next file in the batch by advancing the index without loading or detecting. The
+     * caller remains on the COMPLETE screen — the UI recomposes with updated
+     * [hasMoreBatchImages]/[peekNextBatchFile] values. Returns the new "next file" after skipping,
+     * or null if there are no more files to process.
+     */
+    fun skipNextBatchFile(): File? {
+        val skippedIndex = _currentImageIndex.value + 1
+        if (skippedIndex >= _sourceFiles.value.size) return null
+        _currentImageIndex.value = skippedIndex
+        _skippedBatchIndices.value = _skippedBatchIndices.value + skippedIndex
+        // Return the file after the skipped one (the new "next" preview)
+        return peekNextBatchFile()
+    }
+
     /** Returns true if the next image in the batch is pre-processed and ready. */
     val isNextImageReady: Boolean
         get() =
@@ -246,6 +239,33 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         get() =
             _currentImageIndex.value > 0 &&
                 _preProcessedCache.value.containsKey(_currentImageIndex.value - 1)
+
+    // ========== Back-of-Photo / Auto-Skip ==========
+
+    /**
+     * Set of batch file indices that should be automatically skipped during folder processing.
+     * These are files identified as "backs" of photographs — they've been selected as back images
+     * for other photos and should not be processed as standalone photos.
+     */
+    private val _skippedBatchIndices = MutableStateFlow<Set<Int>>(emptySet())
+    val skippedBatchIndices: StateFlow<Set<Int>> = _skippedBatchIndices.asStateFlow()
+
+    /**
+     * Marks a batch file index as skipped (it's a "back" of an already-processed photo). The file
+     * will be skipped during automatic batch progression.
+     */
+    fun markBatchIndexSkipped(index: Int) {
+        _skippedBatchIndices.value = _skippedBatchIndices.value + index
+    }
+
+    /** Removes a batch file index from the skipped set. */
+    fun unmarkBatchIndexSkipped(index: Int) {
+        _skippedBatchIndices.value = _skippedBatchIndices.value - index
+    }
+
+    /** Returns the set of source files that are marked as skipped (backs of photos). */
+    val skippedBatchFiles: Set<File>
+        get() = _skippedBatchIndices.value.mapNotNull { _sourceFiles.value.getOrNull(it) }.toSet()
 
     // ========== Mode and State ==========
 
@@ -311,7 +331,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
      * actual box state updated on release. Called periodically from the LaunchedEffect throttle
      * loop.
      */
-    @Suppress("ReturnCount")
     fun syncPendingDrag(boxIndex: Int): Long {
         val startNanos = if (DEBUG_TIMING) System.nanoTime() else 0L
 
@@ -446,6 +465,28 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
                 }
             }
         }
+    }
+
+    /**
+     * Convenience overload that applies buffered metadata from a [MetadataEditState]. Only
+     * non-blank fields are applied — blank fields are left unchanged.
+     */
+    fun applyMetadataToSelected(
+        editState: org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
+    ) {
+        applyMetadataToSelected(
+            description = editState.description,
+            keywords = editState.keywords,
+            originalDate = editState.originalDate,
+            year = editState.year,
+            cameraModel = editState.cameraModel,
+            cameraMake = editState.cameraMake,
+            lensModel = editState.lensModel,
+            focalLength = editState.focalLength,
+            aperture = editState.aperture,
+            shutterSpeed = editState.shutterSpeed,
+            iso = editState.iso,
+        )
     }
 
     // ========== Face Selection ==========
@@ -707,6 +748,41 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
             )
         _boundingBoxList.value = BoundingBoxList(sorted)
         _selectedBoxIndex.value = -1
+    }
+
+    /**
+     * Sets detected bounding boxes with per-box configurations (detection mode, correction
+     * strategy).
+     *
+     * Boxes are sorted in reading order, and configs are re-associated by index after sorting.
+     */
+    fun setDetectedBoxes(
+        boxes: List<BoundingBox>,
+        configs: List<PhotoConfiguration> = emptyList(),
+    ) {
+        // Sort in reading order, tracking original indices to re-associate configs
+        val imageHeight = _image.value?.height?.toDouble() ?: 1.0
+        val indexed = boxes.mapIndexed { index, box -> index to box }
+        val sorted =
+            indexed.sortedWith(
+                compareBy<Pair<Int, BoundingBox>> { (_, box) ->
+                        ((box.corners.center().y / imageHeight) * 5).toInt()
+                    }
+                    .thenBy { (_, box) -> box.corners.center().x }
+            )
+        _boundingBoxList.value = BoundingBoxList(sorted.map { (_, box) -> box })
+        _selectedBoxIndex.value = -1
+
+        // Apply per-box configurations after sort (re-associated by tracked index)
+        if (configs.isNotEmpty()) {
+            val configMap = mutableMapOf<String, PhotoConfiguration>()
+            sorted.forEach { (originalIndex, box) ->
+                if (originalIndex < configs.size) {
+                    configMap[box.id] = configs[originalIndex]
+                }
+            }
+            _photoConfigurations.value = _photoConfigurations.value + configMap
+        }
     }
 
     /**
@@ -1174,7 +1250,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
      * Moves a corner with validation to prevent invalid shapes (bowties, self-intersecting).
      * Returns true if the move was applied, false if it was rejected. Pushes to undo stack.
      */
-    @Suppress("ReturnCount")
     fun moveCornerWithValidation(
         boxIndex: Int,
         corner: Corner,
@@ -1453,6 +1528,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _preProcessCount.value = 0
         _preProcessing.value = false
         _sourceExif.value = null
+        // Reset back-of-photo skip state
+        _skippedBatchIndices.value = emptySet()
     }
 
     /**
@@ -1502,180 +1579,5 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         val index = _refinementBoxIndex.value
         val list = _boundingBoxList.value
         return if (index >= 0 && index < list.size()) list.boxes[index] else null
-    }
-}
-
-/**
- * Tri-state for per-field EXIF override behavior.
- * - [KEEP_SOURCE]: Preserve the value from the source file (default)
- * - [OVERRIDE]: Replace with a user-specified value
- * - [NULL_OUT]: Explicitly remove the field from the output
- */
-@Serializable
-enum class OverrideState {
-    KEEP_SOURCE,
-    OVERRIDE,
-    NULL_OUT,
-}
-
-/**
- * A per-field EXIF override with state and optional value.
- *
- * When [state] is [OverrideState.KEEP_SOURCE], the field is preserved from the source image. When
- * [state] is [OverrideState.OVERRIDE], [value] contains the replacement string. When [state] is
- * [OverrideState.NULL_OUT], the field is explicitly removed from output EXIF.
- *
- * @param T The type of value (always String for EXIF fields)
- */
-@Serializable
-data class FieldOverride(
-    val state: OverrideState = OverrideState.KEEP_SOURCE,
-    val value: String? = null,
-)
-
-@Serializable
-data class PhotoConfiguration(
-    val perspectiveCorrectionEnabled: Boolean = false,
-    val rotationDegrees: Int = 0, // 0, 90, 180, or 270 (clockwise)
-    val aspectRatio: Double = 0.0, // 0 = current, or specific ratio
-    // EXIF metadata overrides (applied on top of original image metadata)
-    val description: String = "",
-    val keywords: String = "", // comma-separated
-    val originalDate: String = "", // YYYY-MM-DD or YYYY-MM-DD HH:MM:SS
-    val year: String = "", // extracted or overridden year
-    val cameraModel: String = "",
-    val cameraMake: String = "",
-    val lensModel: String = "",
-    val focalLength: String = "", // e.g. "50mm"
-    val aperture: String = "", // e.g. "f/2.8"
-    val shutterSpeed: String = "", // e.g. "1/125"
-    val iso: String = "", // e.g. "400"
-    // Location metadata (IPTC Core + EXIF GPS)
-    val locationName: String = "", // e.g. "Grandma's house"
-    val city: String = "", // e.g. "Worcester"
-    val state: String = "", // e.g. "MA"
-    val country: String = "", // e.g. "United States"
-    val gpsLatitude: String = "", // decimal degrees, e.g. "42.2626"
-    val gpsLongitude: String = "", // decimal degrees, e.g. "-71.8023"
-    // Face/subject regions (MWG-RS structured, persisted as part of photo config)
-    val subjects: String = "", // comma-separated subject/person names, e.g. "Alice, Bob"
-    val faceRegions: List<FaceRegion> = emptyList(), // structured face regions with coordinates
-    // EXIF override tri-states — null = use legacy string field behavior (backward compat)
-    // When non-null, the FieldOverride.state determines: KEEP_SOURCE, OVERRIDE, or NULL_OUT
-    val overrideDescription: FieldOverride? = null,
-    val overrideKeywords: FieldOverride? = null,
-    val overrideOriginalDate: FieldOverride? = null,
-    val overrideYear: FieldOverride? = null,
-    val overrideCameraMake: FieldOverride? = null,
-    val overrideCameraModel: FieldOverride? = null,
-    val overrideLensModel: FieldOverride? = null,
-    val overrideFocalLength: FieldOverride? = null,
-    val overrideAperture: FieldOverride? = null,
-    val overrideShutterSpeed: FieldOverride? = null,
-    val overrideIso: FieldOverride? = null,
-    val overrideGps: FieldOverride? = null, // covers lat+lon together
-) {
-    /** Cycles rotation 90° clockwise: 0→90→180→270→0 */
-    fun cycleRotationCW(): PhotoConfiguration = copy(rotationDegrees = (rotationDegrees + 90) % 360)
-
-    /** Cycles rotation 90° counter-clockwise: 0→270→180→90→0 */
-    fun cycleRotationCCW(): PhotoConfiguration =
-        copy(rotationDegrees = (rotationDegrees - 90 + 360) % 360)
-
-    /** Returns true if any metadata fields are non-empty. */
-    fun hasMetadata(): Boolean =
-        description.isNotBlank() ||
-            keywords.isNotBlank() ||
-            originalDate.isNotBlank() ||
-            year.isNotBlank() ||
-            cameraModel.isNotBlank() ||
-            cameraMake.isNotBlank() ||
-            lensModel.isNotBlank() ||
-            focalLength.isNotBlank() ||
-            aperture.isNotBlank() ||
-            shutterSpeed.isNotBlank() ||
-            iso.isNotBlank() ||
-            locationName.isNotBlank() ||
-            city.isNotBlank() ||
-            state.isNotBlank() ||
-            country.isNotBlank() ||
-            gpsLatitude.isNotBlank() ||
-            gpsLongitude.isNotBlank() ||
-            subjects.isNotBlank() ||
-            faceRegions.isNotEmpty()
-
-    /** Parses the comma-separated keywords string into individual keyword strings. */
-    fun keywordList(): List<String> =
-        keywords.split(",").map { it.trim() }.filter { it.isNotBlank() }
-
-    /** Sets keywords from a list of individual keyword strings. */
-    fun withKeywordList(keywords: List<String>): PhotoConfiguration =
-        copy(keywords = keywords.joinToString(", "))
-
-    /** Returns subjects as a list of individual names. */
-    fun subjectList(): List<String> =
-        subjects.split(",").map { it.trim() }.filter { it.isNotBlank() }
-
-    /** Returns a human-readable location string, e.g. "Grandma's house, Worcester, MA" */
-    fun locationDisplay(): String =
-        listOf(locationName, city, state, country).filter { it.isNotBlank() }.joinToString(", ")
-
-    /** Returns true if there is GPS coordinate data. */
-    fun hasGpsCoordinates(): Boolean = gpsLatitude.isNotBlank() && gpsLongitude.isNotBlank()
-}
-
-/**
- * Preset sizes for face regions. The [radius] value represents the circle radius as a fraction of
- * image height (0.0-1.0). We store w=h=radius*2 in MWG-RS format (the bounding box of the circle),
- * but display as a circle.
- */
-enum class FaceSize(val displayName: String, val radius: Double) {
-    SMALL("S", 0.04),
-    MEDIUM("M", 0.07),
-    LARGE("L", 0.12);
-
-    /** The MWG-RS w/h values for this circle size (diameter of the circle). */
-    val diameter: Double
-        get() = radius * 2.0
-
-    companion object {
-        val DEFAULT = MEDIUM
-    }
-}
-
-/**
- * A face region in MWG-RS format, stored normalized 0-1 relative to the photo image.
- *
- * @property name Person/subject name for this face region
- * @property type Region type: "Face", "Pet", "Body", or "Object" (MWG-RS types)
- * @property x Center X as fraction of image width (0.0-1.0)
- * @property y Center Y as fraction of image height (0.0-1.0)
- * @property w Width as fraction of image width (0.0-1.0) — for circular faces, equals diameter
- * @property h Height as fraction of image height (0.0-1.0) — for circular faces, equals diameter
- */
-@Serializable
-data class FaceRegion(
-    val name: String = "",
-    val type: String = "Face",
-    val x: Double = 0.0,
-    val y: Double = 0.0,
-    val w: Double = 0.0,
-    val h: Double = 0.0,
-)
-
-/**
- * MWG-RS region types. Used to categorize what a region represents. See:
- * https://web.archive.org/web/20180921201257/http://www.metadataworkinggroup.org/pdf/mwg_guidance.pdf
- */
-enum class RegionType(val displayName: String, val mwgRsValue: String) {
-    FACE("Face", "Face"),
-    PET("Pet", "Pet"),
-    BODY("Body", "Body"),
-    OBJECT("Object", "Object");
-
-    companion object {
-        /** Parses a region type string, defaulting to FACE for unknown values. */
-        fun fromMwgRs(value: String): RegionType =
-            entries.find { it.mwgRsValue.equals(value, ignoreCase = true) } ?: FACE
     }
 }

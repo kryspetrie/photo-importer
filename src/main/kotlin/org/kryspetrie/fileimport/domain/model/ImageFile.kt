@@ -3,21 +3,53 @@ package org.kryspetrie.fileimport.domain.model
 import java.io.File
 import java.time.LocalDateTime
 
+/**
+ * Represents a media file (image or video) in the domain layer.
+ *
+ * Uses [FilePath] as the primary path representation, keeping the domain layer free of JVM I/O
+ * infrastructure. A computed [file] property provides backward compatibility during migration.
+ *
+ * New code should prefer [path] and [FilePath] operations. The [file] property and [toJavaFile]
+ * method are retained for gradual migration and infrastructure-layer convenience only.
+ *
+ * @property path The file path as a domain [FilePath]
+ * @property fileName Display name of the file
+ * @property filePath Absolute path string of the file
+ * @property fileSize Size of the file in bytes
+ * @property fileType The type of image/video file
+ * @property hash File hash (MD5, etc.)
+ * @property perceptualHash Perceptual hash for similarity detection
+ * @property metadata EXIF/metadata extracted from the file
+ * @property isSelected Whether this file is selected for import
+ * @property importStatus Current import status
+ * @property errorMessage Error message if import failed
+ * @property sidecars Sidecar file paths (XMP, etc.)
+ */
 data class ImageFile(
     val id: String = DomainDefaults.generateId(),
-    val file: File,
-    val fileName: String = file.name,
-    val filePath: String = file.absolutePath,
-    val fileSize: Long = file.length(),
-    val fileType: ImageFileType = ImageFileType.fromExtension(file.extension),
+    val path: FilePath,
+    val fileName: String = path.name,
+    val filePath: String = path.path,
+    val fileSize: Long = 0L,
+    val fileType: ImageFileType = ImageFileType.fromExtension(path.extension),
     val hash: String? = null,
     val perceptualHash: Float? = null,
     val metadata: ImageMetadata? = null,
     val isSelected: Boolean = false,
     val importStatus: ImportStatus = ImportStatus.PENDING,
     val errorMessage: String? = null,
-    val sidecars: List<File> = emptyList(),
+    val sidecars: List<FilePath> = emptyList(),
 ) {
+    /**
+     * Backward-compatible access to the underlying [java.io.File].
+     *
+     * Prefer using [path] and
+     * [FileSystemPort][org.kryspetrie.fileimport.domain.port.FileSystemPort] for I/O operations.
+     * This property is provided for gradual migration from `java.io.File`.
+     */
+    val file: File
+        get() = path.toFile()
+
     val dateTaken: LocalDateTime?
         get() = metadata?.dateTimeOriginal
 

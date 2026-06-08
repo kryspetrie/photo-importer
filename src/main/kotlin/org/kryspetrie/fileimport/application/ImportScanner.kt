@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.application
 
-import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.FolderIndex
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.IndexProgress
@@ -43,8 +43,8 @@ class ImportScanner(
         recursive: Boolean = true,
         onProgress: (scanned: Int, total: Int, file: String) -> Unit = { _, _, _ -> },
     ): List<ImageFile> {
-        val sourceDir = File(sourcePath)
-        require(sourceDir.exists() && sourceDir.isDirectory) {
+        val sourceDir = FilePath(sourcePath)
+        require(sourceDir.toFile().exists() && sourceDir.toFile().isDirectory) {
             "Source directory does not exist: $sourcePath"
         }
 
