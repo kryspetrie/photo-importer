@@ -75,6 +75,7 @@ fun CompletionScreen(
     currentBatchIndex: Int,
     batchTotal: Int,
     skippedCount: Int = 0,
+    failedCount: Int = 0,
     nextBatchFile: File? = null,
     onDone: () -> Unit,
     onImportFile: () -> Unit,
@@ -109,9 +110,10 @@ fun CompletionScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        "$photoCount photo(s) exported",
+                        if (failedCount > 0) "$photoCount photo(s) exported ($failedCount failed)"
+                        else "$photoCount photo(s) exported",
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (failedCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     )
 
                     if (exportDestination.isNotBlank()) {

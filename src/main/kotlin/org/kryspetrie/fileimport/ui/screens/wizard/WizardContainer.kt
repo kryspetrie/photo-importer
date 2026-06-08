@@ -102,6 +102,7 @@ fun WizardContainer(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var processingProgress by remember { mutableFloatStateOf(0f) }
     var processingCurrentFile by remember { mutableStateOf("") }
+    var failedExportCount by remember { mutableStateOf(0) }
     val settings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
     var exportDestination by remember {
         mutableStateOf(
@@ -157,6 +158,8 @@ fun WizardContainer(
                 processingCurrentFile = file
                 appLogger.debug("Export progress: ${(progress * 100).toInt()}% - $file")
             },
+            failedExportCount = failedExportCount,
+            onFailedCountChange = { count -> failedExportCount = count },
             onComplete = onComplete,
             onCancel = onCancel,
         )
@@ -200,6 +203,8 @@ private fun WizardStepContent(
     processingProgress: Float,
     processingCurrentFile: String,
     onProgress: (Float, String) -> Unit,
+    failedExportCount: Int,
+    onFailedCountChange: (Int) -> Unit,
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -265,6 +270,7 @@ private fun WizardStepContent(
                     onExport = { state.goToQuickEdit() },
                     onSkipMetadata = {
                         scope.launch {
+                            onFailedCountChange(0)
                             state.goToProcessing()
                             exportPhotos(
                                 state = state,
@@ -278,6 +284,7 @@ private fun WizardStepContent(
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
+                                    onFailedCountChange(processedPhotos.count { it.outputPath.startsWith("ERROR:") })
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
@@ -318,6 +325,7 @@ private fun WizardStepContent(
                     onBack = { state.goToSummary() },
                     onExport = {
                         scope.launch {
+                            onFailedCountChange(0)
                             state.goToProcessing()
                             exportPhotos(
                                 state = state,
@@ -331,6 +339,7 @@ private fun WizardStepContent(
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
+                                    onFailedCountChange(processedPhotos.count { it.outputPath.startsWith("ERROR:") })
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
@@ -342,6 +351,7 @@ private fun WizardStepContent(
                     },
                     onSkipToExport = {
                         scope.launch {
+                            onFailedCountChange(0)
                             state.goToProcessing()
                             exportPhotos(
                                 state = state,
@@ -355,6 +365,7 @@ private fun WizardStepContent(
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
+                                    onFailedCountChange(processedPhotos.count { it.outputPath.startsWith("ERROR:") })
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
@@ -390,6 +401,7 @@ private fun WizardStepContent(
                     onBack = { state.goToSummary() },
                     onNext = {
                         scope.launch {
+                            onFailedCountChange(0)
                             state.goToProcessing()
                             exportPhotos(
                                 state = state,
@@ -403,6 +415,7 @@ private fun WizardStepContent(
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
+                                    onFailedCountChange(processedPhotos.count { it.outputPath.startsWith("ERROR:") })
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
@@ -435,6 +448,7 @@ private fun WizardStepContent(
                 currentBatchIndex = state.currentImageIndex.value,
                 batchTotal = state.batchTotal,
                 skippedCount = state.skippedBatchIndices.value.size,
+                failedCount = failedExportCount,
                 onDone = {
                     state.resetToImportStep()
                     onCancel()
