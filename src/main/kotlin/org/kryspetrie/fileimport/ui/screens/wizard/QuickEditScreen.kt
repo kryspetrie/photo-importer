@@ -737,6 +737,25 @@ fun QuickEditScreen(
                                                     style = MaterialTheme.typography.labelSmall,
                                                 )
                                             }
+                                            TextButton(
+                                                onClick = {
+                                                    state.updatePhotoConfiguration(box.id) {
+                                                        it.copy(
+                                                            backImageMode = null,
+                                                            backImageSourcePath = null,
+                                                            backCropNormalized = null,
+                                                            backCropRotation = 0,
+                                                        )
+                                                    }
+                                                },
+                                                contentPadding = PaddingValues(0.dp),
+                                            ) {
+                                                Text(
+                                                    "Remove",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.error,
+                                                )
+                                            }
                                         }
                                     }
                                 } else {
