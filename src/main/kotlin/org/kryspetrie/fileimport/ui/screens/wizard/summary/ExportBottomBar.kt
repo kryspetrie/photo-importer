@@ -56,7 +56,7 @@ private fun ExportButtons(
     enabled: Boolean,
 ) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = onBack, modifier = Modifier.height(48.dp)) {
+        OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text("Back")
@@ -65,12 +65,12 @@ private fun ExportButtons(
             OutlinedButton(
                 onClick = onSkipMetadata,
                 enabled = enabled,
-                modifier = Modifier.height(48.dp),
+                modifier = Modifier.height(40.dp),
             ) {
                 Text("Export Now")
             }
         }
-        Button(onClick = onExport, enabled = enabled, modifier = Modifier.height(48.dp)) {
+        Button(onClick = onExport, enabled = enabled, modifier = Modifier.height(40.dp)) {
             Text("Metadata")
             Spacer(Modifier.width(4.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))

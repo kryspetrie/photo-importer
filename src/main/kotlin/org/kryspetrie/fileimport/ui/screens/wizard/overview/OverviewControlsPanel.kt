@@ -18,7 +18,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -53,15 +53,11 @@ private fun ModeControlsRow(
         // 4-Point mode toggle
         when (wizardMode) {
             WizardMode.FOUR_POINT -> {
-                Button(
+                OutlinedButton(
                     onClick = {
                         state.exitFourPointMode()
                         refocus()
                     },
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.tertiary
-                        ),
                     modifier = Modifier.height(40.dp),
                 ) {
                     Text("Cancel 4-Point")
@@ -85,15 +81,11 @@ private fun ModeControlsRow(
         // Add Box mode toggle (2-click rectangle)
         when (wizardMode) {
             WizardMode.FOUR_POINT -> {
-                Button(
+                OutlinedButton(
                     onClick = {
                         state.exitFourPointMode()
                         refocus()
                     },
-                    colors =
-                        ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.secondary
-                        ),
                     modifier = Modifier.height(40.dp),
                 ) {
                     Text("Cancel")

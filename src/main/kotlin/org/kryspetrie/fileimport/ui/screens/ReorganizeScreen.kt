@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -150,7 +150,11 @@ fun ReorganizeScreen(
                     }
                 }
             },
-            confirmButton = { Button(onClick = { undoJournal(journal) }) { Text("Undo") } },
+            confirmButton = {
+                TextButton(onClick = { undoJournal(journal) }) {
+                    Text("Undo", color = MaterialTheme.colorScheme.error)
+                }
+            },
             dismissButton = {
                 TextButton(onClick = { viewModel.showUndoConfirm = null }) { Text("Cancel") }
             },

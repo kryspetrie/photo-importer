@@ -3,8 +3,6 @@ package org.kryspetrie.fileimport.ui.screens.duplicatescanner
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -51,16 +49,12 @@ fun DuplicateResolveConfirmDialog(
             }
         },
         confirmButton = {
-            Button(
-                onClick = onConfirm,
-                colors =
-                    ButtonDefaults.buttonColors(
-                        containerColor =
-                            if (moveToTrash) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error
-                    ),
-            ) {
-                Text("Resolve")
+            TextButton(onClick = onConfirm) {
+                Text(
+                    "Resolve",
+                    color = if (moveToTrash) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.error,
+                )
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },

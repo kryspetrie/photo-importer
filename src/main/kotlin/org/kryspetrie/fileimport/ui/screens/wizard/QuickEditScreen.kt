@@ -527,7 +527,7 @@ fun QuickEditScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // Back button
-                    OutlinedButton(onClick = onBack) {
+                    OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Back")

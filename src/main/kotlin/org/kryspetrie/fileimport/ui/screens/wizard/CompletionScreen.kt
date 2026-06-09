@@ -428,7 +428,7 @@ private fun FinishedActions(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Button(onClick = onDone, modifier = Modifier.fillMaxWidth(0.5f).height(48.dp)) {
+        Button(onClick = onDone, modifier = Modifier.fillMaxWidth(0.5f).height(40.dp)) {
             Text("Done")
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

@@ -210,7 +210,7 @@ fun PhotoScanMetadataScreen(
                 )
             },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
                         selectedPhoto?.configuration?.let { onApplyToAll(it) }
                         showApplyToAllDialog = false
