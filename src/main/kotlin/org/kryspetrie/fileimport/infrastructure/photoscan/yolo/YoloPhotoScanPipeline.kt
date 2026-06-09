@@ -3,6 +3,7 @@
 package org.kryspetrie.fileimport.infrastructure.photoscan.yolo
 
 import java.awt.image.BufferedImage
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.max
@@ -355,8 +356,7 @@ class YoloPhotoScanPipeline(
         // Use 0.5 visibility threshold for warp scoring.
         // Corners with vis < 0.5 are likely at wrong positions and should
         // cause infinite warp score, triggering recovery.
-        val WARP_VIS_THRESH = 0.5f
-        val visCount = result.keypoints.count { it.visibility >= WARP_VIS_THRESH }
+        val visCount = result.keypoints.count { it.visibility >= 0.5f }
         if (visCount < 4) return Float.POSITIVE_INFINITY
 
         val ul = kpMap["UL"]!!
@@ -469,7 +469,7 @@ class YoloPhotoScanPipeline(
         // We must convert to mutable keypoints ONCE per photo, then carry through
         // both passes, writing back to results after each pass so pass 1 sees
         // pass 0 improvements.
-        val RESCUE_VIS_THRESHOLD = 0.7f
+        val rescueVisThreshold = 0.7f
 
         // Create mutable keypoints for each result that needs rescue.
         // These persist across both passes, exactly like Python's in-place dict modification.
@@ -505,7 +505,7 @@ class YoloPhotoScanPipeline(
                     // Skip high-visibility corners — matches Python's
                     // `if kp["visibility"] >= vis_threshold: continue`
                     // where vis_threshold = _RESCUE_VIS_THRESHOLD = 0.7
-                    if (mkp.visibility >= RESCUE_VIS_THRESHOLD) continue
+                    if (mkp.visibility >= rescueVisThreshold) continue
                     val cx = mkp.x
                     val cy = mkp.y
                     val vis = mkp.visibility
@@ -513,7 +513,7 @@ class YoloPhotoScanPipeline(
                     // --- Enhancement: Neighbor-anchored projection ---
                     // This uses the CURRENT (possibly pass-0-updated) positions of neighbors
                     appLogger?.info(
-                        "[RESCUE] $cornerName pass=$passNum vis=${String.format("%.2f", mkp.visibility)} pos=(${mkp.x.toInt()},${mkp.y.toInt()})"
+                        "[RESCUE] $cornerName pass=$passNum vis=${String.format(Locale.US, "%.2f", mkp.visibility)} pos=(${mkp.x.toInt()},${mkp.y.toInt()})"
                     )
                     val proj = projectFromNeighbors(mutKps, kpIdx)
                     val projX = proj.projX
@@ -523,7 +523,7 @@ class YoloPhotoScanPipeline(
 
                     val useProjection = projConf >= NEIGHBOR_VIS_THRESHOLD
                     appLogger?.info(
-                        "[RESCUE] $cornerName projectedAxis=$projectedAxis projConf=${String.format("%.2f", projConf)} useProjection=$useProjection proj=(${projX?.toInt()},${projY?.toInt()})"
+                        "[RESCUE] $cornerName projectedAxis=$projectedAxis projConf=${String.format(Locale.US, "%.2f", projConf)} useProjection=$useProjection proj=(${projX?.toInt()},${projY?.toInt()})"
                     )
 
                     val searchCx: Float

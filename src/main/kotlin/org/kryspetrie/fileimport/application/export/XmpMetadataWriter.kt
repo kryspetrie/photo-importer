@@ -3,6 +3,7 @@ package org.kryspetrie.fileimport.application.export
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.util.Locale
 import org.apache.commons.imaging.Imaging
 import org.apache.commons.imaging.formats.jpeg.xmp.JpegXmpRewriter
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
@@ -111,5 +112,5 @@ $mwgRsXmp
             .replace("'", "&apos;")
 
     /** Formats a double to 6 decimal places for MWG-RS coordinates. */
-    fun formatDecimal(value: Double): String = String.format("%.6f", value)
+    fun formatDecimal(value: Double): String = String.format(Locale.US, "%.6f", value)
 }

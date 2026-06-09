@@ -223,28 +223,28 @@ class FaceRegionTransformer : FaceRegionTransformerPort {
             pairs.add(AssociatedPair(srcCorners[i].copy(), dstCorners[i].copy()))
         }
         val estimator: HomographyDLT_to_Epipolar = FactoryMultiView.homographyDLT(true)
-        val H = DMatrixRMaj(3, 3)
-        if (!estimator.process(pairs, H)) {
-            H[0, 0] = 1.0
-            H[0, 1] = 0.0
-            H[0, 2] = 0.0
-            H[1, 0] = 0.0
-            H[1, 1] = 1.0
-            H[1, 2] = 0.0
-            H[2, 0] = 0.0
-            H[2, 1] = 0.0
-            H[2, 2] = 1.0
+        val homography = DMatrixRMaj(3, 3)
+        if (!estimator.process(pairs, homography)) {
+            homography[0, 0] = 1.0
+            homography[0, 1] = 0.0
+            homography[0, 2] = 0.0
+            homography[1, 0] = 0.0
+            homography[1, 1] = 1.0
+            homography[1, 2] = 0.0
+            homography[2, 0] = 0.0
+            homography[2, 1] = 0.0
+            homography[2, 2] = 1.0
         }
-        return H
+        return homography
     }
 
     /** Applies a 3×3 homography to transform a source-pixel point. */
-    internal fun transformPoint(x: Double, y: Double, H: DMatrixRMaj): Point2D_F64 {
-        val w = H[2, 0] * x + H[2, 1] * y + H[2, 2]
+    internal fun transformPoint(x: Double, y: Double, h: DMatrixRMaj): Point2D_F64 {
+        val w = h[2, 0] * x + h[2, 1] * y + h[2, 2]
         if (w == 0.0) return Point2D_F64(Double.NaN, Double.NaN)
         return Point2D_F64(
-            (H[0, 0] * x + H[0, 1] * y + H[0, 2]) / w,
-            (H[1, 0] * x + H[1, 1] * y + H[1, 2]) / w,
+            (h[0, 0] * x + h[0, 1] * y + h[0, 2]) / w,
+            (h[1, 0] * x + h[1, 1] * y + h[1, 2]) / w,
         )
     }
 

@@ -2046,8 +2046,8 @@ private fun SubjectsSection(
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                         Text(
-                                            "(${String.format("%.0f%%", region.x * 100)}," +
-                                                " ${String.format("%.0f%%", region.y * 100)})",
+                                            "(${kotlin.math.round(region.x * 100).toInt()}%," +
+                                                " ${kotlin.math.round(region.y * 100).toInt()}%)",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )

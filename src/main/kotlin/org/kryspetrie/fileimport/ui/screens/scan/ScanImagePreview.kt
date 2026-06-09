@@ -59,8 +59,8 @@ fun ScanImagePreview(
                             detectDragGestures { change, _ ->
                                 if (draggedCornerPhotoIndex != null && draggedCornerName != null) {
                                     onCornerDrag(
-                                        draggedCornerPhotoIndex!!,
-                                        draggedCornerName!!,
+                                        draggedCornerPhotoIndex,
+                                        draggedCornerName,
                                         change.position.x,
                                         change.position.y,
                                     )

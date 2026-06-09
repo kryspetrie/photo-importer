@@ -269,8 +269,9 @@ class YoloCornerRegressionService(
             // confidence — the projected reference guides us to the right photo.
             val proj = projectedRefs[cornerName]
             val hasProjection = proj != null && proj.confidence > 0f
-            val projRefX = if (hasProjection) proj!!.projX else null
-            val projRefY = if (hasProjection) proj.projY else null
+            val projNonNull = proj?.takeIf { it.confidence > 0f }
+            val projRefX = projNonNull?.projX
+            val projRefY = projNonNull?.projY
 
             var bestResult: Triple<Float, Float, Float>? = null
 
@@ -331,7 +332,7 @@ class YoloCornerRegressionService(
                             bestDetByPose != null &&
                             bestDetByProj != bestDetByPose -> {
                             // Different detections: prefer higher confidence
-                            if (bestDetByProj!!.confidence >= bestDetByPose!!.confidence) {
+                            if (bestDetByProj.confidence >= bestDetByPose.confidence) {
                                 bestDetByProj
                             } else {
                                 bestDetByPose

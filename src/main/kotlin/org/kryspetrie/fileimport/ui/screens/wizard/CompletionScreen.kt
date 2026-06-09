@@ -219,6 +219,7 @@ private sealed class PreviewState {
 }
 
 /** Shows a small preview of the next photo to be processed. Clicking opens fullscreen. */
+@Suppress("InjectDispatcher")
 @Composable
 private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
     var previewState by remember { mutableStateOf<PreviewState>(PreviewState.Loading) }

@@ -9,18 +9,6 @@ import org.kryspetrie.fileimport.ui.screens.components.ImportProgressInline
 import org.kryspetrie.fileimport.ui.screens.components.ImportResultInline
 import org.kryspetrie.fileimport.ui.screens.components.ProgressCard
 
-enum class MediaImportFlowStep {
-    SETUP,
-    SCANNING,
-    SELECTING,
-    INDEXING,
-    CHECKING_DUPES,
-    DUPE_REVIEW,
-    PREVIEW,
-    IMPORTING,
-    COMPLETE,
-}
-
 @Composable
 fun MediaImportProgressView(
     flowStep: MediaImportFlowStep,

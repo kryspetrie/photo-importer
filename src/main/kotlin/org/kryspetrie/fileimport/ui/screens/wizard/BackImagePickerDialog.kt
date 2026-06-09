@@ -83,6 +83,7 @@ import kotlinx.coroutines.withContext
  *   confirmed
  * @param onDismiss Called when cancelled
  */
+@Suppress("InjectDispatcher")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackImagePickerDialog(
@@ -97,6 +98,7 @@ fun BackImagePickerDialog(
     var cropRect by remember { mutableStateOf<Rect?>(null) }
     @Suppress("VarCouldBeVal") // Compose mutable state delegates require var
     var isDragging by remember { mutableStateOf(false) }
+    @Suppress("VarCouldBeVal") // Compose mutable state delegate
     var dragStart by remember { mutableStateOf<Offset?>(null) }
     var viewSize by remember { mutableStateOf(Pair(600, 400)) }
     var showBatchPicker by remember {
