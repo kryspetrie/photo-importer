@@ -1015,7 +1015,7 @@ private fun MetadataEditorPane(
                     sourceExif = sourceExif,
                     onSearchLocation =
                         if (onSearchLocation != null) {
-                            { onSearchLocation!!(selectedIndex) }
+                            { onSearchLocation(selectedIndex) }
                         } else null,
                 )
 
