@@ -85,7 +85,7 @@ class PhotoScanDetectorService(
     ): List<DetectedPhoto> {
         val pipeline =
             yoloPipeline
-                ?: throw IllegalStateException("YOLO detection not available — models not loaded")
+                ?: error("YOLO detection not available — models not loaded")
         return pipeline.detectPhotos(image, config)
     }
 

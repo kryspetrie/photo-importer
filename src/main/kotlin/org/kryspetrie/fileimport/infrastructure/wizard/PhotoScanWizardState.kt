@@ -667,9 +667,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         }
     }
 
-    /** Minimum face region dimension as fraction of image size. */
-    private val MIN_FACE_REGION_SIZE = 0.03
-
     // ========== Workflow ==========
 
     private val _currentStep = MutableStateFlow(WizardStep.IMPORT)

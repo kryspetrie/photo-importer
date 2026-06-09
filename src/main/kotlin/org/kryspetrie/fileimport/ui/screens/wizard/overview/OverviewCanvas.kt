@@ -92,7 +92,11 @@ fun OverviewCanvas(
  * no-undo variants so intermediate positions don't fill the undo buffer. One undo = one complete
  * drag operation.
  */
-private fun canvasPointerHandler(state: PhotoScanWizardState, wizardMode: WizardMode, isShiftHeld: () -> Boolean): Modifier =
+private fun canvasPointerHandler(
+    state: PhotoScanWizardState,
+    wizardMode: WizardMode,
+    isShiftHeld: () -> Boolean,
+): Modifier =
     Modifier.pointerInput(state, wizardMode) {
         awaitPointerEventScope {
             var isDragging = false

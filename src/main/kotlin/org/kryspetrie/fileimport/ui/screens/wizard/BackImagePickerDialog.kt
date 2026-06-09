@@ -95,14 +95,14 @@ fun BackImagePickerDialog(
     var backImage by remember { mutableStateOf<BufferedImage?>(null) }
     var backImageMode by remember { mutableStateOf("combine") }
     var cropRect by remember { mutableStateOf<Rect?>(null) }
+    @Suppress("VarCouldBeVal") // Compose mutable state delegates require var
     var isDragging by remember { mutableStateOf(false) }
     var dragStart by remember { mutableStateOf<Offset?>(null) }
-    var dragCurrent by remember { mutableStateOf<Offset?>(null) }
     var viewSize by remember { mutableStateOf(Pair(600, 400)) }
     var showBatchPicker by remember {
         mutableStateOf(batchFiles != null && batchFiles.isNotEmpty())
     }
-    var showFilePicker by remember { mutableStateOf(false) }
+    @Suppress("VarCouldBeVal") // Compose mutable state delegate
     var cropRotation by remember { mutableStateOf(0) }
 
     // Load image when file is selected

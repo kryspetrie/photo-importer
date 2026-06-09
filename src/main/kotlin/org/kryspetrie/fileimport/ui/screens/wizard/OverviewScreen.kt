@@ -166,7 +166,12 @@ fun OverviewScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             title = { Text("Delete Photo") },
-            text = { Text("Remove this photo box? This cannot be undone, but you can use Undo (Ctrl+Z) to restore it.") },
+            text = {
+                Text(
+                    "Remove this photo box? This cannot be undone, " +
+                        "but you can use Undo (Ctrl+Z) to restore it."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {

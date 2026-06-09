@@ -268,14 +268,14 @@ class YoloCornerRegressionService(
             // pose model places the corner on the wrong photo but with high
             // confidence — the projected reference guides us to the right photo.
             val proj = projectedRefs[cornerName]
-            val kpVis = kpsByName[cornerName]?.visibility ?: 0f
             val hasProjection = proj != null && proj.confidence > 0f
             val projRefX = if (hasProjection) proj!!.projX else null
             val projRefY = if (hasProjection) proj.projY else null
 
             var bestResult: Triple<Float, Float, Float>? = null
 
-            for (iteration in 0 until (iterations + maxExtraIters)) {
+            @Suppress("UNUSED_VARIABLE")
+            for (iterIdx in 0 until (iterations + maxExtraIters)) {
                 val (crop, offsets) = cornerCrop(image, ax, ay, cropSize)
                 val offsetX = offsets.first
                 val offsetY = offsets.second

@@ -1083,7 +1083,10 @@ private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () ->
             onDismissRequest = { showCancelConfirm = false },
             title = { Text("Cancel Export?") },
             text = {
-                Text("Canceling will discard all progress and return to the import screen. Any photos already exported to disk will remain.")
+                Text(
+                    "Canceling will discard all progress and return to the import screen. " +
+                        "Any photos already exported to disk will remain."
+                )
             },
             confirmButton = {
                 TextButton(

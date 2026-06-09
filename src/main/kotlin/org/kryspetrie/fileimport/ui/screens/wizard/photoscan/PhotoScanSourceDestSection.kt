@@ -149,7 +149,7 @@ fun DestinationSelectionSection(
                         )
                     !destValid && destCanCreate ->
                         Text("Folder will be created", color = MaterialTheme.colorScheme.primary)
-                    else -> Text(destDirName ?: "")
+                    else -> Text(destDirName.orEmpty())
                 }
             },
         )

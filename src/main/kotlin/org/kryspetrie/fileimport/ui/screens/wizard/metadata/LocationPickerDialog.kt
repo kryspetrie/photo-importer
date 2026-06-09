@@ -205,7 +205,7 @@ fun LocationPickerDialog(
                 // Error
                 AnimatedVisibility(visible = errorMessage != null) {
                     Text(
-                        errorMessage ?: "",
+                        errorMessage.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )

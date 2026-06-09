@@ -151,7 +151,10 @@ private fun SummaryTopAppBar(
             onDismissRequest = { showResetConfirmDialog = false },
             title = { Text("Reset All Rotations?") },
             text = {
-                Text("This will clear all rotation and correction settings for $photoCount photo(s). You can still use Undo after resetting.")
+                Text(
+                    "This will clear all rotation and correction settings for " +
+                        "$photoCount photo(s). You can still use Undo after resetting."
+                )
             },
             confirmButton = {
                 TextButton(

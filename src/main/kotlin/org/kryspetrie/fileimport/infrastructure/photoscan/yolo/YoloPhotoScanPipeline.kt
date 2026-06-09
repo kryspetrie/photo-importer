@@ -785,7 +785,7 @@ class YoloPhotoScanPipeline(
             val yLo = max(0, yCenter - stripHalfWidth)
             val yHi = min(imgH, yCenter + stripHalfWidth + 1)
 
-            var xCenter = nnOtherAxis?.roundToInt() ?: (imgW / 2)
+            val xCenter = nnOtherAxis?.roundToInt() ?: (imgW / 2)
             var xLo = max(0, xCenter - perpendicularRange)
             var xHi = min(imgW, xCenter + perpendicularRange)
 
@@ -874,7 +874,7 @@ class YoloPhotoScanPipeline(
             val xLo = max(0, xCenter - stripHalfWidth)
             val xHi = min(imgW, xCenter + stripHalfWidth + 1)
 
-            var yCenter = nnOtherAxis?.roundToInt() ?: (imgH / 2)
+            val yCenter = nnOtherAxis?.roundToInt() ?: (imgH / 2)
             var yLo = max(0, yCenter - perpendicularRange)
             var yHi = min(imgH, yCenter + perpendicularRange)
 
@@ -1199,7 +1199,7 @@ class YoloPhotoScanPipeline(
         }
 
         // Try orientation-aware filtering first, fall back to angle-only if too few lines
-        var lines = mutableListOf<FloatArray>()
+        val lines = mutableListOf<FloatArray>()
         if (hEdgesOriented.size >= 3 && vEdgesOriented.size >= 3) {
             val hLine = fitWeightedLine(hEdgesOriented)
             val vLine = fitWeightedLine(vEdgesOriented)
@@ -1473,7 +1473,6 @@ class YoloPhotoScanPipeline(
     )
 
     companion object {
-        private const val VIS_THRESH_DEDUP = 0.25f
         private const val NEIGHBOR_VIS_THRESHOLD = 0.5f
         private const val RESCUE_EDGE_THRESHOLD = 50f
         private const val RESCUE_MAX_SHIFT_RATIO = 0.3f

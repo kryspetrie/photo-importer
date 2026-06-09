@@ -113,7 +113,11 @@ fun CompletionScreen(
                         if (failedCount > 0) "$photoCount photo(s) exported ($failedCount failed)"
                         else "$photoCount photo(s) exported",
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (failedCount > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                        color = if (failedCount > 0) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
                     )
 
                     if (exportDestination.isNotBlank()) {

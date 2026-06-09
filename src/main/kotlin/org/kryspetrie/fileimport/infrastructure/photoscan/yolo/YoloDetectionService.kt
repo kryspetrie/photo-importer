@@ -121,7 +121,6 @@ class YoloDetectionService(private val env: OrtEnvironment, private val session:
         // Detect output format from shape
         // Legacy: [1, 5, N] — transposed, 5 rows for cx,cy,w,h,conf
         // NMS-enabled: [1, N, 6] — row-oriented, 6 cols for x1,y1,x2,y2,conf,cls
-        val shape1 = output.size
         val shape2 = output[0].size
         val shape3 = if (output[0].isNotEmpty()) output[0][0].size else 0
 
@@ -175,7 +174,6 @@ class YoloDetectionService(private val env: OrtEnvironment, private val session:
         } else {
             // NMS-enabled format: [1, N, 6] — x1, y1, x2, y2, conf, cls
             val nDetections = shape2
-            val cols = shape3
 
             for (i in 0 until nDetections) {
                 val conf = output[0][i][4]
@@ -211,7 +209,6 @@ class YoloDetectionService(private val env: OrtEnvironment, private val session:
 
             val keep = nms(allBoxes, allConfs, (0 until validIndices.size).toList(), iouThreshold)
             for (idx in keep) {
-                val origIdx = validIndices[idx]
                 detections.add(
                     Detection(
                         x1 = max(0f, allBoxes[idx * 4]),

@@ -107,7 +107,6 @@ class DuplicateScannerService(
         withContext(dispatcherProvider.io) {
             val allImages = listOf(group.primaryImage) + group.duplicateImages
             val keepId = pickKeeper(allImages.map { it.toResolvableDuplicate() }, action)
-            val keep = allImages.first { it.id == keepId }
             val toRemove = allImages.filter { it.id != keepId }
 
             var removed = 0

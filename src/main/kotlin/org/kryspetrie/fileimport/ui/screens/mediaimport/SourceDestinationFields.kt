@@ -56,7 +56,7 @@ fun SourceDestinationFields(
                         )
                     else ->
                         Text(
-                            sourceDirName ?: "",
+                            sourceDirName.orEmpty(),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF2E7D32),
                         )
