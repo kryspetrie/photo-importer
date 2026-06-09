@@ -5,6 +5,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -14,6 +17,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.input.key.isShiftPressed
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import java.awt.image.BufferedImage
@@ -42,7 +47,21 @@ fun OverviewCanvas(
     val zoomController by state.zoomController.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
 
-    Canvas(modifier = Modifier.fillMaxSize().then(canvasPointerHandler(state, wizardMode))) {
+    // Track Shift key state for scroll modifiers (e.g., Shift+scroll to rotate).
+    // AWT Toolkit.getLockingKeyState(VK_SHIFT) throws "Invalid key for toolkit" on some platforms
+    // because Shift is not a locking/toggle key. We track it via Compose key events instead.
+    var isShiftHeld by remember { mutableStateOf(false) }
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxSize()
+            .onPreviewKeyEvent { keyEvent ->
+                // Track Shift key state from any key event
+                isShiftHeld = keyEvent.isShiftPressed
+                false // Don't consume — let other handlers process the event
+            }
+            .then(canvasPointerHandler(state, wizardMode) { isShiftHeld })
+    ) {
         drawCanvasContent(
             image = image,
             boundingBoxList = boundingBoxList,
@@ -73,7 +92,7 @@ fun OverviewCanvas(
  * no-undo variants so intermediate positions don't fill the undo buffer. One undo = one complete
  * drag operation.
  */
-private fun canvasPointerHandler(state: PhotoScanWizardState, wizardMode: WizardMode): Modifier =
+private fun canvasPointerHandler(state: PhotoScanWizardState, wizardMode: WizardMode, isShiftHeld: () -> Boolean): Modifier =
     Modifier.pointerInput(state, wizardMode) {
         awaitPointerEventScope {
             var isDragging = false
@@ -222,14 +241,11 @@ private fun canvasPointerHandler(state: PhotoScanWizardState, wizardMode: Wizard
                     PointerEventType.Scroll -> {
                         val scrollDelta = event.changes.firstOrNull()?.scrollDelta
                         if (scrollDelta != null) {
-                            val isShiftHeld =
-                                java.awt.Toolkit.getDefaultToolkit()
-                                    .getLockingKeyState(java.awt.event.KeyEvent.VK_SHIFT)
                             val boundingBoxList = state.boundingBoxList.value
                             val zoomCtrl = state.zoomController.value
                             val hoveredBoxIndex = findBoxHit(pos, boundingBoxList, zoomCtrl)
                             when {
-                                isShiftHeld && hoveredBoxIndex >= 0 -> {
+                                isShiftHeld() && hoveredBoxIndex >= 0 -> {
                                     // Shift+scroll over box: rotate the box around its center
                                     val rotationStep = 2.0 // degrees per scroll tick
                                     state.selectBox(hoveredBoxIndex)
