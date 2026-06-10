@@ -80,7 +80,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.Popup
 import java.awt.image.BufferedImage
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
@@ -351,52 +350,54 @@ fun MetadataScreen(
                 }
             }
         }
-    } else if (showFullscreenPreview) {
+    }
 
-        // Location picker popup
-        if (showLocationPicker && locationPickerTargetIndex != null) {
-            // Full-screen overlay for the map-based location picker
-            Dialog(
-                onDismissRequest = {
-                    showLocationPicker = false
-                    locationPickerTargetIndex = null
-                },
-                properties = DialogProperties(usePlatformDefaultWidth = false),
+    // Location picker popup — independent of other overlays (Compose Dialogs are window-level)
+    if (showLocationPicker && locationPickerTargetIndex != null) {
+        Dialog(
+            onDismissRequest = {
+                showLocationPicker = false
+                locationPickerTargetIndex = null
+            },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                tonalElevation = 8.dp,
+                shape = MaterialTheme.shapes.medium,
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    tonalElevation = 8.dp,
-                    shape = MaterialTheme.shapes.medium,
-                ) {
-                    LocationPickerDialog(
-                        locationSearchService = locationSearchService,
-                        geocodingPort = geocodingPort,
-                        dispatcherProvider = dispatcherProvider,
-                        onLocationSelected = { result ->
-                            val idx = locationPickerTargetIndex
-                            if (idx != null && idx < boundingBoxList.size()) {
-                                val boxId = boundingBoxList.boxes[idx].id
-                                state.updatePhotoConfiguration(boxId) {
-                                    it.copy(
-                                        city = result.city ?: it.city,
-                                        state = result.state ?: it.state,
-                                        country = result.country ?: it.country,
-                                        gpsLatitude = result.latitude.toString(),
-                                        gpsLongitude = result.longitude.toString(),
-                                    )
-                                }
+                LocationPickerDialog(
+                    locationSearchService = locationSearchService,
+                    geocodingPort = geocodingPort,
+                    dispatcherProvider = dispatcherProvider,
+                    onLocationSelected = { result ->
+                        val idx = locationPickerTargetIndex
+                        if (idx != null && idx < boundingBoxList.size()) {
+                            val boxId = boundingBoxList.boxes[idx].id
+                            state.updatePhotoConfiguration(boxId) {
+                                it.copy(
+                                    city = result.city ?: it.city,
+                                    state = result.state ?: it.state,
+                                    country = result.country ?: it.country,
+                                    gpsLatitude = result.latitude.toString(),
+                                    gpsLongitude = result.longitude.toString(),
+                                )
                             }
-                            showLocationPicker = false
-                            locationPickerTargetIndex = null
-                        },
-                        onDismiss = {
-                            showLocationPicker = false
-                            locationPickerTargetIndex = null
-                        },
-                    )
-                }
+                        }
+                        showLocationPicker = false
+                        locationPickerTargetIndex = null
+                    },
+                    onDismiss = {
+                        showLocationPicker = false
+                        locationPickerTargetIndex = null
+                    },
+                )
             }
         }
+    }
+
+    // Fullscreen photo preview — independent of other overlays
+    if (showFullscreenPreview) {
         fullscreenPreviewIndex?.let { idx ->
             val box = boundingBoxList.boxes[idx]
             val config = photoConfigurations[box.id] ?: PhotoConfiguration()
@@ -443,14 +444,37 @@ fun MetadataScreen(
             TopAppBar(
                 title = { Text("Metadata") },
                 actions = {
-                    Button(
-                        onClick = onNext,
-                        enabled = boundingBoxList.size() > 0,
-                        modifier = Modifier.height(32.dp),
-                    ) {
-                        Text("Next", style = MaterialTheme.typography.labelSmall)
-                        Spacer(Modifier.width(4.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(16.dp))
+                    // Photo navigation (prev/next) at top for easy access
+                    if (boundingBoxList.size() > 1) {
+                        val currentIdx =
+                            if (selectedIndices.size == 1) selectedIndices.first() else -1
+                        OutlinedButton(
+                            onClick = {
+                                if (currentIdx > 0) state.selectSingleMetadata(currentIdx - 1)
+                            },
+                            enabled = currentIdx > 0,
+                            modifier = Modifier.height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                        ) {
+                            Text("◄ Prev", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Text(
+                            if (currentIdx >= 0)
+                                "Photo ${currentIdx + 1} of ${boundingBoxList.size()}"
+                            else "${boundingBoxList.size()} photos",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                if (currentIdx < boundingBoxList.size() - 1 && currentIdx >= 0)
+                                    state.selectSingleMetadata(currentIdx + 1)
+                            },
+                            enabled = currentIdx >= 0 && currentIdx < boundingBoxList.size() - 1,
+                            modifier = Modifier.height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp),
+                        ) {
+                            Text("Next ►", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 },
             )
@@ -468,44 +492,16 @@ fun MetadataScreen(
                         Text("Back")
                     }
 
-                    // Photo navigation (prev/next)
-                    if (boundingBoxList.size() > 1) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            val currentIdx =
-                                if (selectedIndices.size == 1) selectedIndices.first() else -1
-                            OutlinedButton(
-                                onClick = {
-                                    if (currentIdx > 0) state.selectSingleMetadata(currentIdx - 1)
-                                },
-                                enabled = currentIdx > 0,
-                                modifier = Modifier.height(32.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                            ) {
-                                Text("◄ Prev", style = MaterialTheme.typography.labelSmall)
-                            }
-                            Text(
-                                if (currentIdx >= 0)
-                                    "Photo ${currentIdx + 1} of ${boundingBoxList.size()}"
-                                else "${boundingBoxList.size()} photos",
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                            OutlinedButton(
-                                onClick = {
-                                    if (currentIdx < boundingBoxList.size() - 1 && currentIdx >= 0)
-                                        state.selectSingleMetadata(currentIdx + 1)
-                                },
-                                enabled = currentIdx >= 0 && currentIdx < boundingBoxList.size() - 1,
-                                modifier = Modifier.height(32.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                            ) {
-                                Text("Next ►", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    } else {
-                        Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.weight(1f))
+
+                    Button(
+                        onClick = onNext,
+                        enabled = boundingBoxList.size() > 0,
+                        modifier = Modifier.height(40.dp),
+                    ) {
+                        Text("Next")
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
                     }
                 }
             }

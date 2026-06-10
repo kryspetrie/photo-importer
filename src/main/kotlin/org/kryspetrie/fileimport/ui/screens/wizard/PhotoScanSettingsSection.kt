@@ -249,10 +249,7 @@ private fun ConflictResolutionField(
                     { onConfigChange(config.copy(conflictResolution = r)) },
                 )
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        r.displayName,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    Text(r.displayName, style = MaterialTheme.typography.bodySmall)
                     Text(
                         r.description,
                         style = MaterialTheme.typography.labelSmall,
@@ -265,20 +262,22 @@ private fun ConflictResolutionField(
 }
 
 private val ConflictResolution.displayName: String
-    get() = when (this) {
-        ConflictResolution.RENAME -> "Rename"
-        ConflictResolution.SKIP -> "Skip"
-        ConflictResolution.REPLACE -> "Replace"
-        ConflictResolution.ASK_USER -> "Ask me"
-    }
+    get() =
+        when (this) {
+            ConflictResolution.RENAME -> "Rename"
+            ConflictResolution.SKIP -> "Skip"
+            ConflictResolution.REPLACE -> "Replace"
+            ConflictResolution.ASK_USER -> "Ask me"
+        }
 
 private val ConflictResolution.description: String
-    get() = when (this) {
-        ConflictResolution.RENAME -> "Add a number suffix to avoid conflicts (safest)"
-        ConflictResolution.SKIP -> "Don't import if a file with the same name exists"
-        ConflictResolution.REPLACE -> "Overwrite existing files (irreversible!)"
-        ConflictResolution.ASK_USER -> "Prompt for each conflict individually"
-    }
+    get() =
+        when (this) {
+            ConflictResolution.RENAME -> "Add a number suffix to avoid conflicts (safest)"
+            ConflictResolution.SKIP -> "Don't import if a file with the same name exists"
+            ConflictResolution.REPLACE -> "Overwrite existing files (irreversible!)"
+            ConflictResolution.ASK_USER -> "Prompt for each conflict individually"
+        }
 
 @Composable
 private fun DateSourceField(
@@ -290,10 +289,7 @@ private fun DateSourceField(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(config.dateSource == s, { onConfigChange(config.copy(dateSource = s)) })
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        s.displayName,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    Text(s.displayName, style = MaterialTheme.typography.bodySmall)
                     Text(
                         s.description,
                         style = MaterialTheme.typography.labelSmall,
@@ -306,18 +302,21 @@ private fun DateSourceField(
 }
 
 private val DateSource.displayName: String
-    get() = when (this) {
-        DateSource.EXIF_DATE -> "EXIF date taken"
-        DateSource.FILE_MODIFIED_DATE -> "File modified"
-        DateSource.FILE_CREATED_DATE -> "File created"
-    }
+    get() =
+        when (this) {
+            DateSource.EXIF_DATE -> "EXIF date taken"
+            DateSource.FILE_MODIFIED_DATE -> "File modified"
+            DateSource.FILE_CREATED_DATE -> "File created"
+        }
 
 private val DateSource.description: String
-    get() = when (this) {
-        DateSource.EXIF_DATE -> "Use photo capture date from EXIF metadata (falls back to file date)"
-        DateSource.FILE_MODIFIED_DATE -> "Use file's last modified timestamp"
-        DateSource.FILE_CREATED_DATE -> "Use file creation timestamp (may change when copying)"
-    }
+    get() =
+        when (this) {
+            DateSource.EXIF_DATE ->
+                "Use photo capture date from EXIF metadata (falls back to file date)"
+            DateSource.FILE_MODIFIED_DATE -> "Use file's last modified timestamp"
+            DateSource.FILE_CREATED_DATE -> "Use file creation timestamp (may change when copying)"
+        }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

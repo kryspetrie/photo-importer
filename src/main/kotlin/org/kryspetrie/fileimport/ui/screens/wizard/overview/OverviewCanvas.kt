@@ -53,14 +53,14 @@ fun OverviewCanvas(
     var isShiftHeld by remember { mutableStateOf(false) }
 
     Canvas(
-        modifier = Modifier
-            .fillMaxSize()
-            .onPreviewKeyEvent { keyEvent ->
-                // Track Shift key state from any key event
-                isShiftHeld = keyEvent.isShiftPressed
-                false // Don't consume — let other handlers process the event
-            }
-            .then(canvasPointerHandler(state, wizardMode) { isShiftHeld })
+        modifier =
+            Modifier.fillMaxSize()
+                .onPreviewKeyEvent { keyEvent ->
+                    // Track Shift key state from any key event
+                    isShiftHeld = keyEvent.isShiftPressed
+                    false // Don't consume — let other handlers process the event
+                }
+                .then(canvasPointerHandler(state, wizardMode) { isShiftHeld })
     ) {
         drawCanvasContent(
             image = image,

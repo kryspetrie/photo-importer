@@ -161,7 +161,7 @@ private fun SummaryTopAppBar(
                     onClick = {
                         onClearAll()
                         showResetConfirmDialog = false
-                    },
+                    }
                 ) {
                     Text("Reset", color = MaterialTheme.colorScheme.error)
                 }

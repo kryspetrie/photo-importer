@@ -38,6 +38,10 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
  * 5. XMP face region write (via [XmpMetadataWriter])
  * 6. Filename conflict resolution (via [FilenameResolver])
  *
+ * Back-of-photo image handling:
+ * - `"combine"` mode: Stitches the back crop below the front photo with a 2px separator
+ * - `"append_back"` mode: Exports the back crop as a separate `_back.jpg` file
+ *
  * @see DetectedPhoto
  * @see PhotoScanConfiguration
  * @see ExifMetadataWriter
@@ -104,9 +108,10 @@ class PhotoScanExportService(
                         correctedImage
                     }
 
-                // Composite back image below the front image if configured
+                // Handle back-of-photo image based on mode
+                val backMode = photo.configuration.backImageMode
                 val compositeImage =
-                    if (photo.configuration.hasBackImage()) {
+                    if (backMode == "combine" && photo.configuration.hasBackImage()) {
                         compositeBackImage(finalImage, photo.configuration)
                     } else {
                         finalImage
@@ -142,6 +147,33 @@ class PhotoScanExportService(
                         fileSize = outputFile.length(),
                     )
                 )
+
+                // Export back image as separate "_back" file if mode is append_back
+                if (backMode == "append_back" && photo.configuration.hasBackImage()) {
+                    val backImageResult = prepareBackImage(photo.configuration)
+                    if (backImageResult != null) {
+                        val backFileName =
+                            if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}_back.jpg"
+                            else "${baseFileName}_back.jpg"
+                        val backResolvedPath =
+                            FilenameResolver.resolveFilenameConflict(
+                                File(destinationPath),
+                                backFileName,
+                            )
+                        val backOutputFile = File(backResolvedPath)
+                        writeJpegImage(backImageResult, backOutputFile)
+                        exportedFiles.add(
+                            ExportedFile(
+                                sourceFile = sourceFile,
+                                destinationPath = backResolvedPath,
+                                photoId = photo.id,
+                                width = backImageResult.width,
+                                height = backImageResult.height,
+                                fileSize = backOutputFile.length(),
+                            )
+                        )
+                    }
+                }
             } catch (e: Exception) {
                 errors.add("Failed to export photo ${index + 1}: ${e.message}")
             }
@@ -190,8 +222,10 @@ class PhotoScanExportService(
                     correctedImage
                 }
 
+            // Handle back-of-photo image based on mode
+            val backMode = detectedPhoto.configuration.backImageMode
             val compositeImage =
-                if (detectedPhoto.configuration.hasBackImage()) {
+                if (backMode == "combine" && detectedPhoto.configuration.hasBackImage()) {
                     compositeBackImage(finalImage, detectedPhoto.configuration)
                 } else {
                     finalImage
@@ -213,6 +247,20 @@ class PhotoScanExportService(
                 preRotationHeight = correctedImage.height,
             )
 
+            // Export back image as separate "_back" file if mode is append_back
+            if (backMode == "append_back" && detectedPhoto.configuration.hasBackImage()) {
+                val backImageResult = prepareBackImage(detectedPhoto.configuration)
+                if (backImageResult != null) {
+                    val backResolvedPath =
+                        FilenameResolver.resolveFilenameConflict(
+                            File(destinationPath),
+                            "${baseFileName}_back.jpg",
+                        )
+                    val backOutputFile = File(backResolvedPath)
+                    writeJpegImage(backImageResult, backOutputFile)
+                }
+            }
+
             SingleExportResult(
                 success = true,
                 destinationPath = resolvedPath,
@@ -228,6 +276,26 @@ class PhotoScanExportService(
                 error = e.message,
             )
         }
+    }
+
+    /**
+     * Writes an image to file as a JPEG with the configured quality. Used for back-of-photo images
+     * that don't need metadata.
+     */
+    private fun writeJpegImage(image: BufferedImage, outputFile: File) {
+        outputFile.parentFile?.mkdirs()
+        val writer = ImageIO.getImageWritersByFormatName("jpg").next()
+        val writeParam =
+            JPEGImageWriteParam(Locale.US).apply {
+                compressionMode = ImageWriteParam.MODE_EXPLICIT
+                compressionQuality = jpegQuality
+            }
+        val fileOs = ImageIO.createImageOutputStream(outputFile)
+        fileOs.use {
+            writer.output = it
+            writer.write(null, IIOImage(image, null, null), writeParam)
+        }
+        writer.dispose()
     }
 
     /**
@@ -312,56 +380,74 @@ class PhotoScanExportService(
     }
 
     /**
-     * Composites a back-of-photo image below the front (extracted) photo.
-     *
-     * The back image is loaded from [PhotoScanConfiguration.backImageSourcePath], optionally
-     * cropped using [PhotoScanConfiguration.backCropNormalized] coordinates, and optionally
-     * rotated by [PhotoScanConfiguration.backCropRotation]. The front and back images are
-     * stacked vertically with the back image scaled to match the front image width.
+     * Prepares the back-of-photo image: loads, crops, and rotates it. Returns null if the back
+     * image cannot be loaded.
      */
-    private fun compositeBackImage(frontImage: BufferedImage, config: PhotoScanConfiguration): BufferedImage {
-        val sourcePath = config.backImageSourcePath ?: return frontImage
+    private fun prepareBackImage(config: PhotoScanConfiguration): BufferedImage? {
+        val sourcePath = config.backImageSourcePath ?: return null
         val sourceFile = File(sourcePath)
-        if (!sourceFile.exists()) return frontImage
+        if (!sourceFile.exists()) return null
 
-        val backImage = try {
-            ImageIO.read(sourceFile) ?: return frontImage
-        } catch (_: Exception) {
-            return frontImage
-        }
+        val backImage =
+            try {
+                ImageIO.read(sourceFile) ?: return null
+            } catch (_: Exception) {
+                return null
+            }
 
         // Apply crop if normalized crop coordinates are provided
-        val croppedBack = if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
-            val (left, top, right, bottom) = config.backCropNormalized
-            val cropX = (left * backImage.width).toInt().coerceIn(0, backImage.width)
-            val cropY = (top * backImage.height).toInt().coerceIn(0, backImage.height)
-            val cropW = ((right - left) * backImage.width).toInt().coerceIn(1, backImage.width - cropX)
-            val cropH = ((bottom - top) * backImage.height).toInt().coerceIn(1, backImage.height - cropY)
-            backImage.getSubimage(cropX, cropY, cropW, cropH)
-        } else {
-            backImage
-        }
+        val croppedBack =
+            if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
+                val (left, top, right, bottom) = config.backCropNormalized
+                val cropX = (left * backImage.width).toInt().coerceIn(0, backImage.width)
+                val cropY = (top * backImage.height).toInt().coerceIn(0, backImage.height)
+                val cropW =
+                    ((right - left) * backImage.width).toInt().coerceIn(1, backImage.width - cropX)
+                val cropH =
+                    ((bottom - top) * backImage.height)
+                        .toInt()
+                        .coerceIn(1, backImage.height - cropY)
+                backImage.getSubimage(cropX, cropY, cropW, cropH)
+            } else {
+                backImage
+            }
 
         // Apply rotation (0, 90, 180, 270 degrees)
-        val rotatedBack = when (config.backCropRotation) {
+        return when (config.backCropRotation) {
             90 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CW_90)
             180 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CW_180)
             270 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CCW_90)
             else -> croppedBack
         }
+    }
+
+    /**
+     * Composites a back-of-photo image below the front (extracted) photo.
+     *
+     * The back image is loaded from [PhotoScanConfiguration.backImageSourcePath], optionally
+     * cropped using [PhotoScanConfiguration.backCropNormalized] coordinates, and optionally rotated
+     * by [PhotoScanConfiguration.backCropRotation]. The front and back images are stacked
+     * vertically with the back image scaled to match the front image width.
+     */
+    private fun compositeBackImage(
+        frontImage: BufferedImage,
+        config: PhotoScanConfiguration,
+    ): BufferedImage {
+        val preparedBack = prepareBackImage(config) ?: return frontImage
 
         // Scale back image to match front image width
         val targetWidth = frontImage.width
-        val scale = targetWidth.toFloat() / rotatedBack.width.toFloat()
-        val targetHeight = (rotatedBack.height * scale).toInt()
+        val scale = targetWidth.toFloat() / preparedBack.width.toFloat()
+        val targetHeight = (preparedBack.height * scale).toInt()
 
-        val scaledBack = java.awt.image.BufferedImage(
-            targetWidth,
-            targetHeight,
-            java.awt.image.BufferedImage.TYPE_INT_RGB,
-        )
+        val scaledBack =
+            java.awt.image.BufferedImage(
+                targetWidth,
+                targetHeight,
+                java.awt.image.BufferedImage.TYPE_INT_RGB,
+            )
         val g2d = scaledBack.createGraphics()
-        g2d.drawImage(rotatedBack, 0, 0, targetWidth, targetHeight, null)
+        g2d.drawImage(preparedBack, 0, 0, targetWidth, targetHeight, null)
         g2d.dispose()
 
         // Stack front and back vertically with a 2px separator
@@ -369,11 +455,12 @@ class PhotoScanExportService(
         val compositeWidth = frontImage.width
         val compositeHeight = frontImage.height + separatorHeight + scaledBack.height
 
-        val composite = java.awt.image.BufferedImage(
-            compositeWidth,
-            compositeHeight,
-            java.awt.image.BufferedImage.TYPE_INT_RGB,
-        )
+        val composite =
+            java.awt.image.BufferedImage(
+                compositeWidth,
+                compositeHeight,
+                java.awt.image.BufferedImage.TYPE_INT_RGB,
+            )
         val g = composite.createGraphics()
         // Draw front image at top
         g.drawImage(frontImage, 0, 0, null)

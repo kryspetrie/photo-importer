@@ -83,9 +83,7 @@ class PhotoScanDetectorService(
         image: BufferedImage,
         config: YoloPhotoScanPipeline.PipelineConfig,
     ): List<DetectedPhoto> {
-        val pipeline =
-            yoloPipeline
-                ?: error("YOLO detection not available — models not loaded")
+        val pipeline = yoloPipeline ?: error("YOLO detection not available — models not loaded")
         return pipeline.detectPhotos(image, config)
     }
 

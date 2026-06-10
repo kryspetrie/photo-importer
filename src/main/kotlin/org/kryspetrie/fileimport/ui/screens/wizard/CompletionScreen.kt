@@ -113,11 +113,12 @@ fun CompletionScreen(
                         if (failedCount > 0) "$photoCount photo(s) exported ($failedCount failed)"
                         else "$photoCount photo(s) exported",
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (failedCount > 0) {
-                            MaterialTheme.colorScheme.error
-                        } else {
-                            MaterialTheme.colorScheme.primary
-                        },
+                        color =
+                            if (failedCount > 0) {
+                                MaterialTheme.colorScheme.error
+                            } else {
+                                MaterialTheme.colorScheme.primary
+                            },
                     )
 
                     if (exportDestination.isNotBlank()) {
@@ -214,7 +215,9 @@ private fun BatchActions(
 /** Preview load state: loading, success, or error. */
 private sealed class PreviewState {
     data object Loading : PreviewState()
+
     data class Success(val image: BufferedImage) : PreviewState()
+
     data class Error(val message: String) : PreviewState()
 }
 

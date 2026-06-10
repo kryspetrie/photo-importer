@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Preview
 import androidx.compose.material3.Button
-
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -49,18 +48,12 @@ fun MediaImportActionBar(
             Spacer(Modifier.width(6.dp))
             Text("Import All")
         }
-        OutlinedButton(
-            onClick = { onStartFlow(false, ImportMode.NEW) },
-            enabled = canStart,
-        ) {
+        OutlinedButton(onClick = { onStartFlow(false, ImportMode.NEW) }, enabled = canStart) {
             Icon(Icons.Default.NewReleases, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text("Import New")
         }
-        OutlinedButton(
-            onClick = { onStartFlow(false, ImportMode.SELECT) },
-            enabled = canStart,
-        ) {
+        OutlinedButton(onClick = { onStartFlow(false, ImportMode.SELECT) }, enabled = canStart) {
             Icon(Icons.Default.CheckCircle, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text("Select & Import")

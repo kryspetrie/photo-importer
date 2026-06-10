@@ -74,7 +74,6 @@ import org.kryspetrie.fileimport.infrastructure.wizard.Point
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
-import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataScreen
 
 /**
  * Main container for the Photo Import Wizard. Manages the step-by-step workflow: Import → Overview
@@ -267,7 +266,7 @@ private fun WizardStepContent(
                     image = image,
                     perspectiveService = perspectiveService,
                     onBack = { state.goToOverview() },
-                    onExport = { state.goToQuickEdit() },
+                    onExport = { state.goToEdit() },
                     onSkipMetadata = {
                         scope.launch {
                             onFailedCountChange(0)
@@ -284,7 +283,9 @@ private fun WizardStepContent(
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
-                                    onFailedCountChange(processedPhotos.count { it.outputPath.startsWith("ERROR:") })
+                                    onFailedCountChange(
+                                        processedPhotos.count { it.outputPath.startsWith("ERROR:") }
+                                    )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
@@ -300,10 +301,10 @@ private fun WizardStepContent(
             }
         }
 
-        PhotoScanWizardState.WizardStep.QUICK_EDIT -> {
+        PhotoScanWizardState.WizardStep.EDIT -> {
             val image = state.image.collectAsState().value
             if (image != null) {
-                QuickEditScreen(
+                EditScreen(
                     state = state,
                     image = image,
                     perspectiveService = perspectiveService,
@@ -339,7 +340,9 @@ private fun WizardStepContent(
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
-                                    onFailedCountChange(processedPhotos.count { it.outputPath.startsWith("ERROR:") })
+                                    onFailedCountChange(
+                                        processedPhotos.count { it.outputPath.startsWith("ERROR:") }
+                                    )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
@@ -365,7 +368,9 @@ private fun WizardStepContent(
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
-                                    onFailedCountChange(processedPhotos.count { it.outputPath.startsWith("ERROR:") })
+                                    onFailedCountChange(
+                                        processedPhotos.count { it.outputPath.startsWith("ERROR:") }
+                                    )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} photo(s) to $exportDestination",
@@ -376,55 +381,6 @@ private fun WizardStepContent(
                         }
                     },
                     faceRegionTransformer = faceRegionTransformer,
-                )
-            } else {
-                LoadingContent(message = "Loading image...")
-            }
-        }
-
-        PhotoScanWizardState.WizardStep.METADATA -> {
-            val image = state.image.collectAsState().value
-            if (image != null) {
-                MetadataScreen(
-                    state = state,
-                    image = image,
-                    perspectiveService = perspectiveService,
-                    metadataHistory = settings.metadataHistory,
-                    faceRegionTransformer = faceRegionTransformer,
-                    onMetadataHistoryUpdate = { fieldKey, value ->
-                        scope.launch {
-                            val currentSettings = settingsPort.observeSettings().first()
-                            val updated = currentSettings.addMetadataHistory(fieldKey, value)
-                            settingsPort.saveSettings(updated)
-                        }
-                    },
-                    onBack = { state.goToSummary() },
-                    onNext = {
-                        scope.launch {
-                            onFailedCountChange(0)
-                            state.goToProcessing()
-                            exportPhotos(
-                                state = state,
-                                image = image,
-                                exportService = exportService,
-                                destinationPath = exportDestination,
-                                appLogger = appLogger,
-                                dispatcherProvider = dispatcherProvider,
-                                isLoading = isLoading,
-                                onMessage = onMessage,
-                                onError = onError,
-                                onProgress = onProgress,
-                                onComplete = { processedPhotos ->
-                                    onFailedCountChange(processedPhotos.count { it.outputPath.startsWith("ERROR:") })
-                                    appLogger.logOperationComplete(
-                                        OperationType.EXPORT_COMPLETE,
-                                        "Exported ${processedPhotos.size} photo(s) to $exportDestination",
-                                    )
-                                    state.goToComplete()
-                                },
-                            )
-                        }
-                    },
                 )
             } else {
                 LoadingContent(message = "Loading image...")
@@ -1070,7 +1026,10 @@ private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () ->
 
             OutlinedButton(
                 onClick = { showCancelConfirm = true },
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
             ) {
                 Text("Cancel")
             }
@@ -1093,7 +1052,7 @@ private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () ->
                     onClick = {
                         showCancelConfirm = false
                         onBack()
-                    },
+                    }
                 ) {
                     Text("Cancel Export", color = MaterialTheme.colorScheme.error)
                 }

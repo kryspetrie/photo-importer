@@ -52,7 +52,8 @@ fun DuplicateResolveConfirmDialog(
             TextButton(onClick = onConfirm) {
                 Text(
                     "Resolve",
-                    color = if (moveToTrash) MaterialTheme.colorScheme.primary
+                    color =
+                        if (moveToTrash) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.error,
                 )
             }

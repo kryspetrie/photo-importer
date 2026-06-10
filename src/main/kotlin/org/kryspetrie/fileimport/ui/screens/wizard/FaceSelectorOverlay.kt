@@ -5,7 +5,6 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,9 +24,9 @@ import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.OpenWith
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.TouchApp
-import androidx.compose.material.icons.filled.OpenWith
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -36,6 +34,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -95,15 +94,42 @@ fun regionTypeIcon(type: RegionType): ImageVector =
     }
 
 /**
+ * Immutable snapshot of face region data needed for rendering. Avoids recomposition when unrelated
+ * state changes.
+ */
+@Immutable
+private data class FaceRenderData(
+    val name: String,
+    val type: String,
+    val x: Double,
+    val y: Double,
+    val w: Double,
+    val h: Double,
+)
+
+/**
+ * Convert a [FaceRegion] to a lightweight render data object. This allows us to pass only the data
+ * needed for drawing, reducing recomposition scope.
+ */
+private fun FaceRegion.toRenderData(): FaceRenderData =
+    FaceRenderData(name = name, type = type, x = x, y = y, w = w, h = h)
+
+/**
  * The face selection overlay, drawn inside a Dialog.
  *
  * Features:
  * - Left side toolbar for interaction mode, region type, and size selection
- * - Individual Compose composables per face region (no single Canvas redraw)
- * - Lightweight hover preview Canvas (only redraws on mouse move)
+ * - Individual Compose composables per face region for isolated redraws
+ * - Lightweight hover preview Canvas (PLACE mode only)
  * - PLACE mode: click to place new faces, shows hover preview
- * - MOVE mode: drag to move existing faces, select to resize/delete
+ * - MOVE mode: drag to move existing faces, click ✕ to delete
  * - Inherited face regions shown in cyan with "adopt" click support
+ *
+ * Performance optimization:
+ * - During drag in MOVE mode, a local [dragOffsetPx] accumulates pixel offsets per-frame without
+ *   triggering state updates. The final position is committed to state only on drag end.
+ * - Face regions use individual Canvas composables positioned over the full image, but each only
+ *   reads its own render data, limiting recomposition scope.
  */
 @Composable
 fun FaceSelectorOverlay(
@@ -123,12 +149,8 @@ fun FaceSelectorOverlay(
     var hoverOffset by remember { mutableStateOf<Offset?>(null) }
     var draggingFaceIdx by remember { mutableStateOf(-1) }
     var interactionMode by remember { mutableStateOf(InteractionMode.PLACE) }
-    // Store the starting normalized position of the face being dragged, so we can
-    // compute the final position as: startPos + cumulativePixelOffset / imageDimension.
-    var dragStartNormX by remember { mutableStateOf(0.0) }
-    var dragStartNormY by remember { mutableStateOf(0.0) }
-    var dragTotalPixelDx by remember { mutableStateOf(0f) }
-    var dragTotalPixelDy by remember { mutableStateOf(0f) }
+    // Local drag offset in pixels — accumulated during drag, committed to state on drag end
+    var dragOffsetPx by remember { mutableStateOf(Offset.Zero) }
     val faceRegions = photoConfig.faceRegions
 
     Dialog(
@@ -352,7 +374,8 @@ fun FaceSelectorOverlay(
                     )
                     Text(
                         when (interactionMode) {
-                            InteractionMode.PLACE -> "Click to place a ${selectedRegionType.displayName}"
+                            InteractionMode.PLACE ->
+                                "Click to place a ${selectedRegionType.displayName}"
                             InteractionMode.MOVE -> "Drag to move • Click ✕ to delete"
                         },
                         color = Color.White,
@@ -381,7 +404,7 @@ fun FaceSelectorOverlay(
                                     Rect(offsetX, offsetY, offsetX + drawW, offsetY + drawH)
                             }
                         }
-                        .pointerInput(Unit) {
+                        .pointerInput(interactionMode) {
                             // Track hover position for preview circle (PLACE mode only)
                             awaitPointerEventScope {
                                 while (true) {
@@ -399,7 +422,9 @@ fun FaceSelectorOverlay(
                             }
                         }
                         .pointerInput(interactionMode, faceRegions.toList()) {
-                            // MOVE mode: drag to move existing faces
+                            // MOVE mode: drag gesture for moving face regions
+                            // Performance: drag offset is accumulated locally (dragOffsetPx)
+                            // and only committed to state on drag end.
                             if (interactionMode == InteractionMode.MOVE) {
                                 detectDragGestures(
                                     onDragStart = { offset ->
@@ -409,10 +434,7 @@ fun FaceSelectorOverlay(
                                                 findClosestFace(offset, faceRegions, bounds)
                                             if (bestIdx >= 0) {
                                                 draggingFaceIdx = bestIdx
-                                                dragStartNormX = faceRegions[bestIdx].x
-                                                dragStartNormY = faceRegions[bestIdx].y
-                                                dragTotalPixelDx = 0f
-                                                dragTotalPixelDy = 0f
+                                                dragOffsetPx = Offset.Zero
                                             }
                                         }
                                     },
@@ -422,20 +444,34 @@ fun FaceSelectorOverlay(
                                             draggingFaceIdx >= 0 &&
                                                 draggingFaceIdx < faceRegions.size
                                         ) {
-                                            dragTotalPixelDx += dragAmount.x
-                                            dragTotalPixelDy += dragAmount.y
+                                            // Accumulate pixel offset locally — no state update per
+                                            // frame
+                                            dragOffsetPx =
+                                                Offset(
+                                                    dragOffsetPx.x + dragAmount.x,
+                                                    dragOffsetPx.y + dragAmount.y,
+                                                )
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        if (
+                                            draggingFaceIdx >= 0 &&
+                                                draggingFaceIdx < faceRegions.size
+                                        ) {
                                             val bounds = imageDisplayBounds
                                             if (bounds.width > 0f && bounds.height > 0f) {
+                                                val region = faceRegions[draggingFaceIdx]
                                                 val newX =
-                                                    (dragStartNormX +
-                                                            dragTotalPixelDx.toDouble() /
+                                                    (region.x +
+                                                            dragOffsetPx.x.toDouble() /
                                                                 bounds.width.toDouble())
                                                         .coerceIn(0.0, 1.0)
                                                 val newY =
-                                                    (dragStartNormY +
-                                                            dragTotalPixelDy.toDouble() /
+                                                    (region.y +
+                                                            dragOffsetPx.y.toDouble() /
                                                                 bounds.height.toDouble())
                                                         .coerceIn(0.0, 1.0)
+                                                // Single state commit on drag end
                                                 state.updateFaceRegion(
                                                     idx,
                                                     draggingFaceIdx,
@@ -444,9 +480,13 @@ fun FaceSelectorOverlay(
                                                 )
                                             }
                                         }
+                                        draggingFaceIdx = -1
+                                        dragOffsetPx = Offset.Zero
                                     },
-                                    onDragEnd = { draggingFaceIdx = -1 },
-                                    onDragCancel = { draggingFaceIdx = -1 },
+                                    onDragCancel = {
+                                        draggingFaceIdx = -1
+                                        dragOffsetPx = Offset.Zero
+                                    },
                                 )
                             }
                         }
@@ -457,18 +497,14 @@ fun FaceSelectorOverlay(
                                 if (bounds.width > 0f && bounds.height > 0f) {
                                     if (interactionMode == InteractionMode.MOVE) {
                                         // Check if tapping on an existing face circle's delete zone
-                                        val tappedIdx =
-                                            findClosestFace(offset, faceRegions, bounds)
+                                        val tappedIdx = findClosestFace(offset, faceRegions, bounds)
                                         if (tappedIdx >= 0) {
                                             val region = faceRegions[tappedIdx]
                                             val cx =
-                                                bounds.left +
-                                                    (region.x * bounds.width).toFloat()
+                                                bounds.left + (region.x * bounds.width).toFloat()
                                             val cy =
-                                                bounds.top +
-                                                    (region.y * bounds.height).toFloat()
-                                            val radius =
-                                                (region.w / 2.0 * bounds.height).toFloat()
+                                                bounds.top + (region.y * bounds.height).toFloat()
+                                            val radius = (region.w / 2.0 * bounds.height).toFloat()
                                             val deleteX = cx
                                             val deleteY = cy + radius + 14f
                                             val distToDelete =
@@ -508,19 +544,20 @@ fun FaceSelectorOverlay(
                     contentScale = ContentScale.Fit,
                 )
 
-                // ── Individual face region composables ─────────────────
+                // ── Individual face region composables (one per region) ───
+                // Each composable reads only its own render data + the drag offset,
+                // so recomposition is scoped to the affected regions.
                 for (faceIdx in faceRegions.indices) {
-                    val region = faceRegions[faceIdx]
-                    val bounds = imageDisplayBounds
-                    if (bounds.width > 0f && bounds.height > 0f) {
-                        FaceRegionComposable(
-                            region = region,
-                            faceIdx = faceIdx,
-                            bounds = bounds,
-                            isDragging = faceIdx == draggingFaceIdx,
-                            interactionMode = interactionMode,
-                        )
-                    }
+                    val renderData = faceRegions[faceIdx].toRenderData()
+                    val isDragging = faceIdx == draggingFaceIdx
+                    val currentDragOffset = if (isDragging) dragOffsetPx else Offset.Zero
+                    FaceRegionComposable(
+                        renderData = renderData,
+                        bounds = imageDisplayBounds,
+                        isDragging = isDragging,
+                        dragOffset = currentDragOffset,
+                        interactionMode = interactionMode,
+                    )
                 }
 
                 // ── Inherited face regions (drawn as canvas for lightweight rendering) ──
@@ -640,25 +677,35 @@ fun FaceSelectorOverlay(
 
 /**
  * Individual composable for a single face region circle.
- * Positioned absolutely within the image overlay box.
- * Only redraws when its own data or bounds change.
+ *
+ * Rendered as a full-size Canvas positioned over the image, but reads only its own [FaceRenderData]
+ * plus the image [bounds]. During drag, the [dragOffset] provides a local pixel offset that updates
+ * per-frame without triggering a state commit — the final position is committed to state only on
+ * drag end.
+ *
+ * @param renderData Immutable snapshot of this face region's data
+ * @param bounds The image display bounds for coordinate mapping
+ * @param isDragging Whether this region is currently being dragged
+ * @param dragOffset Pixel offset accumulated during drag (zero when not dragging)
+ * @param interactionMode Current interaction mode (affects delete button visibility)
  */
 @Composable
 private fun FaceRegionComposable(
-    region: FaceRegion,
-    faceIdx: Int,
+    renderData: FaceRenderData,
     bounds: Rect,
     isDragging: Boolean,
+    dragOffset: Offset,
     interactionMode: InteractionMode,
 ) {
-    val color = regionTypeColor(RegionType.fromMwgRs(region.type))
+    val color = regionTypeColor(RegionType.fromMwgRs(renderData.type))
     val textMeasurer = rememberTextMeasurer()
-    val cx = bounds.left + (region.x * bounds.width).toFloat()
-    val cy = bounds.top + (region.y * bounds.height).toFloat()
-    val radius = (region.w / 2.0 * bounds.height).toFloat()
+    // Apply drag offset to pixel position during drag
+    val cx = bounds.left + (renderData.x * bounds.width).toFloat() + dragOffset.x
+    val cy = bounds.top + (renderData.y * bounds.height).toFloat() + dragOffset.y
+    val radius = (renderData.w / 2.0 * bounds.height).toFloat()
 
-    // Name label dimensions
-    val nameLabel = region.name
+    // Pre-measure label text (only changes when name changes)
+    val nameLabel = renderData.name
     val nameLayout =
         remember(nameLabel) {
             textMeasurer.measure(nameLabel, TextStyle(color = Color.Black, fontSize = 11.sp))
@@ -673,14 +720,11 @@ private fun FaceRegionComposable(
     val deleteY = cy + radius + 10f
 
     Canvas(modifier = Modifier.fillMaxSize()) {
-        // Circle outline (or filled if dragging)
+        // Circle fill (only when dragging)
         if (isDragging) {
-            drawCircle(
-                color = color.copy(alpha = 0.4f),
-                radius = radius,
-                center = Offset(cx, cy),
-            )
+            drawCircle(color = color.copy(alpha = 0.4f), radius = radius, center = Offset(cx, cy))
         }
+        // Circle outline
         drawCircle(
             color = color,
             radius = radius,
@@ -707,7 +751,7 @@ private fun FaceRegionComposable(
             center = Offset(labelX - 8f, labelY + labelHeight / 2f),
         )
 
-        // Delete X button (always visible in MOVE mode, hidden in PLACE mode)
+        // Delete X button (visible in MOVE mode)
         if (interactionMode == InteractionMode.MOVE) {
             drawCircle(
                 color = Color.Red.copy(alpha = 0.85f),

@@ -677,8 +677,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         OVERVIEW, // All boxes visible
         REFINEMENT, // Zoomed single box (redirects to OVERVIEW - inline refinement)
         SUMMARY, // Crop & rotate grid view
-        QUICK_EDIT, // Combined rotation + metadata + location + subjects
-        METADATA, // EXIF metadata editing (legacy - superseded by QUICK_EDIT)
+        EDIT, // Edit screen: rotation OR metadata (user chooses mode)
         PROCESSING, // Export in progress
         COMPLETE, // Done — post-export completion page
     }
@@ -722,7 +721,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _selectedCorner.value = null
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
-        _currentStep.value = WizardStep.QUICK_EDIT
+        _currentStep.value = WizardStep.EDIT
         _undoRedoManager.clearAll()
         _undoRedoVersion.value++
     }
@@ -1477,14 +1476,9 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _currentStep.value = WizardStep.SUMMARY
     }
 
-    /** Goes to the metadata editing step. */
-    fun goToMetadata() {
-        _currentStep.value = WizardStep.METADATA
-    }
-
-    /** Goes to the quick edit step (combined rotation + metadata + location). */
-    fun goToQuickEdit() {
-        _currentStep.value = WizardStep.QUICK_EDIT
+    /** Goes to the edit step (rotation or metadata mode). */
+    fun goToEdit() {
+        _currentStep.value = WizardStep.EDIT
     }
 
     /** Goes to processing step. */

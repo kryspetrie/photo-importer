@@ -60,7 +60,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -96,6 +95,7 @@ import java.awt.image.BufferedImage
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.FaceRegionTransformer
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
@@ -119,17 +119,24 @@ import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataField
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.OverrideCheckbox
 
+/** Edit mode: which aspect of the photo the user is editing. */
+enum class EditMode {
+    ROTATE,
+    METADATA,
+}
+
 /**
- * Quick Edit screen combining crop preview, rotation controls, metadata editing, location capture,
- * and subject/face tagging into a single streamlined view.
+ * Edit screen combining rotation and metadata editing into a single view with mode selection.
  *
- * Layout:
- * - Left: Large cropped preview with thumbnail strip at top
- * - Right: Scrolled editor panel with rotation, metadata, location, subjects sections
+ * The user chooses between "Rotate" and "Metadata" modes via tabs in the top bar.
+ * - Rotate mode: large preview with rotation controls
+ * - Metadata mode: large preview with full metadata editing panel
+ *
+ * Both modes share: thumbnail strip, photo navigation, back image management, and export actions.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QuickEditScreen(
+fun EditScreen(
     state: PhotoScanWizardState,
     image: BufferedImage,
     perspectiveService: PerspectiveCorrectionService,
@@ -153,6 +160,7 @@ fun QuickEditScreen(
     val sourceExif by state.sourceExif.collectAsState()
     val currentImageFile by state.imageFile.collectAsState()
 
+    var editMode by remember { mutableStateOf(EditMode.ROTATE) }
     var isMultiEditMode by remember { mutableStateOf(false) }
     var fullscreenPreviewIndex by remember { mutableStateOf<Int?>(null) }
     var showLocationSection by remember { mutableStateOf(false) }
@@ -189,7 +197,7 @@ fun QuickEditScreen(
         }
     }
 
-    // Fullscreen overlay
+    // ── Fullscreen preview overlay ──
     if (fullscreenPreviewIndex != null && fullscreenPreviewIndex!! < boundingBoxList.size()) {
         val idx = fullscreenPreviewIndex!!
         val box = boundingBoxList.boxes[idx]
@@ -224,7 +232,6 @@ fun QuickEditScreen(
 
     // ── Face selection full-screen overlay ──
     val showFaceSelect = faceSelectIndex != null && faceSelectIndex!! < boundingBoxList.size()
-
     if (showFaceSelect && faceSelectIndex != null) {
         val idx = faceSelectIndex!!
         val box = boundingBoxList.boxes[idx]
@@ -233,8 +240,6 @@ fun QuickEditScreen(
             remember(image, box.id, config.rotationDegrees) {
                 cropAndRotateBoundingBox(image, box, config, perspectiveService)
             }
-
-        // Compute inherited face regions from source image XMP
         val sourceFile = state.imageFile.value
         LaunchedEffect(faceSelectIndex, sourceFile) {
             inheritedFaceRegions =
@@ -247,9 +252,9 @@ fun QuickEditScreen(
                         val detectedPhoto =
                             boxToDetectedPhoto(box, perspectiveEnabled, config.rotationDegrees)
                         val marginedPhoto =
-                            if (marginFraction > 0.0) {
+                            if (marginFraction > 0.0)
                                 GeometryUtils.applyMargin(detectedPhoto, marginFraction)
-                            } else detectedPhoto
+                            else detectedPhoto
                         val corrected = perspectiveService.correctPerspective(image, marginedPhoto)
                         val regions =
                             faceRegionTransformer.transformFaceRegionsFromSource(
@@ -279,7 +284,6 @@ fun QuickEditScreen(
                     }
                 } else emptyList()
         }
-
         if (faceSelectIndex != null && fullPreview != null) {
             FaceSelectorOverlay(
                 fullPreview = fullPreview,
@@ -301,7 +305,7 @@ fun QuickEditScreen(
         }
     }
 
-    // Face name entry popup — simplified (type and size selected from side toolbar)
+    // ── Face name entry popup ──
     if (showFaceNamePopup && pendingFaceCoords != null) {
         Dialog(
             onDismissRequest = {
@@ -309,82 +313,33 @@ fun QuickEditScreen(
                 pendingFaceCoords = null
             }
         ) {
-            Surface(
-                modifier = Modifier.width(260.dp),
-                tonalElevation = 8.dp,
-                shape = RoundedCornerShape(12.dp),
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        "Name this ${selectedRegionType.displayName.lowercase()}",
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            regionTypeIcon(selectedRegionType),
-                            contentDescription = selectedRegionType.displayName,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            "${selectedRegionType.displayName} • ${selectedFaceSize.displayName}",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            FaceNameEntryPanel(
+                faceNameInput = faceNameInput,
+                onFaceNameInputChange = { faceNameInput = it },
+                selectedRegionType = selectedRegionType,
+                selectedFaceSize = selectedFaceSize,
+                onConfirm = {
+                    if (faceNameInput.isNotBlank()) {
+                        val (photoIdx, normX, normY) = pendingFaceCoords!!
+                        state.addFaceRegion(
+                            photoIdx,
+                            faceNameInput.trim(),
+                            normX,
+                            normY,
+                            selectedRegionType,
+                            selectedFaceSize,
                         )
                     }
-                    TextField(
-                        value = faceNameInput,
-                        onValueChange = { faceNameInput = it },
-                        placeholder = { Text("Name…", style = MaterialTheme.typography.bodySmall) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                    )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.align(Alignment.End),
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                showFaceNamePopup = false
-                                pendingFaceCoords = null
-                                faceNameInput = ""
-                            }
-                        ) {
-                            Text("Cancel", style = MaterialTheme.typography.labelSmall)
-                        }
-                        Button(
-                            onClick = {
-                                if (faceNameInput.isNotBlank()) {
-                                    val (photoIdx, normX, normY) = pendingFaceCoords!!
-                                    state.addFaceRegion(
-                                        photoIdx,
-                                        faceNameInput.trim(),
-                                        normX,
-                                        normY,
-                                        selectedRegionType,
-                                        selectedFaceSize,
-                                    )
-                                }
-                                showFaceNamePopup = false
-                                pendingFaceCoords = null
-                                faceNameInput = ""
-                            },
-                            enabled = faceNameInput.isNotBlank(),
-                        ) {
-                            Icon(Icons.Default.Check, null, Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Save", style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-            }
+                    showFaceNamePopup = false
+                    pendingFaceCoords = null
+                    faceNameInput = ""
+                },
+                onCancel = {
+                    showFaceNamePopup = false
+                    pendingFaceCoords = null
+                    faceNameInput = ""
+                },
+            )
         }
     }
 
@@ -456,7 +411,6 @@ fun QuickEditScreen(
                             backCropRotation = rotation,
                         )
                     }
-                    // Auto-skip this back image from batch processing if it's in the batch
                     state.sourceFiles.value
                         .indexOfFirst { it.absolutePath == sourcePath }
                         .takeIf { it >= 0 }
@@ -470,25 +424,21 @@ fun QuickEditScreen(
 
     Scaffold(
         modifier =
-            Modifier.onPreviewKeyEvent { keyEvent ->
-                // Cmd+, = Previous photo, Cmd+. = Next photo
+            modifier.onPreviewKeyEvent { keyEvent ->
                 if (keyEvent.type == KeyEventType.KeyDown) {
                     val isMeta = isCtrlPressed(keyEvent)
                     when {
                         isMeta && keyEvent.key == Key.Comma -> {
                             val currentIdx =
                                 if (selectedIndices.size == 1) selectedIndices.first() else -1
-                            if (currentIdx > 0) {
-                                state.selectSingleMetadata(currentIdx - 1)
-                            }
+                            if (currentIdx > 0) state.selectSingleMetadata(currentIdx - 1)
                             true
                         }
                         isMeta && keyEvent.key == Key.Period -> {
                             val currentIdx =
                                 if (selectedIndices.size == 1) selectedIndices.first() else -1
-                            if (currentIdx >= 0 && currentIdx < boundingBoxList.size() - 1) {
+                            if (currentIdx >= 0 && currentIdx < boundingBoxList.size() - 1)
                                 state.selectSingleMetadata(currentIdx + 1)
-                            }
                             true
                         }
                         else -> false
@@ -497,9 +447,21 @@ fun QuickEditScreen(
             },
         topBar = {
             TopAppBar(
-                title = { Text("Quick Edit") },
+                title = { Text("Edit") },
                 actions = {
-                    if (onSkipToExport != null) {
+                    // ── Mode tabs ──
+                    EditModeTab(
+                        label = "Rotate",
+                        selected = editMode == EditMode.ROTATE,
+                        onClick = { editMode = EditMode.ROTATE },
+                    )
+                    EditModeTab(
+                        label = "Metadata",
+                        selected = editMode == EditMode.METADATA,
+                        onClick = { editMode = EditMode.METADATA },
+                    )
+                    Spacer(Modifier.weight(1f))
+                    if (editMode == EditMode.ROTATE && onSkipToExport != null) {
                         OutlinedButton(
                             onClick = onSkipToExport,
                             modifier = Modifier.height(32.dp),
@@ -527,14 +489,11 @@ fun QuickEditScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Back button
                     OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Back")
                     }
-
-                    // Photo navigation
                     if (boundingBoxList.size() > 1) {
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -577,8 +536,6 @@ fun QuickEditScreen(
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
-
-                    // Multi-edit toggle
                     if (boundingBoxList.size() > 1) {
                         if (isMultiEditMode) {
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -615,7 +572,7 @@ fun QuickEditScreen(
     ) { paddingValues ->
         if (selectedIndices.isEmpty() && !isMultiEditMode) {
             // No selection — show thumbnail strip and prompt
-            Column(modifier = modifier.fillMaxSize().padding(paddingValues)) {
+            Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                 ThumbnailStrip(
                     image = image,
                     perspectiveService = perspectiveService,
@@ -641,10 +598,9 @@ fun QuickEditScreen(
                 }
             }
         } else {
-            Row(modifier = modifier.fillMaxSize().padding(paddingValues)) {
+            Row(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                 // ═══ Left pane: preview + thumbnails ═══
                 Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    // Thumbnail strip at top
                     ThumbnailStrip(
                         image = image,
                         perspectiveService = perspectiveService,
@@ -666,7 +622,7 @@ fun QuickEditScreen(
                         onDeselectAll = { state.deselectAllMetadata() },
                     )
 
-                    // Large preview
+                    // Large preview — only in single-select mode
                     if (selectedIndices.size == 1 && !isMultiEditMode) {
                         val selectedIndex = selectedIndices.first()
                         val box = boundingBoxList.boxes[selectedIndex]
@@ -698,7 +654,7 @@ fun QuickEditScreen(
                                     modifier = Modifier.fillMaxSize(),
                                     contentScale = ContentScale.Fit,
                                 )
-                                // Back-of-photo button — appears in bottom-right of preview
+                                // Back-of-photo button
                                 if (config.hasBackImage()) {
                                     Surface(
                                         modifier =
@@ -796,32 +752,163 @@ fun QuickEditScreen(
                     }
                 }
 
-                // ═══ Right pane: editor ═══
-                QuickEditEditor(
-                    state = state,
-                    image = image,
-                    perspectiveService = perspectiveService,
-                    boundingBoxList = boundingBoxList,
-                    photoConfigurations = photoConfigurations,
-                    selectedIndices = selectedIndices,
-                    isMultiEditMode = isMultiEditMode,
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    onMetadataHistoryRemove = onMetadataHistoryRemove,
-                    showCameraSection = showCameraSection,
-                    onToggleCameraSection = { showCameraSection = !showCameraSection },
-                    showLocationSection = showLocationSection,
-                    onToggleLocationSection = { showLocationSection = !showLocationSection },
-                    showSubjectsSection = showSubjectsSection,
-                    onToggleSubjectsSection = { showSubjectsSection = !showSubjectsSection },
-                    sourceExif = sourceExif,
-                    onSelectFaces = { idx -> faceSelectIndex = idx },
-                    onPickLocation = { idx ->
-                        locationPickerTargetIndex = idx
-                        showLocationPicker = true
-                    },
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                // ═══ Right pane: content depends on edit mode ═══
+                when (editMode) {
+                    EditMode.ROTATE -> {
+                        RotateEditorPanel(
+                            state = state,
+                            boundingBoxList = boundingBoxList,
+                            photoConfigurations = photoConfigurations,
+                            selectedIndices = selectedIndices,
+                            isMultiEditMode = isMultiEditMode,
+                            onAddBackImage = { showBackImagePicker = true },
+                            onRemoveBackImage = {
+                                val idx = selectedIndices.firstOrNull() ?: return@RotateEditorPanel
+                                if (idx < boundingBoxList.size()) {
+                                    val box = boundingBoxList.boxes[idx]
+                                    state.updatePhotoConfiguration(box.id) {
+                                        it.copy(
+                                            backImageMode = null,
+                                            backImageSourcePath = null,
+                                            backCropNormalized = null,
+                                            backCropRotation = 0,
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                    }
+                    EditMode.METADATA -> {
+                        MetadataEditorPanel(
+                            state = state,
+                            image = image,
+                            perspectiveService = perspectiveService,
+                            boundingBoxList = boundingBoxList,
+                            photoConfigurations = photoConfigurations,
+                            selectedIndices = selectedIndices,
+                            isMultiEditMode = isMultiEditMode,
+                            metadataHistory = metadataHistory,
+                            onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                            onMetadataHistoryRemove = onMetadataHistoryRemove,
+                            showCameraSection = showCameraSection,
+                            onToggleCameraSection = { showCameraSection = !showCameraSection },
+                            showLocationSection = showLocationSection,
+                            onToggleLocationSection = {
+                                showLocationSection = !showLocationSection
+                            },
+                            showSubjectsSection = showSubjectsSection,
+                            onToggleSubjectsSection = {
+                                showSubjectsSection = !showSubjectsSection
+                            },
+                            sourceExif = sourceExif,
+                            onSelectFaces = { idx -> faceSelectIndex = idx },
+                            onPickLocation = { idx ->
+                                locationPickerTargetIndex = idx
+                                showLocationPicker = true
+                            },
+                            onAddBackImage = { showBackImagePicker = true },
+                            onRemoveBackImage = {
+                                val idx =
+                                    selectedIndices.firstOrNull() ?: return@MetadataEditorPanel
+                                if (idx < boundingBoxList.size()) {
+                                    val box = boundingBoxList.boxes[idx]
+                                    state.updatePhotoConfiguration(box.id) {
+                                        it.copy(
+                                            backImageMode = null,
+                                            backImageSourcePath = null,
+                                            backCropNormalized = null,
+                                            backCropRotation = 0,
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Mode tab button in the top bar. */
+@Composable
+private fun EditModeTab(label: String, selected: Boolean, onClick: () -> Unit) {
+    TextButton(onClick = onClick) {
+        Text(
+            label,
+            style =
+                MaterialTheme.typography.titleSmall.copy(
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+                ),
+            color =
+                if (selected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+/** Face name entry panel (extracted from inline Dialog content). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FaceNameEntryPanel(
+    faceNameInput: String,
+    onFaceNameInputChange: (String) -> Unit,
+    selectedRegionType: RegionType,
+    selectedFaceSize: FaceSize,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.width(260.dp),
+        tonalElevation = 8.dp,
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text(
+                "Name this ${selectedRegionType.displayName.lowercase()}",
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    regionTypeIcon(selectedRegionType),
+                    contentDescription = selectedRegionType.displayName,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.primary,
                 )
+                Text(
+                    "${selectedRegionType.displayName} • ${selectedFaceSize.displayName}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TextField(
+                value = faceNameInput,
+                onValueChange = onFaceNameInputChange,
+                placeholder = { Text("Name…", style = MaterialTheme.typography.bodySmall) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                textStyle = MaterialTheme.typography.bodyMedium,
+            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.align(Alignment.End),
+            ) {
+                OutlinedButton(onClick = onCancel) {
+                    Text("Cancel", style = MaterialTheme.typography.labelSmall)
+                }
+                Button(onClick = onConfirm, enabled = faceNameInput.isNotBlank()) {
+                    Icon(Icons.Default.Check, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Save", style = MaterialTheme.typography.labelSmall)
+                }
             }
         }
     }
@@ -851,7 +938,6 @@ private fun ThumbnailStrip(
                     cropAndRotateBoundingBox(image, box, visualConfig, perspectiveService)
                 }
             val isSelected = index in selectedIndices
-
             Card(
                 modifier = Modifier.width(100.dp).height(80.dp).clickable { onSelect(index) },
                 shape = RoundedCornerShape(6.dp),
@@ -913,10 +999,205 @@ private fun ThumbnailStrip(
     }
 }
 
-/** The right-side editor panel containing rotation, metadata, location, and subjects sections. */
+/**
+ * Rotation-only editor panel — shown in Rotate mode. Displays per-photo rotation controls with a
+ * large preview.
+ */
+@Composable
+private fun RotateEditorPanel(
+    state: PhotoScanWizardState,
+    boundingBoxList: BoundingBoxList,
+    photoConfigurations: Map<String, PhotoConfiguration>,
+    selectedIndices: Set<Int>,
+    isMultiEditMode: Boolean,
+    onAddBackImage: () -> Unit,
+    onRemoveBackImage: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
+
+    ChunkyScrollbar(modifier = modifier) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (isMultiSelect) {
+                Text(
+                    "${selectedIndices.size} photos selected",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                // Batch rotation controls for multi-select
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Rotate all:", style = MaterialTheme.typography.labelMedium)
+                    IconButton(
+                        onClick = {
+                            selectedIndices.forEach { idx ->
+                                if (idx < boundingBoxList.size()) {
+                                    val box = boundingBoxList.boxes[idx]
+                                    state.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(18.dp))
+                    }
+                    IconButton(
+                        onClick = {
+                            selectedIndices.forEach { idx ->
+                                if (idx < boundingBoxList.size()) {
+                                    val box = boundingBoxList.boxes[idx]
+                                    state.updatePhotoConfiguration(box.id) {
+                                        it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
+                                    }
+                                }
+                            }
+                        }
+                    ) {
+                        Text("180°", style = MaterialTheme.typography.labelSmall)
+                    }
+                    IconButton(
+                        onClick = {
+                            selectedIndices.forEach { idx ->
+                                if (idx < boundingBoxList.size()) {
+                                    val box = boundingBoxList.boxes[idx]
+                                    state.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(18.dp))
+                    }
+                }
+            } else if (selectedIndices.size == 1) {
+                val selectedIndex = selectedIndices.first()
+                val box = boundingBoxList.boxes[selectedIndex]
+                val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+
+                Text(
+                    "Photo ${selectedIndex + 1}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                RotationSection(
+                    rotationDegrees = config.rotationDegrees,
+                    onRotateCW = {
+                        state.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
+                    },
+                    onRotateCCW = {
+                        state.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
+                    },
+                    onRotate180 = {
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
+                        }
+                    },
+                )
+
+                // Additional per-photo settings
+                Surface(
+                    tonalElevation = 1.dp,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text("Photo Settings", style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            "Rotation: ${config.rotationDegrees}°",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+
+                        // ── Back-of-photo image management ──
+                        if (config.hasBackImage()) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.Image,
+                                    "Back image assigned",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(
+                                    "Back: ${if (config.backImageMode == "combine") "Combined" else "Appended"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                                Spacer(Modifier.weight(1f))
+                                OutlinedButton(
+                                    onClick = onAddBackImage,
+                                    modifier = Modifier.height(28.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                ) {
+                                    Text("Change", style = MaterialTheme.typography.labelSmall)
+                                }
+                                OutlinedButton(
+                                    onClick = onRemoveBackImage,
+                                    modifier = Modifier.height(28.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                ) {
+                                    Text(
+                                        "Remove",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
+                        } else {
+                            OutlinedButton(
+                                onClick = onAddBackImage,
+                                modifier = Modifier.fillMaxWidth().height(32.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Image,
+                                    "Select back of photo",
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("Add Back Image", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Help text
+            Surface(
+                tonalElevation = 0.dp,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        "Switch to Metadata tab to edit IPTC fields, location, and subjects.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Metadata editor panel — shown in Metadata mode. Contains all the metadata editing functionality.
+ */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-private fun QuickEditEditor(
+private fun MetadataEditorPanel(
     state: PhotoScanWizardState,
     image: BufferedImage,
     perspectiveService: PerspectiveCorrectionService,
@@ -936,9 +1217,10 @@ private fun QuickEditEditor(
     sourceExif: SourceExifSummary?,
     onSelectFaces: (Int) -> Unit,
     onPickLocation: (Int) -> Unit,
+    onAddBackImage: () -> Unit,
+    onRemoveBackImage: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var showMetadata by remember { mutableStateOf(true) } // Toggle: rotation-only vs full edit
     val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
 
     // Buffered values for multi-edit
@@ -966,18 +1248,6 @@ private fun QuickEditEditor(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // ── Toggle: rotation-only vs full edit (rotation + metadata) ──
-            if (!isMultiSelect) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text("Show metadata fields", style = MaterialTheme.typography.bodySmall)
-                    Switch(checked = showMetadata, onCheckedChange = { showMetadata = it })
-                }
-            }
-
             if (isMultiSelect) {
                 // ── Multi-edit mode ──
                 Row(
@@ -1038,8 +1308,6 @@ private fun QuickEditEditor(
                     onMetadataHistoryRemove = onMetadataHistoryRemove,
                     sourceExif = sourceExif,
                 )
-
-                // Collapsible sections
                 CameraSection(
                     showExpanded = showCameraSection,
                     onToggle = onToggleCameraSection,
@@ -1059,9 +1327,7 @@ private fun QuickEditEditor(
                     onIsoChange = { bufferedIso = it },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    sourceExif = sourceExif,
                 )
-
                 LocationSection(
                     showExpanded = showLocationSection,
                     onToggle = onToggleLocationSection,
@@ -1087,7 +1353,6 @@ private fun QuickEditEditor(
                             if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
                         },
                 )
-
                 SubjectsSection(
                     showExpanded = showSubjectsSection,
                     onToggle = onToggleSubjectsSection,
@@ -1109,294 +1374,304 @@ private fun QuickEditEditor(
                     color = MaterialTheme.colorScheme.primary,
                 )
 
-                // ── Rotation section ──
-                RotationSection(
-                    rotationDegrees = config.rotationDegrees,
-                    onRotateCW = {
-                        state.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
+                // ── Metadata fields ──
+                QuickEditMetadataFields(
+                    description = config.description,
+                    onDescriptionChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(description = newValue) }
                     },
-                    onRotateCCW = {
-                        state.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
+                    keywords = config.keywords,
+                    onKeywordsChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(keywords = newValue) }
                     },
-                    onRotate180 = {
+                    originalDate = config.originalDate,
+                    onOriginalDateChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(originalDate = newValue) }
+                    },
+                    year = config.year,
+                    onYearChange = { newValue ->
                         state.updatePhotoConfiguration(box.id) {
-                            it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
+                            it.copy(year = newValue.filter { c -> c.isDigit() }.take(4))
                         }
                     },
+                    metadataHistory = metadataHistory,
+                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    onMetadataHistoryRemove = onMetadataHistoryRemove,
+                    onCommitKeyword = { keyword -> onMetadataHistoryUpdate("keywords", keyword) },
+                    boxId = box.id,
+                    state = state,
+                    overrideDescription = config.overrideDescription != OverrideState.NULL_OUT,
+                    onOverrideDescriptionChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideDescription =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideKeywords = config.overrideKeywords != OverrideState.NULL_OUT,
+                    onOverrideKeywordsChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideKeywords =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideOriginalDate = config.overrideOriginalDate != OverrideState.NULL_OUT,
+                    onOverrideOriginalDateChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideOriginalDate =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideYear = config.overrideYear != OverrideState.NULL_OUT,
+                    onOverrideYearChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideYear =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    sourceExif = sourceExif,
                 )
 
-                // ── Metadata fields ──
-                if (showMetadata) {
-                    QuickEditMetadataFields(
-                        description = config.description,
-                        onDescriptionChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(description = newValue)
-                            }
-                        },
-                        keywords = config.keywords,
-                        onKeywordsChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) { it.copy(keywords = newValue) }
-                        },
-                        originalDate = config.originalDate,
-                        onOriginalDateChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(originalDate = newValue)
-                            }
-                        },
-                        year = config.year,
-                        onYearChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(year = newValue.filter { c -> c.isDigit() }.take(4))
-                            }
-                        },
-                        metadataHistory = metadataHistory,
-                        onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                        onMetadataHistoryRemove = onMetadataHistoryRemove,
-                        onCommitKeyword = { keyword ->
-                            // Save keyword to history on commit
-                            onMetadataHistoryUpdate("keywords", keyword)
-                        },
-                        boxId = box.id,
-                        state = state,
-                        // Override checkboxes from PhotoConfiguration
-                        overrideDescription = config.overrideDescription != OverrideState.NULL_OUT,
-                        onOverrideDescriptionChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideDescription =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideKeywords = config.overrideKeywords != OverrideState.NULL_OUT,
-                        onOverrideKeywordsChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideKeywords =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideOriginalDate =
-                            config.overrideOriginalDate != OverrideState.NULL_OUT,
-                        onOverrideOriginalDateChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideOriginalDate =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideYear = config.overrideYear != OverrideState.NULL_OUT,
-                        onOverrideYearChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideYear =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        sourceExif = sourceExif,
-                    )
+                // ── Camera Settings ──
+                CameraSection(
+                    showExpanded = showCameraSection,
+                    onToggle = onToggleCameraSection,
+                    cameraMake = config.cameraMake,
+                    onCameraMakeChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(cameraMake = newValue) }
+                    },
+                    cameraModel = config.cameraModel,
+                    onCameraModelChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(cameraModel = newValue) }
+                    },
+                    lensModel = config.lensModel,
+                    onLensModelChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(lensModel = newValue) }
+                    },
+                    focalLength = config.focalLength,
+                    onFocalLengthChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(focalLength = newValue) }
+                    },
+                    aperture = config.aperture,
+                    onApertureChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(aperture = newValue) }
+                    },
+                    shutterSpeed = config.shutterSpeed,
+                    onShutterSpeedChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(shutterSpeed = newValue) }
+                    },
+                    iso = config.iso,
+                    onIsoChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(iso = newValue) }
+                    },
+                    metadataHistory = metadataHistory,
+                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    overrideCameraMake = config.overrideCameraMake != OverrideState.NULL_OUT,
+                    onOverrideCameraMakeChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideCameraMake =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideCameraModel = config.overrideCameraModel != OverrideState.NULL_OUT,
+                    onOverrideCameraModelChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideCameraModel =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideLensModel = config.overrideLensModel != OverrideState.NULL_OUT,
+                    onOverrideLensModelChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideLensModel =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideFocalLength = config.overrideFocalLength != OverrideState.NULL_OUT,
+                    onOverrideFocalLengthChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideFocalLength =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideAperture = config.overrideAperture != OverrideState.NULL_OUT,
+                    onOverrideApertureChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideAperture =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideShutterSpeed = config.overrideShutterSpeed != OverrideState.NULL_OUT,
+                    onOverrideShutterSpeedChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideShutterSpeed =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    overrideIso = config.overrideIso != OverrideState.NULL_OUT,
+                    onOverrideIsoChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideIso =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    sourceExif = sourceExif,
+                )
 
-                    // ── Camera Settings ──
-                    CameraSection(
-                        showExpanded = showCameraSection,
-                        onToggle = onToggleCameraSection,
-                        cameraMake = config.cameraMake,
-                        onCameraMakeChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(cameraMake = newValue)
-                            }
+                // ── Location ──
+                LocationSection(
+                    showExpanded = showLocationSection,
+                    onToggle = onToggleLocationSection,
+                    locationName = config.locationName,
+                    onLocationNameChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(locationName = newValue) }
+                    },
+                    city = config.city,
+                    onCityChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(city = newValue) }
+                    },
+                    stateVal = config.state,
+                    onStateChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(state = newValue) }
+                    },
+                    country = config.country,
+                    onCountryChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(country = newValue) }
+                    },
+                    gpsLatitude = config.gpsLatitude,
+                    onGpsLatitudeChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(gpsLatitude = newValue) }
+                    },
+                    gpsLongitude = config.gpsLongitude,
+                    onGpsLongitudeChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(gpsLongitude = newValue) }
+                    },
+                    metadataHistory = metadataHistory,
+                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    onPickLocation = { onPickLocation(selectedIndex) },
+                    overrideGps = config.overrideGps != OverrideState.NULL_OUT,
+                    onOverrideGpsChange = { included ->
+                        state.updatePhotoConfiguration(box.id) {
+                            it.copy(
+                                overrideGps =
+                                    if (included) OverrideState.KEEP_SOURCE
+                                    else OverrideState.NULL_OUT
+                            )
+                        }
+                    },
+                    sourceGpsHint =
+                        sourceExif?.let {
+                            val parts = mutableListOf<String>()
+                            it.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
+                            it.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
+                            if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
                         },
-                        cameraModel = config.cameraModel,
-                        onCameraModelChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(cameraModel = newValue)
-                            }
-                        },
-                        lensModel = config.lensModel,
-                        onLensModelChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) { it.copy(lensModel = newValue) }
-                        },
-                        focalLength = config.focalLength,
-                        onFocalLengthChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(focalLength = newValue)
-                            }
-                        },
-                        aperture = config.aperture,
-                        onApertureChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) { it.copy(aperture = newValue) }
-                        },
-                        shutterSpeed = config.shutterSpeed,
-                        onShutterSpeedChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(shutterSpeed = newValue)
-                            }
-                        },
-                        iso = config.iso,
-                        onIsoChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) { it.copy(iso = newValue) }
-                        },
-                        metadataHistory = metadataHistory,
-                        onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                        // Override checkboxes from PhotoConfiguration
-                        overrideCameraMake = config.overrideCameraMake != OverrideState.NULL_OUT,
-                        onOverrideCameraMakeChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideCameraMake =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideCameraModel = config.overrideCameraModel != OverrideState.NULL_OUT,
-                        onOverrideCameraModelChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideCameraModel =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideLensModel = config.overrideLensModel != OverrideState.NULL_OUT,
-                        onOverrideLensModelChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideLensModel =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideFocalLength = config.overrideFocalLength != OverrideState.NULL_OUT,
-                        onOverrideFocalLengthChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideFocalLength =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideAperture = config.overrideAperture != OverrideState.NULL_OUT,
-                        onOverrideApertureChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideAperture =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideShutterSpeed =
-                            config.overrideShutterSpeed != OverrideState.NULL_OUT,
-                        onOverrideShutterSpeedChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideShutterSpeed =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        overrideIso = config.overrideIso != OverrideState.NULL_OUT,
-                        onOverrideIsoChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideIso =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        },
-                        sourceExif = sourceExif,
-                    )
+                )
 
-                    // ── Location ──
-                    LocationSection(
-                        showExpanded = showLocationSection,
-                        onToggle = onToggleLocationSection,
-                        locationName = config.locationName,
-                        onLocationNameChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(locationName = newValue)
+                // ── Subjects & Faces ──
+                SubjectsSection(
+                    showExpanded = showSubjectsSection,
+                    onToggle = onToggleSubjectsSection,
+                    subjects = config.subjects,
+                    onSubjectsChange = { newValue ->
+                        state.updatePhotoConfiguration(box.id) { it.copy(subjects = newValue) }
+                    },
+                    metadataHistory = metadataHistory,
+                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    onMetadataHistoryRemove = onMetadataHistoryRemove,
+                    onSelectFaces = { onSelectFaces(selectedIndex) },
+                    faceRegions = config.faceRegions,
+                    onRemoveFace = { faceIdx -> state.removeFaceRegion(selectedIndex, faceIdx) },
+                    onClearAllFaces = { state.clearAllFaceRegions(selectedIndex) },
+                )
+
+                // ── Back-of-photo Image ──
+                if (config.hasBackImage()) {
+                    Surface(
+                        tonalElevation = 1.dp,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.Image,
+                                "Back image assigned",
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                            Text(
+                                "Back: ${if (config.backImageMode == "combine") "Combined" else "Appended"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                            Spacer(Modifier.weight(1f))
+                            OutlinedButton(
+                                onClick = onAddBackImage,
+                                modifier = Modifier.height(28.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                            ) {
+                                Text("Change", style = MaterialTheme.typography.labelSmall)
                             }
-                        },
-                        city = config.city,
-                        onCityChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) { it.copy(city = newValue) }
-                        },
-                        stateVal = config.state,
-                        onStateChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) { it.copy(state = newValue) }
-                        },
-                        country = config.country,
-                        onCountryChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) { it.copy(country = newValue) }
-                        },
-                        gpsLatitude = config.gpsLatitude,
-                        onGpsLatitudeChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(gpsLatitude = newValue)
-                            }
-                        },
-                        gpsLongitude = config.gpsLongitude,
-                        onGpsLongitudeChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(gpsLongitude = newValue)
-                            }
-                        },
-                        metadataHistory = metadataHistory,
-                        onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                        onPickLocation = { onPickLocation(selectedIndex) },
-                        overrideGps = config.overrideGps != OverrideState.NULL_OUT,
-                        onOverrideGpsChange = { included ->
-                            state.updatePhotoConfiguration(box.id) {
-                                it.copy(
-                                    overrideGps =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
+                            OutlinedButton(
+                                onClick = onRemoveBackImage,
+                                modifier = Modifier.height(28.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                            ) {
+                                Text(
+                                    "Remove",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error,
                                 )
                             }
-                        },
-                        sourceGpsHint =
-                            sourceExif?.let {
-                                val parts = mutableListOf<String>()
-                                it.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
-                                it.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
-                                if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}"
-                                else null
-                            },
-                    )
-
-                    // ── Subjects & Faces ──
-                    SubjectsSection(
-                        showExpanded = showSubjectsSection,
-                        onToggle = onToggleSubjectsSection,
-                        subjects = config.subjects,
-                        onSubjectsChange = { newValue ->
-                            state.updatePhotoConfiguration(box.id) { it.copy(subjects = newValue) }
-                        },
-                        metadataHistory = metadataHistory,
-                        onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                        onMetadataHistoryRemove = onMetadataHistoryRemove,
-                        onSelectFaces = { onSelectFaces(selectedIndex) },
-                        faceRegions = config.faceRegions,
-                        onRemoveFace = { faceIdx ->
-                            state.removeFaceRegion(selectedIndex, faceIdx)
-                        },
-                        onClearAllFaces = { state.clearAllFaceRegions(selectedIndex) },
-                    )
-                } // end Metadata section
+                        }
+                    }
+                } else {
+                    OutlinedButton(onClick = onAddBackImage, modifier = Modifier.fillMaxWidth()) {
+                        Icon(
+                            Icons.Default.Image,
+                            "Select back of photo",
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text("Add Back Image", style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
         }
     }
@@ -1463,7 +1738,6 @@ private fun QuickEditMetadataFields(
     onCommitKeyword: ((String) -> Unit)? = null,
     boxId: String? = null,
     state: PhotoScanWizardState? = null,
-    // Override tri-states (null = no override indicator shown)
     overrideDescription: Boolean? = null,
     onOverrideDescriptionChange: ((Boolean) -> Unit)? = null,
     overrideKeywords: Boolean? = null,
@@ -1475,13 +1749,11 @@ private fun QuickEditMetadataFields(
     sourceExif: SourceExifSummary? = null,
 ) {
     val focusManager = LocalFocusManager.current
-    // Parse current keywords into chips
     val keywordList =
         remember(keywords) { keywords.split(",").map { it.trim() }.filter { it.isNotBlank() } }
     var keywordInput by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
 
-    // Description
     MetadataField(
         label = "Description",
         placeholder = "Photo description...",
@@ -1497,8 +1769,6 @@ private fun QuickEditMetadataFields(
     // Keywords — chip/tag UI with X removal + suggestion dropdown
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text("Keywords", style = MaterialTheme.typography.labelMedium)
-
-        // Current keyword chips
         if (keywordList.isNotEmpty()) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -1516,8 +1786,6 @@ private fun QuickEditMetadataFields(
                 }
             }
         }
-
-        // Add keyword input with suggestions
         var suggestionsExpanded by remember { mutableStateOf(false) }
         val availableSuggestions =
             remember(metadataHistory.keywords, keywordList) {
@@ -1528,8 +1796,7 @@ private fun QuickEditMetadataFields(
                 if (keywordInput.isBlank()) availableSuggestions
                 else availableSuggestions.filter { it.contains(keywordInput, ignoreCase = true) }
             }
-
-        if (availableSuggestions.isNotEmpty() || true) { // always show input
+        if (availableSuggestions.isNotEmpty() || true) {
             ExposedDropdownMenuBox(
                 expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
                 onExpandedChange = { suggestionsExpanded = it },
@@ -1554,7 +1821,6 @@ private fun QuickEditMetadataFields(
                         keyboardActions =
                             KeyboardActions(
                                 onDone = {
-                                    // Add keyword on Enter
                                     if (keywordInput.isNotBlank()) {
                                         val updated =
                                             if (keywords.isBlank()) keywordInput
@@ -1645,8 +1911,6 @@ private fun QuickEditMetadataFields(
             }
         }
     }
-
-    // Date picker dialog
     if (showDatePicker) {
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
@@ -1658,7 +1922,6 @@ private fun QuickEditMetadataFields(
         )
     }
 
-    // Year
     MetadataField(
         label = "Year",
         placeholder = "1995",
@@ -1695,7 +1958,6 @@ private fun CameraSection(
     onIsoChange: (String) -> Unit,
     metadataHistory: MetadataHistory,
     onMetadataHistoryUpdate: (String, String) -> Unit,
-    // Override checkboxes (null = no checkbox)
     overrideCameraMake: Boolean? = null,
     onOverrideCameraMakeChange: ((Boolean) -> Unit)? = null,
     overrideCameraModel: Boolean? = null,
@@ -1906,8 +2168,6 @@ private fun LocationSection(
                     suggestions = metadataHistory.country,
                     onCommit = { onMetadataHistoryUpdate("country", country) },
                 )
-
-                // GPS coordinates
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -1963,8 +2223,6 @@ private fun LocationSection(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     )
                 }
-
-                // Pick on Map button
                 if (onPickLocation != null) {
                     OutlinedButton(onClick = onPickLocation, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.LocationOn, null, Modifier.size(16.dp))
@@ -1977,7 +2235,7 @@ private fun LocationSection(
     }
 }
 
-/** Collapsible subjects/faces section with subject names and face region support. */
+/** Collapsible subjects/faces section. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun SubjectsSection(
@@ -2024,8 +2282,6 @@ private fun SubjectsSection(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-
-                // Select Faces button
                 if (onSelectFaces != null) {
                     OutlinedButton(onClick = onSelectFaces, modifier = Modifier.fillMaxWidth()) {
                         Icon(Icons.Default.Face, null, Modifier.size(16.dp))
@@ -2037,8 +2293,6 @@ private fun SubjectsSection(
                         )
                     }
                 }
-
-                // Face regions list
                 if (faceRegions.isNotEmpty()) {
                     Surface(
                         tonalElevation = 1.dp,
@@ -2085,8 +2339,7 @@ private fun SubjectsSection(
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                         Text(
-                                            "(${kotlin.math.round(region.x * 100).toInt()}%," +
-                                                " ${kotlin.math.round(region.y * 100).toInt()}%)",
+                                            "(${kotlin.math.round(region.x * 100).toInt()}%, ${kotlin.math.round(region.y * 100).toInt()}%)",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
@@ -2109,8 +2362,6 @@ private fun SubjectsSection(
                         }
                     }
                 }
-
-                // Current subject chips
                 if (subjectList.isNotEmpty()) {
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -2128,8 +2379,6 @@ private fun SubjectsSection(
                         }
                     }
                 }
-
-                // Add subject input with suggestions
                 var suggestionsExpanded by remember { mutableStateOf(false) }
                 val availableSuggestions =
                     remember(metadataHistory.subjects, subjectList) {
@@ -2143,7 +2392,6 @@ private fun SubjectsSection(
                                 it.contains(subjectInput, ignoreCase = true)
                             }
                     }
-
                 ExposedDropdownMenuBox(
                     expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
                     onExpandedChange = { suggestionsExpanded = it },
@@ -2222,7 +2470,6 @@ private fun SubjectsSection(
 @Composable
 private fun DatePickerDialog(onDismissRequest: () -> Unit, onDateSelected: (String) -> Unit) {
     val datePickerState = rememberDatePickerState()
-
     Dialog(onDismissRequest = onDismissRequest) {
         Card(modifier = Modifier.padding(16.dp)) {
             Column(
@@ -2241,9 +2488,7 @@ private fun DatePickerDialog(onDismissRequest: () -> Unit, onDateSelected: (Stri
                                         instant.atZone(ZoneId.systemDefault()).toLocalDate()
                                     localDate.format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
                                 } ?: ""
-                            if (selectedDate.isNotBlank()) {
-                                onDateSelected(selectedDate)
-                            }
+                            if (selectedDate.isNotBlank()) onDateSelected(selectedDate)
                             onDismissRequest()
                         }
                     ) {

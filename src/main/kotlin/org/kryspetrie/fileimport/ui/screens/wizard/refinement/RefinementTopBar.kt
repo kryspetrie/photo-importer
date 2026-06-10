@@ -44,9 +44,7 @@ internal fun RefinementTopBar(
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
             }
-            IconButton(onClick = onShowHelp) {
-                Icon(Icons.Default.Info, "Keyboard shortcuts")
-            }
+            IconButton(onClick = onShowHelp) { Icon(Icons.Default.Info, "Keyboard shortcuts") }
         },
     )
 }

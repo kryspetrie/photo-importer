@@ -27,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.io.File
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.DuplicateScannerService
@@ -52,25 +51,26 @@ fun DuplicateScannerScreen(
     fun startScan() {
         viewModel.errorMessage = null
         viewModel.step = DuplicateScannerViewModel.ScanStep.SCANNING
-        viewModel.activeJob = scope.launch {
-            try {
-                val found =
-                    scannerService.scanForDuplicates(
-                        viewModel.folderPath,
-                        viewModel.buildDedupSettings(),
-                    ) {
-                        viewModel.scanProgress = it
-                    }
-                viewModel.duplicates = found
-                viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
-            } catch (_: kotlinx.coroutines.CancellationException) {
-                // Cancellation is expected — don't show error
-                viewModel.step = DuplicateScannerViewModel.ScanStep.SETUP
-            } catch (e: Exception) {
-                viewModel.errorMessage = e.message ?: "Scan failed"
-                viewModel.step = DuplicateScannerViewModel.ScanStep.SETUP
+        viewModel.activeJob =
+            scope.launch {
+                try {
+                    val found =
+                        scannerService.scanForDuplicates(
+                            viewModel.folderPath,
+                            viewModel.buildDedupSettings(),
+                        ) {
+                            viewModel.scanProgress = it
+                        }
+                    viewModel.duplicates = found
+                    viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
+                } catch (_: kotlinx.coroutines.CancellationException) {
+                    // Cancellation is expected — don't show error
+                    viewModel.step = DuplicateScannerViewModel.ScanStep.SETUP
+                } catch (e: Exception) {
+                    viewModel.errorMessage = e.message ?: "Scan failed"
+                    viewModel.step = DuplicateScannerViewModel.ScanStep.SETUP
+                }
             }
-        }
     }
 
     fun resolveAll() {
@@ -79,25 +79,26 @@ fun DuplicateScannerScreen(
             else null
         viewModel.showResolveConfirm = false
         viewModel.step = DuplicateScannerViewModel.ScanStep.RESOLVING
-        viewModel.activeJob = scope.launch {
-            try {
-                scannerService.resolveAll(
-                    viewModel.duplicates,
-                    viewModel.resolveAction,
-                    trashFolder,
-                ) { c, t ->
-                    viewModel.resolveProgress = c to t
+        viewModel.activeJob =
+            scope.launch {
+                try {
+                    scannerService.resolveAll(
+                        viewModel.duplicates,
+                        viewModel.resolveAction,
+                        trashFolder,
+                    ) { c, t ->
+                        viewModel.resolveProgress = c to t
+                    }
+                    viewModel.duplicates = emptyList()
+                    viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
+                } catch (_: kotlinx.coroutines.CancellationException) {
+                    // Cancellation is expected — don't show error
+                    viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
+                } catch (e: Exception) {
+                    viewModel.errorMessage = "Resolve failed: ${e.message}"
+                    viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
                 }
-                viewModel.duplicates = emptyList()
-                viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
-            } catch (_: kotlinx.coroutines.CancellationException) {
-                // Cancellation is expected — don't show error
-                viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
-            } catch (e: Exception) {
-                viewModel.errorMessage = "Resolve failed: ${e.message}"
-                viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
             }
-        }
     }
 
     // Resolve all confirm dialog
@@ -202,11 +203,8 @@ fun DuplicateScannerScreen(
         ) {
             when (viewModel.step) {
                 DuplicateScannerViewModel.ScanStep.SCANNING,
-                DuplicateScannerViewModel.ScanStep.RESOLVING,
-                -> {
-                    OutlinedButton(onClick = { viewModel.cancelOperation() }) {
-                        Text("Cancel")
-                    }
+                DuplicateScannerViewModel.ScanStep.RESOLVING -> {
+                    OutlinedButton(onClick = { viewModel.cancelOperation() }) { Text("Cancel") }
                 }
                 DuplicateScannerViewModel.ScanStep.RESULTS -> {
                     if (viewModel.duplicates.isNotEmpty()) {
