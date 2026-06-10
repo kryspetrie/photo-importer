@@ -195,7 +195,26 @@ fun PhotoScanImportScreen(
                     )
 
                     // ── Export Settings ──
-                    ExportSettingsCard(state = state)
+                    ExportSettingsCard(
+                        state = state,
+                        alwaysEditMetadata = settings.alwaysEditMetadata,
+                        onAlwaysEditMetadataChange = { newValue ->
+                            scope.launch {
+                                val currentSettings = settingsPort.observeSettings().first()
+                                settingsPort.saveSettings(
+                                    currentSettings.copy(alwaysEditMetadata = newValue)
+                                )
+                            }
+                        },
+                        onStrategyChange = { strategy ->
+                            scope.launch {
+                                val currentSettings = settingsPort.observeSettings().first()
+                                settingsPort.saveSettings(
+                                    currentSettings.copy(lastCorrectionStrategy = strategy)
+                                )
+                            }
+                        },
+                    )
 
                     // ── Import Photo Scans Button ──
                     Button(

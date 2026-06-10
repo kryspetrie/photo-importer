@@ -70,8 +70,6 @@ fun SummaryScreen(
     onBack: () -> Unit,
     onExport: () -> Unit,
     onSkipMetadata: (() -> Unit)? = null,
-    alwaysEditMetadata: Boolean = false,
-    onAlwaysEditMetadataChange: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val boundingBoxList by state.boundingBoxList.collectAsState()
@@ -102,8 +100,6 @@ fun SummaryScreen(
                 onBack = onBack,
                 onExport = onExport,
                 onSkipMetadata = onSkipMetadata,
-                alwaysEditMetadata = alwaysEditMetadata,
-                onAlwaysEditMetadataChange = onAlwaysEditMetadataChange,
             )
         },
     )

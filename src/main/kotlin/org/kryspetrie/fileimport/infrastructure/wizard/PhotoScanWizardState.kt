@@ -78,11 +78,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     }
 
     /** Default correction strategy for photos that don't have an explicit per-photo strategy. */
-    private val _defaultCorrectionStrategy = MutableStateFlow<CorrectionStrategy?>(null)
-    val defaultCorrectionStrategy: StateFlow<CorrectionStrategy?> =
+    private val _defaultCorrectionStrategy = MutableStateFlow(CorrectionStrategy.PERSPECTIVE)
+    val defaultCorrectionStrategy: StateFlow<CorrectionStrategy> =
         _defaultCorrectionStrategy.asStateFlow()
 
-    fun setDefaultCorrectionStrategy(strategy: CorrectionStrategy?) {
+    fun setDefaultCorrectionStrategy(strategy: CorrectionStrategy) {
         _defaultCorrectionStrategy.value = strategy
     }
 

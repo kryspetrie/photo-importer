@@ -16,14 +16,24 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 
@@ -115,12 +125,18 @@ private fun PhotoCardHeader(box: BoundingBox, index: Int, config: PhotoConfigura
     }
 }
 
-/** Row with correction strategy dropdown, allowing per-photo override. */
+/**
+ * Row with correction strategy dropdown, allowing per-photo override. Shows "Default" as first
+ * option (null = use global setting), plus the three strategy choices.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CorrectionStrategyRow(
     config: PhotoConfiguration,
     onConfigChange: (PhotoConfiguration) -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -131,13 +147,56 @@ private fun CorrectionStrategyRow(
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        CorrectionStrategyDropdown(
-            selectedStrategy = config.correctionStrategy,
-            onStrategyChange = { strategy ->
-                onConfigChange(config.copy(correctionStrategy = strategy))
-            },
-            modifier = Modifier.height(40.dp),
-        )
+        ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+            OutlinedTextField(
+                value = config.correctionStrategy?.displayName ?: "Default",
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Correction") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                modifier = Modifier.height(40.dp).menuAnchor().width(160.dp),
+                textStyle = MaterialTheme.typography.labelSmall,
+            )
+            ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                DropdownMenuItem(
+                    text = {
+                        Column {
+                            Text("Default", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                "Use the correction strategy from settings",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    },
+                    onClick = {
+                        onConfigChange(config.copy(correctionStrategy = null))
+                        expanded = false
+                    },
+                )
+                CorrectionStrategy.entries.forEach { strategy ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(
+                                    strategy.displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                                Text(
+                                    strategy.description,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        },
+                        onClick = {
+                            onConfigChange(config.copy(correctionStrategy = strategy))
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 

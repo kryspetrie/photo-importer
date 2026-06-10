@@ -119,6 +119,9 @@ fun WizardContainer(
     }
     val scope = rememberCoroutineScope()
 
+    // Initialize correction strategy from persisted settings (once)
+    LaunchedEffect(Unit) { state.setDefaultCorrectionStrategy(settings.lastCorrectionStrategy) }
+
     Box(modifier = modifier.fillMaxSize()) {
         WizardStepContent(
             currentStep = currentStep,
@@ -292,15 +295,6 @@ private fun WizardStepContent(
                                     )
                                     state.goToComplete()
                                 },
-                            )
-                        }
-                    },
-                    alwaysEditMetadata = settings.alwaysEditMetadata,
-                    onAlwaysEditMetadataChange = { newValue ->
-                        scope.launch {
-                            val currentSettings = settingsPort.observeSettings().first()
-                            settingsPort.saveSettings(
-                                currentSettings.copy(alwaysEditMetadata = newValue)
                             )
                         }
                     },
@@ -903,11 +897,17 @@ private suspend fun exportPhotos(
         }
 
         val baseName = state.imageFile.value?.nameWithoutExtension ?: "scan"
+        val globalStrategy = state.defaultCorrectionStrategy.value
         val results = mutableListOf<ProcessedPhoto>()
 
         boxes.forEachIndexed { index, box ->
             val fileName = if (boxes.size > 1) "${baseName}_${index + 1}" else baseName
-            val config = configurations[box.id] ?: PhotoConfiguration()
+            val rawConfig = configurations[box.id] ?: PhotoConfiguration()
+            // Apply global default strategy when per-photo strategy is not set
+            val config =
+                if (rawConfig.correctionStrategy == null)
+                    rawConfig.copy(correctionStrategy = globalStrategy)
+                else rawConfig
             val result =
                 exportSinglePhoto(
                     image = image,

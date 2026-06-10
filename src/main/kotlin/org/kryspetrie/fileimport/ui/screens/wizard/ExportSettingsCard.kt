@@ -12,6 +12,7 @@ import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.Transform
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -23,15 +24,22 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.CorrectionStrategyDropdown
 
 /**
  * Card with export settings for the photo scan import screen: perspective correction toggle,
- * correction strategy selector, and margin slider.
+ * correction strategy selector, margin slider, and metadata preference.
  */
 @Composable
-fun ExportSettingsCard(state: PhotoScanWizardState, modifier: Modifier = Modifier) {
+fun ExportSettingsCard(
+    state: PhotoScanWizardState,
+    alwaysEditMetadata: Boolean = false,
+    onAlwaysEditMetadataChange: ((Boolean) -> Unit)? = null,
+    onStrategyChange: ((CorrectionStrategy) -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
     val perspectiveEnabled by state.perspectiveCorrectionEnabled.collectAsState()
     val marginPercent by state.exportMarginPercent.collectAsState()
     val defaultStrategy by state.defaultCorrectionStrategy.collectAsState()
@@ -62,10 +70,10 @@ fun ExportSettingsCard(state: PhotoScanWizardState, modifier: Modifier = Modifie
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Column {
-                        Text("Correct for perspective", style = MaterialTheme.typography.bodyMedium)
+                        Text("Perspective correction", style = MaterialTheme.typography.bodyMedium)
                         Text(
                             if (perspectiveEnabled)
-                                "Warp-stretch: removes skew, preserves all content"
+                                "Warp-stretch removes skew and preserves all content"
                             else "Simple crop: axis-aligned rectangle, no skew removal",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -79,29 +87,33 @@ fun ExportSettingsCard(state: PhotoScanWizardState, modifier: Modifier = Modifie
             }
 
             // Correction strategy selector
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    Icons.Default.CropFree,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Column {
-                    Text("Correction strategy", style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        "How to handle skew and rotation when perspective correction is off",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (!perspectiveEnabled) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        Icons.Default.CropFree,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("Correction strategy", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "How to handle skew and rotation when perspective correction is off",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    CorrectionStrategyDropdown(
+                        selectedStrategy = defaultStrategy,
+                        onStrategyChange = { strategy ->
+                            state.setDefaultCorrectionStrategy(strategy)
+                            onStrategyChange?.invoke(strategy)
+                        },
                     )
                 }
-                Spacer(Modifier.weight(1f))
-                CorrectionStrategyDropdown(
-                    selectedStrategy = defaultStrategy,
-                    onStrategyChange = { state.setDefaultCorrectionStrategy(it) },
-                )
             }
 
             // Margin slider
@@ -136,6 +148,30 @@ fun ExportSettingsCard(state: PhotoScanWizardState, modifier: Modifier = Modifie
                         steps = 9,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                }
+            }
+
+            // Always start with metadata checkbox
+            if (onAlwaysEditMetadataChange != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(
+                        checked = alwaysEditMetadata,
+                        onCheckedChange = onAlwaysEditMetadataChange,
+                    )
+                    Column {
+                        Text(
+                            "Start with metadata editor",
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            "Skip rotation and go directly to metadata tagging",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }

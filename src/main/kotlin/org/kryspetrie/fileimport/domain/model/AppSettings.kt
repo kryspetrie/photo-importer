@@ -58,6 +58,12 @@ data class AppSettings(
      * need to edit metadata and don't need to rotate photos.
      */
     val alwaysEditMetadata: Boolean = false,
+
+    /**
+     * Last-used correction strategy for the photo scan. Persists across sessions so users don't
+     * have to re-select their preferred strategy each time.
+     */
+    val lastCorrectionStrategy: CorrectionStrategy = CorrectionStrategy.PERSPECTIVE,
 ) {
     /** Returns the currently active Photo Scan profile, or the default if none is selected. */
     val activePhotoScanProfile: PhotoScanProfile

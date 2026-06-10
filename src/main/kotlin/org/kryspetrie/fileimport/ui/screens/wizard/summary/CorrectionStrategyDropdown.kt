@@ -22,25 +22,23 @@ import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 /**
  * Dropdown for selecting how a photo should be geometrically corrected on export.
  *
- * When set to null, the strategy is auto-detected from the corner geometry:
- * - Nearly rectangular corners → CROP (simple axis-aligned rectangle)
- * - Slightly skewed with rotation → CROP_AND_ROTATE
- * - Significant perspective distortion → PERSPECTIVE (warp-stretch)
+ * Offers three strategies:
+ * - CROP: Simple axis-aligned crop for nearly-rectangular photos
+ * - CROP_AND_ROTATE: Crop + rotation for slightly rotated photos
+ * - PERSPECTIVE: Full 4-point perspective transform for skewed/trapezoidal photos (default)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CorrectionStrategyDropdown(
-    selectedStrategy: CorrectionStrategy?,
-    onStrategyChange: (CorrectionStrategy?) -> Unit,
+    selectedStrategy: CorrectionStrategy,
+    onStrategyChange: (CorrectionStrategy) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val currentLabel = selectedStrategy?.displayName ?: "Auto"
-
     ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
         OutlinedTextField(
-            value = currentLabel,
+            value = selectedStrategy.displayName,
             onValueChange = {},
             readOnly = true,
             label = { Text("Correction") },
@@ -50,23 +48,6 @@ fun CorrectionStrategyDropdown(
         )
 
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            // Auto option — auto-detect from geometry
-            DropdownMenuItem(
-                text = {
-                    Column {
-                        Text("Auto", style = MaterialTheme.typography.labelSmall)
-                        Text(
-                            "Detect from corners",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                },
-                onClick = {
-                    onStrategyChange(null)
-                    expanded = false
-                },
-            )
             CorrectionStrategy.entries.forEach { strategy ->
                 DropdownMenuItem(
                     text = {
