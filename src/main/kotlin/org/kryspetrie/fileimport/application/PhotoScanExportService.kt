@@ -398,7 +398,11 @@ class PhotoScanExportService(
         // Apply crop if normalized crop coordinates are provided
         val croppedBack =
             if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
-                val (left, top, right, bottom) = config.backCropNormalized
+                val cropNorm = config.backCropNormalized
+                val left = cropNorm[0]
+                val top = cropNorm[1]
+                val right = cropNorm[2]
+                val bottom = cropNorm[3]
                 val cropX = (left * backImage.width).toInt().coerceIn(0, backImage.width)
                 val cropY = (top * backImage.height).toInt().coerceIn(0, backImage.height)
                 val cropW =

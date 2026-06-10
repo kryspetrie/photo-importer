@@ -2338,8 +2338,10 @@ private fun SubjectsSection(
                                             region.name,
                                             style = MaterialTheme.typography.bodySmall,
                                         )
+                                        val xPct = kotlin.math.round(region.x * 100).toInt()
+                                        val yPct = kotlin.math.round(region.y * 100).toInt()
                                         Text(
-                                            "(${kotlin.math.round(region.x * 100).toInt()}%, ${kotlin.math.round(region.y * 100).toInt()}%)",
+                                            "($xPct%, $yPct%)",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
