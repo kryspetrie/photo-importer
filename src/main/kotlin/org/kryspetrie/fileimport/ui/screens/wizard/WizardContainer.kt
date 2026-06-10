@@ -295,6 +295,15 @@ private fun WizardStepContent(
                             )
                         }
                     },
+                    alwaysEditMetadata = settings.alwaysEditMetadata,
+                    onAlwaysEditMetadataChange = { newValue ->
+                        scope.launch {
+                            val currentSettings = settingsPort.observeSettings().first()
+                            settingsPort.saveSettings(
+                                currentSettings.copy(alwaysEditMetadata = newValue)
+                            )
+                        }
+                    },
                 )
             } else {
                 LoadingContent(message = "Loading image...")
@@ -380,6 +389,7 @@ private fun WizardStepContent(
                             )
                         }
                     },
+                    startWithMetadata = settings.alwaysEditMetadata,
                     faceRegionTransformer = faceRegionTransformer,
                 )
             } else {

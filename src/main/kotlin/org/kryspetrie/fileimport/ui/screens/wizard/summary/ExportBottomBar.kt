@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -22,13 +23,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-/** Bottom bar with photo count, back button, next button, and "Skip Metadata" button. */
+/**
+ * Bottom bar with photo count, back button, next button, "Skip Metadata" button, and edit-mode
+ * preference.
+ */
 @Composable
 fun ExportBottomBar(
     photoCount: Int,
     onBack: () -> Unit,
     onExport: () -> Unit,
     onSkipMetadata: (() -> Unit)? = null,
+    alwaysEditMetadata: Boolean = false,
+    onAlwaysEditMetadataChange: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Surface(tonalElevation = 4.dp, modifier = modifier.fillMaxWidth()) {
@@ -37,7 +43,22 @@ fun ExportBottomBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("$photoCount photo(s) ready", style = MaterialTheme.typography.bodyMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("$photoCount photo(s) ready", style = MaterialTheme.typography.bodyMedium)
+                if (onAlwaysEditMetadataChange != null) {
+                    Spacer(Modifier.width(12.dp))
+                    Checkbox(
+                        checked = alwaysEditMetadata,
+                        onCheckedChange = onAlwaysEditMetadataChange,
+                        modifier = Modifier.size(24.dp),
+                    )
+                    Text(
+                        "Start with metadata",
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier.padding(start = 2.dp),
+                    )
+                }
+            }
             ExportButtons(
                 onBack = onBack,
                 onExport = onExport,

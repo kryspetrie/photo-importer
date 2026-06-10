@@ -146,6 +146,7 @@ fun EditScreen(
     onBack: () -> Unit,
     onExport: () -> Unit,
     onSkipToExport: (() -> Unit)? = null,
+    startWithMetadata: Boolean = false,
     modifier: Modifier = Modifier,
     faceRegionTransformer: FaceRegionTransformer? = null,
 ) {
@@ -160,7 +161,9 @@ fun EditScreen(
     val sourceExif by state.sourceExif.collectAsState()
     val currentImageFile by state.imageFile.collectAsState()
 
-    var editMode by remember { mutableStateOf(EditMode.ROTATE) }
+    var editMode by remember {
+        mutableStateOf(if (startWithMetadata) EditMode.METADATA else EditMode.ROTATE)
+    }
     var isMultiEditMode by remember { mutableStateOf(false) }
     var fullscreenPreviewIndex by remember { mutableStateOf<Int?>(null) }
     var showLocationSection by remember { mutableStateOf(false) }

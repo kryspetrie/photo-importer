@@ -52,6 +52,12 @@ data class AppSettings(
 
     /** Recently used metadata values for photo scan EXIF fields. */
     val metadataHistory: MetadataHistory = MetadataHistory(),
+
+    /**
+     * When true, the Edit step starts on the Metadata tab instead of Rotate. Useful when you only
+     * need to edit metadata and don't need to rotate photos.
+     */
+    val alwaysEditMetadata: Boolean = false,
 ) {
     /** Returns the currently active Photo Scan profile, or the default if none is selected. */
     val activePhotoScanProfile: PhotoScanProfile
