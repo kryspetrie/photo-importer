@@ -79,6 +79,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.Popup
 import java.awt.image.BufferedImage
 import org.koin.compose.koinInject
@@ -355,95 +356,110 @@ fun MetadataScreen(
         // Location picker popup
         if (showLocationPicker && locationPickerTargetIndex != null) {
             // Full-screen overlay for the map-based location picker
-            Popup(
+            Dialog(
                 onDismissRequest = {
                     showLocationPicker = false
                     locationPickerTargetIndex = null
-                }
+                },
+                properties = DialogProperties(usePlatformDefaultWidth = false),
             ) {
-                Box(
-                    modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)),
-                    contentAlignment = Alignment.Center,
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    tonalElevation = 8.dp,
+                    shape = MaterialTheme.shapes.medium,
                 ) {
-                    Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        tonalElevation = 8.dp,
-                        shape = MaterialTheme.shapes.medium,
-                    ) {
-                        LocationPickerDialog(
-                            locationSearchService = locationSearchService,
-                            geocodingPort = geocodingPort,
-                            dispatcherProvider = dispatcherProvider,
-                            onLocationSelected = { result ->
-                                val idx = locationPickerTargetIndex
-                                if (idx != null && idx < boundingBoxList.size()) {
-                                    val boxId = boundingBoxList.boxes[idx].id
-                                    state.updatePhotoConfiguration(boxId) {
-                                        it.copy(
-                                            city = result.city ?: it.city,
-                                            state = result.state ?: it.state,
-                                            country = result.country ?: it.country,
-                                            gpsLatitude = result.latitude.toString(),
-                                            gpsLongitude = result.longitude.toString(),
-                                        )
-                                    }
+                    LocationPickerDialog(
+                        locationSearchService = locationSearchService,
+                        geocodingPort = geocodingPort,
+                        dispatcherProvider = dispatcherProvider,
+                        onLocationSelected = { result ->
+                            val idx = locationPickerTargetIndex
+                            if (idx != null && idx < boundingBoxList.size()) {
+                                val boxId = boundingBoxList.boxes[idx].id
+                                state.updatePhotoConfiguration(boxId) {
+                                    it.copy(
+                                        city = result.city ?: it.city,
+                                        state = result.state ?: it.state,
+                                        country = result.country ?: it.country,
+                                        gpsLatitude = result.latitude.toString(),
+                                        gpsLongitude = result.longitude.toString(),
+                                    )
                                 }
-                                showLocationPicker = false
-                                locationPickerTargetIndex = null
-                            },
-                            onDismiss = {
-                                showLocationPicker = false
-                                locationPickerTargetIndex = null
-                            },
-                        )
-                    }
+                            }
+                            showLocationPicker = false
+                            locationPickerTargetIndex = null
+                        },
+                        onDismiss = {
+                            showLocationPicker = false
+                            locationPickerTargetIndex = null
+                        },
+                    )
                 }
             }
         }
-        val idx = fullscreenPreviewIndex!!
-        val box = boundingBoxList.boxes[idx]
-        val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-        val fullPreview =
-            remember(image, box.id, config.rotationDegrees) {
-                cropAndRotateBoundingBox(image, box, config, perspectiveService)
-            }
-
-        Popup(onDismissRequest = { fullscreenPreviewIndex = null }) {
-            Box(
-                modifier = Modifier.fillMaxSize().background(Color.Black),
-                contentAlignment = Alignment.Center,
-            ) {
-                if (fullPreview != null) {
-                    Image(
-                        bitmap = fullPreview.toComposeImageBitmap(),
-                        contentDescription = "Photo ${idx + 1} fullscreen",
-                        modifier = Modifier.fillMaxSize().padding(32.dp),
-                        contentScale = ContentScale.Fit,
-                    )
+        fullscreenPreviewIndex?.let { idx ->
+            val box = boundingBoxList.boxes[idx]
+            val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+            val fullPreview =
+                remember(image, box.id, config.rotationDegrees) {
+                    cropAndRotateBoundingBox(image, box, config, perspectiveService)
                 }
-                // Close button in top-right corner
-                IconButton(
-                    onClick = { fullscreenPreviewIndex = null },
-                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+
+            Dialog(
+                onDismissRequest = { fullscreenPreviewIndex = null },
+                properties = DialogProperties(usePlatformDefaultWidth = false),
+            ) {
+                Box(
+                    modifier = Modifier.fillMaxSize().background(Color.Black),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = "Close preview",
-                        modifier = Modifier.size(36.dp),
-                    )
+                    if (fullPreview != null) {
+                        Image(
+                            bitmap = fullPreview.toComposeImageBitmap(),
+                            contentDescription = "Photo ${idx + 1} fullscreen",
+                            modifier = Modifier.fillMaxSize().padding(32.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                    }
+                    // Close button in top-right corner
+                    IconButton(
+                        onClick = { fullscreenPreviewIndex = null },
+                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+                        colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                    ) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close preview",
+                            modifier = Modifier.size(36.dp),
+                        )
+                    }
                 }
             }
         }
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Metadata") }) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Metadata") },
+                actions = {
+                    Button(
+                        onClick = onNext,
+                        enabled = boundingBoxList.size() > 0,
+                        modifier = Modifier.height(32.dp),
+                    ) {
+                        Text("Next", style = MaterialTheme.typography.labelSmall)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(16.dp))
+                    }
+                },
+            )
+        },
         bottomBar = {
-            Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+            Surface(tonalElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     OutlinedButton(onClick = onBack) {
@@ -451,11 +467,45 @@ fun MetadataScreen(
                         Spacer(Modifier.width(4.dp))
                         Text("Back")
                     }
-                    Spacer(Modifier.weight(1f))
-                    Button(onClick = onNext, enabled = boundingBoxList.size() > 0) {
-                        Text("Next")
-                        Spacer(Modifier.width(4.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
+
+                    // Photo navigation (prev/next)
+                    if (boundingBoxList.size() > 1) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            val currentIdx =
+                                if (selectedIndices.size == 1) selectedIndices.first() else -1
+                            OutlinedButton(
+                                onClick = {
+                                    if (currentIdx > 0) state.selectSingleMetadata(currentIdx - 1)
+                                },
+                                enabled = currentIdx > 0,
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                            ) {
+                                Text("◄ Prev", style = MaterialTheme.typography.labelSmall)
+                            }
+                            Text(
+                                if (currentIdx >= 0)
+                                    "Photo ${currentIdx + 1} of ${boundingBoxList.size()}"
+                                else "${boundingBoxList.size()} photos",
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                            OutlinedButton(
+                                onClick = {
+                                    if (currentIdx < boundingBoxList.size() - 1 && currentIdx >= 0)
+                                        state.selectSingleMetadata(currentIdx + 1)
+                                },
+                                enabled = currentIdx >= 0 && currentIdx < boundingBoxList.size() - 1,
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                            ) {
+                                Text("Next ►", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    } else {
+                        Spacer(Modifier.weight(1f))
                     }
                 }
             }

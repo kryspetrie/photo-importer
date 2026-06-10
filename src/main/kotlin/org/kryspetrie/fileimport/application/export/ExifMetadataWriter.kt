@@ -355,6 +355,7 @@ object ExifMetadataWriter {
     }
 
     /** Writes GPS latitude/longitude data to the GPS IFD directory. */
+    @Suppress("SpreadOperator") // Apache Commons Imaging vararg API requires spread
     private fun writeGpsData(outputSet: TiffOutputSet, config: PhotoScanConfiguration) {
         if (config.gpsLatitude.isBlank() || config.gpsLongitude.isBlank()) return
         val lat = config.gpsLatitude.trim().toDoubleOrNull()

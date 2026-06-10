@@ -60,6 +60,8 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -937,6 +939,7 @@ private fun QuickEditEditor(
     onPickLocation: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var editTab by remember { mutableStateOf(0) } // 0 = Rotation, 1 = Metadata {
     val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
 
     // Buffered values for multi-edit
@@ -964,6 +967,25 @@ private fun QuickEditEditor(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // ── Edit tab selector ──
+            if (!isMultiSelect) {
+                TabRow(
+                    selectedTabIndex = editTab,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Tab(
+                        selected = editTab == 0,
+                        onClick = { editTab = 0 },
+                        text = { Text("Rotation") },
+                    )
+                    Tab(
+                        selected = editTab == 1,
+                        onClick = { editTab = 1 },
+                        text = { Text("Metadata") },
+                    )
+                }
+            }
+
             if (isMultiSelect) {
                 // ── Multi-edit mode ──
                 Row(
@@ -1095,6 +1117,8 @@ private fun QuickEditEditor(
                     color = MaterialTheme.colorScheme.primary,
                 )
 
+                // ═══ Rotation tab content ═══
+                if (editTab == 0) {
                 // ── Rotation section ──
                 RotationSection(
                     rotationDegrees = config.rotationDegrees,
@@ -1110,7 +1134,10 @@ private fun QuickEditEditor(
                         }
                     },
                 )
+                } // end Rotation tab
 
+                // ═══ Metadata tab content ═══
+                if (editTab == 1) {
                 // ── Metadata fields ──
                 QuickEditMetadataFields(
                     description = config.description,
@@ -1358,6 +1385,7 @@ private fun QuickEditEditor(
                     onRemoveFace = { faceIdx -> state.removeFaceRegion(selectedIndex, faceIdx) },
                     onClearAllFaces = { state.clearAllFaceRegions(selectedIndex) },
                 )
+                } // end Metadata tab
             }
         }
     }

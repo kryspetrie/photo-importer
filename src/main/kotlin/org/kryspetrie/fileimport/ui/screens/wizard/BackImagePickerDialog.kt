@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -53,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.style.TextOverflow
@@ -239,11 +242,58 @@ fun BackImagePickerDialog(
                             )
                         }
 
-                        // Drag overlay for drawing crop
-                        Box(
-                            modifier = Modifier.fillMaxSize().clickable(enabled = false) {}
-                            // Mouse event handling for crop drawing
-                        )
+                        // Drag overlay for drawing crop — click+drag to define crop region
+                        if (backImage != null) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .pointerInput(backImage!!.width, backImage!!.height) {
+                                        detectDragGestures(
+                                            onDragStart = { offset ->
+                                                isDragging = true
+                                                dragStart = offset
+                                                cropRect = null
+                                            },
+                                            onDrag = { change, _ ->
+                                                change.consume()
+                                                val start = dragStart ?: return@detectDragGestures
+                                                val img = backImage ?: return@detectDragGestures
+
+                                                // Calculate ContentScale.Fit mapping
+                                                val scaleX = viewSize.first.toFloat() / img.width.toFloat()
+                                                val scaleY = viewSize.second.toFloat() / img.height.toFloat()
+                                                val scale = minOf(scaleX, scaleY)
+                                                val imgDisplayW = img.width * scale
+                                                val imgDisplayH = img.height * scale
+                                                val offsetX = (viewSize.first - imgDisplayW) / 2f
+                                                val offsetY = (viewSize.second - imgDisplayH) / 2f
+
+                                                // Convert view-pixel coordinates to normalized [0,1]
+                                                val x1 = ((start.x - offsetX) / imgDisplayW).coerceIn(0f, 1f)
+                                                val y1 = ((start.y - offsetY) / imgDisplayH).coerceIn(0f, 1f)
+                                                val x2 = ((change.position.x - offsetX) / imgDisplayW).coerceIn(0f, 1f)
+                                                val y2 = ((change.position.y - offsetY) / imgDisplayH).coerceIn(0f, 1f)
+
+                                                cropRect = Rect(
+                                                    left = minOf(x1, x2),
+                                                    top = minOf(y1, y2),
+                                                    right = maxOf(x1, x2),
+                                                    bottom = maxOf(y1, y2),
+                                                )
+                                            },
+                                            onDragEnd = {
+                                                isDragging = false
+                                                dragStart = null
+                                            },
+                                            onDragCancel = {
+                                                isDragging = false
+                                                dragStart = null
+                                                cropRect = null
+                                            },
+                                        )
+                                    }
+                            )
+                        }
                     } else {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -272,6 +322,46 @@ fun BackImagePickerDialog(
                 }
 
                 Spacer(Modifier.height(12.dp))
+
+                // ── Crop & rotation controls ──
+                if (backImage != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Crop:", style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.width(4.dp))
+                            if (cropRect != null) {
+                                OutlinedButton(
+                                    onClick = { cropRect = null },
+                                    modifier = Modifier.height(28.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                ) {
+                                    Text("Clear Crop", style = MaterialTheme.typography.labelSmall)
+                                }
+                            } else {
+                                Text(
+                                    "Drag on image to crop",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Rotate:", style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.width(4.dp))
+                            OutlinedButton(
+                                onClick = { cropRotation = (cropRotation + 90) % 360 },
+                                modifier = Modifier.height(28.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp),
+                            ) {
+                                Text("↻ ${cropRotation}°", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+                }
 
                 // ── Mode selection ──
                 if (backImage != null) {

@@ -104,6 +104,14 @@ class PhotoScanExportService(
                         correctedImage
                     }
 
+                // Composite back image below the front image if configured
+                val compositeImage =
+                    if (photo.configuration.hasBackImage()) {
+                        compositeBackImage(finalImage, photo.configuration)
+                    } else {
+                        finalImage
+                    }
+
                 val fileName =
                     if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}.jpg"
                     else "${baseFileName}.jpg"
@@ -113,7 +121,7 @@ class PhotoScanExportService(
                 val outputFile = File(resolvedPath)
 
                 writeImageWithMetadata(
-                    finalImage,
+                    compositeImage,
                     outputFile,
                     photo.configuration,
                     sourceJavaFile,
@@ -129,8 +137,8 @@ class PhotoScanExportService(
                         sourceFile = sourceFile,
                         destinationPath = resolvedPath,
                         photoId = photo.id,
-                        width = finalImage.width,
-                        height = finalImage.height,
+                        width = compositeImage.width,
+                        height = compositeImage.height,
                         fileSize = outputFile.length(),
                     )
                 )
@@ -182,12 +190,19 @@ class PhotoScanExportService(
                     correctedImage
                 }
 
+            val compositeImage =
+                if (detectedPhoto.configuration.hasBackImage()) {
+                    compositeBackImage(finalImage, detectedPhoto.configuration)
+                } else {
+                    finalImage
+                }
+
             val resolvedPath =
                 FilenameResolver.resolveFilenameConflict(File(destinationPath), "$baseFileName.jpg")
             val outputFile = File(resolvedPath)
 
             writeImageWithMetadata(
-                finalImage,
+                compositeImage,
                 outputFile,
                 detectedPhoto.configuration,
                 sourceJavaFile,
@@ -201,8 +216,8 @@ class PhotoScanExportService(
             SingleExportResult(
                 success = true,
                 destinationPath = resolvedPath,
-                width = finalImage.width,
-                height = finalImage.height,
+                width = compositeImage.width,
+                height = compositeImage.height,
             )
         } catch (e: Exception) {
             SingleExportResult(
@@ -294,5 +309,81 @@ class PhotoScanExportService(
         if (mergedConfig.faceRegions.isNotEmpty()) {
             XmpMetadataWriter.writeXmpFaceRegions(outputFile, mergedConfig)
         }
+    }
+
+    /**
+     * Composites a back-of-photo image below the front (extracted) photo.
+     *
+     * The back image is loaded from [PhotoScanConfiguration.backImageSourcePath], optionally
+     * cropped using [PhotoScanConfiguration.backCropNormalized] coordinates, and optionally
+     * rotated by [PhotoScanConfiguration.backCropRotation]. The front and back images are
+     * stacked vertically with the back image scaled to match the front image width.
+     */
+    private fun compositeBackImage(frontImage: BufferedImage, config: PhotoScanConfiguration): BufferedImage {
+        val sourcePath = config.backImageSourcePath ?: return frontImage
+        val sourceFile = File(sourcePath)
+        if (!sourceFile.exists()) return frontImage
+
+        val backImage = try {
+            ImageIO.read(sourceFile) ?: return frontImage
+        } catch (_: Exception) {
+            return frontImage
+        }
+
+        // Apply crop if normalized crop coordinates are provided
+        val croppedBack = if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
+            val (left, top, right, bottom) = config.backCropNormalized
+            val cropX = (left * backImage.width).toInt().coerceIn(0, backImage.width)
+            val cropY = (top * backImage.height).toInt().coerceIn(0, backImage.height)
+            val cropW = ((right - left) * backImage.width).toInt().coerceIn(1, backImage.width - cropX)
+            val cropH = ((bottom - top) * backImage.height).toInt().coerceIn(1, backImage.height - cropY)
+            backImage.getSubimage(cropX, cropY, cropW, cropH)
+        } else {
+            backImage
+        }
+
+        // Apply rotation (0, 90, 180, 270 degrees)
+        val rotatedBack = when (config.backCropRotation) {
+            90 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CW_90)
+            180 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CW_180)
+            270 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CCW_90)
+            else -> croppedBack
+        }
+
+        // Scale back image to match front image width
+        val targetWidth = frontImage.width
+        val scale = targetWidth.toFloat() / rotatedBack.width.toFloat()
+        val targetHeight = (rotatedBack.height * scale).toInt()
+
+        val scaledBack = java.awt.image.BufferedImage(
+            targetWidth,
+            targetHeight,
+            java.awt.image.BufferedImage.TYPE_INT_RGB,
+        )
+        val g2d = scaledBack.createGraphics()
+        g2d.drawImage(rotatedBack, 0, 0, targetWidth, targetHeight, null)
+        g2d.dispose()
+
+        // Stack front and back vertically with a 2px separator
+        val separatorHeight = 2
+        val compositeWidth = frontImage.width
+        val compositeHeight = frontImage.height + separatorHeight + scaledBack.height
+
+        val composite = java.awt.image.BufferedImage(
+            compositeWidth,
+            compositeHeight,
+            java.awt.image.BufferedImage.TYPE_INT_RGB,
+        )
+        val g = composite.createGraphics()
+        // Draw front image at top
+        g.drawImage(frontImage, 0, 0, null)
+        // Draw separator line
+        g.color = java.awt.Color.LIGHT_GRAY
+        g.fillRect(0, frontImage.height, compositeWidth, separatorHeight)
+        // Draw back image below
+        g.drawImage(scaledBack, 0, frontImage.height + separatorHeight, null)
+        g.dispose()
+
+        return composite
     }
 }

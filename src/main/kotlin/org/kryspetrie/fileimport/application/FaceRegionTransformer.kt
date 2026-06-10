@@ -122,13 +122,12 @@ class FaceRegionTransformer : FaceRegionTransformerPort {
             val toleranceX = region.w * sourceWidth * 0.5
             val toleranceY = region.h * sourceHeight * 0.5
 
-            if (
+            val outOfBounds =
                 srcCenterX < bounds.minX - toleranceX ||
                     srcCenterX > bounds.maxX + toleranceX ||
                     srcCenterY < bounds.minY - toleranceY ||
                     srcCenterY > bounds.maxY + toleranceY
-            )
-                continue
+            if (outOfBounds) continue
 
             val srcLeft = (region.x - region.w / 2) * sourceWidth
             val srcTop = (region.y - region.h / 2) * sourceHeight
