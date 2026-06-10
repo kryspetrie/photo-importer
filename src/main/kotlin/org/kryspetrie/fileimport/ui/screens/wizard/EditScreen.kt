@@ -161,9 +161,10 @@ fun EditScreen(
     val sourceExif by state.sourceExif.collectAsState()
     val currentImageFile by state.imageFile.collectAsState()
 
-    var editMode by remember {
-        mutableStateOf(if (startWithMetadata) EditMode.METADATA else EditMode.ROTATE)
-    }
+    var editMode by
+        remember(startWithMetadata) {
+            mutableStateOf(if (startWithMetadata) EditMode.METADATA else EditMode.ROTATE)
+        }
     var isMultiEditMode by remember { mutableStateOf(false) }
     var fullscreenPreviewIndex by remember { mutableStateOf<Int?>(null) }
     var showLocationSection by remember { mutableStateOf(false) }
