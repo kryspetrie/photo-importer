@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +27,8 @@ import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.OpenWith
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -56,7 +59,8 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.awt.image.BufferedImage
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -65,6 +69,12 @@ import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.infrastructure.wizard.FaceSize
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+
+/** Interaction mode for the face selector overlay. */
+enum class InteractionMode(val displayName: String, val icon: ImageVector) {
+    PLACE("Place", Icons.Default.TouchApp),
+    MOVE("Move", Icons.Default.OpenWith),
+}
 
 /** Color for each region type when drawn on the canvas. */
 private fun regionTypeColor(type: RegionType): Color =
@@ -85,12 +95,14 @@ fun regionTypeIcon(type: RegionType): ImageVector =
     }
 
 /**
- * The face selection overlay, drawn inside a Popup.
+ * The face selection overlay, drawn inside a Dialog.
  *
  * Features:
- * - Left side toolbar for region type (Face/Pet/Body/Object) and size (S/M/L) selection
- * - Canvas overlay for drawing circles, labels, hover preview
- * - Tap to place, drag to move existing circles
+ * - Left side toolbar for interaction mode, region type, and size selection
+ * - Individual Compose composables per face region (no single Canvas redraw)
+ * - Lightweight hover preview Canvas (only redraws on mouse move)
+ * - PLACE mode: click to place new faces, shows hover preview
+ * - MOVE mode: drag to move existing faces, select to resize/delete
  * - Inherited face regions shown in cyan with "adopt" click support
  */
 @Composable
@@ -110,17 +122,19 @@ fun FaceSelectorOverlay(
     var imageDisplayBounds by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
     var hoverOffset by remember { mutableStateOf<Offset?>(null) }
     var draggingFaceIdx by remember { mutableStateOf(-1) }
+    var interactionMode by remember { mutableStateOf(InteractionMode.PLACE) }
     // Store the starting normalized position of the face being dragged, so we can
     // compute the final position as: startPos + cumulativePixelOffset / imageDimension.
-    // This avoids drift caused by adding per-frame deltas to an already-updated position.
     var dragStartNormX by remember { mutableStateOf(0.0) }
     var dragStartNormY by remember { mutableStateOf(0.0) }
     var dragTotalPixelDx by remember { mutableStateOf(0f) }
     var dragTotalPixelDy by remember { mutableStateOf(0f) }
     val faceRegions = photoConfig.faceRegions
-    val textMeasurer = rememberTextMeasurer()
 
-    Popup(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Box(
             modifier = Modifier.fillMaxSize().background(Color.Black),
             contentAlignment = Alignment.Center,
@@ -144,6 +158,38 @@ fun FaceSelectorOverlay(
                         Icon(Icons.Default.Close, "Close", modifier = Modifier.size(20.dp))
                     }
 
+                    // Interaction mode toggle
+                    Text("Mode", color = Color.White, style = MaterialTheme.typography.labelSmall)
+                    InteractionMode.entries.forEach { mode ->
+                        val isSelected = interactionMode == mode
+                        Surface(
+                            modifier = Modifier.clickable { interactionMode = mode },
+                            shape = RoundedCornerShape(6.dp),
+                            color =
+                                if (isSelected) Color.White.copy(alpha = 0.9f)
+                                else Color.White.copy(alpha = 0.2f),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    mode.icon,
+                                    contentDescription = mode.displayName,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = if (isSelected) Color.Black else Color.White,
+                                )
+                                Text(
+                                    mode.displayName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (isSelected) Color.Black else Color.White,
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.size(4.dp))
                     Text("Type", color = Color.White, style = MaterialTheme.typography.labelSmall)
                     // Region type buttons
                     RegionType.entries.forEach { type ->
@@ -299,20 +345,23 @@ fun FaceSelectorOverlay(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(
-                        Icons.Default.Face,
+                        interactionMode.icon,
                         null,
                         tint = Color.Yellow,
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        "Click to place • Drag to move",
+                        when (interactionMode) {
+                            InteractionMode.PLACE -> "Click to place a ${selectedRegionType.displayName}"
+                            InteractionMode.MOVE -> "Drag to move • Click ✕ to delete"
+                        },
                         color = Color.White,
                         style = MaterialTheme.typography.labelSmall,
                     )
                 }
             }
 
-            // ── Image + Canvas overlay ────────────────────────────────────
+            // ── Image + overlays ────────────────────────────────────
             Box(
                 modifier =
                     Modifier.fillMaxSize()
@@ -333,105 +382,120 @@ fun FaceSelectorOverlay(
                             }
                         }
                         .pointerInput(Unit) {
-                            // Track hover position for preview circle
+                            // Track hover position for preview circle (PLACE mode only)
                             awaitPointerEventScope {
                                 while (true) {
                                     val event = awaitPointerEvent()
-                                    if (event.type == PointerEventType.Move) {
-                                        hoverOffset = event.changes.firstOrNull()?.position
-                                    } else if (event.type == PointerEventType.Exit) {
+                                    if (interactionMode == InteractionMode.PLACE) {
+                                        if (event.type == PointerEventType.Move) {
+                                            hoverOffset = event.changes.firstOrNull()?.position
+                                        } else if (event.type == PointerEventType.Exit) {
+                                            hoverOffset = null
+                                        }
+                                    } else {
                                         hoverOffset = null
                                     }
                                 }
                             }
                         }
-                        .pointerInput(faceRegions.toList()) {
-                            // Combined drag (for moving existing faces) and tap (for placing new
-                            // faces)
-                            detectDragGestures(
-                                onDragStart = { offset ->
-                                    val bounds = imageDisplayBounds
-                                    if (bounds.width > 0f && bounds.height > 0f) {
-                                        val bestIdx = findClosestFace(offset, faceRegions, bounds)
-                                        if (bestIdx >= 0) {
-                                            draggingFaceIdx = bestIdx
-                                            // Store start position so we compute:
-                                            // final = start + totalPixelDrag / imageDimension
-                                            dragStartNormX = faceRegions[bestIdx].x
-                                            dragStartNormY = faceRegions[bestIdx].y
-                                            dragTotalPixelDx = 0f
-                                            dragTotalPixelDy = 0f
-                                        }
-                                    }
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    if (
-                                        draggingFaceIdx >= 0 && draggingFaceIdx < faceRegions.size
-                                    ) {
-                                        dragTotalPixelDx += dragAmount.x
-                                        dragTotalPixelDy += dragAmount.y
+                        .pointerInput(interactionMode, faceRegions.toList()) {
+                            // MOVE mode: drag to move existing faces
+                            if (interactionMode == InteractionMode.MOVE) {
+                                detectDragGestures(
+                                    onDragStart = { offset ->
                                         val bounds = imageDisplayBounds
                                         if (bounds.width > 0f && bounds.height > 0f) {
-                                            val newX =
-                                                (dragStartNormX +
-                                                        dragTotalPixelDx.toDouble() /
-                                                            bounds.width.toDouble())
-                                                    .coerceIn(0.0, 1.0)
-                                            val newY =
-                                                (dragStartNormY +
-                                                        dragTotalPixelDy.toDouble() /
-                                                            bounds.height.toDouble())
-                                                    .coerceIn(0.0, 1.0)
-                                            state.updateFaceRegion(
-                                                idx,
-                                                draggingFaceIdx,
-                                                x = newX,
-                                                y = newY,
-                                            )
+                                            val bestIdx =
+                                                findClosestFace(offset, faceRegions, bounds)
+                                            if (bestIdx >= 0) {
+                                                draggingFaceIdx = bestIdx
+                                                dragStartNormX = faceRegions[bestIdx].x
+                                                dragStartNormY = faceRegions[bestIdx].y
+                                                dragTotalPixelDx = 0f
+                                                dragTotalPixelDy = 0f
+                                            }
                                         }
-                                    }
-                                },
-                                onDragEnd = { draggingFaceIdx = -1 },
-                                onDragCancel = { draggingFaceIdx = -1 },
-                            )
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        if (
+                                            draggingFaceIdx >= 0 &&
+                                                draggingFaceIdx < faceRegions.size
+                                        ) {
+                                            dragTotalPixelDx += dragAmount.x
+                                            dragTotalPixelDy += dragAmount.y
+                                            val bounds = imageDisplayBounds
+                                            if (bounds.width > 0f && bounds.height > 0f) {
+                                                val newX =
+                                                    (dragStartNormX +
+                                                            dragTotalPixelDx.toDouble() /
+                                                                bounds.width.toDouble())
+                                                        .coerceIn(0.0, 1.0)
+                                                val newY =
+                                                    (dragStartNormY +
+                                                            dragTotalPixelDy.toDouble() /
+                                                                bounds.height.toDouble())
+                                                        .coerceIn(0.0, 1.0)
+                                                state.updateFaceRegion(
+                                                    idx,
+                                                    draggingFaceIdx,
+                                                    x = newX,
+                                                    y = newY,
+                                                )
+                                            }
+                                        }
+                                    },
+                                    onDragEnd = { draggingFaceIdx = -1 },
+                                    onDragCancel = { draggingFaceIdx = -1 },
+                                )
+                            }
                         }
-                        .pointerInput(Unit) {
+                        .pointerInput(interactionMode) {
+                            // Tap handler: PLACE mode places new face, MOVE mode checks delete zone
                             detectTapGestures { offset ->
                                 val bounds = imageDisplayBounds
                                 if (bounds.width > 0f && bounds.height > 0f) {
-                                    // Check if tapping on an existing face circle's delete zone
-                                    val tappedIdx = findClosestFace(offset, faceRegions, bounds)
-                                    if (tappedIdx >= 0) {
-                                        val region = faceRegions[tappedIdx]
-                                        val cx = bounds.left + (region.x * bounds.width).toFloat()
-                                        val cy = bounds.top + (region.y * bounds.height).toFloat()
-                                        val radius = (region.w / 2.0 * bounds.height).toFloat()
-                                        // Delete X at bottom of circle
-                                        val deleteX = cx
-                                        val deleteY = cy + radius + 14f
-                                        val distToDelete =
-                                            sqrt(
-                                                (offset.x - deleteX).pow(2) +
-                                                    (offset.y - deleteY).pow(2)
-                                            )
-                                        if (distToDelete < 14f) {
-                                            state.removeFaceRegion(idx, tappedIdx)
-                                            return@detectTapGestures
+                                    if (interactionMode == InteractionMode.MOVE) {
+                                        // Check if tapping on an existing face circle's delete zone
+                                        val tappedIdx =
+                                            findClosestFace(offset, faceRegions, bounds)
+                                        if (tappedIdx >= 0) {
+                                            val region = faceRegions[tappedIdx]
+                                            val cx =
+                                                bounds.left +
+                                                    (region.x * bounds.width).toFloat()
+                                            val cy =
+                                                bounds.top +
+                                                    (region.y * bounds.height).toFloat()
+                                            val radius =
+                                                (region.w / 2.0 * bounds.height).toFloat()
+                                            val deleteX = cx
+                                            val deleteY = cy + radius + 14f
+                                            val distToDelete =
+                                                sqrt(
+                                                    (offset.x - deleteX).pow(2) +
+                                                        (offset.y - deleteY).pow(2)
+                                                )
+                                            if (distToDelete < 14f) {
+                                                state.removeFaceRegion(idx, tappedIdx)
+                                                return@detectTapGestures
+                                            }
                                         }
                                     }
 
-                                    // Place a new face
-                                    val normX =
-                                        ((offset.x - bounds.left) / bounds.width)
-                                            .toDouble()
-                                            .coerceIn(0.0, 1.0)
-                                    val normY =
-                                        ((offset.y - bounds.top) / bounds.height)
-                                            .toDouble()
-                                            .coerceIn(0.0, 1.0)
-                                    if (normX in 0.0..1.0 && normY in 0.0..1.0) {
-                                        onPlaceFace(normX, normY)
+                                    // PLACE mode: place a new face at the tap position
+                                    if (interactionMode == InteractionMode.PLACE) {
+                                        val normX =
+                                            ((offset.x - bounds.left) / bounds.width)
+                                                .toDouble()
+                                                .coerceIn(0.0, 1.0)
+                                        val normY =
+                                            ((offset.y - bounds.top) / bounds.height)
+                                                .toDouble()
+                                                .coerceIn(0.0, 1.0)
+                                        if (normX in 0.0..1.0 && normY in 0.0..1.0) {
+                                            onPlaceFace(normX, normY)
+                                        }
                                     }
                                 }
                             }
@@ -444,196 +508,226 @@ fun FaceSelectorOverlay(
                     contentScale = ContentScale.Fit,
                 )
 
-                // Canvas overlay for face circles, labels, and hover preview
-                Canvas(modifier = Modifier.fillMaxSize()) {
+                // ── Individual face region composables ─────────────────
+                for (faceIdx in faceRegions.indices) {
+                    val region = faceRegions[faceIdx]
                     val bounds = imageDisplayBounds
-                    if (bounds.width <= 0f || bounds.height <= 0f) return@Canvas
+                    if (bounds.width > 0f && bounds.height > 0f) {
+                        FaceRegionComposable(
+                            region = region,
+                            faceIdx = faceIdx,
+                            bounds = bounds,
+                            isDragging = faceIdx == draggingFaceIdx,
+                            interactionMode = interactionMode,
+                        )
+                    }
+                }
 
-                    // ── Draw existing face regions ──────────────────────
-                    for (faceIdx in faceRegions.indices) {
-                        val region = faceRegions[faceIdx]
-                        val cx = bounds.left + (region.x * bounds.width).toFloat()
-                        val cy = bounds.top + (region.y * bounds.height).toFloat()
-                        val radius = (region.w / 2.0 * bounds.height).toFloat()
-                        val color = regionTypeColor(RegionType.fromMwgRs(region.type))
+                // ── Inherited face regions (drawn as canvas for lightweight rendering) ──
+                if (inheritedFaceRegions.isNotEmpty()) {
+                    val textMeasurer = rememberTextMeasurer()
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val bounds = imageDisplayBounds
+                        if (bounds.width <= 0f || bounds.height <= 0f) return@Canvas
 
-                        // Circle outline (or filled if dragging)
-                        if (faceIdx == draggingFaceIdx) {
+                        for (region in inheritedFaceRegions) {
+                            val cx = bounds.left + (region.x * bounds.width).toFloat()
+                            val cy = bounds.top + (region.y * bounds.height).toFloat()
+                            val radius = (region.w / 2.0 * bounds.height).toFloat()
+
                             drawCircle(
-                                color = color.copy(alpha = 0.4f),
+                                color = Color.Cyan,
                                 radius = radius,
                                 center = Offset(cx, cy),
+                                style = Stroke(width = 1.5f),
                             )
-                        }
-                        drawCircle(
-                            color = color,
-                            radius = radius,
-                            center = Offset(cx, cy),
-                            style = Stroke(width = 2f),
-                        )
 
-                        // Name label above the circle
-                        val nameLabel = region.name
-                        val nameLayout =
-                            textMeasurer.measure(
-                                nameLabel,
-                                TextStyle(color = Color.Black, fontSize = 11.sp),
-                            )
-                        drawRoundRect(
-                            color = color.copy(alpha = 0.85f),
-                            topLeft =
-                                Offset(
-                                    cx - nameLayout.size.width.toFloat() / 2f - 4f,
-                                    cy - radius - 20f,
-                                ),
-                            size =
-                                Size(
-                                    nameLayout.size.width.toFloat() + 8f,
-                                    nameLayout.size.height.toFloat() + 4f,
-                                ),
-                        )
-                        drawText(
-                            textLayoutResult = nameLayout,
-                            topLeft =
-                                Offset(cx - nameLayout.size.width.toFloat() / 2f, cy - radius - 18f),
-                        )
-
-                        // Region type icon indicator (small colored dot)
-                        drawCircle(
-                            color = color,
-                            radius = 5f,
-                            center =
-                                Offset(
-                                    cx - nameLayout.size.width.toFloat() / 2f - 12f,
-                                    cy - radius - 12f,
-                                ),
-                        )
-
-                        // Delete X at bottom of circle
-                        val deleteX = cx
-                        val deleteY = cy + radius + 10f
-                        drawCircle(
-                            color = Color.Red.copy(alpha = 0.85f),
-                            radius = 10f,
-                            center = Offset(deleteX, deleteY),
-                        )
-                        drawLine(
-                            color = Color.White,
-                            start = Offset(deleteX - 5f, deleteY - 5f),
-                            end = Offset(deleteX + 5f, deleteY + 5f),
-                            strokeWidth = 2f,
-                            cap = StrokeCap.Round,
-                        )
-                        drawLine(
-                            color = Color.White,
-                            start = Offset(deleteX + 5f, deleteY - 5f),
-                            end = Offset(deleteX - 5f, deleteY + 5f),
-                            strokeWidth = 2f,
-                            cap = StrokeCap.Round,
-                        )
-                    }
-
-                    // ── Draw inherited face regions (cyan) ──────────────
-                    for (region in inheritedFaceRegions) {
-                        val cx = bounds.left + (region.x * bounds.width).toFloat()
-                        val cy = bounds.top + (region.y * bounds.height).toFloat()
-                        val radius = (region.w / 2.0 * bounds.height).toFloat()
-
-                        drawCircle(
-                            color = Color.Cyan,
-                            radius = radius,
-                            center = Offset(cx, cy),
-                            style = Stroke(width = 1.5f),
-                        )
-
-                        val inheritedLabel = region.name
-                        val inheritedLayout =
-                            textMeasurer.measure(
-                                inheritedLabel,
-                                TextStyle(color = Color.White, fontSize = 10.sp),
-                            )
-                        drawRoundRect(
-                            color = Color.Cyan.copy(alpha = 0.7f),
-                            topLeft =
-                                Offset(
-                                    cx - inheritedLayout.size.width.toFloat() / 2f - 4f,
-                                    cy - radius - 18f,
-                                ),
-                            size =
-                                Size(
-                                    inheritedLayout.size.width.toFloat() + 8f,
-                                    inheritedLayout.size.height.toFloat() + 4f,
-                                ),
-                        )
-                        drawText(
-                            textLayoutResult = inheritedLayout,
-                            topLeft =
-                                Offset(
-                                    cx - inheritedLayout.size.width.toFloat() / 2f,
-                                    cy - radius - 16f,
-                                ),
-                        )
-
-                        // Plus icon at bottom (adopt indicator)
-                        val plusX = cx
-                        val plusY = cy + radius + 8f
-                        drawCircle(
-                            color = Color.Cyan.copy(alpha = 0.7f),
-                            radius = 8f,
-                            center = Offset(plusX, plusY),
-                        )
-                        drawLine(
-                            color = Color.White,
-                            start = Offset(plusX - 4f, plusY),
-                            end = Offset(plusX + 4f, plusY),
-                            strokeWidth = 2f,
-                            cap = StrokeCap.Round,
-                        )
-                        drawLine(
-                            color = Color.White,
-                            start = Offset(plusX, plusY - 4f),
-                            end = Offset(plusX, plusY + 4f),
-                            strokeWidth = 2f,
-                            cap = StrokeCap.Round,
-                        )
-                    }
-
-                    // ── Draw hover preview ────────────────────────────
-                    val currentHoverOffset = hoverOffset
-                    if (currentHoverOffset != null && draggingFaceIdx < 0) {
-                        val bounds2 = imageDisplayBounds
-                        if (bounds2.width > 0f && bounds2.height > 0f) {
-                            val normX =
-                                ((currentHoverOffset.x - bounds2.left) / bounds2.width)
-                                    .toDouble()
-                                    .coerceIn(0.0, 1.0)
-                            val normY =
-                                ((currentHoverOffset.y - bounds2.top) / bounds2.height)
-                                    .toDouble()
-                                    .coerceIn(0.0, 1.0)
-                            if (normX in 0.0..1.0 && normY in 0.0..1.0) {
-                                val previewCx = bounds2.left + (normX * bounds2.width).toFloat()
-                                val previewCy = bounds2.top + (normY * bounds2.height).toFloat()
-                                val previewRadius =
-                                    (selectedFaceSize.radius * bounds2.height).toFloat()
-                                val previewColor = regionTypeColor(selectedRegionType)
-
-                                drawCircle(
-                                    color = previewColor.copy(alpha = 0.35f),
-                                    radius = previewRadius,
-                                    center = Offset(previewCx, previewCy),
+                            val inheritedLabel = region.name
+                            val inheritedLayout =
+                                textMeasurer.measure(
+                                    inheritedLabel,
+                                    TextStyle(color = Color.White, fontSize = 10.sp),
                                 )
-                                drawCircle(
-                                    color = previewColor.copy(alpha = 0.8f),
-                                    radius = previewRadius,
-                                    center = Offset(previewCx, previewCy),
-                                    style = Stroke(width = 2f),
-                                )
-                            }
+                            drawRoundRect(
+                                color = Color.Cyan.copy(alpha = 0.7f),
+                                topLeft =
+                                    Offset(
+                                        cx - inheritedLayout.size.width.toFloat() / 2f - 4f,
+                                        cy - radius - 18f,
+                                    ),
+                                size =
+                                    Size(
+                                        inheritedLayout.size.width.toFloat() + 8f,
+                                        inheritedLayout.size.height.toFloat() + 4f,
+                                    ),
+                            )
+                            drawText(
+                                textLayoutResult = inheritedLayout,
+                                topLeft =
+                                    Offset(
+                                        cx - inheritedLayout.size.width.toFloat() / 2f,
+                                        cy - radius - 16f,
+                                    ),
+                            )
+
+                            // Plus icon at bottom (adopt indicator)
+                            val plusX = cx
+                            val plusY = cy + radius + 8f
+                            drawCircle(
+                                color = Color.Cyan.copy(alpha = 0.7f),
+                                radius = 8f,
+                                center = Offset(plusX, plusY),
+                            )
+                            drawLine(
+                                color = Color.White,
+                                start = Offset(plusX - 4f, plusY),
+                                end = Offset(plusX + 4f, plusY),
+                                strokeWidth = 2f,
+                                cap = StrokeCap.Round,
+                            )
+                            drawLine(
+                                color = Color.White,
+                                start = Offset(plusX, plusY - 4f),
+                                end = Offset(plusX, plusY + 4f),
+                                strokeWidth = 2f,
+                                cap = StrokeCap.Round,
+                            )
                         }
                     }
                 }
+
+                // ── Lightweight hover preview Canvas (PLACE mode only) ──
+                if (interactionMode == InteractionMode.PLACE) {
+                    val currentHoverOffset = hoverOffset
+                    val previewColor = regionTypeColor(selectedRegionType)
+                    val previewRadius = selectedFaceSize.radius
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        val bounds = imageDisplayBounds
+                        if (bounds.width <= 0f || bounds.height <= 0f) return@Canvas
+                        if (currentHoverOffset == null || draggingFaceIdx >= 0) return@Canvas
+
+                        val normX =
+                            ((currentHoverOffset.x - bounds.left) / bounds.width)
+                                .toDouble()
+                                .coerceIn(0.0, 1.0)
+                        val normY =
+                            ((currentHoverOffset.y - bounds.top) / bounds.height)
+                                .toDouble()
+                                .coerceIn(0.0, 1.0)
+                        if (normX !in 0.0..1.0 || normY !in 0.0..1.0) return@Canvas
+
+                        val previewCx = bounds.left + (normX * bounds.width).toFloat()
+                        val previewCy = bounds.top + (normY * bounds.height).toFloat()
+                        val radius = (previewRadius * bounds.height).toFloat()
+
+                        drawCircle(
+                            color = previewColor.copy(alpha = 0.35f),
+                            radius = radius,
+                            center = Offset(previewCx, previewCy),
+                        )
+                        drawCircle(
+                            color = previewColor.copy(alpha = 0.8f),
+                            radius = radius,
+                            center = Offset(previewCx, previewCy),
+                            style = Stroke(width = 2f),
+                        )
+                    }
+                }
             }
+        }
+    }
+}
+
+/**
+ * Individual composable for a single face region circle.
+ * Positioned absolutely within the image overlay box.
+ * Only redraws when its own data or bounds change.
+ */
+@Composable
+private fun FaceRegionComposable(
+    region: FaceRegion,
+    faceIdx: Int,
+    bounds: Rect,
+    isDragging: Boolean,
+    interactionMode: InteractionMode,
+) {
+    val color = regionTypeColor(RegionType.fromMwgRs(region.type))
+    val textMeasurer = rememberTextMeasurer()
+    val cx = bounds.left + (region.x * bounds.width).toFloat()
+    val cy = bounds.top + (region.y * bounds.height).toFloat()
+    val radius = (region.w / 2.0 * bounds.height).toFloat()
+
+    // Name label dimensions
+    val nameLabel = region.name
+    val nameLayout =
+        remember(nameLabel) {
+            textMeasurer.measure(nameLabel, TextStyle(color = Color.Black, fontSize = 11.sp))
+        }
+    val labelWidth = nameLayout.size.width.toFloat() + 8f
+    val labelHeight = nameLayout.size.height.toFloat() + 4f
+    val labelX = cx - labelWidth / 2f
+    val labelY = cy - radius - 20f
+
+    // Delete button position
+    val deleteX = cx
+    val deleteY = cy + radius + 10f
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        // Circle outline (or filled if dragging)
+        if (isDragging) {
+            drawCircle(
+                color = color.copy(alpha = 0.4f),
+                radius = radius,
+                center = Offset(cx, cy),
+            )
+        }
+        drawCircle(
+            color = color,
+            radius = radius,
+            center = Offset(cx, cy),
+            style = Stroke(width = 2f),
+        )
+
+        // Name label background
+        drawRoundRect(
+            color = color.copy(alpha = 0.85f),
+            topLeft = Offset(labelX, labelY),
+            size = Size(labelWidth, labelHeight),
+        )
+        // Name label text
+        drawText(
+            textLayoutResult = nameLayout,
+            topLeft = Offset(cx - nameLayout.size.width.toFloat() / 2f, labelY + 2f),
+        )
+
+        // Region type icon indicator (small colored dot)
+        drawCircle(
+            color = color,
+            radius = 5f,
+            center = Offset(labelX - 8f, labelY + labelHeight / 2f),
+        )
+
+        // Delete X button (always visible in MOVE mode, hidden in PLACE mode)
+        if (interactionMode == InteractionMode.MOVE) {
+            drawCircle(
+                color = Color.Red.copy(alpha = 0.85f),
+                radius = 10f,
+                center = Offset(deleteX, deleteY),
+            )
+            drawLine(
+                color = Color.White,
+                start = Offset(deleteX - 5f, deleteY - 5f),
+                end = Offset(deleteX + 5f, deleteY + 5f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
+            drawLine(
+                color = Color.White,
+                start = Offset(deleteX + 5f, deleteY - 5f),
+                end = Offset(deleteX - 5f, deleteY + 5f),
+                strokeWidth = 2f,
+                cap = StrokeCap.Round,
+            )
         }
     }
 }
