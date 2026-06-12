@@ -102,7 +102,7 @@ fun WizardContainer(
     var processingProgress by remember { mutableFloatStateOf(0f) }
     var processingCurrentFile by remember { mutableStateOf("") }
     var failedExportCount by remember { mutableStateOf(0) }
-    val settings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
+    val settings by settingsPort.observeSettings().collectAsState()
     var exportDestination by remember {
         mutableStateOf(
             settings.photoScanImportTabSettings.lastDestinationPath.ifBlank {

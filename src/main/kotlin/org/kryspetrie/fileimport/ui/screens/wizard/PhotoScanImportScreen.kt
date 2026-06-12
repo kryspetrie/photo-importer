@@ -52,7 +52,7 @@ fun PhotoScanImportScreen(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val settings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
+    val settings by settingsPort.observeSettings().collectAsState()
     val scope = rememberCoroutineScope()
 
     val cvAutoDetectEnabled by state.cvAutoDetectEnabled.collectAsState()

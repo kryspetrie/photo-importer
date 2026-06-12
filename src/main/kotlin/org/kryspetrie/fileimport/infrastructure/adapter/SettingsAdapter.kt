@@ -1,8 +1,8 @@
 package org.kryspetrie.fileimport.infrastructure.adapter
 
 import java.io.File
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.kryspetrie.fileimport.domain.model.AppSettings
@@ -86,7 +86,7 @@ class SettingsAdapter(
         }
     }
 
-    override fun observeSettings(): Flow<AppSettings> = _settings
+    override fun observeSettings(): StateFlow<AppSettings> = _settings
 
     override suspend fun loadProfile(profileId: String): ImportProfile? =
         loadSettings().profiles.find { it.id == profileId }

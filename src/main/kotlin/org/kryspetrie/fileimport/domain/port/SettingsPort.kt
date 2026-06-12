@@ -1,6 +1,6 @@
 package org.kryspetrie.fileimport.domain.port
 
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImportProfile
@@ -10,7 +10,7 @@ interface SettingsPort {
 
     suspend fun saveSettings(settings: AppSettings)
 
-    fun observeSettings(): Flow<AppSettings>
+    fun observeSettings(): StateFlow<AppSettings>
 
     suspend fun loadProfile(profileId: String): ImportProfile?
 
