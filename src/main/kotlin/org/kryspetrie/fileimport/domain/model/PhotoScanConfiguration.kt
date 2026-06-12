@@ -49,8 +49,9 @@ data class PhotoScanConfiguration(
     val aspectRatio: Double = 0.0,
 
     /**
-     * Correction strategy for the photo geometry. null = auto (determined from corner geometry via
-     * [determineCorrectionStrategy]). Non-null = force a specific strategy regardless of geometry.
+     * Correction strategy for the photo geometry. null = use the global default strategy (set via
+     * [PhotoScanWizardState.defaultCorrectionStrategy]). Non-null = force a specific strategy for
+     * this photo, overriding the global default.
      */
     val correctionStrategy: CorrectionStrategy? = null,
 

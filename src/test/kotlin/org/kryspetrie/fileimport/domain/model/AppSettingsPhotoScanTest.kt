@@ -1,6 +1,7 @@
 package org.kryspetrie.fileimport.domain.model
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -185,5 +186,83 @@ class AppSettingsPhotoScanTest {
         assertEquals(2, deserialized.photoScanProfiles.size)
         assertEquals("id1", deserialized.activePhotoScanProfileId)
         assertEquals(listOf("/recent/path"), deserialized.recentPhotoScanDestinations)
+    }
+
+    // ==================== alwaysEditMetadata Tests ====================
+
+    @Test
+    fun `alwaysEditMetadata defaults to false`() {
+        val settings = AppSettings()
+        assertFalse(settings.alwaysEditMetadata)
+    }
+
+    @Test
+    fun `alwaysEditMetadata can be set to true`() {
+        val settings = AppSettings(alwaysEditMetadata = true)
+        assertTrue(settings.alwaysEditMetadata)
+    }
+
+    @Test
+    fun `alwaysEditMetadata persists through serialization`() {
+        val original = AppSettings(alwaysEditMetadata = true)
+        val json =
+            kotlinx.serialization.json
+                .Json { prettyPrint = true }
+                .encodeToString(AppSettings.serializer(), original)
+        val deserialized =
+            kotlinx.serialization.json
+                .Json { ignoreUnknownKeys = true }
+                .decodeFromString(AppSettings.serializer(), json)
+
+        assertTrue(deserialized.alwaysEditMetadata)
+    }
+
+    // ==================== lastCorrectionStrategy Tests ====================
+
+    @Test
+    fun `lastCorrectionStrategy defaults to PERSPECTIVE`() {
+        val settings = AppSettings()
+        assertEquals(CorrectionStrategy.PERSPECTIVE, settings.lastCorrectionStrategy)
+    }
+
+    @Test
+    fun `lastCorrectionStrategy can be changed`() {
+        val settings = AppSettings(lastCorrectionStrategy = CorrectionStrategy.CROP)
+        assertEquals(CorrectionStrategy.CROP, settings.lastCorrectionStrategy)
+
+        val updated = settings.copy(lastCorrectionStrategy = CorrectionStrategy.CROP_AND_ROTATE)
+        assertEquals(CorrectionStrategy.CROP_AND_ROTATE, updated.lastCorrectionStrategy)
+    }
+
+    @Test
+    fun `lastCorrectionStrategy persists through serialization`() {
+        val original = AppSettings(lastCorrectionStrategy = CorrectionStrategy.CROP_AND_ROTATE)
+        val json =
+            kotlinx.serialization.json
+                .Json { prettyPrint = true }
+                .encodeToString(AppSettings.serializer(), original)
+        val deserialized =
+            kotlinx.serialization.json
+                .Json { ignoreUnknownKeys = true }
+                .decodeFromString(AppSettings.serializer(), json)
+
+        assertEquals(CorrectionStrategy.CROP_AND_ROTATE, deserialized.lastCorrectionStrategy)
+    }
+
+    @Test
+    fun `all three strategies can be stored and retrieved`() {
+        for (strategy in CorrectionStrategy.entries) {
+            val settings = AppSettings(lastCorrectionStrategy = strategy)
+            val json =
+                kotlinx.serialization.json
+                    .Json { prettyPrint = true }
+                    .encodeToString(AppSettings.serializer(), settings)
+            val deserialized =
+                kotlinx.serialization.json
+                    .Json { ignoreUnknownKeys = true }
+                    .decodeFromString(AppSettings.serializer(), json)
+
+            assertEquals(strategy, deserialized.lastCorrectionStrategy)
+        }
     }
 }

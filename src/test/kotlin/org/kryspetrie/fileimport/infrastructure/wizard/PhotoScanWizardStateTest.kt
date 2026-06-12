@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.RegionType
 
 /**
@@ -995,6 +996,27 @@ class PhotoScanWizardStateTest {
         assertEquals(0.0, state.exportMarginPercent.value)
         state.setExportMarginPercent(0.5)
         assertEquals(0.2, state.exportMarginPercent.value)
+    }
+
+    // ==================== Correction Strategy Default ====================
+
+    // WS-61: defaultCorrectionStrategy defaults to PERSPECTIVE
+    @Test
+    fun `defaultCorrectionStrategy defaults to PERSPECTIVE`() {
+        assertEquals(CorrectionStrategy.PERSPECTIVE, state.defaultCorrectionStrategy.value)
+    }
+
+    // WS-62: setDefaultCorrectionStrategy changes the strategy
+    @Test
+    fun `setDefaultCorrectionStrategy changes the strategy`() {
+        state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
+        assertEquals(CorrectionStrategy.CROP, state.defaultCorrectionStrategy.value)
+
+        state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
+        assertEquals(CorrectionStrategy.CROP_AND_ROTATE, state.defaultCorrectionStrategy.value)
+
+        state.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
+        assertEquals(CorrectionStrategy.PERSPECTIVE, state.defaultCorrectionStrategy.value)
     }
 
     // ==================== Face Region Tests ====================

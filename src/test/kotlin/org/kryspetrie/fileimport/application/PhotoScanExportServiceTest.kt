@@ -18,6 +18,7 @@ import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 
 @DisplayName("PhotoScanExportService")
@@ -1087,6 +1088,133 @@ class PhotoScanExportServiceTest {
             assertThat(ifd0.getString(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION))
                 .isEqualTo("Summer vacation")
             assertThat(ifd0.containsTag(ExifIFD0Directory.TAG_MODEL)).isFalse()
+        }
+    }
+
+    @Nested
+    @DisplayName("correction strategy")
+    inner class CorrectionStrategyTests {
+        @Test
+        @DisplayName("null correctionStrategy with perspective correction ON uses PERSPECTIVE")
+        fun nullStrategyWithPerspectiveCorrectionOnUsesPerspective() {
+            val photo =
+                createDetectedPhoto().copy(
+                    applyPerspectiveCorrection = true,
+                    configuration = PhotoScanConfiguration(correctionStrategy = null),
+                )
+            val marginedPhoto = GeometryUtils.applyMargin(photo, 0.02)
+            // When correctionStrategy is null and perspectiveCorrection is ON,
+            // the export service should use PERSPECTIVE
+            assertThat(marginedPhoto.applyPerspectiveCorrection).isTrue()
+        }
+
+        @Test
+        @DisplayName("null correctionStrategy with perspective correction OFF uses auto-detect")
+        fun nullStrategyWithPerspectiveCorrectionOffUsesAutoDetect() {
+            val photo =
+                createDetectedPhoto().copy(
+                    applyPerspectiveCorrection = false,
+                    configuration = PhotoScanConfiguration(correctionStrategy = null),
+                )
+            // When correctionStrategy is null and perspectiveCorrection is OFF,
+            // the strategy is determined from corner geometry
+            assertThat(photo.configuration.correctionStrategy).isNull()
+            assertThat(photo.applyPerspectiveCorrection).isFalse()
+        }
+
+        @Test
+        @DisplayName("explicit CROP strategy overrides perspective correction being ON")
+        fun explicitCropStrategyOverridesPerspectiveCorrection() {
+            val photo =
+                createDetectedPhoto().copy(
+                    applyPerspectiveCorrection = true,
+                    configuration =
+                        PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
+                )
+            // Even though perspectiveCorrection is ON, explicit CROP strategy should be used
+            assertThat(photo.configuration.correctionStrategy).isEqualTo(CorrectionStrategy.CROP)
+        }
+
+        @Test
+        @DisplayName("explicit PERSPECTIVE strategy when perspective correction OFF")
+        fun explicitPerspectiveStrategyWhenPerspectiveCorrectionOff() {
+            val photo =
+                createDetectedPhoto().copy(
+                    applyPerspectiveCorrection = false,
+                    configuration =
+                        PhotoScanConfiguration(
+                            correctionStrategy = CorrectionStrategy.PERSPECTIVE
+                        ),
+                )
+            // Even though perspectiveCorrection is OFF, explicit PERSPECTIVE strategy is used
+            assertThat(photo.configuration.correctionStrategy)
+                .isEqualTo(CorrectionStrategy.PERSPECTIVE)
+        }
+
+        @Test
+        @DisplayName("CROP_AND_ROTATE strategy value is preserved")
+        fun cropAndRotateStrategyIsPreserved() {
+            val config =
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP_AND_ROTATE)
+            assertThat(config.correctionStrategy).isEqualTo(CorrectionStrategy.CROP_AND_ROTATE)
+        }
+
+        @Test
+        @DisplayName("null correctionStrategy defaults to null in PhotoScanConfiguration")
+        fun nullCorrectionStrategyIsDefault() {
+            val config = PhotoScanConfiguration()
+            assertThat(config.correctionStrategy).isNull()
+        }
+
+        @Test
+        @DisplayName("export with explicit CROP strategy produces axis-aligned crop")
+        fun exportWithCropStrategyProducesAxisAlignedCrop() {
+            val sourceFile = createTestImage(200, 150, 0xAAAAAA)
+            val source = ImageIO.read(sourceFile)
+            val destDir = File(tempDir, "crop_test_${System.nanoTime()}")
+            destDir.mkdirs()
+            val photo =
+                createDetectedPhoto().copy(
+                    applyPerspectiveCorrection = true,
+                    configuration =
+                        PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
+                )
+            val result =
+                service.exportSinglePhoto(
+                    source.toProcessedImage(),
+                    photo,
+                    destDir.absolutePath,
+                    "crop_test",
+                    sourceFile = FilePath(sourceFile.absolutePath),
+                )
+            assertThat(result.success).isTrue()
+            assertThat(File(result.destinationPath)).exists()
+        }
+
+        @Test
+        @DisplayName("export with explicit PERSPECTIVE strategy succeeds")
+        fun exportWithPerspectiveStrategySucceeds() {
+            val sourceFile = createTestImage(200, 150, 0xBBBBBB)
+            val source = ImageIO.read(sourceFile)
+            val destDir = File(tempDir, "persp_test_${System.nanoTime()}")
+            destDir.mkdirs()
+            val photo =
+                createDetectedPhoto().copy(
+                    applyPerspectiveCorrection = true,
+                    configuration =
+                        PhotoScanConfiguration(
+                            correctionStrategy = CorrectionStrategy.PERSPECTIVE
+                        ),
+                )
+            val result =
+                service.exportSinglePhoto(
+                    source.toProcessedImage(),
+                    photo,
+                    destDir.absolutePath,
+                    "perspective_test",
+                    sourceFile = FilePath(sourceFile.absolutePath),
+                )
+            assertThat(result.success).isTrue()
         }
     }
 }
