@@ -118,6 +118,15 @@ dependencies {
         testLogging { showStandardStreams = true }
     }
 
+    tasks.register<Test>("uiTest") {
+        description = "Runs UI component tests (Compose rendering tests)"
+        group = "verification"
+        useJUnitPlatform { includeTags("UiComponentTest") }
+        testLogging { showStandardStreams = true }
+        classpath = sourceSets["test"].runtimeClasspath
+        testClassesDirs = sourceSets["test"].output.classesDirs
+    }
+
     tasks.register<Test>("integrationTest") {
         description = "Runs integration tests that make real network calls"
         group = "verification"
