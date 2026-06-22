@@ -72,6 +72,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanConstants
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
+import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
@@ -119,6 +120,13 @@ fun WizardContainer(
         }
     }
     val scope = rememberCoroutineScope()
+    val previewCache = remember { PreviewCache(perspectiveService) }
+
+    // Clear preview cache when the source image changes (new import)
+    val sourceImage by state.image.collectAsState()
+    LaunchedEffect(sourceImage) {
+        previewCache.clear()
+    }
 
     // Initialize correction strategy from persisted settings (once)
     LaunchedEffect(Unit) { state.setDefaultCorrectionStrategy(settings.lastCorrectionStrategy) }
@@ -132,6 +140,7 @@ fun WizardContainer(
             detectorService = detectorService,
             exportService = exportService,
             perspectiveService = perspectiveService,
+            previewCache = previewCache,
             appLogger = appLogger,
             dispatcherProvider = dispatcherProvider,
             faceRegionTransformer = faceRegionTransformer,
@@ -194,6 +203,7 @@ private fun WizardStepContent(
     detectorService: PhotoScanDetectorPort,
     exportService: PhotoScanExportService,
     perspectiveService: PerspectiveCorrectionService,
+    previewCache: PreviewCache,
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
     faceRegionTransformer: FaceRegionTransformer,
@@ -269,6 +279,7 @@ private fun WizardStepContent(
                     state = state,
                     image = image,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     onBack = { state.goToOverview() },
                     onExport = { state.goToEdit() },
                     onSkipMetadata = {
@@ -312,6 +323,7 @@ private fun WizardStepContent(
                     state = state,
                     image = image,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     metadataHistory = settings.metadataHistory,
                     onMetadataHistoryUpdate = { fieldKey, value ->
                         scope.launch {

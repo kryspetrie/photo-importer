@@ -2,7 +2,9 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -45,21 +49,30 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import java.awt.Cursor
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 
 /**
  * Summary screen showing all detected photos as a scrolling grid of image tiles. Each tile displays
  * the cropped+rotated preview with inline rotation buttons. Warp-stretch perspective correction is
- * always applied.
+ * always applied. Uses [PreviewCache] to avoid recomputing perspective correction on every
+ * recomposition, and supports full-screen preview on tile click.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,6 +80,7 @@ fun SummaryScreen(
     state: PhotoScanWizardState,
     image: BufferedImage,
     perspectiveService: PerspectiveCorrectionService,
+    previewCache: PreviewCache,
     onBack: () -> Unit,
     onExport: () -> Unit,
     onSkipMetadata: (() -> Unit)? = null,
@@ -88,6 +102,7 @@ fun SummaryScreen(
             PhotoGrid(
                 image = image,
                 perspectiveService = perspectiveService,
+                previewCache = previewCache,
                 boundingBoxList = boundingBoxList,
                 photoConfigurations = photoConfigurations,
                 onConfigChange = { boxId, config -> state.setPhotoConfiguration(boxId, config) },
@@ -175,17 +190,22 @@ private fun SummaryTopAppBar(
 
 /**
  * Scrolling grid of photo tiles. Each tile shows the perspective-corrected and rotated preview
- * image with rotation controls overlaid at the bottom.
+ * image with rotation controls overlaid at the bottom. Clicking a tile opens the full-screen
+ * preview dialog. Uses [PreviewCache] for efficient thumbnail rendering.
  */
 @Composable
 private fun PhotoGrid(
     image: BufferedImage,
     perspectiveService: PerspectiveCorrectionService,
+    previewCache: PreviewCache,
     boundingBoxList: BoundingBoxList,
     photoConfigurations: Map<String, PhotoConfiguration>,
     onConfigChange: (String, PhotoConfiguration) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Full-screen preview state
+    var fullscreenBoxIndex by remember { mutableStateOf<Int?>(null) }
+
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 220.dp),
         modifier = modifier.fillMaxSize(),
@@ -195,35 +215,63 @@ private fun PhotoGrid(
     ) {
         itemsIndexed(boundingBoxList.boxes) { index, box ->
             val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-            val previewImage =
-                remember(image, box, config) {
-                    cropAndRotateBoundingBox(image, box, config, perspectiveService)
-                }
+            val thumbnail = remember(image, box, config) {
+                previewCache.getThumbnail(image, box, config)
+            }
 
             PhotoTile(
                 index = index,
                 box = box,
                 config = config,
-                previewImage = previewImage,
+                thumbnail = thumbnail,
                 onRotateCW = { onConfigChange(box.id, config.cycleRotationCW()) },
                 onRotateCCW = { onConfigChange(box.id, config.cycleRotationCCW()) },
+                onPreviewClick = { fullscreenBoxIndex = index },
             )
         }
+    }
+
+    // Full-screen preview overlay
+    if (fullscreenBoxIndex != null && fullscreenBoxIndex!! < boundingBoxList.size()) {
+        val idx = fullscreenBoxIndex!!
+        val box = boundingBoxList.boxes[idx]
+        val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+        val fullPreview = remember(image, box, config) {
+            previewCache.getFullPreview(image, box, config)
+        }
+        val fullBitmap = remember(fullPreview) {
+            fullPreview?.toComposeImageBitmap()
+        }
+
+        SummaryFullscreenPreviewDialog(
+            photoIndex = idx,
+            totalCount = boundingBoxList.size(),
+            rotationDegrees = config.rotationDegrees,
+            bitmap = fullBitmap,
+            onDismiss = { fullscreenBoxIndex = null },
+            onPrevious = {
+                if (idx > 0) fullscreenBoxIndex = idx - 1
+            },
+            onNext = {
+                if (idx < boundingBoxList.size() - 1) fullscreenBoxIndex = idx + 1
+            },
+        )
     }
 }
 
 /**
- * A single tile in the photo grid. Shows the cropped+rotated preview image with rotation buttons at
- * the bottom.
+ * A single tile in the photo grid. Shows the cached thumbnail with rotation buttons and a
+ * click-to-zoom hint at the bottom.
  */
 @Composable
 private fun PhotoTile(
     index: Int,
     box: BoundingBox,
     config: PhotoConfiguration,
-    previewImage: BufferedImage?,
+    thumbnail: ImageBitmap?,
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit,
+    onPreviewClick: () -> Unit,
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -233,21 +281,46 @@ private fun PhotoTile(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
     ) {
         Column {
-            // Image area
+            // Image area — clickable to open full-screen preview
             Box(
                 modifier =
                     Modifier.fillMaxWidth()
                         .height(180.dp)
-                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)),
+                        .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                        .pointerHoverIcon(PointerIcon(Cursor(Cursor.HAND_CURSOR)))
+                        .clickable(onClick = onPreviewClick),
                 contentAlignment = Alignment.Center,
             ) {
-                if (previewImage != null) {
+                if (thumbnail != null) {
                     Image(
-                        bitmap = previewImage.toComposeImageBitmap(),
+                        bitmap = thumbnail,
                         contentDescription = "Photo ${index + 1} preview",
                         modifier = Modifier.fillMaxSize().padding(4.dp),
                         contentScale = ContentScale.Fit,
                     )
+                    // Zoom hint overlay (bottom-right corner)
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
+                        shape = RoundedCornerShape(4.dp),
+                        color = Color.Black.copy(alpha = 0.5f),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                Icons.Default.ZoomIn,
+                                contentDescription = null,
+                                modifier = Modifier.size(12.dp),
+                                tint = Color.White,
+                            )
+                            Text(
+                                "Zoom",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                            )
+                        }
+                    }
                 } else {
                     Text(
                         "Could not render preview",
@@ -297,6 +370,114 @@ private fun PhotoTile(
                             modifier = Modifier.size(18.dp),
                             tint = MaterialTheme.colorScheme.primary,
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Full-screen preview dialog shown when a photo tile is clicked. Supports navigation between
+ * photos with Previous/Next buttons.
+ */
+@Composable
+private fun SummaryFullscreenPreviewDialog(
+    photoIndex: Int,
+    totalCount: Int,
+    rotationDegrees: Int,
+    bitmap: ImageBitmap?,
+    onDismiss: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.95f))
+                    .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Title bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "Photo ${photoIndex + 1} of $totalCount",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White.copy(alpha = 0.8f),
+                    )
+                    if (rotationDegrees != 0) {
+                        Text(
+                            "${rotationDegrees}° rotation",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White.copy(alpha = 0.6f),
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White.copy(alpha = 0.8f),
+                        )
+                    }
+                }
+
+                // Image
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap,
+                            contentDescription = "Photo ${photoIndex + 1} full preview",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
+                        )
+                    } else {
+                        Text(
+                            "Could not render preview",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                }
+
+                // Navigation bar
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedButton(
+                        onClick = onPrevious,
+                        enabled = photoIndex > 0,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.RotateLeft, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Previous")
+                    }
+                    Spacer(Modifier.weight(1f))
+                    OutlinedButton(
+                        onClick = onNext,
+                        enabled = photoIndex < totalCount - 1,
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                    ) {
+                        Text("Next")
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.AutoMirrored.Filled.RotateRight, null, Modifier.size(16.dp))
                     }
                 }
             }

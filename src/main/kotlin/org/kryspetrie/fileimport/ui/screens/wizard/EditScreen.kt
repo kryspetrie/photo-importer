@@ -99,6 +99,7 @@ import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.FaceRegionTransformer
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
@@ -145,6 +146,7 @@ fun EditScreen(
     state: PhotoScanWizardState,
     image: BufferedImage,
     perspectiveService: PerspectiveCorrectionService,
+    previewCache: PreviewCache,
     metadataHistory: MetadataHistory,
     onMetadataHistoryUpdate: (String, String) -> Unit,
     onMetadataHistoryRemove: (String, String) -> Unit,
@@ -213,19 +215,16 @@ fun EditScreen(
         val idx = fullscreenPreviewIndex!!
         val box = boundingBoxList.boxes[idx]
         val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-        val fullPreview =
-            remember(image, box.id, config.rotationDegrees) {
-                cropAndRotateBoundingBox(image, box, config, perspectiveService)
-            }
+        val fullPreview = previewCache.getFullPreview(image, box, config)
+        val fullscreenBitmap = remember(fullPreview) {
+            fullPreview?.toComposeImageBitmap()
+        }
         Popup(onDismissRequest = { fullscreenPreviewIndex = null }) {
             Box(
                 modifier = Modifier.fillMaxSize().background(Color.Black),
                 contentAlignment = Alignment.Center,
             ) {
-                if (fullPreview != null) {
-                    val fullscreenBitmap = remember(fullPreview) {
-                        fullPreview.toComposeImageBitmap()
-                    }
+                if (fullscreenBitmap != null) {
                     Image(
                         bitmap = fullscreenBitmap,
                         contentDescription = "Photo ${idx + 1} fullscreen",
@@ -250,10 +249,7 @@ fun EditScreen(
         val idx = faceSelectIndex!!
         val box = boundingBoxList.boxes[idx]
         val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-        val fullPreview =
-            remember(image, box.id, config.rotationDegrees) {
-                cropAndRotateBoundingBox(image, box, config, perspectiveService)
-            }
+        val fullPreview = previewCache.getFullPreview(image, box, config)
         val sourceFile = state.imageFile.value
         LaunchedEffect(faceSelectIndex, sourceFile) {
             inheritedFaceRegions =
@@ -617,6 +613,7 @@ fun EditScreen(
                 ThumbnailStrip(
                     image = image,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     boundingBoxList = boundingBoxList,
                     photoConfigurations = photoConfigurations,
                     selectedIndices = selectedIndices,
@@ -645,6 +642,7 @@ fun EditScreen(
                     ThumbnailStrip(
                         image = image,
                         perspectiveService = perspectiveService,
+                        previewCache = previewCache,
                         boundingBoxList = boundingBoxList,
                         photoConfigurations = photoConfigurations,
                         selectedIndices = selectedIndices,
@@ -668,17 +666,11 @@ fun EditScreen(
                         val selectedIndex = selectedIndices.first()
                         val box = boundingBoxList.boxes[selectedIndex]
                         val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-                        val previewImage =
-                            remember(image, box.id, config.rotationDegrees) {
-                                val visualConfig =
-                                    PhotoConfiguration(rotationDegrees = config.rotationDegrees)
-                                cropAndRotateBoundingBox(
-                                    image,
-                                    box,
-                                    visualConfig,
-                                    perspectiveService,
-                                )
-                            }
+                        val visualConfig = PhotoConfiguration(rotationDegrees = config.rotationDegrees)
+                        val previewImage = previewCache.getFullPreview(image, box, visualConfig)
+                        val previewBitmap = remember(previewImage) {
+                            previewImage?.toComposeImageBitmap()
+                        }
                         Box(
                             modifier =
                                 Modifier.weight(1f)
@@ -687,12 +679,9 @@ fun EditScreen(
                                     .clickable { fullscreenPreviewIndex = selectedIndex },
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (previewImage != null) {
-                            val previewBitmap = remember(previewImage) {
-                                previewImage.toComposeImageBitmap()
-                            }
-                            Image(
-                                bitmap = previewBitmap,
+                            if (previewBitmap != null) {
+                                Image(
+                                    bitmap = previewBitmap,
                                     contentDescription =
                                         "Photo ${selectedIndex + 1} — click to enlarge",
                                     modifier = Modifier.fillMaxSize(),
@@ -964,6 +953,7 @@ private fun FaceNameEntryPanel(
 private fun ThumbnailStrip(
     image: BufferedImage,
     perspectiveService: PerspectiveCorrectionService,
+    previewCache: PreviewCache,
     boundingBoxList: BoundingBoxList,
     photoConfigurations: Map<String, PhotoConfiguration>,
     selectedIndices: Set<Int>,
@@ -977,11 +967,8 @@ private fun ThumbnailStrip(
     ) {
         itemsIndexed(boundingBoxList.boxes) { index, box ->
             val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-            val previewImage =
-                remember(image, box.id, config.rotationDegrees) {
-                    val visualConfig = PhotoConfiguration(rotationDegrees = config.rotationDegrees)
-                    cropAndRotateBoundingBox(image, box, visualConfig, perspectiveService)
-                }
+            val visualConfig = PhotoConfiguration(rotationDegrees = config.rotationDegrees)
+            val thumbnail = previewCache.getThumbnail(image, box, visualConfig)
             val isSelected = index in selectedIndices
             Card(
                 modifier = Modifier.width(100.dp).height(80.dp).clickable { onSelect(index) },
@@ -1000,12 +987,9 @@ private fun ThumbnailStrip(
                     ),
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    if (previewImage != null) {
-                        val thumbBitmap = remember(previewImage) {
-                            previewImage.toComposeImageBitmap()
-                        }
+                    if (thumbnail != null) {
                         Image(
-                            bitmap = thumbBitmap,
+                            bitmap = thumbnail,
                             contentDescription = "Photo ${index + 1}",
                             modifier = Modifier.fillMaxSize().padding(2.dp),
                             contentScale = ContentScale.Fit,

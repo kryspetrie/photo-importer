@@ -16,6 +16,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
+import org.kryspetrie.fileimport.ui.components.PreviewCache
 
 /**
  * Component tests for SummaryScreen. Tests UI rendering and export configuration.
@@ -31,12 +32,16 @@ class SummaryScreenTest {
 
     private lateinit var wizardState: PhotoScanWizardState
     private lateinit var testImage: BufferedImage
+    private lateinit var perspectiveService: PerspectiveCorrectionService
+    private lateinit var previewCache: PreviewCache
 
     @BeforeEach
     fun setup() {
         wizardState = PhotoScanWizardState()
         testImage = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
         wizardState.initializeWithImage(testImage, java.io.File("test-scan.jpg"))
+        perspectiveService = PerspectiveCorrectionService()
+        previewCache = PreviewCache(perspectiveService)
 
         val box =
             BoundingBox(
@@ -59,6 +64,7 @@ class SummaryScreenTest {
                 state = wizardState,
                 image = testImage,
                 perspectiveService = PerspectiveCorrectionService(),
+                previewCache = previewCache,
                 onBack = {},
                 onExport = {},
             )
@@ -75,6 +81,7 @@ class SummaryScreenTest {
                 state = wizardState,
                 image = testImage,
                 perspectiveService = PerspectiveCorrectionService(),
+                previewCache = previewCache,
                 onBack = {},
                 onExport = {},
             )
@@ -91,6 +98,7 @@ class SummaryScreenTest {
                 state = wizardState,
                 image = testImage,
                 perspectiveService = PerspectiveCorrectionService(),
+                previewCache = previewCache,
                 onBack = {},
                 onExport = {},
             )
@@ -109,6 +117,7 @@ class SummaryScreenTest {
                 state = wizardState,
                 image = testImage,
                 perspectiveService = PerspectiveCorrectionService(),
+                previewCache = previewCache,
                 onBack = {},
                 onExport = { exportCalled = true },
             )

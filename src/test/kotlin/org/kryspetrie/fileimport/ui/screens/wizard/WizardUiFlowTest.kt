@@ -22,6 +22,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
+import org.kryspetrie.fileimport.ui.components.PreviewCache
 
 /**
  * Compose UI flow tests that render actual Compose components and simulate user interactions.
@@ -164,6 +165,7 @@ class WizardUiFlowTest {
     inner class SummaryScreenFlowTests {
 
         private lateinit var perspectiveService: PerspectiveCorrectionService
+        private lateinit var previewCache: PreviewCache
 
         @BeforeEach
         fun setup() {
@@ -171,6 +173,7 @@ class WizardUiFlowTest {
             testImage = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(testImage, File("test-summary.jpg"))
             perspectiveService = PerspectiveCorrectionService()
+            previewCache = PreviewCache(perspectiveService)
         }
 
         @Test
@@ -181,6 +184,7 @@ class WizardUiFlowTest {
                     state = wizardState,
                     image = testImage,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     onBack = {},
                     onExport = {},
                 )
@@ -197,6 +201,7 @@ class WizardUiFlowTest {
                     state = wizardState,
                     image = testImage,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     onBack = {},
                     onExport = {},
                 )
@@ -215,6 +220,7 @@ class WizardUiFlowTest {
                     state = wizardState,
                     image = testImage,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     onBack = {},
                     onExport = { exportCalled = true },
                 )
@@ -235,6 +241,7 @@ class WizardUiFlowTest {
                     state = wizardState,
                     image = testImage,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     onBack = { backCalled = true },
                     onExport = {},
                 )
@@ -253,6 +260,7 @@ class WizardUiFlowTest {
                     state = wizardState,
                     image = testImage,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     onBack = {},
                     onExport = {},
                     onSkipMetadata = {},
@@ -270,6 +278,7 @@ class WizardUiFlowTest {
                     state = wizardState,
                     image = testImage,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     onBack = {},
                     onExport = {},
                     onSkipMetadata = null,
@@ -289,6 +298,7 @@ class WizardUiFlowTest {
                     state = wizardState,
                     image = testImage,
                     perspectiveService = perspectiveService,
+                    previewCache = previewCache,
                     onBack = {},
                     onExport = {},
                     onSkipMetadata = { skipCalled = true },
