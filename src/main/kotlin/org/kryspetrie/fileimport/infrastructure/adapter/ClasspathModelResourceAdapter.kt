@@ -15,7 +15,7 @@ import org.kryspetrie.fileimport.domain.port.ModelResourcePort
  * |---------------------------------------|------------------------------------------|--------------|
  * | `models/detection_model.onnx`         | YOLO detection — finds bounding boxes    | ~10 MB       |
  * | `models/pose_model.onnx`              | YOLO pose — finds 4-corner keypoints     | ~38 MB       |
- * | `models/corner_regression_model.onnx` | Corner regression — sub-pixel refinement | ~10 MB       |
+ * | `models/face_detection_model.onnx`  | YOLO12n face detection — bounding boxes  | ~10 MB       |
  *
  * ## Error handling
  *

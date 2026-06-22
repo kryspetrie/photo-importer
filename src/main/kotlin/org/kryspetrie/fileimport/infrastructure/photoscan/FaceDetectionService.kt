@@ -11,15 +11,16 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
 import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloFaceDetectionService
 
 /**
- * Infrastructure adapter implementing [FaceDetectionPort] using ONNX Runtime YOLOv8-face model.
+ * Infrastructure adapter implementing [FaceDetectionPort] using ONNX Runtime YOLO face detection model.
  *
  * Lazily initializes the ONNX session when face detection is first requested. If the model file is
  * not available on the classpath, [isFaceDetectionAvailable] returns false and [detectFaces] throws.
  *
  * ## Model
  *
- * The face detection model (`models/face_detection_model.onnx`) is a YOLOv8-face model that outputs
- * bounding boxes plus 5 facial keypoints (left eye, right eye, nose, left mouth, right mouth).
+ * The face detection model (`models/face_detection_model.onnx`) is a YOLO12n-face model that outputs
+ * face bounding boxes with confidence scores in NMS-filtered `[1, 300, 6]` format
+ * (x1, y1, x2, y2, confidence, class).
  *
  * ## Threading
  *

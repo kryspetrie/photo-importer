@@ -98,45 +98,32 @@ class FaceDetectionServiceTest {
         }
 
         @Test
-        @DisplayName("maps DetectedFace correctly, dropping keypoints and keeping bbox + confidence")
-        fun mapsDetectedFaceDroppingKeypoints() {
+        @DisplayName("maps FaceDetection to DetectedFace correctly")
+        fun mapsDetectedFaceCorrectly() {
             whenever(modelResourcePort.isFaceDetectionModelAvailable()).thenReturn(true)
 
             val bufferedImage = BufferedImage(640, 480, BufferedImage.TYPE_INT_RGB)
             val image = AwtProcessedImage(bufferedImage)
 
-            val faceWithKeypoints = YoloFaceDetectionService.FaceDetection(
+            val face1 = YoloFaceDetectionService.FaceDetection(
                 x1 = 10.5f,
                 y1 = 20.5f,
                 x2 = 110.5f,
                 y2 = 120.5f,
                 confidence = 0.95f,
-                keypoints = listOf(
-                    YoloFaceDetectionService.FaceKeypoint(
-                        x = 50f,
-                        y = 60f,
-                        visibility = 0.9f,
-                    ),
-                    YoloFaceDetectionService.FaceKeypoint(
-                        x = 70f,
-                        y = 80f,
-                        visibility = 0.7f,
-                    ),
-                ),
             )
 
-            val faceWithoutKeypoints = YoloFaceDetectionService.FaceDetection(
+            val face2 = YoloFaceDetectionService.FaceDetection(
                 x1 = 200f,
                 y1 = 300f,
                 x2 = 400f,
                 y2 = 500f,
                 confidence = 0.8f,
-                keypoints = emptyList(),
             )
 
             val yoloService = mock<YoloFaceDetectionService>()
             whenever(yoloService.detectFaces(bufferedImage, 0.5f, 0.45f))
-                .thenReturn(listOf(faceWithKeypoints, faceWithoutKeypoints))
+                .thenReturn(listOf(face1, face2))
 
             val service = FaceDetectionService(modelResourcePort)
             service.injectYoloService(yoloService)
@@ -145,7 +132,6 @@ class FaceDetectionServiceTest {
 
             assertThat(results).hasSize(2)
 
-            // First face: keypoints are dropped, bbox and confidence are preserved precisely
             assertThat(results[0]).isEqualTo(
                 DetectedFace(
                     x1 = 10.5f,
@@ -156,7 +142,6 @@ class FaceDetectionServiceTest {
                 )
             )
 
-            // Second face: no keypoints to drop, values pass through unchanged
             assertThat(results[1]).isEqualTo(
                 DetectedFace(
                     x1 = 200f,
@@ -167,7 +152,6 @@ class FaceDetectionServiceTest {
                 )
             )
 
-            // Verify the YOLO service was actually called (delegation happened)
             verify(yoloService).detectFaces(bufferedImage, 0.5f, 0.45f)
         }
     }
