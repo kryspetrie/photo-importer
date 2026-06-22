@@ -66,13 +66,14 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.ui.screens.wizard.summary.AspectRatioDropdown
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 
 /**
  * Summary screen showing all detected photos as a scrolling grid of image tiles. Each tile displays
- * the cropped+rotated preview with inline rotation buttons. Warp-stretch perspective correction is
- * always applied. Uses [PreviewCache] to avoid recomputing perspective correction on every
- * recomposition, and supports full-screen preview on tile click.
+ * the cropped+rotated preview with inline rotation and aspect ratio controls. Warp-stretch
+ * perspective correction is always applied. Uses [PreviewCache] to avoid recomputing perspective
+ * correction on every recomposition, and supports full-screen preview on tile click.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -190,8 +191,8 @@ private fun SummaryTopAppBar(
 
 /**
  * Scrolling grid of photo tiles. Each tile shows the perspective-corrected and rotated preview
- * image with rotation controls overlaid at the bottom. Clicking a tile opens the full-screen
- * preview dialog. Uses [PreviewCache] for efficient thumbnail rendering.
+ * image with rotation and aspect ratio controls. Clicking a tile opens the full-screen preview
+ * dialog. Uses [PreviewCache] for efficient thumbnail rendering.
  */
 @Composable
 private fun PhotoGrid(
@@ -226,6 +227,9 @@ private fun PhotoGrid(
                 thumbnail = thumbnail,
                 onRotateCW = { onConfigChange(box.id, config.cycleRotationCW()) },
                 onRotateCCW = { onConfigChange(box.id, config.cycleRotationCCW()) },
+                onAspectRatioChange = { newRatio ->
+                    onConfigChange(box.id, config.copy(aspectRatio = newRatio))
+                },
                 onPreviewClick = { fullscreenBoxIndex = index },
             )
         }
@@ -260,9 +264,10 @@ private fun PhotoGrid(
 }
 
 /**
- * A single tile in the photo grid. Shows the cached thumbnail with rotation buttons and a
- * click-to-zoom hint at the bottom.
+ * A single tile in the photo grid. Shows the cached thumbnail with rotation and aspect ratio
+ * controls, and a click-to-zoom hint overlay.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PhotoTile(
     index: Int,
@@ -271,6 +276,7 @@ private fun PhotoTile(
     thumbnail: ImageBitmap?,
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit,
+    onAspectRatioChange: (Double) -> Unit,
     onPreviewClick: () -> Unit,
 ) {
     Card(
@@ -330,47 +336,59 @@ private fun PhotoTile(
                 }
             }
 
-            // Bottom bar with rotation buttons and info
+            // Controls bar: rotation + aspect ratio
             Surface(
                 tonalElevation = 1.dp,
                 shape = RoundedCornerShape(bottomStart = 8.dp, bottomEnd = 8.dp),
             ) {
-                Row(
+                Column(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 2.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Left: rotate CCW
-                    IconButton(onClick = onRotateCCW, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.RotateLeft,
-                            "Rotate counter-clockwise",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+                    // Row 1: rotation controls and photo label
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Left: rotate CCW
+                        IconButton(onClick = onRotateCCW, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.RotateLeft,
+                                "Rotate counter-clockwise",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
 
-                    // Center: photo label + rotation state
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Photo ${index + 1}", style = MaterialTheme.typography.labelSmall)
-                        if (config.rotationDegrees != 0) {
-                            Text(
-                                "${config.rotationDegrees}°",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
+                        // Center: photo label + rotation state
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("Photo ${index + 1}", style = MaterialTheme.typography.labelSmall)
+                            if (config.rotationDegrees != 0) {
+                                Text(
+                                    "${config.rotationDegrees}°",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
+                            }
+                        }
+
+                        // Right: rotate CW
+                        IconButton(onClick = onRotateCW, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.AutoMirrored.Filled.RotateRight,
+                                "Rotate clockwise",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
 
-                    // Right: rotate CW
-                    IconButton(onClick = onRotateCW, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.RotateRight,
-                            "Rotate clockwise",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
+                    // Row 2: aspect ratio dropdown
+                    AspectRatioDropdown(
+                        selectedRatio = config.aspectRatio,
+                        onRatioChange = onAspectRatioChange,
+                        boxAspectRatio = box.aspectRatio(),
+                    )
                 }
             }
         }
