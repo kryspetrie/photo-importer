@@ -71,7 +71,7 @@ private fun ExportButtons(
             }
         }
         Button(onClick = onExport, enabled = enabled, modifier = Modifier.height(40.dp)) {
-            Text("Edit")
+            Text("Next")
             Spacer(Modifier.width(4.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
         }

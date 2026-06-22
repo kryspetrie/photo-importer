@@ -108,7 +108,7 @@ fun ExportSettingsCard(
                     }
                     CorrectionStrategyDropdown(
                         selectedStrategy = defaultStrategy,
-                        onStrategyChange = { strategy ->
+                        onStrategyChange = { strategy: CorrectionStrategy ->
                             state.setDefaultCorrectionStrategy(strategy)
                             onStrategyChange?.invoke(strategy)
                         },
