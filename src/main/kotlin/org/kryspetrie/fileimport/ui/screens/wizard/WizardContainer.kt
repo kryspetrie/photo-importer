@@ -303,7 +303,7 @@ private fun WizardStepContent(
                                     )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
-                                        "Exported ${processedPhotos.size} photo(s) to $exportDestination",
+                                        "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
                                     )
                                     state.goToComplete()
                                 },
@@ -368,7 +368,7 @@ private fun WizardStepContent(
                                     )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
-                                        "Exported ${processedPhotos.size} photo(s) to $exportDestination",
+                                        "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
                                     )
                                     state.goToComplete()
                                 },
@@ -396,7 +396,7 @@ private fun WizardStepContent(
                                     )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
-                                        "Exported ${processedPhotos.size} photo(s) to $exportDestination",
+                                        "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
                                     )
                                     state.goToComplete()
                                 },
@@ -576,9 +576,9 @@ private suspend fun loadImageAndDetect(
                             state.setDetectedBoxes(boxes, configs)
                             appLogger.logOperationComplete(
                                 OperationType.IMAGE_DETECTION,
-                                "Detected ${boxes.size} photo(s)",
+                                "Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}",
                             )
-                            onMessage("Detected ${boxes.size} photo(s)")
+                            onMessage("Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}")
                         } else {
                             appLogger.info(
                                 "No photos detected in ${file.name} - user can add manually"
@@ -869,7 +869,7 @@ private suspend fun exportPhotos(
 
         appLogger.logOperationStart(
             OperationType.EXPORT_START,
-            "Destination: $destinationPath, ${boxes.size} photo(s)",
+            "Destination: $destinationPath, ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}",
         )
 
         if (boxes.isEmpty()) {

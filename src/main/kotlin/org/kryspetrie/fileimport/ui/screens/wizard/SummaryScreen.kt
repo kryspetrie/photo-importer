@@ -349,7 +349,7 @@ private fun ResetConfirmDialog(photoCount: Int, onConfirm: () -> Unit, onDismiss
         text = {
             Text(
                 "This will clear all rotation and correction settings for " +
-                    "$photoCount photo(s). You can still use Undo after resetting."
+                    "$photoCount ${if (photoCount == 1) "photo" else "photos"}. You can still use Undo after resetting."
             )
         },
         confirmButton = {
@@ -381,6 +381,8 @@ private fun PhotoSidebarList(
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var pendingDeleteIndex by remember { mutableStateOf<Int?>(null) }
+
     Column(modifier = modifier) {
         BulkActionButtons(
             onRotateAllCW = onRotateAllCW,
@@ -411,10 +413,29 @@ private fun PhotoSidebarList(
                     thumbnail = thumbnail,
                     isSelected = index == selectedIndex,
                     onSelect = { onSelectedIndexChange(index) },
-                    onDelete = { onDelete(index) },
+                    onDelete = { pendingDeleteIndex = index },
                 )
             }
         }
+    }
+
+    // Delete confirmation dialog
+    if (pendingDeleteIndex != null) {
+        val deleteIndex = pendingDeleteIndex!!
+        AlertDialog(
+            onDismissRequest = { pendingDeleteIndex = null },
+            title = { Text("Delete Photo?") },
+            text = { Text("Remove Photo ${deleteIndex + 1} from the scan? This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    onDelete(deleteIndex)
+                    pendingDeleteIndex = null
+                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteIndex = null }) { Text("Cancel") }
+            },
+        )
     }
 }
 

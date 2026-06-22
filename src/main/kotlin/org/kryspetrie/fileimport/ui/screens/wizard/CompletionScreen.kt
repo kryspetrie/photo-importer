@@ -110,8 +110,8 @@ fun CompletionScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        if (failedCount > 0) "$photoCount photo(s) exported ($failedCount failed)"
-                        else "$photoCount photo(s) exported",
+                        if (failedCount > 0) "$photoCount ${if (photoCount == 1) "photo" else "photos"} exported ($failedCount failed)"
+                        else "$photoCount ${if (photoCount == 1) "photo" else "photos"} exported",
                         style = MaterialTheme.typography.titleMedium,
                         color =
                             if (failedCount > 0) {

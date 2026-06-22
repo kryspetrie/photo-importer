@@ -571,7 +571,7 @@ fun EditScreen(
                         }
                     } else {
                         Text(
-                            "${boundingBoxList.size()} photo(s)",
+                            "${boundingBoxList.size()} ${if (boundingBoxList.size() == 1) "photo" else "photos"}",
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -1323,7 +1323,7 @@ private fun MetadataEditorPanel(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "${selectedIndices.size} photo(s) selected",
+                        "${selectedIndices.size} ${if (selectedIndices.size == 1) "photo" else "photos"} selected",
                         style = MaterialTheme.typography.titleSmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
