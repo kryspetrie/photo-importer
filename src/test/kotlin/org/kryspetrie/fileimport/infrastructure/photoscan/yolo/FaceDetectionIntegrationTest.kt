@@ -18,13 +18,14 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.FaceDetectionService
 /**
  * Integration tests for face detection using real ONNX model inference.
  *
- * Reference coordinates were captured from the YOLO12n face detection model running on
- * faces-01.jpg and faces-02.jpg. Tolerance is generous (±30px) to account for:
- * - Floating-point non-determinism across runs (ONNX Runtime, BLAS, etc.)
- * - Different hardware (ARM vs x86, GPU vs CPU)
- * - Minor model version differences
+ * Reference coordinates were captured from [FaceDetectionGoldTest] running the
+ * YOLO12n face detection model with confThreshold=0.50, iouThreshold=0.45.
  *
- * Run [FaceDetectionGoldTest] to regenerate reference coordinates after model changes.
+ * Tolerance is ±30px for bounding-box coordinates (out of ~2688px width) and
+ * ±0.05 for confidence scores, accounting for floating-point non-determinism
+ * across different hardware and ONNX Runtime backends.
+ *
+ * To regenerate references after model changes, run [FaceDetectionGoldTest].
  */
 @DisplayName("Face Detection Integration")
 @EnabledIf("sessionAvailable")
@@ -52,7 +53,7 @@ class FaceDetectionIntegrationTest {
     }
 
     // ─── Reference data for faces-01.jpg (2688×2016) ───
-    // Model output: 8 faces detected, sorted by descending confidence
+    // Captured from YOLO12n face model, confThreshold=0.50, iouThreshold=0.45
 
     private val faces01References = listOf(
         // Face 0: conf=0.852 — rightmost person, large face
@@ -74,7 +75,7 @@ class FaceDetectionIntegrationTest {
     )
 
     // ─── Reference data for faces-02.jpg (1512×2016) ───
-    // Model output: 4 faces detected
+    // Captured from YOLO12n face model, confThreshold=0.50, iouThreshold=0.45
 
     private val faces02References = listOf(
         // Face 0: conf=0.898 — left, large face
