@@ -100,6 +100,7 @@ import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.FaceRegionTransformer
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
@@ -485,6 +486,7 @@ fun EditScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Edit") },
+                navigationIcon = { WizardStepIndicator(currentStep = PhotoScanWizardState.WizardStep.EDIT) },
                 actions = {
                     // ── Mode tabs ──
                     EditModeTab(

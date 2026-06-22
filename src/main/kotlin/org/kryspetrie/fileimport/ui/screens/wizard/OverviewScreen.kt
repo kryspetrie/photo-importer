@@ -48,6 +48,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.FourPointState
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
 import org.kryspetrie.fileimport.infrastructure.wizard.ZoomController
+import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.FourPointStatusBar
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewCanvas
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewControlsPanel
@@ -115,6 +116,7 @@ fun OverviewScreen(
                 selectedBoxIndex = selectedBoxIndex,
                 onDeleteSelected = { showDeleteConfirmDialog = true },
                 onShowHelp = { showHelpDialog = true },
+                currentStep = PhotoScanWizardState.WizardStep.OVERVIEW,
             )
         },
         content = { paddingValues ->
@@ -198,9 +200,11 @@ private fun OverviewTopBar(
     selectedBoxIndex: Int,
     onDeleteSelected: () -> Unit,
     onShowHelp: () -> Unit,
+    currentStep: PhotoScanWizardState.WizardStep,
 ) {
     TopAppBar(
         title = { Text("Select Photos", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        navigationIcon = { WizardStepIndicator(currentStep = currentStep) },
         actions = {
             // Mode indicator
             when (wizardMode) {

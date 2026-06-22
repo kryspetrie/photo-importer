@@ -67,6 +67,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.AspectRatioDropdown
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.BulkActionButtons
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.CorrectionStrategyDropdown
@@ -106,6 +107,7 @@ fun SummaryScreen(
                 onRotateAllCW = { state.rotateAllBoxesCW() },
                 onRotateAllCCW = { state.rotateAllBoxesCCW() },
                 onClearAll = { state.clearAllConfigurations() },
+                currentStep = PhotoScanWizardState.WizardStep.SUMMARY,
             )
         },
         content = { paddingValues ->
@@ -282,11 +284,13 @@ private fun SummaryTopAppBar(
     onRotateAllCW: () -> Unit,
     onRotateAllCCW: () -> Unit,
     onClearAll: () -> Unit,
+    currentStep: PhotoScanWizardState.WizardStep,
 ) {
     var showResetConfirmDialog by remember { mutableStateOf(false) }
 
     TopAppBar(
         title = { Text("Crop & Rotate") },
+        navigationIcon = { WizardStepIndicator(currentStep = currentStep) },
         actions = {
             TopAppBarActions(
                 onRotateAllCCW = onRotateAllCCW,
@@ -779,8 +783,16 @@ private fun SummaryFullscreenPreviewDialog(
             modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f)).clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
-            Column(modifier = Modifier.fillMaxSize().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                FullscreenHeaderRow(photoIndex = photoIndex, rotationDegrees = rotationDegrees, totalCount = totalCount, onDismiss = onDismiss)
+            Column(
+                modifier = Modifier.fillMaxSize().padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                FullscreenHeaderRow(
+                    photoIndex = photoIndex,
+                    rotationDegrees = rotationDegrees,
+                    totalCount = totalCount,
+                    onDismiss = onDismiss,
+                )
                 Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Image(
                         bitmap = bitmap,
@@ -797,13 +809,22 @@ private fun SummaryFullscreenPreviewDialog(
 
 /** Header row in the fullscreen preview dialog. */
 @Composable
-private fun FullscreenHeaderRow(photoIndex: Int, totalCount: Int, rotationDegrees: Int, onDismiss: () -> Unit) {
+private fun FullscreenHeaderRow(
+    photoIndex: Int,
+    totalCount: Int,
+    rotationDegrees: Int,
+    onDismiss: () -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Photo ${photoIndex + 1} of $totalCount", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.8f))
+        Text(
+            "Photo ${photoIndex + 1} of $totalCount",
+            style = MaterialTheme.typography.titleSmall,
+            color = Color.White.copy(alpha = 0.8f),
+        )
         if (rotationDegrees != 0) {
             Text("${rotationDegrees}° rotation", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
         }
