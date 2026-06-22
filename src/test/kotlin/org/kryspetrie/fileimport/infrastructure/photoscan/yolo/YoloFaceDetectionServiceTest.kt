@@ -342,8 +342,11 @@ class YoloFaceDetectionServiceTest {
         @Test
         @DisplayName("sorts results by descending confidence after NMS")
         fun sortsByDescendingConfidence() {
+            @Suppress("MaxLineLength")
             val det1 = floatArrayOf(10f, 10f, 100f, 100f, 0.7f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
+            @Suppress("MaxLineLength")
             val det2 = floatArrayOf(200f, 200f, 300f, 300f, 0.95f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
+            @Suppress("MaxLineLength")
             val det3 = floatArrayOf(400f, 10f, 500f, 100f, 0.8f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
             val output = arrayOf(arrayOf(det1, det2, det3))
             val result = parseFaceOutput(output, 1f, 0, 0, 640, 480, 0.5f, 0.45f)

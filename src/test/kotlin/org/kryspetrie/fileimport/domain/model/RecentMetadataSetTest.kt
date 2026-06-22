@@ -204,22 +204,74 @@ class RecentMetadataSetTest {
         assertEquals("Test", set.description)
     }
 
-    // ── Serialization round-trip test ──
+    // ── mergeInto tests ──
 
     @Test
-    fun `RecentMetadataSet fields are accessible after construction`() {
+    fun `mergeInto applies non-blank fields over existing config`() {
         val set = RecentMetadataSet(
-            description = "Test",
-            city = "Boston",
-            gpsLatitude = "42.3601",
-            gpsLongitude = "-71.0589",
-            timestamp = 1700000000000L,
+            description = "New desc",
+            city = "Paris",
+            gpsLatitude = "48.8566",
         )
+        val config = PhotoScanConfiguration(
+            description = "Old desc",
+            keywords = "old keywords",
+            city = "Boston",
+            country = "US",
+        )
+        val merged = set.mergeInto(config)
 
-        assertEquals("Test", set.description)
-        assertEquals("Boston", set.city)
-        assertEquals("42.3601", set.gpsLatitude)
-        assertEquals("-71.0589", set.gpsLongitude)
-        assertEquals(1700000000000L, set.timestamp)
+        assertEquals("New desc", merged.description)
+        assertEquals("old keywords", merged.keywords) // blank in set → preserved
+        assertEquals("Paris", merged.city)
+        assertEquals("US", merged.country) // blank in set → preserved
+        assertEquals("48.8566", merged.gpsLatitude)
+    }
+
+    @Test
+    fun `mergeInto with empty set returns config unchanged`() {
+        val set = RecentMetadataSet()
+        val config = PhotoScanConfiguration(description = "Test", city = "Boston")
+        val merged = set.mergeInto(config)
+
+        assertEquals("Test", merged.description)
+        assertEquals("Boston", merged.city)
+    }
+
+    @Test
+    fun `mergeLocationInto applies only location fields`() {
+        val set = RecentMetadataSet(
+            description = "Should not be applied",
+            locationName = "Grandma's house",
+            city = "Worcester",
+            state = "MA",
+            country = "United States",
+            gpsLatitude = "42.2626",
+            gpsLongitude = "-71.8023",
+        )
+        val config = PhotoScanConfiguration(
+            description = "Original desc",
+            city = "Boston",
+            country = "US",
+        )
+        val merged = set.mergeLocationInto(config)
+
+        assertEquals("Original desc", merged.description) // Not a location field → preserved
+        assertEquals("Worcester", merged.city)
+        assertEquals("MA", merged.state)
+        assertEquals("United States", merged.country)
+        assertEquals("42.2626", merged.gpsLatitude)
+        assertEquals("-71.8023", merged.gpsLongitude)
+    }
+
+    @Test
+    fun `mergeLocationInto with empty location fields preserves config`() {
+        val set = RecentMetadataSet(description = "Beach photo")
+        val config = PhotoScanConfiguration(city = "Boston", country = "US")
+        val merged = set.mergeLocationInto(config)
+
+        assertEquals("Boston", merged.city)
+        assertEquals("US", merged.country)
+        assertEquals("", merged.description) // Not a location field → not touched
     }
 }

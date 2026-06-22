@@ -47,7 +47,7 @@ class FaceDetectionService(
     ): List<DetectedFace> {
         val service =
             faceService
-                ?: throw IllegalStateException(
+                ?: error(
                     "Face detection model is not available. Call isFaceDetectionAvailable() first."
                 )
         val bufferedImage = image.toBufferedImage()

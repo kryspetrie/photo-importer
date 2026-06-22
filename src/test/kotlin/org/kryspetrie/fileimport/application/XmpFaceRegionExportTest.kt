@@ -37,20 +37,6 @@ class XmpFaceRegionExportTest {
         service = PhotoScanExportService(perspectiveService, FaceRegionTransformer())
     }
 
-    private fun createTestImage(width: Int, height: Int, color: Int): File {
-        val img = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-        val g = img.createGraphics()
-        g.color = java.awt.Color(color)
-        g.fillRect(0, 0, width, height)
-        g.color = java.awt.Color(0xFF, 0x00, 0x00)
-        g.fillRect(width / 4, height / 4, width / 2, height / 2)
-        g.dispose()
-
-        val file = File(tempDir, "test_${System.nanoTime()}.jpg")
-        ImageIO.write(img, "jpg", file)
-        return file
-    }
-
     private fun createDetectedPhoto(
         tlX: Float = 0f,
         tlY: Float = 0f,

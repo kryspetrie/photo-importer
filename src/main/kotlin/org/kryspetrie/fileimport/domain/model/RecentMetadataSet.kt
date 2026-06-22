@@ -96,10 +96,55 @@ data class RecentMetadataSet(
             if (loc.isNotBlank()) parts.add(loc)
             if (originalDate.isNotBlank()) parts.add(originalDate) else if (year.isNotBlank()) parts.add(year)
             if (cameraMake.isNotBlank() || cameraModel.isNotBlank()) {
-                parts.add(listOfNotNull(if (cameraMake.isNotBlank()) cameraMake else null, if (cameraModel.isNotBlank()) cameraModel else null).joinToString(" "))
+                val cameraStr = listOfNotNull(
+                    if (cameraMake.isNotBlank()) cameraMake else null,
+                    if (cameraModel.isNotBlank()) cameraModel else null,
+                ).joinToString(" ")
+                if (cameraStr.isNotBlank()) parts.add(cameraStr)
             }
             return parts.joinToString(" · ")
         }
+
+    /**
+     * Applies this set's non-blank fields over an existing [PhotoScanConfiguration],
+     * returning a new config with the merged values.
+     *
+     * Blank fields in this set are skipped, preserving the original config's values.
+     * This matches the multi-edit "apply non-blank" convention.
+     */
+    fun mergeInto(config: PhotoScanConfiguration): PhotoScanConfiguration = config.copy(
+        description = if (description.isNotBlank()) description else config.description,
+        keywords = if (keywords.isNotBlank()) keywords else config.keywords,
+        originalDate = if (originalDate.isNotBlank()) originalDate else config.originalDate,
+        year = if (year.isNotBlank()) year else config.year,
+        cameraMake = if (cameraMake.isNotBlank()) cameraMake else config.cameraMake,
+        cameraModel = if (cameraModel.isNotBlank()) cameraModel else config.cameraModel,
+        lensModel = if (lensModel.isNotBlank()) lensModel else config.lensModel,
+        focalLength = if (focalLength.isNotBlank()) focalLength else config.focalLength,
+        aperture = if (aperture.isNotBlank()) aperture else config.aperture,
+        shutterSpeed = if (shutterSpeed.isNotBlank()) shutterSpeed else config.shutterSpeed,
+        iso = if (iso.isNotBlank()) iso else config.iso,
+        locationName = if (locationName.isNotBlank()) locationName else config.locationName,
+        city = if (city.isNotBlank()) city else config.city,
+        state = if (state.isNotBlank()) state else config.state,
+        country = if (country.isNotBlank()) country else config.country,
+        gpsLatitude = if (gpsLatitude.isNotBlank()) gpsLatitude else config.gpsLatitude,
+        gpsLongitude = if (gpsLongitude.isNotBlank()) gpsLongitude else config.gpsLongitude,
+        subjects = if (subjects.isNotBlank()) subjects else config.subjects,
+    )
+
+    /**
+     * Applies only the location-related fields from this set over an existing
+     * [PhotoScanConfiguration], returning a new config with merged location values.
+     */
+    fun mergeLocationInto(config: PhotoScanConfiguration): PhotoScanConfiguration = config.copy(
+        locationName = if (locationName.isNotBlank()) locationName else config.locationName,
+        city = if (city.isNotBlank()) city else config.city,
+        state = if (state.isNotBlank()) state else config.state,
+        country = if (country.isNotBlank()) country else config.country,
+        gpsLatitude = if (gpsLatitude.isNotBlank()) gpsLatitude else config.gpsLatitude,
+        gpsLongitude = if (gpsLongitude.isNotBlank()) gpsLongitude else config.gpsLongitude,
+    )
 
     companion object {
         /**

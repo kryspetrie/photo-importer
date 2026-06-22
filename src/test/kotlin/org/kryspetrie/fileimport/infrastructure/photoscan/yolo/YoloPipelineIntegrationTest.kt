@@ -186,9 +186,9 @@ class YoloPipelineIntegrationTest {
                     val dy = abs(coords[1] - refCoords[1])
                     val dist = sqrt(dx * dx + dy * dy)
                     val status = if (dist < tolerance) "PASS" else "FAIL"
-                    println(
-                        "    $name: detected=(${coords[0].toInt()}, ${coords[1].toInt()}) ref=(${refCoords[0].toInt()}, ${refCoords[1].toInt()}) delta=${dist.toInt()}px $status"
-                    )
+                    val detStr = "(${coords[0].toInt()}, ${coords[1].toInt()})"
+                    val refStr = "(${refCoords[0].toInt()}, ${refCoords[1].toInt()})"
+                    println("    $name: detected=$detStr ref=$refStr delta=${dist.toInt()}px $status")
                     totalChecks++
                     if (dist < tolerance) totalMatches++
                 }
@@ -200,7 +200,8 @@ class YoloPipelineIntegrationTest {
         if (totalChecks > 0) {
             val matchRate = totalMatches.toFloat() / totalChecks.toFloat()
             assert(matchRate >= 0.8f) {
-                "Expected at least 80% of corners within ${tolerance}px tolerance, got $matchRate ($totalMatches/$totalChecks)"
+                "Expected at least 80% of corners within ${tolerance}px tolerance, " +
+                    "got $matchRate ($totalMatches/$totalChecks)"
             }
         }
     }

@@ -1494,28 +1494,7 @@ private fun MetadataEditorPanel(
                     RecentValuesDropdown(
                         recentSets = metadataHistory.recentSets,
                         onApplySet = { set ->
-                            state.updatePhotoConfiguration(box.id) { config ->
-                                config.copy(
-                                    description = if (set.description.isNotBlank()) set.description else config.description,
-                                    keywords = if (set.keywords.isNotBlank()) set.keywords else config.keywords,
-                                    originalDate = if (set.originalDate.isNotBlank()) set.originalDate else config.originalDate,
-                                    year = if (set.year.isNotBlank()) set.year else config.year,
-                                    cameraMake = if (set.cameraMake.isNotBlank()) set.cameraMake else config.cameraMake,
-                                    cameraModel = if (set.cameraModel.isNotBlank()) set.cameraModel else config.cameraModel,
-                                    lensModel = if (set.lensModel.isNotBlank()) set.lensModel else config.lensModel,
-                                    focalLength = if (set.focalLength.isNotBlank()) set.focalLength else config.focalLength,
-                                    aperture = if (set.aperture.isNotBlank()) set.aperture else config.aperture,
-                                    shutterSpeed = if (set.shutterSpeed.isNotBlank()) set.shutterSpeed else config.shutterSpeed,
-                                    iso = if (set.iso.isNotBlank()) set.iso else config.iso,
-                                    locationName = if (set.locationName.isNotBlank()) set.locationName else config.locationName,
-                                    city = if (set.city.isNotBlank()) set.city else config.city,
-                                    state = if (set.state.isNotBlank()) set.state else config.state,
-                                    country = if (set.country.isNotBlank()) set.country else config.country,
-                                    gpsLatitude = if (set.gpsLatitude.isNotBlank()) set.gpsLatitude else config.gpsLatitude,
-                                    gpsLongitude = if (set.gpsLongitude.isNotBlank()) set.gpsLongitude else config.gpsLongitude,
-                                    subjects = if (set.subjects.isNotBlank()) set.subjects else config.subjects,
-                                )
-                            }
+                            state.updatePhotoConfiguration(box.id) { set.mergeInto(it) }
                             onRecordMetadataSet(set)
                         },
                     )
@@ -1728,16 +1707,7 @@ private fun MetadataEditorPanel(
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
                     onApplyRecentLocation = { set ->
-                        state.updatePhotoConfiguration(box.id) { config ->
-                            config.copy(
-                                locationName = if (set.locationName.isNotBlank()) set.locationName else config.locationName,
-                                city = if (set.city.isNotBlank()) set.city else config.city,
-                                state = if (set.state.isNotBlank()) set.state else config.state,
-                                country = if (set.country.isNotBlank()) set.country else config.country,
-                                gpsLatitude = if (set.gpsLatitude.isNotBlank()) set.gpsLatitude else config.gpsLatitude,
-                                gpsLongitude = if (set.gpsLongitude.isNotBlank()) set.gpsLongitude else config.gpsLongitude,
-                            )
-                        }
+                        state.updatePhotoConfiguration(box.id) { set.mergeLocationInto(it) }
                     },
                     onPickLocation = { onPickLocation(selectedIndex) },
                     overrideGps = config.overrideGps != OverrideState.NULL_OUT,
