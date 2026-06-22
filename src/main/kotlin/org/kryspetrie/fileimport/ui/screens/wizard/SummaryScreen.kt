@@ -66,7 +66,10 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.domain.model.DetectionMode
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.AspectRatioDropdown
+import org.kryspetrie.fileimport.ui.screens.wizard.summary.DetectionModeBadge
+import org.kryspetrie.fileimport.ui.screens.wizard.summary.DetectionModeDropdown
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 
 /**
@@ -107,6 +110,10 @@ fun SummaryScreen(
                 boundingBoxList = boundingBoxList,
                 photoConfigurations = photoConfigurations,
                 onConfigChange = { boxId, config -> state.setPhotoConfiguration(boxId, config) },
+                onDetectionModeChange = { boxId, mode ->
+                    val current = photoConfigurations[boxId] ?: PhotoConfiguration()
+                    state.setPhotoConfiguration(boxId, current.copy(detectionMode = mode))
+                },
                 modifier = modifier.padding(paddingValues),
             )
         },
@@ -202,6 +209,7 @@ private fun PhotoGrid(
     boundingBoxList: BoundingBoxList,
     photoConfigurations: Map<String, PhotoConfiguration>,
     onConfigChange: (String, PhotoConfiguration) -> Unit,
+    onDetectionModeChange: (String, DetectionMode?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // Full-screen preview state
@@ -229,6 +237,9 @@ private fun PhotoGrid(
                 onRotateCCW = { onConfigChange(box.id, config.cycleRotationCCW()) },
                 onAspectRatioChange = { newRatio ->
                     onConfigChange(box.id, config.copy(aspectRatio = newRatio))
+                },
+                onDetectionModeChange = { mode ->
+                    onDetectionModeChange(box.id, mode)
                 },
                 onPreviewClick = { fullscreenBoxIndex = index },
             )
@@ -277,6 +288,7 @@ private fun PhotoTile(
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit,
     onAspectRatioChange: (Double) -> Unit,
+    onDetectionModeChange: (DetectionMode?) -> Unit,
     onPreviewClick: () -> Unit,
 ) {
     Card(
@@ -304,6 +316,13 @@ private fun PhotoTile(
                         modifier = Modifier.fillMaxSize().padding(4.dp),
                         contentScale = ContentScale.Fit,
                     )
+                    // Detection mode badge (top-left corner)
+                    if (config.detectionMode != null) {
+                        DetectionModeBadge(
+                            mode = config.detectionMode,
+                            modifier = Modifier.align(Alignment.TopStart).padding(4.dp),
+                        )
+                    }
                     // Zoom hint overlay (bottom-right corner)
                     Surface(
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -388,6 +407,12 @@ private fun PhotoTile(
                         selectedRatio = config.aspectRatio,
                         onRatioChange = onAspectRatioChange,
                         boxAspectRatio = box.aspectRatio(),
+                    )
+
+                    // Row 3: detection mode dropdown
+                    DetectionModeDropdown(
+                        selectedMode = config.detectionMode,
+                        onModeChange = onDetectionModeChange,
                     )
                 }
             }
