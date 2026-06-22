@@ -1,0 +1,1071 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Face Detect Tester</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0e0e10;
+    --surface: #18181b;
+    --surface2: #222225;
+    --surface3: #2a2a2e;
+    --border: #3a3a3f;
+    --text: #e4e4e7;
+    --text-dim: #8a8a94;
+    --accent: #38bdf8;
+    --accent-hover: #7dd3fc;
+    --accent-dim: rgba(56,189,248,0.15);
+    --success: #4ade80;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-ui);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  /* Header */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.3px;
+  }
+  .header .badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .status-bar {
+    margin-left: auto;
+    font-size: 12px;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .status-dot.ready { background: var(--success); }
+  .status-dot.loading { background: var(--warn); animation: pulse 1s infinite; }
+  .status-dot.error { background: var(--danger); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Controls */
+  .controls {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .control-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .file-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .file-btn:hover { background: var(--surface3); border-color: var(--accent); color: var(--accent); }
+  .file-btn.loaded { border-color: var(--success); color: var(--success); }
+  input[type="file"] { display: none; }
+  .file-name {
+    font-size: 11px;
+    color: var(--text-dim);
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .slider-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .slider-group input[type="range"] {
+    width: 100px;
+    height: 4px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--surface3);
+    border-radius: 2px;
+    outline: none;
+  }
+  .slider-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+  }
+  .slider-value {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    min-width: 32px;
+    text-align: right;
+  }
+  .run-btn {
+    padding: 8px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: var(--font-ui);
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.3px;
+  }
+  .run-btn:hover { background: var(--accent-hover); }
+  .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Main content */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  .canvas-panel {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    padding: 12px;
+    position: relative;
+    overflow: auto;
+  }
+  .canvas-wrapper {
+    position: relative;
+    display: inline-block;
+    line-height: 0;
+  }
+  #display-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 4px;
+    display: block;
+  }
+  .canvas-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    color: var(--text-dim);
+  }
+  .canvas-placeholder svg { opacity: 0.3; }
+  .canvas-placeholder p { font-size: 14px; }
+
+  /* Overlay message that auto-fades */
+  .auto-launch-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(14,14,16,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    opacity: 1;
+    transition: opacity 0.6s ease;
+    pointer-events: none;
+  }
+  .auto-launch-overlay.hidden { opacity: 0; }
+  .auto-launch-overlay.dismissed { display: none; }
+  .auto-launch-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 40px;
+    text-align: center;
+    max-width: 420px;
+    pointer-events: auto;
+  }
+  .auto-launch-card .icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+  }
+  .auto-launch-card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .auto-launch-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 16px;
+  }
+  .auto-launch-card .shortcut {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 6px;
+    color: var(--text);
+    display: inline-block;
+  }
+
+  /* Results panel */
+  .results-panel {
+    width: 380px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .results-header {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .results-header h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .results-count {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    background: var(--accent-dim);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .results-text {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+  .results-text pre {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    line-height: 1.6;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+  .detection-item {
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent);
+  }
+  .detection-item .det-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .det-index {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+  }
+  .det-conf {
+    font-size: 12px;
+    font-family: var(--font-mono);
+    color: var(--success);
+    font-weight: 600;
+  }
+  .det-coords {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+  .empty-results {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 20px;
+    font-size: 13px;
+  }
+  .results-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .copy-btn {
+    flex: 1;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .copy-btn.copied { border-color: var(--success); color: var(--success); }
+  .timing-info {
+    font-size: 11px;
+    color: var(--text-dim);
+    padding: 4px 16px 8px;
+    font-family: var(--font-mono);
+  }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+  /* Notification */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    padding: 10px 20px;
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text);
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+  .toast.success { border-color: var(--success); }
+  .toast.error { border-color: var(--danger); }
+</style>
+
+
+  
+  
+  <script type="application/ld+json">
+{
+  "@context": "urn:goose.ai:schema",
+  "@type": "GooseApp",
+  "name": "face-detect-tester",
+  "description": "Face detection tester with ONNX Runtime — load images & models, run inference, view bounding boxes, copy coordinates",
+  "width": 1200,
+  "height": 750,
+  "resizable": true,
+  "mcpServers": [
+    "apps"
+  ]
+}
+  </script>
+  <script type="application/x-goose-prd">
+# Face Detect Tester — Product Requirements Document
+
+## Overview
+A single-page HTML tool for face detection testing using ONNX Runtime Web. Users load an image and a .onnx model, run inference, and view bounding boxes + copy-pasteable coordinate outputs.
+
+## Auto-Open Behavior
+- The app displays a welcome overlay card on load that auto-dismisses after 1 second (reduced from 3s for quick access)
+- The overlay also immediately dismisses on any user interaction (click, keydown, or focus)
+- On creation/update, the app window receives focus via `window.focus()` for immediate visibility
+- Initial status shows "Ready" to indicate the app is immediately usable
+- The overlay fades out smoothly via CSS opacity transition and is fully removed from layout after animation
+
+## Core Features
+1. **Image Loading**: File picker for images, displayed on a canvas at original resolution
+2. **ONNX Model Loading**: File picker for .onnx model files, loaded via ONNX Runtime Web (WASM backend from CDN)
+3. **Letterbox Preprocessing**: Resize image to 640×640 preserving aspect ratio, pad remainder with gray (114,114,114), normalize to 0–1 float32 in NCHW format
+4. **Inference**: Run model via ONNX Runtime Web, parse [1, 300, 6] output (x1, y1, x2, y2, conf, cls)
+5. **Coordinate Transform**: Convert 640-space detections back to original image pixel coordinates by reversing the letterbox transform, clamping to image bounds
+6. **NMS Filtering**: Non-Maximum Suppression with configurable IoU threshold
+7. **Confidence Filtering**: Configurable confidence threshold slider
+8. **Visualization**: Draw colored bounding boxes with confidence labels on the canvas
+9. **Results Panel**: Show each detection's coordinates, size, and confidence percentage
+10. **Copy Outputs**: "Copy as Kotlin" and "Copy as Text" buttons for clipboard export
+
+## Controls
+- Image file picker
+- Model (.onnx) file picker
+- Confidence threshold slider (0.01–0.99, default 0.50)
+- IoU threshold slider (0.01–0.99, default 0.45)
+- Run Detection button (enabled only when both image and model are loaded)
+- Sliders apply filters in real-time after a detection run
+
+## UI/UX
+- Dark theme (bg #0e0e10, surfaces #18181b/#222225)
+- Accent color: #38bdf8 (sky blue)
+- Inter for UI text, JetBrains Mono for data/code
+- Status indicator in header (idle/ready/loading/error states with colored dots)
+- Toast notifications for success/error feedback
+- Left panel: canvas with image + bounding boxes; Right panel: results with detection cards
+- Responsive layout with resizable window support
+- Welcome overlay that auto-dismisses quickly (1s) for immediate interaction
+  </script>
+</head>
+<body>
+
+<div class="auto-launch-overlay" id="autoLaunchOverlay">
+  <div class="auto-launch-card">
+    <div class="icon">🔍</div>
+    <h2>Face Detect Tester</h2>
+    <p>Load an image and an ONNX model file, then run detection. Detections are displayed with bounding boxes and copy-pasteable coordinates.</p>
+    <div class="shortcut">Ready to use — start by picking files above</div>
+  </div>
+</div>
+
+<div class="header">
+  <h1>🔍 Face Detect Tester</h1>
+  <span class="badge">ONNX</span>
+  <div class="status-bar">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Idle</span>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="control-group">
+    <span class="control-label">Image</span>
+    <label class="file-btn" id="imageBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      Choose File
+      <input type="file" id="imageInput" accept="image/*">
+    </label>
+    <span class="file-name" id="imageName">No file chosen</span>
+  </div>
+
+  <div class="control-group">
+    <span class="control-label">Model</span>
+    <label class="file-btn" id="modelBtn">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15l3 3 3-3"/></svg>
+      Choose .onnx
+      <input type="file" id="modelInput" accept=".onnx">
+    </label>
+    <span class="file-name" id="modelName">No file chosen</span>
+  </div>
+
+  <div class="control-group slider-group">
+    <span class="control-label">Conf</span>
+    <input type="range" id="confSlider" min="0.01" max="0.99" step="0.01" value="0.50">
+    <span class="slider-value" id="confValue">0.50</span>
+  </div>
+
+  <div class="control-group slider-group">
+    <span class="control-label">IoU</span>
+    <input type="range" id="iouSlider" min="0.01" max="0.99" step="0.01" value="0.45">
+    <span class="slider-value" id="iouValue">0.45</span>
+  </div>
+
+  <button class="run-btn" id="runBtn" disabled>▶ Run Detection</button>
+</div>
+
+<div class="main">
+  <div class="canvas-panel" id="canvasPanel">
+    <div class="canvas-placeholder" id="canvasPlaceholder">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+      </svg>
+      <p>Load an image to begin</p>
+    </div>
+    <div class="canvas-wrapper" id="canvasWrapper" style="display:none;">
+      <canvas id="display-canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="results-panel">
+    <div class="results-header">
+      <h2>Detections</h2>
+      <span class="results-count" id="resultsCount">0</span>
+    </div>
+    <div class="timing-info" id="timingInfo"></div>
+    <div class="results-text" id="resultsText">
+      <div class="empty-results">No detections yet.<br>Load an image and model, then run detection.</div>
+    </div>
+    <div class="results-footer">
+      <button class="copy-btn" id="copyKotlinBtn" disabled>📋 Copy as Kotlin</button>
+      <button class="copy-btn" id="copyPlainBtn" disabled>📄 Copy as Text</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ──────────── State ────────────
+let imageEl = null;
+let imageFileName = '';
+let modelBuffer = null;
+let modelFileName = '';
+let session = null;
+let rawDetections = [];
+let filteredDetections = [];
+let letterboxInfo = null;
+let inferenceTimeMs = 0;
+let postprocessTimeMs = 0;
+
+const MIN_CONF = 0.001;
+
+// ──────────── DOM refs ────────────
+const imageInput = document.getElementById('imageInput');
+const modelInput = document.getElementById('modelInput');
+const imageBtn = document.getElementById('imageBtn');
+const modelBtn = document.getElementById('modelBtn');
+const imageNameEl = document.getElementById('imageName');
+const modelNameEl = document.getElementById('modelName');
+const confSlider = document.getElementById('confSlider');
+const iouSlider = document.getElementById('iouSlider');
+const confValueEl = document.getElementById('confValue');
+const iouValueEl = document.getElementById('iouValue');
+const runBtn = document.getElementById('runBtn');
+const statusDot = document.getElementById('statusDot');
+const statusText = document.getElementById('statusText');
+const canvasPanel = document.getElementById('canvasPanel');
+const canvasPlaceholder = document.getElementById('canvasPlaceholder');
+const canvasWrapper = document.getElementById('canvasWrapper');
+const displayCanvas = document.getElementById('display-canvas');
+const ctx = displayCanvas.getContext('2d');
+const resultsText = document.getElementById('resultsText');
+const resultsCount = document.getElementById('resultsCount');
+const timingInfo = document.getElementById('timingInfo');
+const copyKotlinBtn = document.getElementById('copyKotlinBtn');
+const copyPlainBtn = document.getElementById('copyPlainBtn');
+const toast = document.getElementById('toast');
+const autoLaunchOverlay = document.getElementById('autoLaunchOverlay');
+
+// Offscreen canvas for letterbox preprocessing
+const letterboxCanvas = document.createElement('canvas');
+letterboxCanvas.width = 640;
+letterboxCanvas.height = 640;
+const letterboxCtx = letterboxCanvas.getContext('2d');
+
+// ──────────── Box colors ────────────
+const BOX_COLORS = [
+  '#38bdf8','#4ade80','#fb923c','#f87171',
+  '#c084fc','#2dd4bf','#facc15','#fb7185',
+  '#818cf8','#34d399','#fdba74','#fca5a5',
+  '#d8b4fe','#5eead4','#fde047','#fda4af'
+];
+
+// ──────────── Auto-launch: dismiss overlay immediately on interaction ────────────
+function dismissOverlay() {
+  if (autoLaunchOverlay && !autoLaunchOverlay.classList.contains('dismissed')) {
+    autoLaunchOverlay.classList.add('hidden');
+    setTimeout(() => {
+      autoLaunchOverlay.classList.add('dismissed');
+    }, 600);
+  }
+}
+
+// Dismiss on any click, keydown, or focus - immediately
+document.addEventListener('click', dismissOverlay, { once: true });
+document.addEventListener('keydown', dismissOverlay, { once: true });
+document.addEventListener('focus', dismissOverlay, { once: true });
+
+// Auto-dismiss overlay after 1 second (reduced from 3s for quicker access)
+setTimeout(dismissOverlay, 1000);
+
+// ──────────── Status helpers ────────────
+function setStatus(text, type) {
+  statusText.textContent = text;
+  statusDot.className = 'status-dot';
+  if (type === 'ready') statusDot.classList.add('ready');
+  else if (type === 'loading') statusDot.classList.add('loading');
+  else if (type === 'error') statusDot.classList.add('error');
+}
+
+function showToast(msg, type = '') {
+  toast.textContent = msg;
+  toast.className = 'toast show ' + type;
+  setTimeout(() => { toast.className = 'toast'; }, 2500);
+}
+
+function updateRunButton() {
+  runBtn.disabled = !(imageEl && session);
+}
+
+// ──────────── Image loading ────────────
+imageInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  imageFileName = file.name;
+  imageNameEl.textContent = file.name;
+  imageBtn.classList.add('loaded');
+  dismissOverlay();
+
+  const img = new Image();
+  img.onload = () => {
+    imageEl = img;
+    drawImage();
+    updateRunButton();
+    setStatus('Image loaded', 'ready');
+  };
+  img.onerror = () => {
+    imageEl = null;
+    setStatus('Failed to load image', 'error');
+    showToast('Failed to load image', 'error');
+    updateRunButton();
+  };
+  img.src = URL.createObjectURL(file);
+});
+
+function drawImage() {
+  if (!imageEl) return;
+  displayCanvas.width = imageEl.naturalWidth;
+  displayCanvas.height = imageEl.naturalHeight;
+  ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+  ctx.drawImage(imageEl, 0, 0);
+  canvasPlaceholder.style.display = 'none';
+  canvasWrapper.style.display = 'inline-block';
+}
+
+// ──────────── Model loading ────────────
+modelInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  modelFileName = file.name;
+  modelNameEl.textContent = file.name;
+  modelBtn.classList.add('loaded');
+  dismissOverlay();
+  setStatus('Loading model...', 'loading');
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    modelBuffer = new Uint8Array(arrayBuffer);
+
+    if (typeof ort !== 'undefined') {
+      ort.env.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/';
+      ort.env.wasm.numThreads = 1;
+    }
+
+    session = await ort.InferenceSession.create(modelBuffer, {
+      executionProviders: ['wasm']
+    });
+
+    setStatus('Model loaded', 'ready');
+    showToast('Model loaded successfully', 'success');
+  } catch (err) {
+    session = null;
+    modelBuffer = null;
+    setStatus('Model error: ' + err.message, 'error');
+    showToast('Failed to load model: ' + err.message, 'error');
+  }
+  updateRunButton();
+});
+
+// ──────────── Sliders ────────────
+confSlider.addEventListener('input', () => {
+  confValueEl.textContent = parseFloat(confSlider.value).toFixed(2);
+  applyFilters();
+});
+
+iouSlider.addEventListener('input', () => {
+  iouValueEl.textContent = parseFloat(iouSlider.value).toFixed(2);
+  applyFilters();
+});
+
+// ──────────── Run Detection ────────────
+runBtn.addEventListener('click', runInference);
+
+async function runInference() {
+  if (!imageEl || !session) return;
+
+  runBtn.disabled = true;
+  setStatus('Preprocessing...', 'loading');
+
+  try {
+    const preprocessStart = performance.now();
+    const { tensor, scale, padX, padY } = letterboxPreprocess(imageEl);
+    letterboxInfo = { scale, padX, padY, origW: imageEl.naturalWidth, origH: imageEl.naturalHeight };
+    const preprocessTime = performance.now() - preprocessStart;
+
+    setStatus('Running inference...', 'loading');
+    const inferStart = performance.now();
+    const inputName = session.inputNames[0];
+    const inputTensor = new ort.Tensor('float32', tensor, [1, 3, 640, 640]);
+    const feeds = {};
+    feeds[inputName] = inputTensor;
+    const results = await session.run(feeds);
+    inferenceTimeMs = performance.now() - inferStart;
+
+    setStatus('Postprocessing...', 'loading');
+    const postStart = performance.now();
+    const outputName = session.outputNames[0];
+    const outputTensor = results[outputName];
+    const outputData = outputTensor.data;
+    const outputDims = outputTensor.dims;
+
+    rawDetections = parseOutput(outputData, outputDims, scale, padX, padY, imageEl.naturalWidth, imageEl.naturalHeight);
+    postprocessTimeMs = performance.now() - postStart + preprocessTime;
+
+    applyFilters();
+    setStatus(`Found ${filteredDetections.length} face(s)`, 'ready');
+    showToast(`Detection complete: ${filteredDetections.length} face(s)`, 'success');
+
+  } catch (err) {
+    setStatus('Error: ' + err.message, 'error');
+    showToast('Inference error: ' + err.message, 'error');
+    console.error(err);
+  } finally {
+    runBtn.disabled = false;
+    updateRunButton();
+  }
+}
+
+// ──────────── Letterbox preprocess ────────────
+function letterboxPreprocess(img) {
+  const origW = img.naturalWidth;
+  const origH = img.naturalHeight;
+  const scale = Math.min(640 / origW, 640 / origH);
+  const newW = Math.round(origW * scale);
+  const newH = Math.round(origH * scale);
+  const padX = Math.round((640 - newW) / 2);
+  const padY = Math.round((640 - newH) / 2);
+
+  letterboxCtx.fillStyle = 'rgb(114, 114, 114)';
+  letterboxCtx.fillRect(0, 0, 640, 640);
+  letterboxCtx.drawImage(img, padX, padY, newW, newH);
+
+  const imageData = letterboxCtx.getImageData(0, 0, 640, 640);
+  const pixelData = imageData.data;
+  const float32Data = new Float32Array(3 * 640 * 640);
+  const numPixels = 640 * 640;
+
+  for (let i = 0; i < numPixels; i++) {
+    float32Data[i] = pixelData[i * 4] / 255.0;
+    float32Data[numPixels + i] = pixelData[i * 4 + 1] / 255.0;
+    float32Data[2 * numPixels + i] = pixelData[i * 4 + 2] / 255.0;
+  }
+
+  return { tensor: float32Data, scale, padX, padY };
+}
+
+// ──────────── Parse [1, N, 6] output ────────────
+function parseOutput(data, dims, scale, padX, padY, origW, origH) {
+  const detections = [];
+  let numDets, detLen;
+  if (dims.length === 3) {
+    numDets = dims[1];
+    detLen = dims[2];
+  } else if (dims.length === 2) {
+    numDets = dims[0];
+    detLen = dims[1];
+  } else {
+    console.warn('Unexpected output dims:', dims);
+    return detections;
+  }
+
+  if (detLen < 6) {
+    console.warn('Output has fewer than 6 values per row');
+    return detections;
+  }
+
+  for (let i = 0; i < numDets; i++) {
+    const offset = i * detLen;
+    const x1_640 = data[offset + 0];
+    const y1_640 = data[offset + 1];
+    const x2_640 = data[offset + 2];
+    const y2_640 = data[offset + 3];
+    const conf = data[offset + 4];
+
+    if (conf < MIN_CONF) continue;
+
+    const x1 = (x1_640 - padX) / scale;
+    const y1 = (y1_640 - padY) / scale;
+    const x2 = (x2_640 - padX) / scale;
+    const y2 = (y2_640 - padY) / scale;
+
+    const x1c = Math.max(0, Math.min(x1, origW));
+    const y1c = Math.max(0, Math.min(y1, origH));
+    const x2c = Math.max(0, Math.min(x2, origW));
+    const y2c = Math.max(0, Math.min(y2, origH));
+
+    detections.push({
+      x1: x1c, y1: y1c, x2: x2c, y2: y2c,
+      conf: conf
+    });
+  }
+
+  return detections;
+}
+
+// ──────────── NMS ────────────
+function computeIoU(a, b) {
+  const ix1 = Math.max(a.x1, b.x1);
+  const iy1 = Math.max(a.y1, b.y1);
+  const ix2 = Math.min(a.x2, b.x2);
+  const iy2 = Math.min(a.y2, b.y2);
+  const inter = Math.max(0, ix2 - ix1) * Math.max(0, iy2 - iy1);
+  const areaA = (a.x2 - a.x1) * (a.y2 - a.y1);
+  const areaB = (b.x2 - b.x1) * (b.y2 - b.y1);
+  const union = areaA + areaB - inter;
+  return union > 0 ? inter / union : 0;
+}
+
+function nms(dets, iouThresh) {
+  const sorted = [...dets].sort((a, b) => b.conf - a.conf);
+  const kept = [];
+  const suppressed = new Set();
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (suppressed.has(i)) continue;
+    kept.push(sorted[i]);
+    for (let j = i + 1; j < sorted.length; j++) {
+      if (suppressed.has(j)) continue;
+      if (computeIoU(sorted[i], sorted[j]) > iouThresh) {
+        suppressed.add(j);
+      }
+    }
+  }
+  return kept;
+}
+
+// ──────────── Apply filters ────────────
+function applyFilters() {
+  if (rawDetections.length === 0 && filteredDetections.length === 0) return;
+
+  const confThresh = parseFloat(confSlider.value);
+  const iouThresh = parseFloat(iouSlider.value);
+
+  const aboveThreshold = rawDetections.filter(d => d.conf >= confThresh);
+  filteredDetections = nms(aboveThreshold, iouThresh);
+
+  drawDetections();
+  updateResults();
+}
+
+// ──────────── Draw detections ────────────
+function drawDetections() {
+  if (!imageEl) return;
+
+  ctx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+  ctx.drawImage(imageEl, 0, 0);
+
+  filteredDetections.forEach((det, idx) => {
+    const color = BOX_COLORS[idx % BOX_COLORS.length];
+    const x = det.x1;
+    const y = det.y1;
+    const w = det.x2 - det.x1;
+    const h = det.y2 - det.y1;
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(2, Math.min(4, Math.round(Math.min(displayCanvas.width, displayCanvas.height) / 300)));
+    ctx.strokeRect(x, y, w, h);
+
+    const label = `${(det.conf * 100).toFixed(1)}%`;
+    const fontSize = Math.max(12, Math.min(18, Math.round(Math.min(displayCanvas.width, displayCanvas.height) / 50)));
+    ctx.font = `600 ${fontSize}px Inter, system-ui, sans-serif`;
+    const textMetrics = ctx.measureText(label);
+    const textW = textMetrics.width + 8;
+    const textH = fontSize + 6;
+    const labelY = y > textH + 2 ? y - textH - 2 : y;
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    const r = 3;
+    ctx.moveTo(x + r, labelY);
+    ctx.lineTo(x + textW - r, labelY);
+    ctx.quadraticCurveTo(x + textW, labelY, x + textW, labelY + r);
+    ctx.lineTo(x + textW, labelY + textH - r);
+    ctx.quadraticCurveTo(x + textW, labelY + textH, x + textW - r, labelY + textH);
+    ctx.lineTo(x + r, labelY + textH);
+    ctx.quadraticCurveTo(x, labelY + textH, x, labelY + textH - r);
+    ctx.lineTo(x, labelY + r);
+    ctx.quadraticCurveTo(x, labelY, x + r, labelY);
+    ctx.fill();
+
+    ctx.fillStyle = '#000';
+    ctx.textBaseline = 'top';
+    ctx.fillText(label, x + 4, labelY + 3);
+  });
+}
+
+// ──────────── Update results display ────────────
+function updateResults() {
+  resultsCount.textContent = filteredDetections.length;
+
+  if (inferenceTimeMs > 0) {
+    timingInfo.textContent = `Inference: ${inferenceTimeMs.toFixed(1)}ms | Postprocess: ${postprocessTimeMs.toFixed(1)}ms | Raw detections: ${rawDetections.length}`;
+  }
+
+  if (filteredDetections.length === 0 && rawDetections.length === 0) {
+    resultsText.innerHTML = '<div class="empty-results">No detections yet.<br>Load an image and model, then run detection.</div>';
+    copyKotlinBtn.disabled = true;
+    copyPlainBtn.disabled = true;
+    return;
+  }
+
+  if (filteredDetections.length === 0) {
+    resultsText.innerHTML = '<div class="empty-results">No faces above threshold.<br>Try lowering the confidence threshold.</div>';
+    copyKotlinBtn.disabled = true;
+    copyPlainBtn.disabled = true;
+    return;
+  }
+
+  copyKotlinBtn.disabled = false;
+  copyPlainBtn.disabled = false;
+
+  let html = '';
+  filteredDetections.forEach((det, idx) => {
+    const color = BOX_COLORS[idx % BOX_COLORS.length];
+    html += `<div class="detection-item" style="border-left-color:${color}">
+      <div class="det-header">
+        <span class="det-index">Face #${idx}</span>
+        <span class="det-conf">${(det.conf * 100).toFixed(2)}%</span>
+      </div>
+      <div class="det-coords">
+        x1=${det.x1.toFixed(1)}, y1=${det.y1.toFixed(1)}<br>
+        x2=${det.x2.toFixed(1)}, y2=${det.y2.toFixed(1)}<br>
+        size=${(det.x2-det.x1).toFixed(0)}×${(det.y2-det.y1).toFixed(0)}
+      </div>
+    </div>`;
+  });
+  resultsText.innerHTML = html;
+}
+
+// ──────────── Generate text outputs ────────────
+function generateKotlinOutput() {
+  const cThresh = parseFloat(confSlider.value).toFixed(2);
+  const iThresh = parseFloat(iouSlider.value).toFixed(2);
+  let out = `// FaceDetection results - image: ${imageFileName}\n`;
+  out += `// Image size: ${letterboxInfo ? letterboxInfo.origW : '?'}x${letterboxInfo ? letterboxInfo.origH : '?'}\n`;
+  out += `// confThreshold=${cThresh}, iouThreshold=${iThresh}\n\n`;
+  out += `val expectedDetections = listOf(\n`;
+  filteredDetections.forEach((det, idx) => {
+    const comma = idx < filteredDetections.length - 1 ? ',' : '';
+    out += `    FaceDetection(x1 = ${det.x1.toFixed(1)}f, y1 = ${det.y1.toFixed(1)}f, x2 = ${det.x2.toFixed(1)}f, y2 = ${det.y2.toFixed(1)}f, confidence = ${det.conf.toFixed(4)}f)${comma}\n`;
+  });
+  out += `)`;
+  return out;
+}
+
+function generatePlainOutput() {
+  const cThresh = parseFloat(confSlider.value).toFixed(2);
+  const iThresh = parseFloat(iouSlider.value).toFixed(2);
+  let out = `# Detection Results - ${imageFileName}\n`;
+  out += `# Image: ${letterboxInfo ? letterboxInfo.origW : '?'}x${letterboxInfo ? letterboxInfo.origH : '?'}\n`;
+  out += `# confThreshold=${cThresh}, iouThreshold=${iThresh}\n`;
+  out += `# count=${filteredDetections.length}\n\n`;
+  filteredDetections.forEach((det, idx) => {
+    out += `det_${idx}: x1=${det.x1.toFixed(1)} y1=${det.y1.toFixed(1)} x2=${det.x2.toFixed(1)} y2=${det.y2.toFixed(1)} conf=${det.conf.toFixed(4)}\n`;
+  });
+  return out;
+}
+
+// ──────────── Copy buttons ────────────
+copyKotlinBtn.addEventListener('click', () => {
+  const text = generateKotlinOutput();
+  navigator.clipboard.writeText(text).then(() => {
+    copyKotlinBtn.classList.add('copied');
+    copyKotlinBtn.textContent = '✓ Copied!';
+    showToast('Kotlin data copied to clipboard', 'success');
+    setTimeout(() => {
+      copyKotlinBtn.classList.remove('copied');
+      copyKotlinBtn.innerHTML = '📋 Copy as Kotlin';
+    }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Copied!', 'success');
+  });
+});
+
+copyPlainBtn.addEventListener('click', () => {
+  const text = generatePlainOutput();
+  navigator.clipboard.writeText(text).then(() => {
+    copyPlainBtn.classList.add('copied');
+    copyPlainBtn.textContent = '✓ Copied!';
+    showToast('Plain text copied to clipboard', 'success');
+    setTimeout(() => {
+      copyPlainBtn.classList.remove('copied');
+      copyPlainBtn.innerHTML = '📄 Copy as Text';
+    }, 2000);
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Copied!', 'success');
+  });
+});
+
+// ──────────── Initialization ────────────
+(function init() {
+  setStatus('Ready', 'ready');
+
+  // Check ORT availability
+  if (typeof ort === 'undefined') {
+    setStatus('ONNX Runtime Web not loaded', 'error');
+    showToast('Failed to load ONNX Runtime Web. Check network or CSP settings.', 'error');
+  }
+
+  // Focus window for immediate visibility and interaction
+  window.focus();
+})();
+</script>
+</body>
+</html>
