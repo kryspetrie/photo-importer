@@ -117,6 +117,26 @@ interface ModelResourcePort {
      * Used for cache invalidation and diagnostic info.
      */
     fun cornerRegressionModelVersion(): String
+
+    /**
+     * Loads the face detection model bytes.
+     *
+     * The face detection model takes a 640×640 letterboxed image and outputs face bounding boxes with
+     * confidence scores and 5 facial keypoints.
+     *
+     * @return Raw model bytes suitable for ONNX Runtime `SessionOptions`
+     * @throws ModelNotFoundException if the model resource cannot be found or read
+     */
+    fun loadFaceDetectionModel(): ByteArray
+
+    /**
+     * Returns whether the face detection model is available.
+     *
+     * This is separate from [isModelAvailable] because face detection is optional — the application
+     * functions fully without it. Returns true if the face detection model file exists on the
+     * classpath or configured location.
+     */
+    fun isFaceDetectionModelAvailable(): Boolean
 }
 
 /** Thrown when a required ML model cannot be found or loaded. */

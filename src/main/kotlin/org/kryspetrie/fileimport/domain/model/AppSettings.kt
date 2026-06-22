@@ -114,4 +114,12 @@ data class AppSettings(
     /** Removes a metadata value from history. */
     fun removeMetadataHistory(fieldKey: String, value: String): AppSettings =
         copy(metadataHistory = metadataHistory.removeValue(fieldKey, value))
+
+    /** Adds a complete metadata set to history (for "apply recent values" feature). */
+    fun addMetadataSet(set: RecentMetadataSet): AppSettings =
+        copy(metadataHistory = metadataHistory.addSet(set))
+
+    /** Removes a metadata set from history by timestamp. */
+    fun removeMetadataSet(timestamp: Long): AppSettings =
+        copy(metadataHistory = metadataHistory.removeSet(timestamp))
 }

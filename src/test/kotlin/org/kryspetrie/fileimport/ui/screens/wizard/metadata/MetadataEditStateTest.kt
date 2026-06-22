@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 
 class MetadataEditStateTest {
 
@@ -237,5 +238,98 @@ class MetadataEditStateTest {
         assertEquals("vacation, landscape", result.keywords)
         assertEquals("Canon", result.cameraMake)
         assertEquals("Worcester", result.city)
+    }
+
+    // ── loadFromSet tests ──
+
+    @Test
+    fun `loadFromSet fills only non-blank fields`() {
+        val state = MetadataEditState()
+        state.description = "Existing description"
+        state.city = "Existing city"
+
+        val set = RecentMetadataSet(
+            locationName = "Grandma's house",
+            city = "Worcester",
+            country = "United States",
+        )
+        state.loadFromSet(set)
+
+        // Non-blank fields from the set overwrite existing values
+        assertEquals("Grandma's house", state.locationName)
+        assertEquals("Worcester", state.city)
+        assertEquals("United States", state.country)
+        // Pre-existing values in fields that are blank in the set are preserved
+        assertEquals("Existing description", state.description)
+        // Other fields left untouched since they were blank in state and set
+        assertEquals("", state.keywords)
+        assertEquals("", state.originalDate)
+    }
+
+    @Test
+    fun `loadFromSet with empty set leaves state unchanged`() {
+        val state = MetadataEditState()
+        state.description = "Test"
+        state.city = "Boston"
+
+        val emptySet = RecentMetadataSet()
+        state.loadFromSet(emptySet)
+
+        assertEquals("Test", state.description)
+        assertEquals("Boston", state.city)
+    }
+
+    @Test
+    fun `loadFromSet with full set overwrites all existing values`() {
+        val state = MetadataEditState()
+        state.description = "Old"
+
+        val set = RecentMetadataSet(
+            description = "New",
+            keywords = "new, keywords",
+            originalDate = "2024-01-01",
+            year = "2024",
+            cameraMake = "Canon",
+            cameraModel = "EOS R5",
+            lensModel = "RF 24-70mm",
+            focalLength = "35mm",
+            aperture = "f/2.8",
+            shutterSpeed = "1/500",
+            iso = "400",
+            locationName = "Grandma's house",
+            city = "Worcester",
+            state = "MA",
+            country = "United States",
+            gpsLatitude = "42.2626",
+            gpsLongitude = "-71.8023",
+            subjects = "Alice",
+        )
+        state.loadFromSet(set)
+
+        assertEquals("New", state.description)
+        assertEquals("new, keywords", state.keywords)
+        assertEquals("2024-01-01", state.originalDate)
+        assertEquals("2024", state.year)
+        assertEquals("Canon", state.cameraMake)
+        assertEquals("Worcester", state.city)
+        assertEquals("42.2626", state.gpsLatitude)
+        assertEquals("-71.8023", state.gpsLongitude)
+        assertEquals("Alice", state.subjects)
+    }
+
+    @Test
+    fun `loadFromSet preserves blank fields in state when set is blank`() {
+        val state = MetadataEditState()
+        // Start with all empty
+        assertEquals("", state.description)
+        assertEquals("", state.city)
+
+        val set = RecentMetadataSet(city = "Paris")
+        state.loadFromSet(set)
+
+        // City was set from the set
+        assertEquals("Paris", state.city)
+        // Description was blank in both state and set, stays blank
+        assertEquals("", state.description)
     }
 }

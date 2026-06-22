@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.screens.scan
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,13 +18,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataField
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
 
+/**
+ * A simplified photo editing dialog for the scan workflow.
+ *
+ * Displays metadata fields with optional recent value suggestions, and corner coordinate info.
+ *
+ * @param photo The detected photo being edited.
+ * @param metadataHistory Optional metadata history for recent value suggestions.
+ * @param onRecordMetadataSet Optional callback to record a metadata set when the user saves.
+ * @param onClose Callback when the dialog is dismissed.
+ * @param onConfigChange Callback with the updated configuration when saved.
+ */
 @Composable
 fun EditPhotoDialog(
     photo: DetectedPhoto,
+    metadataHistory: MetadataHistory? = null,
+    onRecordMetadataSet: ((RecentMetadataSet) -> Unit)? = null,
     onClose: () -> Unit,
     onConfigChange: (PhotoScanConfiguration) -> Unit,
 ) {
@@ -34,23 +51,35 @@ fun EditPhotoDialog(
         title = { Text("Edit Photo") },
         text = {
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
+                // ── Recent Values ──
+                if (metadataHistory != null && metadataHistory.recentSets.isNotEmpty()) {
+                    RecentValuesDropdown(
+                        recentSets = metadataHistory.recentSets,
+                        onApplySet = { set -> editState.loadFromSet(set) },
+                    )
+                }
+
                 MetadataField(
                     label = "Description",
                     placeholder = "Photo description...",
                     value = editState.description,
                     onValueChange = { editState.description = it },
+                    suggestions = metadataHistory?.description ?: emptyList(),
+                    onCommit = {
+                        metadataHistory?.let { _ -> /* handled by onRecordMetadataSet */ }
+                    },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement =
-                        androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     MetadataField(
                         label = "Keywords",
                         placeholder = "vacation, family, holiday",
                         value = editState.keywords,
                         onValueChange = { editState.keywords = it },
+                        suggestions = metadataHistory?.keywords ?: emptyList(),
                         modifier = Modifier.weight(2f),
                     )
                     MetadataField(
@@ -58,8 +87,9 @@ fun EditPhotoDialog(
                         placeholder = "1995",
                         value = editState.year,
                         onValueChange = { editState.year = it.filter { c -> c.isDigit() }.take(4) },
-                        modifier = Modifier.weight(1f),
                         keyboardType = KeyboardType.Number,
+                        suggestions = metadataHistory?.year ?: emptyList(),
+                        modifier = Modifier.weight(1f),
                     )
                 }
                 MetadataField(
@@ -67,6 +97,7 @@ fun EditPhotoDialog(
                     placeholder = "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
                     value = editState.originalDate,
                     onValueChange = { editState.originalDate = it },
+                    suggestions = metadataHistory?.originalDate ?: emptyList(),
                     modifier = Modifier.fillMaxWidth(),
                 )
 
@@ -105,7 +136,11 @@ fun EditPhotoDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    onConfigChange(editState.applyToConfig(photo.configuration))
+                    val newConfig = editState.applyToConfig(photo.configuration)
+                    onConfigChange(newConfig)
+                    // Record the metadata set for future reuse
+                    val set = RecentMetadataSet.fromConfig(newConfig)
+                    onRecordMetadataSet?.invoke(set)
                     onClose()
                 }
             ) {

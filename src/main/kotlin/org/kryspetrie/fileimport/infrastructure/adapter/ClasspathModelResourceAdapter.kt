@@ -37,6 +37,7 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
         const val DETECTION_MODEL_PATH = "models/detection_model.onnx"
         const val POSE_MODEL_PATH = "models/pose_model.onnx"
         const val CORNER_REGRESSION_MODEL_PATH = "models/corner_regression_model.onnx"
+        const val FACE_DETECTION_MODEL_PATH = "models/face_detection_model.onnx"
         const val BUFFER_SIZE = 8192
     }
 
@@ -50,6 +51,9 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
     private val cornerRegressionModelBytes: ByteArray by lazy {
         loadResource(CORNER_REGRESSION_MODEL_PATH)
     }
+
+    /** Cached face detection model bytes, loaded lazily. May not be available. */
+    private val faceDetectionModelBytes: ByteArray? by lazy { loadResourceOrNull(FACE_DETECTION_MODEL_PATH) }
 
     override fun loadDetectionModel(): ByteArray = detectionModelBytes
 
@@ -96,6 +100,15 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
 
     override fun cornerRegressionModelVersion(): String = "corner_regression_v2"
 
+    override fun loadFaceDetectionModel(): ByteArray =
+        faceDetectionModelBytes
+            ?: throw ModelNotFoundException(
+                "Face detection model not found on classpath: $FACE_DETECTION_MODEL_PATH"
+            )
+
+    override fun isFaceDetectionModelAvailable(): Boolean =
+        javaClass.classLoader.getResource(FACE_DETECTION_MODEL_PATH) != null
+
     /**
      * Loads a classpath resource fully into a byte array.
      *
@@ -110,6 +123,20 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
             stream.use { it.readBytes() }
         } catch (e: Exception) {
             throw ModelNotFoundException("Failed to read model resource: $path", e)
+        }
+    }
+
+    /**
+     * Loads a classpath resource into a byte array, returning null if not found.
+     *
+     * Used for optional models that may not be bundled in all builds.
+     */
+    private fun loadResourceOrNull(path: String): ByteArray? {
+        val stream = javaClass.classLoader.getResourceAsStream(path) ?: return null
+        return try {
+            stream.use { it.readBytes() }
+        } catch (_: Exception) {
+            null
         }
     }
 }

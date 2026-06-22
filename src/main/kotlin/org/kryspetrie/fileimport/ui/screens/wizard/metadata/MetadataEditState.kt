@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 
 /**
  * Holds buffered metadata field values for editing.
@@ -79,6 +80,32 @@ class MetadataEditState {
         gpsLatitude = config.gpsLatitude
         gpsLongitude = config.gpsLongitude
         subjects = config.subjects
+    }
+
+    /**
+     * Loads non-blank values from a [RecentMetadataSet], overwriting only the fields
+     * that have values in the set. Blank fields in the set are left unchanged in the state,
+     * supporting the "fill only what you previously entered" pattern.
+     */
+    fun loadFromSet(set: RecentMetadataSet) {
+        if (set.description.isNotBlank()) description = set.description
+        if (set.keywords.isNotBlank()) keywords = set.keywords
+        if (set.originalDate.isNotBlank()) originalDate = set.originalDate
+        if (set.year.isNotBlank()) year = set.year
+        if (set.cameraMake.isNotBlank()) cameraMake = set.cameraMake
+        if (set.cameraModel.isNotBlank()) cameraModel = set.cameraModel
+        if (set.lensModel.isNotBlank()) lensModel = set.lensModel
+        if (set.focalLength.isNotBlank()) focalLength = set.focalLength
+        if (set.aperture.isNotBlank()) aperture = set.aperture
+        if (set.shutterSpeed.isNotBlank()) shutterSpeed = set.shutterSpeed
+        if (set.iso.isNotBlank()) iso = set.iso
+        if (set.locationName.isNotBlank()) locationName = set.locationName
+        if (set.city.isNotBlank()) city = set.city
+        if (set.state.isNotBlank()) state = set.state
+        if (set.country.isNotBlank()) country = set.country
+        if (set.gpsLatitude.isNotBlank()) gpsLatitude = set.gpsLatitude
+        if (set.gpsLongitude.isNotBlank()) gpsLongitude = set.gpsLongitude
+        if (set.subjects.isNotBlank()) subjects = set.subjects
     }
 
     /**

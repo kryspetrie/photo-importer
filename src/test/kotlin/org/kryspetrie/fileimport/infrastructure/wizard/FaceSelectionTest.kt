@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.FaceRegion
 
 /**
  * Tests for face selection state management in PhotoScanWizardState.
@@ -268,6 +269,289 @@ class FaceSelectionTest {
             val config = state.photoConfigurations.value[state.boxes[0].id]
             // addFaceRegion rebuilds subjects from all faceRegion names
             assertEquals("Alice", config?.subjects)
+        }
+    }
+
+    @Nested
+    @DisplayName("addDetectedFaceRegions")
+    inner class AddDetectedFaceRegions {
+
+        @Test
+        @DisplayName("should add multiple unnamed face regions at once")
+        fun shouldAddMultipleUnnamedFaceRegions() {
+            addTestBoxes(1)
+
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.3, y = 0.4, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.7, y = 0.5, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.5, y = 0.2, w = 0.08, h = 0.08),
+            )
+            state.addDetectedFaceRegions(0, detected)
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals(3, config?.faceRegions?.size)
+            // Unnamed regions should not contribute to subjects
+            assertEquals("", config?.subjects)
+            assertEquals(0.3, config?.faceRegions?.get(0)?.x)
+            assertEquals(0.7, config?.faceRegions?.get(1)?.x)
+            assertEquals(0.5, config?.faceRegions?.get(2)?.x)
+        }
+
+        @Test
+        @DisplayName("should add detected regions alongside manually-placed regions")
+        fun shouldAddDetectedRegionsAlongsideManual() {
+            addTestBoxes(1)
+
+            // Place a manual face first
+            state.addFaceRegion(0, "Alice", 0.3, 0.4)
+            assertEquals(1, state.photoConfigurations.value[state.boxes[0].id]?.faceRegions?.size)
+
+            // Auto-detect adds more
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.7, y = 0.5, w = 0.14, h = 0.14),
+            )
+            state.addDetectedFaceRegions(0, detected)
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals(2, config?.faceRegions?.size)
+            // Alice is named, so subjects includes her
+            assertEquals("Alice", config?.subjects)
+        }
+
+        @Test
+        @DisplayName("should rebuild subjects from all named regions after bulk add")
+        fun shouldRebuildSubjectsFromNamedRegionsAfterBulkAdd() {
+            addTestBoxes(1)
+
+            val detected = listOf(
+                FaceRegion(name = "Bob", type = "Face", x = 0.3, y = 0.4, w = 0.14, h = 0.14),
+                FaceRegion(name = "Carol", type = "Face", x = 0.7, y = 0.5, w = 0.14, h = 0.14),
+            )
+            state.addDetectedFaceRegions(0, detected)
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals(2, config?.faceRegions?.size)
+            assertEquals("Bob, Carol", config?.subjects)
+        }
+
+        @Test
+        @DisplayName("should ignore out-of-range photo index")
+        fun shouldIgnoreOutOfRangePhotoIndex() {
+            addTestBoxes(1)
+
+            val detected = listOf(
+                FaceRegion(name = "Nobody", type = "Face", x = 0.5, y = 0.5, w = 0.14, h = 0.14),
+            )
+            state.addDetectedFaceRegions(5, detected)
+            state.addDetectedFaceRegions(-1, detected)
+
+            // Should not crash or add any configuration
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals(0, config?.faceRegions?.size ?: 0)
+        }
+
+        @Test
+        @DisplayName("should add face regions to different photos independently")
+        fun shouldAddRegionsToDifferentPhotos() {
+            addTestBoxes(2)
+
+            val detected0 = listOf(
+                FaceRegion(name = "Alice", type = "Face", x = 0.3, y = 0.3, w = 0.14, h = 0.14),
+            )
+            val detected1 = listOf(
+                FaceRegion(name = "Bob", type = "Face", x = 0.6, y = 0.6, w = 0.14, h = 0.14),
+            )
+            state.addDetectedFaceRegions(0, detected0)
+            state.addDetectedFaceRegions(1, detected1)
+
+            val config0 = state.photoConfigurations.value[state.boxes[0].id]
+            val config1 = state.photoConfigurations.value[state.boxes[1].id]
+            assertEquals(1, config0?.faceRegions?.size)
+            assertEquals("Alice", config0?.faceRegions?.get(0)?.name)
+            assertEquals("Alice", config0?.subjects)
+            assertEquals(1, config1?.faceRegions?.size)
+            assertEquals("Bob", config1?.faceRegions?.get(0)?.name)
+            assertEquals("Bob", config1?.subjects)
+        }
+
+        @Test
+        @DisplayName("should add face regions with different region types")
+        fun shouldAddRegionsWithDifferentTypes() {
+            addTestBoxes(1)
+
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.3, y = 0.3, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Pet", x = 0.7, y = 0.5, w = 0.14, h = 0.14),
+            )
+            state.addDetectedFaceRegions(0, detected)
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals(2, config?.faceRegions?.size)
+            assertEquals("Face", config?.faceRegions?.get(0)?.type)
+            assertEquals("Pet", config?.faceRegions?.get(1)?.type)
+        }
+    }
+
+    @Nested
+    @DisplayName("updateFaceRegionName")
+    inner class UpdateFaceRegionName {
+
+        @Test
+        @DisplayName("should update the name of a face region")
+        fun shouldUpdateFaceRegionName() {
+            addTestBoxes(1)
+            state.addFaceRegion(0, "", 0.3, 0.4)
+
+            state.updateFaceRegionName(0, 0, "Alice")
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals("Alice", config?.faceRegions?.get(0)?.name)
+        }
+
+        @Test
+        @DisplayName("should auto-populate subjects when name is set")
+        fun shouldAutoPopulateSubjectsWhenNameIsSet() {
+            addTestBoxes(1)
+            state.addFaceRegion(0, "", 0.3, 0.4)
+
+            state.updateFaceRegionName(0, 0, "Alice")
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals("Alice", config?.subjects)
+        }
+
+        @Test
+        @DisplayName("should update subjects when renaming an existing face")
+        fun shouldUpdateSubjectsWhenRenaming() {
+            addTestBoxes(1)
+            state.addFaceRegion(0, "Alice", 0.3, 0.4)
+            state.addFaceRegion(0, "Bob", 0.7, 0.6)
+            assertEquals("Alice, Bob", state.photoConfigurations.value[state.boxes[0].id]?.subjects)
+
+            state.updateFaceRegionName(0, 0, "Carol")
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals("Carol", config?.faceRegions?.get(0)?.name)
+            assertEquals("Bob", config?.faceRegions?.get(1)?.name)
+            assertEquals("Carol, Bob", config?.subjects)
+        }
+
+        @Test
+        @DisplayName("should remove name from subjects when cleared to empty string")
+        fun shouldRemoveNameFromSubjectsWhenCleared() {
+            addTestBoxes(1)
+            state.addFaceRegion(0, "Alice", 0.3, 0.4)
+            state.addFaceRegion(0, "Bob", 0.7, 0.6)
+            assertEquals("Alice, Bob", state.photoConfigurations.value[state.boxes[0].id]?.subjects)
+
+            state.updateFaceRegionName(0, 0, "")
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals("", config?.faceRegions?.get(0)?.name)
+            // Only Bob is named now
+            assertEquals("Bob", config?.subjects)
+        }
+
+        @Test
+        @DisplayName("should do nothing for out-of-range photo index")
+        fun shouldDoNothingForOutOfRangePhotoIndex() {
+            addTestBoxes(1)
+            state.addFaceRegion(0, "Alice", 0.3, 0.4)
+
+            state.updateFaceRegionName(5, 0, "Bob")
+            state.updateFaceRegionName(-1, 0, "Bob")
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals("Alice", config?.faceRegions?.get(0)?.name)
+        }
+
+        @Test
+        @DisplayName("should do nothing for out-of-range face index")
+        fun shouldDoNothingForOutOfRangeFaceIndex() {
+            addTestBoxes(1)
+            state.addFaceRegion(0, "Alice", 0.3, 0.4)
+
+            state.updateFaceRegionName(0, 5, "Bob")
+            state.updateFaceRegionName(0, -1, "Bob")
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals("Alice", config?.faceRegions?.get(0)?.name)
+        }
+
+        @Test
+        @DisplayName("should update multiple face names sequentially")
+        fun shouldUpdateMultipleFaceNamesSequentially() {
+            addTestBoxes(1)
+            state.addFaceRegion(0, "", 0.2, 0.3)
+            state.addFaceRegion(0, "", 0.5, 0.4)
+            state.addFaceRegion(0, "", 0.8, 0.5)
+
+            state.updateFaceRegionName(0, 0, "Alice")
+            state.updateFaceRegionName(0, 1, "Bob")
+            state.updateFaceRegionName(0, 2, "Carol")
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals(3, config?.faceRegions?.size)
+            assertEquals("Alice", config?.faceRegions?.get(0)?.name)
+            assertEquals("Bob", config?.faceRegions?.get(1)?.name)
+            assertEquals("Carol", config?.faceRegions?.get(2)?.name)
+            assertEquals("Alice, Bob, Carol", config?.subjects)
+        }
+    }
+
+    @Nested
+    @DisplayName("addDetectedFaceRegions then updateFaceRegionName (naming cycle)")
+    inner class NamingCycle {
+
+        @Test
+        @DisplayName("should add detected faces then name them sequentially")
+        fun shouldAddDetectedFacesThenNameThem() {
+            addTestBoxes(1)
+
+            // Step 1: Auto-detect 3 unnamed faces
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.2, y = 0.3, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.5, y = 0.4, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.8, y = 0.5, w = 0.14, h = 0.14),
+            )
+            state.addDetectedFaceRegions(0, detected)
+
+            val config0 = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals("", config0?.subjects) // No names yet
+            assertEquals(3, config0?.faceRegions?.size)
+
+            // Step 2: Name faces one by one (simulating Tab cycling)
+            state.updateFaceRegionName(0, 0, "Alice")
+            assertEquals("Alice", state.photoConfigurations.value[state.boxes[0].id]?.subjects)
+
+            state.updateFaceRegionName(0, 1, "Bob")
+            assertEquals("Alice, Bob", state.photoConfigurations.value[state.boxes[0].id]?.subjects)
+
+            state.updateFaceRegionName(0, 2, "Carol")
+            assertEquals("Alice, Bob, Carol", state.photoConfigurations.value[state.boxes[0].id]?.subjects)
+        }
+
+        @Test
+        @DisplayName("should correctly name faces after mixing detection and manual addition")
+        fun shouldMixDetectionAndManualAddition() {
+            addTestBoxes(1)
+
+            // Add a manual face first
+            state.addFaceRegion(0, "Alice", 0.3, 0.4)
+
+            // Then auto-detect more
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.7, y = 0.5, w = 0.14, h = 0.14),
+            )
+            state.addDetectedFaceRegions(0, detected)
+
+            // Name the detected face
+            state.updateFaceRegionName(0, 1, "Bob")
+
+            val config = state.photoConfigurations.value[state.boxes[0].id]
+            assertEquals("Alice, Bob", config?.subjects)
+            assertEquals("Alice", config?.faceRegions?.get(0)?.name)
+            assertEquals("Bob", config?.faceRegions?.get(1)?.name)
         }
     }
 }

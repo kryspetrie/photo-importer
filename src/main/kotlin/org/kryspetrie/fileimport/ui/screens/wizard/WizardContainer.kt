@@ -58,6 +58,7 @@ import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
+import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
@@ -323,6 +324,13 @@ private fun WizardStepContent(
                         scope.launch {
                             val currentSettings = settingsPort.observeSettings().first()
                             val updated = currentSettings.removeMetadataHistory(fieldKey, value)
+                            settingsPort.saveSettings(updated)
+                        }
+                    },
+                    onRecordMetadataSet = { set ->
+                        scope.launch {
+                            val currentSettings = settingsPort.observeSettings().first()
+                            val updated = currentSettings.addMetadataSet(set)
                             settingsPort.saveSettings(updated)
                         }
                     },

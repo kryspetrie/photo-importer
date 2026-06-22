@@ -592,6 +592,54 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     }
 
     /**
+     * Adds multiple detected face regions at once (from auto-detection).
+     *
+     * Creates unnamed face regions at the detected positions. Names can be assigned later
+     * via the naming cycle UI. Also auto-populates the subjects string with face names
+     * (though initially empty for auto-detected regions).
+     *
+     * @param photoIndex Index of the photo in the bounding box list
+     * @param regions List of face regions to add (typically from face detection)
+     */
+    fun addDetectedFaceRegions(photoIndex: Int, regions: List<FaceRegion>) {
+        val list = _boundingBoxList.value
+        if (photoIndex < 0 || photoIndex >= list.size()) return
+        val boxId = list.boxes[photoIndex].id
+
+        updatePhotoConfiguration(boxId) { existing ->
+            val newRegions = existing.faceRegions + regions
+            val names = newRegions.map { it.name }.filter { it.isNotBlank() }
+            val newSubjects = names.joinToString(", ")
+            existing.copy(faceRegions = newRegions, subjects = newSubjects)
+        }
+    }
+
+    /**
+     * Updates a face region's name at the given index.
+     *
+     * @param photoIndex Index of the photo in the bounding box list
+     * @param faceIndex Index of the face region within the photo's faceRegions list
+     * @param name New name for the face region
+     */
+    fun updateFaceRegionName(photoIndex: Int, faceIndex: Int, name: String) {
+        val list = _boundingBoxList.value
+        if (photoIndex < 0 || photoIndex >= list.size()) return
+        val boxId = list.boxes[photoIndex].id
+
+        updatePhotoConfiguration(boxId) { existing ->
+            if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
+                return@updatePhotoConfiguration existing
+            val old = existing.faceRegions[faceIndex]
+            val updated = old.copy(name = name)
+            val newRegions =
+                existing.faceRegions.mapIndexed { i, r -> if (i == faceIndex) updated else r }
+            val names = newRegions.map { it.name }.filter { it.isNotBlank() }
+            val newSubjects = names.joinToString(", ")
+            existing.copy(faceRegions = newRegions, subjects = newSubjects)
+        }
+    }
+
+    /**
      * Updates a face region's position at the given index (used for drag-to-move).
      *
      * @param photoIndex Index of the photo in the bounding box list

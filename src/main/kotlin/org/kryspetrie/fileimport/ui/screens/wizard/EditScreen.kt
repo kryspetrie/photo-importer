@@ -99,6 +99,7 @@ import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.FaceRegionTransformer
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
@@ -111,13 +112,17 @@ import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.FaceSize
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
 import org.kryspetrie.fileimport.infrastructure.wizard.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
+import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LoadSourceExifEffect
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataField
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.OverrideCheckbox
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentLocationDropdown
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
 
 /** Edit mode: which aspect of the photo the user is editing. */
 enum class EditMode {
@@ -143,6 +148,7 @@ fun EditScreen(
     metadataHistory: MetadataHistory,
     onMetadataHistoryUpdate: (String, String) -> Unit,
     onMetadataHistoryRemove: (String, String) -> Unit,
+    onRecordMetadataSet: (RecentMetadataSet) -> Unit = {},
     onBack: () -> Unit,
     onExport: () -> Unit,
     onSkipToExport: (() -> Unit)? = null,
@@ -154,6 +160,7 @@ fun EditScreen(
     val geocodingPort: GeocodingPort = koinInject()
     val dispatcherProvider: DispatcherProvider = koinInject()
     val imageRepository: ImageRepositoryPort = koinInject()
+    val faceDetectionPort: FaceDetectionPort = koinInject()
 
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
@@ -216,8 +223,11 @@ fun EditScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 if (fullPreview != null) {
+                    val fullscreenBitmap = remember(fullPreview) {
+                        fullPreview.toComposeImageBitmap()
+                    }
                     Image(
-                        bitmap = fullPreview.toComposeImageBitmap(),
+                        bitmap = fullscreenBitmap,
                         contentDescription = "Photo ${idx + 1} fullscreen",
                         modifier = Modifier.fillMaxSize().padding(32.dp),
                         contentScale = ContentScale.Fit,
@@ -305,6 +315,33 @@ fun EditScreen(
                 },
                 onDismiss = { faceSelectIndex = null },
                 inheritedFaceRegions = inheritedFaceRegions,
+                onAutoDetectFaces = if (faceDetectionPort.isFaceDetectionAvailable()) {
+                    {
+                        try {
+                            val detections = faceDetectionPort.detectFaces(fullPreview.toProcessedImage())
+                            if (detections.isNotEmpty()) {
+                                val imgW = fullPreview.width.toDouble()
+                                val imgH = fullPreview.height.toDouble()
+                                val detectedRegions = detections.map { det ->
+                                    val centerX = ((det.x1 + det.x2) / 2.0 / imgW).coerceIn(0.0, 1.0)
+                                    val centerY = ((det.y1 + det.y2) / 2.0 / imgH).coerceIn(0.0, 1.0)
+                                    val width = ((det.x2 - det.x1) / imgW).coerceIn(0.01, 1.0)
+                                    FaceRegion(
+                                        name = "",
+                                        type = RegionType.FACE.mwgRsValue,
+                                        x = centerX,
+                                        y = centerY,
+                                        w = width,
+                                        h = width,
+                                    )
+                                }
+                                state.addDetectedFaceRegions(idx, detectedRegions)
+                            }
+                        } catch (_: Exception) {
+                            // Detection failed silently — user can still place faces manually
+                        }
+                    }
+                } else null,
             )
         }
     }
@@ -651,8 +688,11 @@ fun EditScreen(
                             contentAlignment = Alignment.Center,
                         ) {
                             if (previewImage != null) {
-                                Image(
-                                    bitmap = previewImage.toComposeImageBitmap(),
+                            val previewBitmap = remember(previewImage) {
+                                previewImage.toComposeImageBitmap()
+                            }
+                            Image(
+                                bitmap = previewBitmap,
                                     contentDescription =
                                         "Photo ${selectedIndex + 1} — click to enlarge",
                                     modifier = Modifier.fillMaxSize(),
@@ -827,6 +867,7 @@ fun EditScreen(
                                     }
                                 }
                             },
+                            onRecordMetadataSet = onRecordMetadataSet,
                             modifier = Modifier.weight(1f).fillMaxHeight(),
                         )
                     }
@@ -960,8 +1001,11 @@ private fun ThumbnailStrip(
             ) {
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (previewImage != null) {
+                        val thumbBitmap = remember(previewImage) {
+                            previewImage.toComposeImageBitmap()
+                        }
                         Image(
-                            bitmap = previewImage.toComposeImageBitmap(),
+                            bitmap = thumbBitmap,
                             contentDescription = "Photo ${index + 1}",
                             modifier = Modifier.fillMaxSize().padding(2.dp),
                             contentScale = ContentScale.Fit,
@@ -1223,6 +1267,7 @@ private fun MetadataEditorPanel(
     onPickLocation: (Int) -> Unit,
     onAddBackImage: () -> Unit,
     onRemoveBackImage: () -> Unit,
+    onRecordMetadataSet: (RecentMetadataSet) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
@@ -1246,6 +1291,38 @@ private fun MetadataEditorPanel(
     var bufferedGpsLatitude by remember { mutableStateOf("") }
     var bufferedGpsLongitude by remember { mutableStateOf("") }
     var bufferedSubjects by remember { mutableStateOf("") }
+
+    /** Apply a recent metadata set to multi-edit buffered fields (only fills non-blank values). */
+    val applyRecentSetToBuffered: (RecentMetadataSet) -> Unit = remember { { set ->
+        if (set.description.isNotBlank()) bufferedDescription = set.description
+        if (set.keywords.isNotBlank()) bufferedKeywords = set.keywords
+        if (set.originalDate.isNotBlank()) bufferedOriginalDate = set.originalDate
+        if (set.year.isNotBlank()) bufferedYear = set.year
+        if (set.cameraMake.isNotBlank()) bufferedCameraMake = set.cameraMake
+        if (set.cameraModel.isNotBlank()) bufferedCameraModel = set.cameraModel
+        if (set.lensModel.isNotBlank()) bufferedLensModel = set.lensModel
+        if (set.focalLength.isNotBlank()) bufferedFocalLength = set.focalLength
+        if (set.aperture.isNotBlank()) bufferedAperture = set.aperture
+        if (set.shutterSpeed.isNotBlank()) bufferedShutterSpeed = set.shutterSpeed
+        if (set.iso.isNotBlank()) bufferedIso = set.iso
+        if (set.locationName.isNotBlank()) bufferedLocationName = set.locationName
+        if (set.city.isNotBlank()) bufferedCity = set.city
+        if (set.state.isNotBlank()) bufferedState = set.state
+        if (set.country.isNotBlank()) bufferedCountry = set.country
+        if (set.gpsLatitude.isNotBlank()) bufferedGpsLatitude = set.gpsLatitude
+        if (set.gpsLongitude.isNotBlank()) bufferedGpsLongitude = set.gpsLongitude
+        if (set.subjects.isNotBlank()) bufferedSubjects = set.subjects
+    } }
+
+    /** Apply a recent location set to multi-edit buffered fields. */
+    val applyRecentLocationToBuffered: (RecentMetadataSet) -> Unit = remember { { set ->
+        if (set.locationName.isNotBlank()) bufferedLocationName = set.locationName
+        if (set.city.isNotBlank()) bufferedCity = set.city
+        if (set.state.isNotBlank()) bufferedState = set.state
+        if (set.country.isNotBlank()) bufferedCountry = set.country
+        if (set.gpsLatitude.isNotBlank()) bufferedGpsLatitude = set.gpsLatitude
+        if (set.gpsLongitude.isNotBlank()) bufferedGpsLongitude = set.gpsLongitude
+    } }
 
     ChunkyScrollbar(modifier = modifier) {
         Column(
@@ -1286,6 +1363,28 @@ private fun MetadataEditorPanel(
                                 gpsLongitude = bufferedGpsLongitude,
                                 subjects = bufferedSubjects,
                             )
+                            onRecordMetadataSet(
+                                RecentMetadataSet(
+                                    description = bufferedDescription,
+                                    keywords = bufferedKeywords,
+                                    originalDate = bufferedOriginalDate,
+                                    year = bufferedYear,
+                                    cameraMake = bufferedCameraMake,
+                                    cameraModel = bufferedCameraModel,
+                                    lensModel = bufferedLensModel,
+                                    focalLength = bufferedFocalLength,
+                                    aperture = bufferedAperture,
+                                    shutterSpeed = bufferedShutterSpeed,
+                                    iso = bufferedIso,
+                                    locationName = bufferedLocationName,
+                                    city = bufferedCity,
+                                    state = bufferedState,
+                                    country = bufferedCountry,
+                                    gpsLatitude = bufferedGpsLatitude,
+                                    gpsLongitude = bufferedGpsLongitude,
+                                    subjects = bufferedSubjects,
+                                )
+                            )
                         },
                         modifier = Modifier.height(32.dp),
                     ) {
@@ -1297,6 +1396,17 @@ private fun MetadataEditorPanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+
+                // ── Recent Values (multi-edit) ──
+                if (metadataHistory.recentSets.isNotEmpty()) {
+                    RecentValuesDropdown(
+                        recentSets = metadataHistory.recentSets,
+                        onApplySet = { set ->
+                            applyRecentSetToBuffered(set)
+                            onRecordMetadataSet(set)
+                        },
+                    )
+                }
 
                 QuickEditMetadataFields(
                     description = bufferedDescription,
@@ -1349,6 +1459,7 @@ private fun MetadataEditorPanel(
                     onGpsLongitudeChange = { bufferedGpsLongitude = it },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    onApplyRecentLocation = applyRecentLocationToBuffered,
                     sourceGpsHint =
                         sourceExif?.let {
                             val parts = mutableListOf<String>()
@@ -1377,6 +1488,38 @@ private fun MetadataEditorPanel(
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
+
+                // ── Recent Values (single-edit) ──
+                if (metadataHistory.recentSets.isNotEmpty()) {
+                    RecentValuesDropdown(
+                        recentSets = metadataHistory.recentSets,
+                        onApplySet = { set ->
+                            state.updatePhotoConfiguration(box.id) { config ->
+                                config.copy(
+                                    description = if (set.description.isNotBlank()) set.description else config.description,
+                                    keywords = if (set.keywords.isNotBlank()) set.keywords else config.keywords,
+                                    originalDate = if (set.originalDate.isNotBlank()) set.originalDate else config.originalDate,
+                                    year = if (set.year.isNotBlank()) set.year else config.year,
+                                    cameraMake = if (set.cameraMake.isNotBlank()) set.cameraMake else config.cameraMake,
+                                    cameraModel = if (set.cameraModel.isNotBlank()) set.cameraModel else config.cameraModel,
+                                    lensModel = if (set.lensModel.isNotBlank()) set.lensModel else config.lensModel,
+                                    focalLength = if (set.focalLength.isNotBlank()) set.focalLength else config.focalLength,
+                                    aperture = if (set.aperture.isNotBlank()) set.aperture else config.aperture,
+                                    shutterSpeed = if (set.shutterSpeed.isNotBlank()) set.shutterSpeed else config.shutterSpeed,
+                                    iso = if (set.iso.isNotBlank()) set.iso else config.iso,
+                                    locationName = if (set.locationName.isNotBlank()) set.locationName else config.locationName,
+                                    city = if (set.city.isNotBlank()) set.city else config.city,
+                                    state = if (set.state.isNotBlank()) set.state else config.state,
+                                    country = if (set.country.isNotBlank()) set.country else config.country,
+                                    gpsLatitude = if (set.gpsLatitude.isNotBlank()) set.gpsLatitude else config.gpsLatitude,
+                                    gpsLongitude = if (set.gpsLongitude.isNotBlank()) set.gpsLongitude else config.gpsLongitude,
+                                    subjects = if (set.subjects.isNotBlank()) set.subjects else config.subjects,
+                                )
+                            }
+                            onRecordMetadataSet(set)
+                        },
+                    )
+                }
 
                 // ── Metadata fields ──
                 QuickEditMetadataFields(
@@ -1584,6 +1727,18 @@ private fun MetadataEditorPanel(
                     },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                    onApplyRecentLocation = { set ->
+                        state.updatePhotoConfiguration(box.id) { config ->
+                            config.copy(
+                                locationName = if (set.locationName.isNotBlank()) set.locationName else config.locationName,
+                                city = if (set.city.isNotBlank()) set.city else config.city,
+                                state = if (set.state.isNotBlank()) set.state else config.state,
+                                country = if (set.country.isNotBlank()) set.country else config.country,
+                                gpsLatitude = if (set.gpsLatitude.isNotBlank()) set.gpsLatitude else config.gpsLatitude,
+                                gpsLongitude = if (set.gpsLongitude.isNotBlank()) set.gpsLongitude else config.gpsLongitude,
+                            )
+                        }
+                    },
                     onPickLocation = { onPickLocation(selectedIndex) },
                     overrideGps = config.overrideGps != OverrideState.NULL_OUT,
                     onOverrideGpsChange = { included ->
@@ -2115,6 +2270,7 @@ private fun LocationSection(
     metadataHistory: MetadataHistory,
     onMetadataHistoryUpdate: (String, String) -> Unit,
     onPickLocation: (() -> Unit)? = null,
+    onApplyRecentLocation: ((RecentMetadataSet) -> Unit)? = null,
     overrideGps: Boolean? = null,
     onOverrideGpsChange: ((Boolean) -> Unit)? = null,
     sourceGpsHint: String? = null,
@@ -2133,6 +2289,13 @@ private fun LocationSection(
         }
         AnimatedVisibility(visible = showExpanded) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // ── Recent Locations ──
+                if (onApplyRecentLocation != null) {
+                    RecentLocationDropdown(
+                        metadataHistory = metadataHistory,
+                        onApplyLocation = onApplyRecentLocation,
+                    )
+                }
                 MetadataField(
                     label = "Location Name",
                     placeholder = "Grandma's house",
@@ -2202,29 +2365,25 @@ private fun LocationSection(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    OutlinedTextField(
+                    MetadataField(
+                        label = "Latitude",
+                        placeholder = "42.2626",
                         value = gpsLatitude,
                         onValueChange = onGpsLatitudeChange,
-                        label = { Text("Latitude") },
-                        placeholder = {
-                            Text("42.2626", style = MaterialTheme.typography.labelSmall)
-                        },
+                        suggestions = metadataHistory.gpsLatitude,
+                        onCommit = { onMetadataHistoryUpdate("gpsLatitude", gpsLatitude) },
+                        keyboardType = KeyboardType.Decimal,
                         modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     )
-                    OutlinedTextField(
+                    MetadataField(
+                        label = "Longitude",
+                        placeholder = "-71.8023",
                         value = gpsLongitude,
                         onValueChange = onGpsLongitudeChange,
-                        label = { Text("Longitude") },
-                        placeholder = {
-                            Text("-71.8023", style = MaterialTheme.typography.labelSmall)
-                        },
+                        suggestions = metadataHistory.gpsLongitude,
+                        onCommit = { onMetadataHistoryUpdate("gpsLongitude", gpsLongitude) },
+                        keyboardType = KeyboardType.Decimal,
                         modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     )
                 }
                 if (onPickLocation != null) {

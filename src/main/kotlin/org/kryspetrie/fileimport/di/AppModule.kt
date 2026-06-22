@@ -15,6 +15,7 @@ import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
@@ -45,6 +46,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.NominatimGeocodingAdapte
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
+import org.kryspetrie.fileimport.infrastructure.photoscan.FaceDetectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
 
@@ -110,6 +112,7 @@ val appModule = module {
     single { HybridCornerDetector(rectangleDetector = get()) }
     single<PhotoScanDetectorPort> { get<PhotoScanDetectorService>() }
     single { PhotoScanDetectorService(modelResourcePort = get(), appLogger = getOrNull()) }
+    single<FaceDetectionPort> { FaceDetectionService(modelResourcePort = get()) }
     single { ScanService(photoDetector = get()) }
     single<PerspectiveCorrectionPort> { PerspectiveCorrectionService() }
     single { PerspectiveCorrectionService() }

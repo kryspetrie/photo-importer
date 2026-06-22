@@ -265,4 +265,87 @@ class AppSettingsPhotoScanTest {
             assertEquals(strategy, deserialized.lastCorrectionStrategy)
         }
     }
+
+    // ==================== Metadata Set (Recent Values) Tests ====================
+
+    @Test
+    fun `addMetadataSet adds a set to history`() {
+        val settings = AppSettings()
+        val set = RecentMetadataSet(city = "Worcester", state = "MA")
+
+        val updated = settings.addMetadataSet(set)
+
+        assertEquals(1, updated.metadataHistory.recentSets.size)
+        assertEquals("Worcester", updated.metadataHistory.recentSets[0].city)
+    }
+
+    @Test
+    fun `addMetadataSet preserves existing history`() {
+        val settings = AppSettings()
+            .addMetadataHistory("city", "Boston")
+            .addMetadataSet(RecentMetadataSet(city = "Worcester", timestamp = 1000))
+
+        val updated = settings.addMetadataSet(RecentMetadataSet(city = "Paris", timestamp = 2000))
+
+        // History should be preserved
+        assertEquals(listOf("Boston"), updated.metadataHistory.city)
+        assertEquals(2, updated.metadataHistory.recentSets.size)
+    }
+
+    @Test
+    fun `removeMetadataSet removes by timestamp`() {
+        val set1 = RecentMetadataSet(city = "Boston", timestamp = 1000)
+        val set2 = RecentMetadataSet(city = "Worcester", timestamp = 2000)
+
+        val settings = AppSettings()
+            .addMetadataSet(set1)
+            .addMetadataSet(set2)
+            .removeMetadataSet(1000)
+
+        assertEquals(1, settings.metadataHistory.recentSets.size)
+        assertEquals("Worcester", settings.metadataHistory.recentSets[0].city)
+    }
+
+    @Test
+    fun `metadata set serialization round trip`() {
+        val original = AppSettings(
+            metadataHistory = MetadataHistory(
+                description = listOf("Sunset", "Beach"),
+                city = listOf("Worcester", "Boston"),
+                recentSets = listOf(
+                    RecentMetadataSet(
+                        city = "Worcester",
+                        state = "MA",
+                        gpsLatitude = "42.2626",
+                        gpsLongitude = "-71.8023",
+                        timestamp = 1700000000000L,
+                    )
+                )
+            )
+        )
+
+        val json = kotlinx.serialization.json.Json { prettyPrint = true; ignoreUnknownKeys = true }
+            .encodeToString(AppSettings.serializer(), original)
+
+        val deserialized = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+            .decodeFromString(AppSettings.serializer(), json)
+
+        assertEquals(original.metadataHistory.description, deserialized.metadataHistory.description)
+        assertEquals(original.metadataHistory.city, deserialized.metadataHistory.city)
+        assertEquals(1, deserialized.metadataHistory.recentSets.size)
+        assertEquals("Worcester", deserialized.metadataHistory.recentSets[0].city)
+        assertEquals("42.2626", deserialized.metadataHistory.recentSets[0].gpsLatitude)
+        assertEquals("-71.8023", deserialized.metadataHistory.recentSets[0].gpsLongitude)
+    }
+
+    @Test
+    fun `addMetadataHistory works for gpsLatitude and gpsLongitude`() {
+        val settings = AppSettings()
+            .addMetadataHistory("gpsLatitude", "42.2626")
+            .addMetadataHistory("gpsLatitude", "51.5074")
+            .addMetadataHistory("gpsLongitude", "-71.8023")
+
+        assertEquals(listOf("51.5074", "42.2626"), settings.metadataHistory.gpsLatitude)
+        assertEquals(listOf("-71.8023"), settings.metadataHistory.gpsLongitude)
+    }
 }
