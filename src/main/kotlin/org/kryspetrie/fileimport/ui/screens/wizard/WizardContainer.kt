@@ -299,7 +299,7 @@ private fun WizardStepContent(
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
                                     onFailedCountChange(
-                                        processedPhotos.count { it.outputPath.startsWith("ERROR:") }
+                                        processedPhotos.count { it.isError }
                                     )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
@@ -364,7 +364,7 @@ private fun WizardStepContent(
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
                                     onFailedCountChange(
-                                        processedPhotos.count { it.outputPath.startsWith("ERROR:") }
+                                        processedPhotos.count { it.isError }
                                     )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
@@ -392,7 +392,7 @@ private fun WizardStepContent(
                                 onProgress = onProgress,
                                 onComplete = { processedPhotos ->
                                     onFailedCountChange(
-                                        processedPhotos.count { it.outputPath.startsWith("ERROR:") }
+                                        processedPhotos.count { it.isError }
                                     )
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
@@ -770,7 +770,7 @@ private suspend fun exportSinglePhoto(
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
     onProgress: (Float, String) -> Unit,
-): ProcessedPhoto {
+): ExportResult {
     val progress = (index + 1).toFloat() / totalCount
     onProgress(progress * 0.9f, fileName)
 
@@ -820,7 +820,7 @@ private suspend fun exportSinglePhoto(
                     fileName,
                     sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
-            ProcessedPhoto(
+            ExportResult.Success(
                     originalFile = state.imageFile.value ?: File(""),
                     outputPath = result.destinationPath,
                     dimensions = result.width to result.height,
@@ -838,10 +838,9 @@ private suspend fun exportSinglePhoto(
                 "Photo ${index + 1} failed: ${e.message}",
                 e,
             )
-            ProcessedPhoto(
+            ExportResult.Failure(
                 originalFile = state.imageFile.value ?: File(""),
-                outputPath = "ERROR: ${e.message}",
-                dimensions = 0 to 0,
+                errorMessage = e.message ?: "Unknown error",
                 correctionsApplied = listOf("Failed: ${e.message}"),
             )
         }
@@ -918,7 +917,7 @@ private suspend fun exportPhotos(
 
         val baseName = state.imageFile.value?.nameWithoutExtension ?: "scan"
         val globalStrategy = state.defaultCorrectionStrategy.value
-        val results = mutableListOf<ProcessedPhoto>()
+        val results = mutableListOf<ExportResult>()
 
         boxes.forEachIndexed { index, box ->
             val fileName = if (boxes.size > 1) "${baseName}_${index + 1}" else baseName
@@ -952,7 +951,7 @@ private suspend fun exportPhotos(
             OperationType.EXPORT_COMPLETE,
             "Successfully exported ${results.size} of ${boxes.size} photos",
         )
-        onComplete(results)
+        onComplete(results.map { it.toProcessedPhoto() })
     } catch (e: Exception) {
         appLogger.logOperationFailed(
             OperationType.EXPORT_FAILED,
@@ -1094,10 +1093,3 @@ private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () ->
     }
 }
 
-/** Result of processed photo export. */
-data class ProcessedPhoto(
-    val originalFile: File,
-    val outputPath: String,
-    val dimensions: Pair<Int, Int>,
-    val correctionsApplied: List<String>,
-)
