@@ -105,6 +105,7 @@ fun WizardContainer(
     var processingProgress by remember { mutableFloatStateOf(0f) }
     var processingCurrentFile by remember { mutableStateOf("") }
     var failedExportCount by remember { mutableStateOf(0) }
+    var exportResults by remember { mutableStateOf<List<ExportResult>>(emptyList()) }
     val settings by settingsPort.observeSettings().collectAsState()
     var exportDestination by remember {
         mutableStateOf(
@@ -173,6 +174,8 @@ fun WizardContainer(
             },
             failedExportCount = failedExportCount,
             onFailedCountChange = { count -> failedExportCount = count },
+            onExportResults = { results -> exportResults = results },
+            exportResults = exportResults,
             onComplete = onComplete,
             onCancel = onCancel,
         )
@@ -219,6 +222,8 @@ private fun WizardStepContent(
     onProgress: (Float, String) -> Unit,
     failedExportCount: Int,
     onFailedCountChange: (Int) -> Unit,
+    onExportResults: (List<ExportResult>) -> Unit,
+    exportResults: List<ExportResult>,
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -286,6 +291,7 @@ private fun WizardStepContent(
                     onSkipMetadata = {
                         scope.launch {
                             onFailedCountChange(0)
+                            onExportResults(emptyList())
                             state.goToProcessing()
                             exportPhotos(
                                 state = state,
@@ -302,6 +308,7 @@ private fun WizardStepContent(
                                     onFailedCountChange(
                                         processedPhotos.count { it.isError }
                                     )
+                                    onExportResults(processedPhotos.map { it.toExportResult() })
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
@@ -351,6 +358,7 @@ private fun WizardStepContent(
                     onExport = {
                         scope.launch {
                             onFailedCountChange(0)
+                            onExportResults(emptyList())
                             state.goToProcessing()
                             exportPhotos(
                                 state = state,
@@ -367,6 +375,7 @@ private fun WizardStepContent(
                                     onFailedCountChange(
                                         processedPhotos.count { it.isError }
                                     )
+                                    onExportResults(processedPhotos.map { it.toExportResult() })
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
@@ -379,6 +388,7 @@ private fun WizardStepContent(
                     onSkipToExport = {
                         scope.launch {
                             onFailedCountChange(0)
+                            onExportResults(emptyList())
                             state.goToProcessing()
                             exportPhotos(
                                 state = state,
@@ -395,6 +405,7 @@ private fun WizardStepContent(
                                     onFailedCountChange(
                                         processedPhotos.count { it.isError }
                                     )
+                                    onExportResults(processedPhotos.map { it.toExportResult() })
                                     appLogger.logOperationComplete(
                                         OperationType.EXPORT_COMPLETE,
                                         "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
@@ -430,6 +441,7 @@ private fun WizardStepContent(
                 batchTotal = state.batchTotal,
                 skippedCount = state.skippedBatchIndices.value.size,
                 failedCount = failedExportCount,
+                exportResults = exportResults,
                 onDone = {
                     state.resetToImportStep()
                     onCancel()

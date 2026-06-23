@@ -56,6 +56,7 @@ import java.awt.Cursor
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import org.kryspetrie.fileimport.ui.screens.wizard.ExportResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -76,6 +77,7 @@ fun CompletionScreen(
     batchTotal: Int,
     skippedCount: Int = 0,
     failedCount: Int = 0,
+    exportResults: List<ExportResult> = emptyList(),
     nextBatchFile: File? = null,
     onDone: () -> Unit,
     onImportFile: () -> Unit,
@@ -150,6 +152,11 @@ fun CompletionScreen(
                         }
                     }
                 }
+            }
+
+            // Per-photo export results summary
+            if (exportResults.isNotEmpty()) {
+                ExportResultsSummary(results = exportResults, modifier = Modifier.fillMaxWidth(0.6f))
             }
 
             // Open folder button
@@ -419,6 +426,116 @@ private fun FullscreenImageDialog(image: BufferedImage, fileName: String, onDism
                 }
 
                 Spacer(Modifier.height(8.dp))
+            }
+        }
+    }
+}
+
+/**
+ * Displays a compact summary of per-photo export results, showing success/fail status and output
+ * path for each photo.
+ */
+@Composable
+private fun ExportResultsSummary(
+    results: List<ExportResult>,
+    modifier: Modifier = Modifier,
+) {
+    if (results.isEmpty()) return
+
+    val successCount = results.count { it is ExportResult.Success }
+    val failureCount = results.count { it is ExportResult.Failure }
+
+    Card(modifier = modifier, shape = RoundedCornerShape(8.dp)) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Summary header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Export Results", style = MaterialTheme.typography.titleSmall)
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (successCount > 0) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = Color(0xFF4CAF50),
+                            )
+                            Text(
+                                "$successCount ${if (successCount == 1) "success" else "successes"}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF4CAF50),
+                            )
+                        }
+                    }
+                    if (failureCount > 0) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = MaterialTheme.colorScheme.error,
+                            )
+                            Text(
+                                "$failureCount ${if (failureCount == 1) "failure" else "failures"}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error,
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Per-photo result rows
+            results.forEachIndexed { index, result ->
+                val isSuccess = result is ExportResult.Success
+                val icon = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Close
+                val iconTint = if (isSuccess) Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+
+                Surface(
+                    tonalElevation = if (isSuccess) 0.dp else 1.dp,
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = iconTint)
+                        Text("Photo ${index + 1}", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(60.dp))
+                        when (result) {
+                            is ExportResult.Success -> {
+                                val fileName = result.outputPath.substringAfterLast('/')
+                                Text(
+                                    fileName,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                Text(
+                                    "${result.dimensions.first}×${result.dimensions.second}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            is ExportResult.Failure -> {
+                                Text(
+                                    result.errorMessage,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
