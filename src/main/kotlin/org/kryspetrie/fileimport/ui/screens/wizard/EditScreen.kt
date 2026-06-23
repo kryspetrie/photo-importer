@@ -485,7 +485,7 @@ fun EditScreen(
             },
         topBar = {
             TopAppBar(
-                title = { Text("Edit") },
+                title = { Text("Edit Metadata") },
                 navigationIcon = { WizardStepIndicator(currentStep = PhotoScanWizardState.WizardStep.EDIT) },
                 actions = {
                     // ── Mode tabs ──

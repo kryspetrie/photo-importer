@@ -61,6 +61,7 @@ import androidx.compose.ui.window.DialogProperties
 import java.awt.Cursor
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.domain.model.AspectRatio
 import org.kryspetrie.fileimport.domain.model.DetectionMode
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
@@ -319,18 +320,12 @@ private fun TopAppBarActions(
     onRotateAllCW: () -> Unit,
     onReset: () -> Unit,
 ) {
-    OutlinedButton(onClick = onRotateAllCCW, modifier = Modifier.height(32.dp)) {
-        Icon(Icons.AutoMirrored.Filled.RotateLeft, null, Modifier.width(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("All CCW", style = MaterialTheme.typography.labelSmall)
+    IconButton(onClick = onRotateAllCCW) {
+        Icon(Icons.AutoMirrored.Filled.RotateLeft, "Rotate all counter-clockwise")
     }
-    Spacer(Modifier.width(4.dp))
-    OutlinedButton(onClick = onRotateAllCW, modifier = Modifier.height(32.dp)) {
-        Icon(Icons.AutoMirrored.Filled.RotateRight, null, Modifier.width(16.dp))
-        Spacer(Modifier.width(4.dp))
-        Text("All CW", style = MaterialTheme.typography.labelSmall)
+    IconButton(onClick = onRotateAllCW) {
+        Icon(Icons.AutoMirrored.Filled.RotateRight, "Rotate all clockwise")
     }
-    Spacer(Modifier.width(4.dp))
     OutlinedButton(
         onClick = onReset,
         modifier = Modifier.height(32.dp),
@@ -533,6 +528,15 @@ private fun SidebarInfoColumn(index: Int, box: BoundingBox, config: PhotoConfigu
                     "${config.rotationDegrees}°",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
+                )
+            }
+            if (config.aspectRatio != 0.0) {
+                val ratioLabel = AspectRatio.entries.find { it.value == config.aspectRatio }?.displayName
+                    ?: String.format("%.2f", config.aspectRatio)
+                Text(
+                    ratioLabel,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary,
                 )
             }
             if (config.correctionStrategy != null) {
