@@ -227,6 +227,17 @@ private fun WizardStepContent(
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
 ) {
+    // Shared completion handler for all export flows
+    val handleExportComplete: (List<ProcessedPhoto>) -> Unit = { processedPhotos ->
+        onFailedCountChange(processedPhotos.count { it.isError })
+        onExportResults(processedPhotos.map { it.toExportResult() })
+        appLogger.logOperationComplete(
+            OperationType.EXPORT_COMPLETE,
+            "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
+        )
+        state.goToComplete()
+    }
+
     when (currentStep) {
         WizardStep.IMPORT -> {
             PhotoScanImportScreen(
@@ -304,17 +315,7 @@ private fun WizardStepContent(
                                 onMessage = onMessage,
                                 onError = onError,
                                 onProgress = onProgress,
-                                onComplete = { processedPhotos ->
-                                    onFailedCountChange(
-                                        processedPhotos.count { it.isError }
-                                    )
-                                    onExportResults(processedPhotos.map { it.toExportResult() })
-                                    appLogger.logOperationComplete(
-                                        OperationType.EXPORT_COMPLETE,
-                                        "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
-                                    )
-                                    state.goToComplete()
-                                },
+                                onComplete = handleExportComplete,
                             )
                         }
                     },
@@ -371,17 +372,7 @@ private fun WizardStepContent(
                                 onMessage = onMessage,
                                 onError = onError,
                                 onProgress = onProgress,
-                                onComplete = { processedPhotos ->
-                                    onFailedCountChange(
-                                        processedPhotos.count { it.isError }
-                                    )
-                                    onExportResults(processedPhotos.map { it.toExportResult() })
-                                    appLogger.logOperationComplete(
-                                        OperationType.EXPORT_COMPLETE,
-                                        "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
-                                    )
-                                    state.goToComplete()
-                                },
+                                onComplete = handleExportComplete,
                             )
                         }
                     },
@@ -401,17 +392,7 @@ private fun WizardStepContent(
                                 onMessage = onMessage,
                                 onError = onError,
                                 onProgress = onProgress,
-                                onComplete = { processedPhotos ->
-                                    onFailedCountChange(
-                                        processedPhotos.count { it.isError }
-                                    )
-                                    onExportResults(processedPhotos.map { it.toExportResult() })
-                                    appLogger.logOperationComplete(
-                                        OperationType.EXPORT_COMPLETE,
-                                        "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
-                                    )
-                                    state.goToComplete()
-                                },
+                                onComplete = handleExportComplete,
                             )
                         }
                     },
