@@ -720,16 +720,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     private val _currentStep = MutableStateFlow(WizardStep.IMPORT)
     val currentStep: StateFlow<WizardStep> = _currentStep.asStateFlow()
 
-    enum class WizardStep {
-        IMPORT, // Mode selection
-        OVERVIEW, // All boxes visible
-        REFINEMENT, // Zoomed single box (redirects to OVERVIEW - inline refinement)
-        SUMMARY, // Crop & rotate grid view
-        EDIT, // Edit screen: rotation OR metadata (user chooses mode)
-        PROCESSING, // Export in progress
-        COMPLETE, // Done — post-export completion page
-    }
-
     /** Initializes the wizard with an image file. */
     fun initializeWithImage(image: BufferedImage, file: File) {
         _image.value = image

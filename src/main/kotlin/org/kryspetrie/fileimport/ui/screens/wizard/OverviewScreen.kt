@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.infrastructure.wizard.FourPointState
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
 import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
 import org.kryspetrie.fileimport.infrastructure.wizard.ZoomController
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
@@ -116,7 +117,7 @@ fun OverviewScreen(
                 selectedBoxIndex = selectedBoxIndex,
                 onDeleteSelected = { showDeleteConfirmDialog = true },
                 onShowHelp = { showHelpDialog = true },
-                currentStep = PhotoScanWizardState.WizardStep.OVERVIEW,
+                currentStep = WizardStep.OVERVIEW,
             )
         },
         content = { paddingValues ->
@@ -200,7 +201,7 @@ private fun OverviewTopBar(
     selectedBoxIndex: Int,
     onDeleteSelected: () -> Unit,
     onShowHelp: () -> Unit,
-    currentStep: PhotoScanWizardState.WizardStep,
+    currentStep: WizardStep,
 ) {
     TopAppBar(
         title = { Text("Select Photos", maxLines = 1, overflow = TextOverflow.Ellipsis) },

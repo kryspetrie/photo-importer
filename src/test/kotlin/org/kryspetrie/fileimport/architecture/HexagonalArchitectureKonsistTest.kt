@@ -391,6 +391,7 @@ class HexagonalArchitectureKonsistTest {
             add("org.kryspetrie.fileimport.infrastructure.wizard.Point")
             add("org.kryspetrie.fileimport.infrastructure.wizard.SourceExifSummary")
             add("org.kryspetrie.fileimport.infrastructure.wizard.WizardMode")
+            add("org.kryspetrie.fileimport.infrastructure.wizard.WizardStep")
             add("org.kryspetrie.fileimport.infrastructure.wizard.ZoomController")
             add("org.kryspetrie.fileimport.infrastructure.wizard.DEBUG_TIMING")
             add("org.kryspetrie.fileimport.infrastructure.wizard.UndoRedoManager")

@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
 
 /**
  * Horizontal step indicator showing progress through the wizard flow.
@@ -27,7 +28,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
  */
 @Composable
 fun WizardStepIndicator(
-    currentStep: PhotoScanWizardState.WizardStep,
+    currentStep: WizardStep,
     modifier: Modifier = Modifier,
 ) {
     val steps = VISIBLE_STEPS
@@ -101,22 +102,22 @@ private fun StepDot(
 
 /** Visible steps for the indicator (excludes REFINEMENT which redirects to OVERVIEW). */
 private val VISIBLE_STEPS = listOf(
-    PhotoScanWizardState.WizardStep.IMPORT,
-    PhotoScanWizardState.WizardStep.OVERVIEW,
-    PhotoScanWizardState.WizardStep.SUMMARY,
-    PhotoScanWizardState.WizardStep.EDIT,
-    PhotoScanWizardState.WizardStep.PROCESSING,
-    PhotoScanWizardState.WizardStep.COMPLETE,
+    WizardStep.IMPORT,
+    WizardStep.OVERVIEW,
+    WizardStep.SUMMARY,
+    WizardStep.EDIT,
+    WizardStep.PROCESSING,
+    WizardStep.COMPLETE,
 )
 
 /** Short labels for each step displayed inside the indicator dot. */
-private val PhotoScanWizardState.WizardStep.shortLabel: String
+private val WizardStep.shortLabel: String
     get() = when (this) {
-        PhotoScanWizardState.WizardStep.IMPORT -> "1"
-        PhotoScanWizardState.WizardStep.OVERVIEW -> "2"
-        PhotoScanWizardState.WizardStep.REFINEMENT -> "2"
-        PhotoScanWizardState.WizardStep.SUMMARY -> "3"
-        PhotoScanWizardState.WizardStep.EDIT -> "4"
-        PhotoScanWizardState.WizardStep.PROCESSING -> "5"
-        PhotoScanWizardState.WizardStep.COMPLETE -> "6"
+        WizardStep.IMPORT -> "1"
+        WizardStep.OVERVIEW -> "2"
+        WizardStep.REFINEMENT -> "2"
+        WizardStep.SUMMARY -> "3"
+        WizardStep.EDIT -> "4"
+        WizardStep.PROCESSING -> "5"
+        WizardStep.COMPLETE -> "6"
     }

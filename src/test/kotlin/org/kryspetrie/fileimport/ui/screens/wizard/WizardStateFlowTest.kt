@@ -12,6 +12,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
 
@@ -78,7 +79,7 @@ class WizardStateFlowTest {
         fun shouldStartAtImportStep() {
             val state = PhotoScanWizardState()
             assertThat(state.currentStep.value)
-                .isEqualTo(PhotoScanWizardState.WizardStep.IMPORT)
+                .isEqualTo(WizardStep.IMPORT)
         }
 
         @Test
@@ -90,7 +91,7 @@ class WizardStateFlowTest {
             state.goToOverview()
 
             assertThat(state.currentStep.value)
-                .isEqualTo(PhotoScanWizardState.WizardStep.OVERVIEW)
+                .isEqualTo(WizardStep.OVERVIEW)
         }
 
         @Test
@@ -101,7 +102,7 @@ class WizardStateFlowTest {
             state.goToSummary()
 
             assertThat(state.currentStep.value)
-                .isEqualTo(PhotoScanWizardState.WizardStep.SUMMARY)
+                .isEqualTo(WizardStep.SUMMARY)
         }
 
         @Test
@@ -113,7 +114,7 @@ class WizardStateFlowTest {
             state.goToEdit()
 
             assertThat(state.currentStep.value)
-                .isEqualTo(PhotoScanWizardState.WizardStep.EDIT)
+                .isEqualTo(WizardStep.EDIT)
         }
 
         @Test
@@ -126,7 +127,7 @@ class WizardStateFlowTest {
             state.goToProcessing()
 
             assertThat(state.currentStep.value)
-                .isEqualTo(PhotoScanWizardState.WizardStep.PROCESSING)
+                .isEqualTo(WizardStep.PROCESSING)
         }
 
         @Test
@@ -140,7 +141,7 @@ class WizardStateFlowTest {
             state.goToComplete()
 
             assertThat(state.currentStep.value)
-                .isEqualTo(PhotoScanWizardState.WizardStep.COMPLETE)
+                .isEqualTo(WizardStep.COMPLETE)
         }
 
         @Test
@@ -149,19 +150,19 @@ class WizardStateFlowTest {
             val state = createWizardWithBoxes()
 
             state.goToOverview()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.OVERVIEW)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
 
             state.goToSummary()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.SUMMARY)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.SUMMARY)
 
             state.goToEdit()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.EDIT)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.EDIT)
 
             state.goToProcessing()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.PROCESSING)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.PROCESSING)
 
             state.goToComplete()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.COMPLETE)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.COMPLETE)
         }
 
         @Test
@@ -176,7 +177,7 @@ class WizardStateFlowTest {
             state.goToComplete()
 
             state.resetToImportStep()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.IMPORT)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.IMPORT)
             assertThat(state.image.value).isNull()
         }
 
@@ -186,10 +187,10 @@ class WizardStateFlowTest {
             val state = createWizardWithBoxes()
             state.goToOverview()
             state.goToSummary()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.SUMMARY)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.SUMMARY)
 
             state.goToOverview()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.OVERVIEW)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
         }
 
         @Test
@@ -199,10 +200,10 @@ class WizardStateFlowTest {
             state.goToOverview()
             state.goToSummary()
             state.goToEdit()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.EDIT)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.EDIT)
 
             state.goToSummary()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.SUMMARY)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.SUMMARY)
         }
 
         @Test
@@ -710,7 +711,7 @@ class WizardStateFlowTest {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             state.initializeWithImage(image, File("family-photo.jpg"))
             state.goToOverview()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.OVERVIEW)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
 
             // 2. DETECT: Simulate CV detection — add boxes
             state.addBox(createTestBox(x = 50.0, y = 50.0, width = 300.0, height = 200.0))
@@ -731,7 +732,7 @@ class WizardStateFlowTest {
 
             // 4. NAVIGATE: Overview → Summary
             state.goToSummary()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.SUMMARY)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.SUMMARY)
 
             // 5. CONFIGURE MORE: Rotate all, change strategy
             state.rotateAllBoxesCW()
@@ -742,12 +743,12 @@ class WizardStateFlowTest {
 
             // 6. NAVIGATE: Summary → Edit
             state.goToEdit()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.EDIT)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.EDIT)
 
             // 7. NAVIGATE: Edit → Processing → Complete
             state.goToProcessing()
             state.goToComplete()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.COMPLETE)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.COMPLETE)
 
             // 8. Verify batch info
             assertThat(state.boxCount()).isEqualTo(2)
@@ -756,7 +757,7 @@ class WizardStateFlowTest {
 
             // 9. RESET: Back to start
             state.resetToImportStep()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.IMPORT)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.IMPORT)
             assertThat(state.image.value).isNull()
             assertThat(state.boundingBoxList.value.size()).isEqualTo(0)
             assertThat(state.photoConfigurations.value).isEmpty()
@@ -799,7 +800,7 @@ class WizardStateFlowTest {
             assertThat(state.singlePhotoMode.value).isTrue()
             assertThat(state.image.value).isNotNull()
             assertThat(state.boundingBoxList.value.size()).isEqualTo(1)
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.EDIT)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.EDIT)
 
             state.resetToImportStep()
             assertThat(state.image.value).isNull()

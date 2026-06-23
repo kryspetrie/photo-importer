@@ -73,6 +73,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.FaceSize
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
 import org.kryspetrie.fileimport.infrastructure.wizard.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
@@ -435,7 +436,7 @@ fun EditScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Edit Metadata") },
-                navigationIcon = { WizardStepIndicator(currentStep = PhotoScanWizardState.WizardStep.EDIT) },
+                navigationIcon = { WizardStepIndicator(currentStep = WizardStep.EDIT) },
                 actions = {
                     // ── Mode tabs ──
                     EditModeTab(

@@ -71,6 +71,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanConstants
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.isImageFile
@@ -196,7 +197,7 @@ fun WizardContainer(
 
 @Composable
 private fun WizardStepContent(
-    currentStep: PhotoScanWizardState.WizardStep,
+    currentStep: WizardStep,
     state: PhotoScanWizardState,
     settingsPort: SettingsPort,
     settings: AppSettings,
@@ -222,7 +223,7 @@ private fun WizardStepContent(
     onCancel: () -> Unit,
 ) {
     when (currentStep) {
-        PhotoScanWizardState.WizardStep.IMPORT -> {
+        WizardStep.IMPORT -> {
             PhotoScanImportScreen(
                 state = state,
                 settingsPort = settingsPort,
@@ -247,7 +248,7 @@ private fun WizardStepContent(
             )
         }
 
-        PhotoScanWizardState.WizardStep.OVERVIEW -> {
+        WizardStep.OVERVIEW -> {
             val image = state.image.collectAsState().value
             if (image != null) {
                 OverviewScreen(
@@ -263,7 +264,7 @@ private fun WizardStepContent(
             }
         }
 
-        PhotoScanWizardState.WizardStep.REFINEMENT -> {
+        WizardStep.REFINEMENT -> {
             // Refinement is now handled inline in Overview — redirect immediately
             LaunchedEffect(Unit) { state.goToOverview() }
             // Don't render content while redirecting; the step will change on next frame
@@ -272,7 +273,7 @@ private fun WizardStepContent(
             }
         }
 
-        PhotoScanWizardState.WizardStep.SUMMARY -> {
+        WizardStep.SUMMARY -> {
             val image = state.image.collectAsState().value
             if (image != null) {
                 SummaryScreen(
@@ -316,7 +317,7 @@ private fun WizardStepContent(
             }
         }
 
-        PhotoScanWizardState.WizardStep.EDIT -> {
+        WizardStep.EDIT -> {
             val image = state.image.collectAsState().value
             if (image != null) {
                 EditScreen(
@@ -411,7 +412,7 @@ private fun WizardStepContent(
             }
         }
 
-        PhotoScanWizardState.WizardStep.PROCESSING -> {
+        WizardStep.PROCESSING -> {
             ProcessingScreen(
                 progress = processingProgress,
                 currentFile = processingCurrentFile,
@@ -419,7 +420,7 @@ private fun WizardStepContent(
             )
         }
 
-        PhotoScanWizardState.WizardStep.COMPLETE -> {
+        WizardStep.COMPLETE -> {
             CompletionScreen(
                 photoCount = state.boxCount(),
                 exportDestination = exportDestination,

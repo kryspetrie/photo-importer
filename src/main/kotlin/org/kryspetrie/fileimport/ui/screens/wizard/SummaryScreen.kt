@@ -67,6 +67,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
 import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.AspectRatioDropdown
@@ -108,7 +109,7 @@ fun SummaryScreen(
                 onRotateAllCW = { state.rotateAllBoxesCW() },
                 onRotateAllCCW = { state.rotateAllBoxesCCW() },
                 onClearAll = { state.clearAllConfigurations() },
-                currentStep = PhotoScanWizardState.WizardStep.SUMMARY,
+                currentStep = WizardStep.SUMMARY,
             )
         },
         content = { paddingValues ->
@@ -285,7 +286,7 @@ private fun SummaryTopAppBar(
     onRotateAllCW: () -> Unit,
     onRotateAllCCW: () -> Unit,
     onClearAll: () -> Unit,
-    currentStep: PhotoScanWizardState.WizardStep,
+    currentStep: WizardStep,
 ) {
     var showResetConfirmDialog by remember { mutableStateOf(false) }
 

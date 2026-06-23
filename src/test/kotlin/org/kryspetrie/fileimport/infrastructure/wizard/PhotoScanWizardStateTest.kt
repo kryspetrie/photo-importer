@@ -29,7 +29,7 @@ class PhotoScanWizardStateTest {
     // WS-01: Initial state
     @Test
     fun `initial state has correct defaults`() {
-        assertEquals(PhotoScanWizardState.WizardStep.IMPORT, state.currentStep.value)
+        assertEquals(WizardStep.IMPORT, state.currentStep.value)
         assertNull(state.image.value)
         assertTrue(state.boundingBoxList.value.isEmpty())
         assertEquals(-1, state.selectedBoxIndex.value)
@@ -45,7 +45,7 @@ class PhotoScanWizardStateTest {
         assertEquals(sampleImage, state.image.value)
         assertEquals(file, state.imageFile.value)
         assertTrue(state.boundingBoxList.value.isEmpty())
-        assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
+        assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
     }
 
     // WS-03: Set detected boxes
@@ -116,7 +116,7 @@ class PhotoScanWizardStateTest {
         state.enterRefinement(0)
 
         // Refinement is now inline — stays on OVERVIEW step
-        assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
+        assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
         assertEquals(0, state.refinementBoxIndex.value)
         assertEquals(0, state.selectedBoxIndex.value)
     }
@@ -130,7 +130,7 @@ class PhotoScanWizardStateTest {
 
         state.exitRefinement()
 
-        assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
+        assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
         assertEquals(-1, state.refinementBoxIndex.value)
     }
 
@@ -297,16 +297,16 @@ class PhotoScanWizardStateTest {
     @Test
     fun `workflow navigation moves through steps`() {
         state.goToOverview()
-        assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
+        assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
 
         state.goToSummary()
-        assertEquals(PhotoScanWizardState.WizardStep.SUMMARY, state.currentStep.value)
+        assertEquals(WizardStep.SUMMARY, state.currentStep.value)
 
         state.goToProcessing()
-        assertEquals(PhotoScanWizardState.WizardStep.PROCESSING, state.currentStep.value)
+        assertEquals(WizardStep.PROCESSING, state.currentStep.value)
 
         state.goToComplete()
-        assertEquals(PhotoScanWizardState.WizardStep.COMPLETE, state.currentStep.value)
+        assertEquals(WizardStep.COMPLETE, state.currentStep.value)
     }
 
     // WS-19: Next box navigation
@@ -435,7 +435,7 @@ class PhotoScanWizardStateTest {
 
         state.resetToImportStep()
 
-        assertEquals(PhotoScanWizardState.WizardStep.IMPORT, state.currentStep.value)
+        assertEquals(WizardStep.IMPORT, state.currentStep.value)
         assertNull(state.image.value)
         assertTrue(state.boundingBoxList.value.isEmpty())
         assertTrue(state.photoConfigurations.value.isEmpty())

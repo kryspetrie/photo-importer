@@ -46,7 +46,7 @@ class PhotoScanWizardFlowTest {
         fun happyPathFullScan() {
             // Step 1: Import — initialize with image
             state.initializeWithImage(testImage, File("test-scan.jpg"))
-            assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
+            assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
             assertNotNull(state.image.value)
             assertEquals(File("test-scan.jpg"), state.imageFile.value)
 
@@ -63,19 +63,19 @@ class PhotoScanWizardFlowTest {
 
             // Step 4: Navigate to summary
             state.goToSummary()
-            assertEquals(PhotoScanWizardState.WizardStep.SUMMARY, state.currentStep.value)
+            assertEquals(WizardStep.SUMMARY, state.currentStep.value)
 
             // Step 5: Navigate to edit
             state.goToEdit()
-            assertEquals(PhotoScanWizardState.WizardStep.EDIT, state.currentStep.value)
+            assertEquals(WizardStep.EDIT, state.currentStep.value)
 
             // Step 6: Navigate to processing
             state.goToProcessing()
-            assertEquals(PhotoScanWizardState.WizardStep.PROCESSING, state.currentStep.value)
+            assertEquals(WizardStep.PROCESSING, state.currentStep.value)
 
             // Step 7: Complete
             state.goToComplete()
-            assertEquals(PhotoScanWizardState.WizardStep.COMPLETE, state.currentStep.value)
+            assertEquals(WizardStep.COMPLETE, state.currentStep.value)
         }
 
         @Test
@@ -86,16 +86,16 @@ class PhotoScanWizardFlowTest {
             // Forward: Overview → Summary → Edit
             state.goToSummary()
             state.goToEdit()
-            assertEquals(PhotoScanWizardState.WizardStep.EDIT, state.currentStep.value)
+            assertEquals(WizardStep.EDIT, state.currentStep.value)
 
             // Back: Edit → Overview (via goToOverview, since Edit's back goes to Summary)
             state.goToOverview()
-            assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
+            assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
 
             // Back: Summary → Overview (simulated by going forward then back)
             state.goToSummary()
             state.goToOverview()
-            assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
+            assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
         }
 
         @Test
@@ -112,7 +112,7 @@ class PhotoScanWizardFlowTest {
 
             // Now reset for next scan
             state.resetToImportStep()
-            assertEquals(PhotoScanWizardState.WizardStep.IMPORT, state.currentStep.value)
+            assertEquals(WizardStep.IMPORT, state.currentStep.value)
             assertNull(state.image.value)
             assertEquals(0, state.boundingBoxList.value.size())
             assertTrue(state.photoConfigurations.value.isEmpty())
@@ -660,7 +660,7 @@ class PhotoScanWizardFlowTest {
             // Exit refinement
             state.exitRefinement()
             // After exiting refinement, we're still in OVERVIEW step
-            assertEquals(PhotoScanWizardState.WizardStep.OVERVIEW, state.currentStep.value)
+            assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
         }
 
         @Test

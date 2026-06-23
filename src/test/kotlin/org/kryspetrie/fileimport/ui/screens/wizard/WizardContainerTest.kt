@@ -11,6 +11,7 @@ import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
 import org.kryspetrie.fileimport.infrastructure.wizard.FourPointState
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
 import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
 import org.kryspetrie.fileimport.infrastructure.wizard.Point
 import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
 
@@ -49,7 +50,7 @@ class WizardContainerTest {
         @DisplayName("should have correct initial wizard step")
         fun shouldHaveCorrectInitialStep() {
             val state = PhotoScanWizardState()
-            assertThat(state.currentStep.value).isEqualTo(PhotoScanWizardState.WizardStep.IMPORT)
+            assertThat(state.currentStep.value).isEqualTo(WizardStep.IMPORT)
         }
     }
 
@@ -62,7 +63,7 @@ class WizardContainerTest {
         fun shouldResetToImportStep() {
             wizardState.resetToImportStep()
             assertThat(wizardState.currentStep.value)
-                .isEqualTo(PhotoScanWizardState.WizardStep.IMPORT)
+                .isEqualTo(WizardStep.IMPORT)
         }
     }
 
