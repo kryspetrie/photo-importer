@@ -750,8 +750,8 @@ private fun validateExportDestination(destinationPath: String): String? {
             "Path exists but is not a directory: $destinationPath"
         outputDir.exists() && !outputDir.canWrite() -> "Cannot write to folder: $destinationPath"
         outputDir.exists() && !outputDir.canExecute() -> "Cannot access folder: $destinationPath"
-        !outputDir.exists() && !File(destinationPath).parentFile?.canWrite()!! ->
-            "Cannot create folder in: ${File(destinationPath).parentFile?.absolutePath}"
+        !outputDir.exists() && File(destinationPath).parentFile?.canWrite() != true ->
+            "Cannot create folder in: ${File(destinationPath).parentFile?.absolutePath ?: destinationPath}"
         else -> null
     }
 }
