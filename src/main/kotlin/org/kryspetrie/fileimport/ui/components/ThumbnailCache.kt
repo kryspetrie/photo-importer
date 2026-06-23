@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.ui.components
 
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
+import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
@@ -12,13 +13,28 @@ import kotlinx.coroutines.withContext
 import org.imgscalr.Scalr
 import org.jetbrains.skia.Image as SkiaImage
 import org.kryspetrie.fileimport.domain.model.ImageFileType
-import org.kryspetrie.fileimport.infrastructure.adapter.RawThumbnailExtractor
-import org.kryspetrie.fileimport.infrastructure.adapter.VideoThumbnailAdapter
+import org.kryspetrie.fileimport.domain.port.ThumbnailExtractorPort
+import org.kryspetrie.fileimport.infrastructure.adapter.ThumbnailExtractorAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
 
+/**
+ * Caches thumbnail [ImageBitmap]s keyed by file path and max pixel dimension.
+ *
+ * Uses [ThumbnailExtractorPort] for RAW and video thumbnail extraction,
+ * keeping this UI component free of direct infrastructure adapter imports
+ * (except the default adapter initialization). The [thumbnailExtractor] defaults
+ * to the infrastructure adapter but can be overridden in tests.
+ */
 object ThumbnailCache {
     /** IO dispatcher for coroutine context switching. Override in tests. */
     @Suppress("InjectDispatcher") // Object singleton — dispatcher injected via configurable var
     var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    /**
+     * Thumbnail extraction port. Defaults to the infrastructure adapter implementation.
+     * Override in tests to provide a test double.
+     */
+    var thumbnailExtractor: ThumbnailExtractorPort = ThumbnailExtractorAdapter
 
     private val cache = ConcurrentHashMap<String, ImageBitmap>()
 
@@ -30,12 +46,13 @@ object ThumbnailCache {
         return withContext(ioDispatcher) {
             try {
                 val fileType = ImageFileType.fromExtension(file.extension)
-                val original =
+                val original: BufferedImage? =
                     if (fileType.isRaw) {
-                        RawThumbnailExtractor.extractEmbeddedThumbnail(file)
+                        thumbnailExtractor.extractFromRaw(file)?.toBufferedImage()
                     } else {
                         ImageIO.read(file)
-                    } ?: return@withContext null
+                    }
+                original ?: return@withContext null
                 val scaled = Scalr.resize(original, Scalr.Method.BALANCED, maxPx)
                 original.flush()
                 val baos = ByteArrayOutputStream()
@@ -57,8 +74,9 @@ object ThumbnailCache {
         }
         return withContext(ioDispatcher) {
             try {
-                val frame =
-                    VideoThumbnailAdapter.extractThumbnail(file, maxPx) ?: return@withContext null
+                val processedImage =
+                    thumbnailExtractor.extractFromVideo(file, maxPx) ?: return@withContext null
+                val frame = processedImage.toBufferedImage()
                 val baos = ByteArrayOutputStream()
                 ImageIO.write(frame, "jpg", baos)
                 frame.flush()

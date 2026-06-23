@@ -374,8 +374,7 @@ class HexagonalArchitectureKonsistTest {
             add("org.kryspetrie.fileimport.infrastructure.adapter.AppPaths")
             add("org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage")
             add("org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage")
-            add("org.kryspetrie.fileimport.infrastructure.adapter.RawThumbnailExtractor")
-            add("org.kryspetrie.fileimport.infrastructure.adapter.VideoThumbnailAdapter")
+            add("org.kryspetrie.fileimport.infrastructure.adapter.ThumbnailExtractorAdapter")
             add("org.kryspetrie.fileimport.infrastructure.adapter.FilePathExt")
 
             // Wizard state (documented boundary exception — tightly coupled UI state)
