@@ -427,6 +427,8 @@ private fun WizardStepContent(
             ProcessingScreen(
                 progress = processingProgress,
                 currentFile = processingCurrentFile,
+                totalPhotos = state.boxCount(),
+                destination = exportDestination,
                 onBack = { state.resetToImportStep() },
             )
         }
@@ -1037,8 +1039,19 @@ private fun LoadingOverlay(message: String) {
  * Canceling requires confirmation since it discards all export progress.
  */
 @Composable
-private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () -> Unit) {
+private fun ProcessingScreen(
+    progress: Float,
+    currentFile: String,
+    totalPhotos: Int,
+    destination: String,
+    onBack: () -> Unit,
+) {
     var showCancelConfirm by remember { mutableStateOf(false) }
+
+    // Derive current photo index from progress fraction
+    val currentIndex = (progress * totalPhotos).toInt().coerceIn(1, totalPhotos).let {
+        if (progress >= 1f) totalPhotos else it
+    }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
@@ -1055,6 +1068,14 @@ private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () ->
 
             Text("Exporting", style = MaterialTheme.typography.headlineSmall)
 
+            if (totalPhotos > 0) {
+                Text(
+                    "Photo $currentIndex of $totalPhotos",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+
             LinearProgressIndicator(
                 progress = { progress.coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth(0.8f),
@@ -1065,6 +1086,14 @@ private fun ProcessingScreen(progress: Float, currentFile: String, onBack: () ->
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            if (destination.isNotBlank()) {
+                Text(
+                    "→ $destination",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
             OutlinedButton(
                 onClick = { showCancelConfirm = true },
