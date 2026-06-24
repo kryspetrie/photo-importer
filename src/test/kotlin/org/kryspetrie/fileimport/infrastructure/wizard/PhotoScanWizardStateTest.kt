@@ -1031,7 +1031,7 @@ class PhotoScanWizardStateTest {
     fun `addFaceRegion creates default-sized region with name and type`() {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.5, 0.4)
-        val config = state.photoConfigurations.value[state.boxes[0].id]
+        val config = state.photoConfigurations.value[state.allBoxes[0].id]
         assertNotNull(config)
         assertEquals(1, config!!.faceRegions.size)
         val region = config.faceRegions[0]
@@ -1048,7 +1048,7 @@ class PhotoScanWizardStateTest {
     fun `addFaceRegion with type PET stores correct type`() {
         addSampleBox()
         state.addFaceRegion(0, "Fido", 0.3, 0.5, RegionType.PET)
-        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
         assertEquals("Pet", config.faceRegions[0].type)
         assertEquals("Fido", config.subjects)
     }
@@ -1057,7 +1057,7 @@ class PhotoScanWizardStateTest {
     fun `addFaceRegion with type BODY stores correct type`() {
         addSampleBox()
         state.addFaceRegion(0, "Torso", 0.3, 0.5, RegionType.BODY)
-        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
         assertEquals("Body", config.faceRegions[0].type)
     }
 
@@ -1065,7 +1065,7 @@ class PhotoScanWizardStateTest {
     fun `addFaceRegion with type OBJECT stores correct type`() {
         addSampleBox()
         state.addFaceRegion(0, "Car", 0.3, 0.5, RegionType.OBJECT)
-        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
         assertEquals("Object", config.faceRegions[0].type)
     }
 
@@ -1074,7 +1074,7 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.3, 0.3)
         state.addFaceRegion(0, "Bob", 0.6, 0.6, RegionType.PET)
-        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
         assertEquals("Alice, Bob", config.subjects)
         assertEquals(2, config.faceRegions.size)
     }
@@ -1083,7 +1083,7 @@ class PhotoScanWizardStateTest {
     fun `addFaceRegion coerces coordinates to 0-1 range`() {
         addSampleBox()
         state.addFaceRegion(0, "Edge", 1.5, -0.3)
-        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
         assertEquals(1.0, region.x)
         assertEquals(0.0, region.y)
     }
@@ -1102,11 +1102,11 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.3, 0.3)
         state.addFaceRegion(0, "Bob", 0.6, 0.6)
-        val config0 = state.photoConfigurations.value[state.boxes[0].id]!!
+        val config0 = state.photoConfigurations.value[state.allBoxes[0].id]!!
         assertEquals("Alice, Bob", config0.subjects)
 
         state.removeFaceRegion(0, 0) // Remove Alice
-        val config1 = state.photoConfigurations.value[state.boxes[0].id]!!
+        val config1 = state.photoConfigurations.value[state.allBoxes[0].id]!!
         assertEquals(1, config1.faceRegions.size)
         assertEquals("Bob", config1.faceRegions[0].name)
         assertEquals("Bob", config1.subjects)
@@ -1117,7 +1117,7 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.3, 0.3)
         state.removeFaceRegion(0, 0)
-        val config = state.photoConfigurations.value[state.boxes[0].id]!!
+        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
         assertEquals("", config.subjects)
         assertEquals(0, config.faceRegions.size)
     }
@@ -1127,7 +1127,7 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.5, 0.5)
         state.updateFaceRegion(0, 0, x = 0.3, y = 0.7)
-        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
         assertEquals(0.3, region.x)
         assertEquals(0.7, region.y)
         assertEquals("Alice", region.name) // unchanged
@@ -1138,7 +1138,7 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.5, 0.5)
         state.updateFaceRegion(0, 0, x = 2.0, y = -1.0)
-        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
         assertEquals(1.0, region.x)
         assertEquals(0.0, region.y)
     }
@@ -1148,7 +1148,7 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.5, 0.5)
         state.updateFaceRegion(0, 0, x = 0.3) // only change x
-        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
         assertEquals(0.3, region.x)
         assertEquals(0.5, region.y) // unchanged
     }
@@ -1158,7 +1158,7 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.5, 0.5)
         state.resizeFaceRegion(0, 0, FaceSize.LARGE)
-        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
         assertEquals(FaceSize.LARGE.diameter, region.w)
         assertEquals(FaceSize.LARGE.diameter, region.h)
         assertEquals(0.5, region.x) // position unchanged
@@ -1170,11 +1170,11 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.3, 0.4)
         state.addFaceRegion(0, "Bob", 0.6, 0.5)
-        assertEquals(2, state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions.size)
-        assertEquals("Alice, Bob", state.photoConfigurations.value[state.boxes[0].id]!!.subjects)
+        assertEquals(2, state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions.size)
+        assertEquals("Alice, Bob", state.photoConfigurations.value[state.allBoxes[0].id]!!.subjects)
         state.clearAllFaceRegions(0)
-        assertEquals(0, state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions.size)
-        assertEquals("", state.photoConfigurations.value[state.boxes[0].id]!!.subjects)
+        assertEquals(0, state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions.size)
+        assertEquals("", state.photoConfigurations.value[state.allBoxes[0].id]!!.subjects)
     }
 
     @Test
@@ -1182,7 +1182,7 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.5, 0.5)
         state.moveFaceRegion(0, 0, dx = 0.1, dy = -0.2)
-        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
         assertEquals(0.6, region.x)
         assertEquals(0.3, region.y)
         // w/h unchanged (default FaceSize.MEDIUM diameter)
@@ -1195,7 +1195,7 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.addFaceRegion(0, "Alice", 0.9, 0.1)
         state.moveFaceRegion(0, 0, dx = 0.5, dy = -0.5)
-        val region = state.photoConfigurations.value[state.boxes[0].id]!!.faceRegions[0]
+        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
         assertEquals(1.0, region.x)
         assertEquals(0.0, region.y)
         // w/h unchanged

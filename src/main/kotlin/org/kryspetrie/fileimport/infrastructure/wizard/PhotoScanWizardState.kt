@@ -10,7 +10,6 @@ import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
-import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 
 // Debug flag for performance timing - set to true to log timing data
 internal const val DEBUG_TIMING = false
@@ -26,6 +25,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     fun setLogger(logger: AppLogger) {
         this.appLogger = logger
+        boxes.appLogger = logger
     }
 
     // ========== Sub-states (independent, no constructor dependencies) ==========
@@ -153,17 +153,14 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         batch.setCurrentImageIndex(index)
         _image.value = cached.image
         _imageFile.value = cached.file
-        _boundingBoxList.value =
-            if (cached.boxes.isNotEmpty()) BoundingBoxList(cached.boxes)
-            else BoundingBoxList.empty()
-        _selectedBoxIndex.value = -1
-        _refinementBoxIndex.value = -1
-        _selectedCorner.value = null
+        boxes.clearBoxes()
+        if (cached.boxes.isNotEmpty()) {
+            boxes.setDetectedBoxes(cached.boxes)
+        }
+        boxes.clearUndoAndSelection()
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
         _photoConfigurations.value = emptyMap()
-        _undoRedoManager.clearAll()
-        _undoRedoVersion.value++
         updateZoomController()
         return true
     }
@@ -209,100 +206,61 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     private val _fourPointState = MutableStateFlow(FourPointState.inactive())
     val fourPointState: StateFlow<FourPointState> = _fourPointState.asStateFlow()
 
-    // ========== Bounding Boxes ==========
+    // ========== Bounding Boxes & Selection (delegated to BoxInteractionState) ==========
 
+    /** Shared mutable box list — also used by [PhotoConfigurationState] and [FaceRegionState]. */
     private val _boundingBoxList = MutableStateFlow(BoundingBoxList.empty())
     val boundingBoxList: StateFlow<BoundingBoxList> = _boundingBoxList.asStateFlow()
 
-    private val _selectedBoxIndex = MutableStateFlow(-1)
-    val selectedBoxIndex: StateFlow<Int> = _selectedBoxIndex.asStateFlow()
-
-    private val _refinementBoxIndex = MutableStateFlow(-1)
-    val refinementBoxIndex: StateFlow<Int> = _refinementBoxIndex.asStateFlow()
-
-    private val _selectedCorner = MutableStateFlow<Corner?>(null)
-    val selectedCorner: StateFlow<Corner?> = _selectedCorner.asStateFlow()
-
-    // ========== Throttled Drag State (4Hz for performance) ==========
-
-    private val _displayRefinementBox = MutableStateFlow<BoundingBox?>(null)
-    val displayRefinementBox: StateFlow<BoundingBox?> = _displayRefinementBox.asStateFlow()
-
-    private val _pendingDragX = MutableStateFlow(0.0)
-    val pendingDragX: Double
-        get() = _pendingDragX.value
-
-    private val _pendingDragY = MutableStateFlow(0.0)
-    val pendingDragY: Double
-        get() = _pendingDragY.value
-
-    /** True when user is actively dragging a corner (used for 4Hz throttle loop) */
-    val isDragging: Boolean
-        get() = _selectedCorner.value != null && _refinementBoxIndex.value >= 0
-
-    /** True when there's a pending drag position to sync */
-    val hasPendingDrag: Boolean
-        get() = _selectedCorner.value != null
-
-    /** Updates the pending drag position (called on every Move event) */
-    fun updatePendingDrag(newX: Double, newY: Double) {
-        _pendingDragX.value = newX
-        _pendingDragY.value = newY
-    }
-
-    /** Syncs the display state to show the actual box (called after drag ends). */
-    fun syncDisplayBox() {
-        val index = _refinementBoxIndex.value
-        if (index >= 0 && index < _boundingBoxList.value.size()) {
-            _displayRefinementBox.value = _boundingBoxList.value.boxes[index]
-        } else {
-            _displayRefinementBox.value = null
-        }
-    }
-
-    /**
-     * Syncs the pending drag position to the display state at 4Hz. This is a visual preview only -
-     * actual box state updated on release. Called periodically from the LaunchedEffect throttle
-     * loop.
-     */
-    fun syncPendingDrag(boxIndex: Int): Long {
-        val startNanos = if (DEBUG_TIMING) System.nanoTime() else 0L
-
-        val corner = _selectedCorner.value ?: return 0
-        val imgX = _pendingDragX.value
-        val imgY = _pendingDragY.value
-
-        val list = _boundingBoxList.value
-        if (boxIndex < 0 || boxIndex >= list.size()) return 0
-
-        val box = list.boxes[boxIndex]
-        val moved = box.moveCorner(corner, Point(imgX, imgY))
-
-        // Validate to prevent rendering invalid shapes
-        if (moved.corners.wouldCreateInvalidShape()) {
-            return 0
-        }
-
-        _displayRefinementBox.value = moved
-
-        val elapsed = if (DEBUG_TIMING) (System.nanoTime() - startNanos) / 1000 else 0L
-        if (DEBUG_TIMING && elapsed > 500) { // Only log if > 0.5ms
-            println("⚠️ syncPendingDrag: ${elapsed}μs (boxIndex=$boxIndex)")
-        }
-        return elapsed
-    }
-
-    // ========== Zoom ==========
-
-    private val _zoomController = MutableStateFlow(ZoomController())
-    val zoomController: StateFlow<ZoomController> = _zoomController.asStateFlow()
-
-    // ========== Undo/Redo ==========
+    // ========== Undo/Redo (shared with BoxInteractionState) ==========
 
     private val _undoRedoVersion = MutableStateFlow(0)
     val undoRedoVersion: StateFlow<Int> = _undoRedoVersion.asStateFlow()
 
     private val _undoRedoManager = UndoRedoManager.forBoundingBox()
+
+    /** Box interaction state (selection, CRUD, manipulation, undo/redo, drag throttle). Delegated sub-state. */
+    val boxes = BoxInteractionState(_boundingBoxList, _undoRedoManager, _undoRedoVersion).also {
+        it.appLogger = appLogger
+    }
+
+    /** Currently selected box index. Delegates to [BoxInteractionState]. */
+    val selectedBoxIndex: StateFlow<Int> = boxes.selectedBoxIndex
+
+    /** Index of the box currently being refined. Delegates to [BoxInteractionState]. */
+    val refinementBoxIndex: StateFlow<Int> = boxes.refinementBoxIndex
+
+    /** Currently selected corner. Delegates to [BoxInteractionState]. */
+    val selectedCorner: StateFlow<Corner?> = boxes.selectedCorner
+
+    /** Display refinement box for throttled drag. Delegates to [BoxInteractionState]. */
+    val displayRefinementBox: StateFlow<BoundingBox?> = boxes.displayRefinementBox
+
+    /** Pending drag X coordinate. Delegates to [BoxInteractionState]. */
+    val pendingDragX: Double get() = boxes.pendingDragX
+
+    /** Pending drag Y coordinate. Delegates to [BoxInteractionState]. */
+    val pendingDragY: Double get() = boxes.pendingDragY
+
+    /** True when actively dragging a corner. Delegates to [BoxInteractionState]. */
+    val isDragging: Boolean get() = boxes.isDragging
+
+    /** True when there's a pending drag position. Delegates to [BoxInteractionState]. */
+    val hasPendingDrag: Boolean get() = boxes.hasPendingDrag
+
+    /** Updates the pending drag position. Delegates to [BoxInteractionState]. */
+    fun updatePendingDrag(newX: Double, newY: Double) = boxes.updatePendingDrag(newX, newY)
+
+    /** Syncs display box after drag ends. Delegates to [BoxInteractionState]. */
+    fun syncDisplayBox() = boxes.syncDisplayBox()
+
+    /** Syncs pending drag to display at 4Hz. Delegates to [BoxInteractionState]. */
+    fun syncPendingDrag(boxIndex: Int): Long = boxes.syncPendingDrag(boxIndex)
+
+    // ========== Zoom ==========
+
+    private val _zoomController = MutableStateFlow(ZoomController())
+    val zoomController: StateFlow<ZoomController> = _zoomController.asStateFlow()
 
     // ========== Summary Screen Settings ==========
 
@@ -453,15 +411,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         // Zoom/pan will be set by the UI via fitToView when the container size is known
 
         // Clear previous state
-        _boundingBoxList.value = BoundingBoxList.empty()
-        _selectedBoxIndex.value = -1
-        _refinementBoxIndex.value = -1
-        _selectedCorner.value = null
+        boxes.clearBoxes()
+        boxes.clearUndoAndSelection()
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
         navigation.step.value = WizardStep.OVERVIEW
-        _undoRedoManager.clearAll()
-        _undoRedoVersion.value++
     }
 
     /**
@@ -478,24 +432,23 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         val h = image.height.toDouble()
         val fullBox =
             BoundingBox.createRectangular(center = Point(w / 2, h / 2), width = w, height = h)
-        _boundingBoxList.value = BoundingBoxList(listOf(fullBox.select()))
-        _selectedBoxIndex.value = 0
-        _refinementBoxIndex.value = -1
-        _selectedCorner.value = null
+        val boxList = listOf(fullBox.select())
+        boxes.setDetectedBoxes(boxList)
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
         navigation.step.value = WizardStep.EDIT
-        _undoRedoManager.clearAll()
-        _undoRedoVersion.value++
+        boxes.setSelectedBoxIndex(0)
+        boxes.setRefinementBoxIndex(-1)
+        boxes.deselectCorner()
     }
 
     /** Sets the detected bounding boxes (from YOLO pipeline). */
-    fun setDetectedBoxes(boxes: List<BoundingBox>) {
+    fun setDetectedBoxes(detectedBoxes: List<BoundingBox>) {
         // Sort in reading order: left-to-right within rows, top-to-bottom across rows.
         // Group by vertical position (within 20% of image height = same row), then sort by x.
         val imageHeight = _image.value?.height?.toDouble() ?: 1.0
         val sorted =
-            boxes.sortedWith(
+            detectedBoxes.sortedWith(
                 compareBy<BoundingBox> { box ->
                         // Round y to nearest 20% of image height to group same-row items
                         ((box.corners.center().y / imageHeight) * 5).toInt()
@@ -505,8 +458,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
                         box.corners.center().x
                     }
             )
-        _boundingBoxList.value = BoundingBoxList(sorted)
-        _selectedBoxIndex.value = -1
+        this.boxes.setDetectedBoxes(sorted)
     }
 
     /**
@@ -516,12 +468,12 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
      * Boxes are sorted in reading order, and configs are re-associated by index after sorting.
      */
     fun setDetectedBoxes(
-        boxes: List<BoundingBox>,
+        detectedBoxes: List<BoundingBox>,
         configs: List<PhotoConfiguration> = emptyList(),
     ) {
         // Sort in reading order, tracking original indices to re-associate configs
         val imageHeight = _image.value?.height?.toDouble() ?: 1.0
-        val indexed = boxes.mapIndexed { index, box -> index to box }
+        val indexed = detectedBoxes.mapIndexed { index, box -> index to box }
         val sorted =
             indexed.sortedWith(
                 compareBy<Pair<Int, BoundingBox>> { (_, box) ->
@@ -529,8 +481,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
                     }
                     .thenBy { (_, box) -> box.corners.center().x }
             )
-        _boundingBoxList.value = BoundingBoxList(sorted.map { (_, box) -> box })
-        _selectedBoxIndex.value = -1
+        this.boxes.setDetectedBoxes(sorted.map { (_, box) -> box })
 
         // Apply per-box configurations after sort (re-associated by tracked index)
         if (configs.isNotEmpty()) {
@@ -573,88 +524,37 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     fun clearAllConfigurations() = configs.clearAllConfigurations()
 
     /** Returns all bounding boxes as a list. */
-    val boxes: List<BoundingBox>
+    val allBoxes: List<BoundingBox>
         get() = configs.boxes
 
-    /** Adds a bounding box. Respects overlap detection from [BoundingBoxList]. */
-    fun addBox(box: BoundingBox): Boolean {
-        val currentList = _boundingBoxList.value
-        if (!currentList.canAdd(box)) {
-            appLogger?.warn("Box not added: overlaps with existing box")
-            return false
-        }
-        _boundingBoxList.value = currentList.copy(boxes = currentList.boxes + box)
-        appLogger?.logOperationComplete(
-            OperationType.BOX_CREATION,
-            "Box ${currentList.size() + 1} at (${box.center().x.toInt()}, " +
-                "${box.center().y.toInt()}), size: ${box.width().toInt()}x${box.height().toInt()}",
-        )
-        return true
-    }
+    /** Adds a bounding box. Delegates to [BoxInteractionState]. */
+    fun addBox(box: BoundingBox): Boolean = boxes.addBox(box)
 
-    /** Removes a bounding box by index. */
-    fun removeBox(index: Int) {
-        val list = _boundingBoxList.value
-        if (index >= 0 && index < list.size()) {
-            val box = list.boxes[index]
-            val boxId = box.id
-            // Save for undo
-            _undoRedoManager.push(box.id, box)
-            // Remove
-            _boundingBoxList.value = list.remove(box.id)
-
-            // Clear selection if this was selected
-            if (_selectedBoxIndex.value == index) {
-                _selectedBoxIndex.value = -1
-            }
-            if (_refinementBoxIndex.value == index) {
-                _refinementBoxIndex.value = -1
-            }
-            appLogger?.logOperationComplete(OperationType.BOX_DELETION, "Removed box $boxId")
-        }
-    }
+    /** Removes a bounding box by index. Delegates to [BoxInteractionState]. */
+    fun removeBox(index: Int) = boxes.removeBox(index)
 
     /** Removes the currently selected bounding box. */
     fun removeSelectedBox() {
-        val index = _selectedBoxIndex.value
+        val index = boxes.selectedBoxIndex.value
         if (index >= 0) {
             removeBox(index)
         }
     }
 
-    /** Updates a bounding box at the given index. */
-    fun updateBox(index: Int, box: BoundingBox) {
-        val list = _boundingBoxList.value
-        _boundingBoxList.value = list.updateAt(index) { box }
-    }
+    /** Updates a bounding box at the given index. Delegates to [BoxInteractionState]. */
+    fun updateBox(index: Int, box: BoundingBox) = boxes.updateBox(index, box)
 
-    /** Selects a box at the given index. */
-    fun selectBox(index: Int) {
-        _boundingBoxList.value = _boundingBoxList.value.selectAt(index)
-        _selectedBoxIndex.value = index
-    }
+    /** Selects a box at the given index. Delegates to [BoxInteractionState]. */
+    fun selectBox(index: Int) = boxes.selectBox(index)
 
-    /** Deselects all boxes. */
-    fun deselectAll() {
-        _boundingBoxList.value = _boundingBoxList.value.deselectAll()
-        _selectedBoxIndex.value = -1
-        _selectedCorner.value = null
-    }
+    /** Deselects all boxes. Delegates to [BoxInteractionState]. */
+    fun deselectAll() = boxes.deselectAll()
 
-    /**
-     * Selects a corner for arrow key movement. Does NOT change selectedBoxIndex — callers must set
-     * that explicitly via selectBox() or enterRefinement(). Previously this set selectedBoxIndex =
-     * refinementBoxIndex, which broke overview-page corner dragging because refinementBoxIndex is
-     * -1 when not in refinement mode.
-     */
-    fun selectCorner(corner: Corner) {
-        _selectedCorner.value = corner
-    }
+    /** Selects a corner for arrow key movement. Delegates to [BoxInteractionState]. */
+    fun selectCorner(corner: Corner) = boxes.selectCorner(corner)
 
-    /** Deselects the current corner. */
-    fun deselectCorner() {
-        _selectedCorner.value = null
-    }
+    /** Deselects the current corner. Delegates to [BoxInteractionState]. */
+    fun deselectCorner() = boxes.deselectCorner()
 
     // ========== Mode Management ==========
 
@@ -697,7 +597,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
             val box = newState.confirm()
             if (box != null) {
                 addBox(box.select())
-                _selectedBoxIndex.value = _boundingBoxList.value.size() - 1
+                boxes.setSelectedBoxIndex(boxes.lastBoxIndex)
             }
             exitFourPointMode()
         }
@@ -717,7 +617,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
             val box = _fourPointState.value.confirm()
             if (box != null) {
                 addBox(box.select())
-                _selectedBoxIndex.value = _boundingBoxList.value.size() - 1
+                boxes.setSelectedBoxIndex(boxes.lastBoxIndex)
             }
             exitFourPointMode()
         }
@@ -736,7 +636,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         }
     }
 
-    /** Creates a rectangular bounding box at the given center point. */
     /**
      * Creates a rectangular bounding box at the given center point.
      *
@@ -773,7 +672,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
         val box = BoundingBox.createRectangular(centerX, centerY, width, height)
         addBox(box.select())
-        _selectedBoxIndex.value = _boundingBoxList.value.size() - 1
+        boxes.setSelectedBoxIndex(boxes.lastBoxIndex)
 
         exitAddBoxMode()
         return true
@@ -781,240 +680,86 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     /** Enters refinement mode for the box at the given index. */
     fun enterRefinement(boxIndex: Int) {
-        _refinementBoxIndex.value = boxIndex
-        _selectedBoxIndex.value = boxIndex
-        _selectedCorner.value = null // Clear any previous corner selection
+        boxes.setRefinementBoxIndex(boxIndex)
+        boxes.setSelectedBoxIndex(boxIndex)
+        boxes.deselectCorner()
         // Stay on OVERVIEW step — corner editing is now inline
         navigation.step.value = WizardStep.OVERVIEW
     }
 
     /** Exits refinement mode and returns to overview. */
     fun exitRefinement() {
-        _refinementBoxIndex.value = -1
-        _selectedCorner.value = null
+        boxes.setRefinementBoxIndex(-1)
+        boxes.deselectCorner()
         navigation.step.value = WizardStep.OVERVIEW
     }
 
-    // ========== Box Manipulation ==========
+    // ========== Box Manipulation (delegated to BoxInteractionState) ==========
 
-    /** Moves the selected box by the given delta (pushes to undo stack). */
-    fun moveSelectedBox(deltaX: Double, deltaY: Double) {
-        val index = _selectedBoxIndex.value
-        if (index >= 0) {
-            val list = _boundingBoxList.value
-            val box = list.boxes[index]
+    /** Moves the selected box by the given delta. Delegates to [BoxInteractionState]. */
+    fun moveSelectedBox(deltaX: Double, deltaY: Double) = boxes.moveSelectedBox(deltaX, deltaY)
 
-            // Save for undo
-            _undoRedoManager.push(box.id, box)
+    /** Moves the selected box without undo. Delegates to [BoxInteractionState]. */
+    fun moveSelectedBoxWithoutUndo(deltaX: Double, deltaY: Double) = boxes.moveSelectedBoxWithoutUndo(deltaX, deltaY)
 
-            // Move
-            val moved = box.move(deltaX, deltaY)
-            updateBox(index, moved)
-        }
-    }
+    /** Moves a specific corner of the box. Delegates to [BoxInteractionState]. */
+    fun moveCorner(boxIndex: Int, corner: Corner, newX: Double, newY: Double) = boxes.moveCorner(boxIndex, corner, newX, newY)
 
-    /** Moves the selected box by the given delta without saving to undo (for drag intermediate). */
-    fun moveSelectedBoxWithoutUndo(deltaX: Double, deltaY: Double) {
-        val index = _selectedBoxIndex.value
-        if (index >= 0) {
-            val list = _boundingBoxList.value
-            val box = list.boxes[index]
-            val moved = box.move(deltaX, deltaY)
-            updateBox(index, moved)
-        }
-    }
+    /** Moves a corner without undo. Delegates to [BoxInteractionState]. */
+    fun moveCornerWithoutUndo(boxIndex: Int, corner: Corner, newX: Double, newY: Double) = boxes.moveCornerWithoutUndo(boxIndex, corner, newX, newY)
 
-    /** Moves a specific corner of the box at the given index (pushes to undo stack). */
-    fun moveCorner(boxIndex: Int, corner: Corner, newX: Double, newY: Double) {
-        val list = _boundingBoxList.value
-        if (boxIndex >= 0 && boxIndex < list.size()) {
-            val box = list.boxes[boxIndex]
+    /** Moves a corner with validation. Delegates to [BoxInteractionState]. */
+    fun moveCornerWithValidation(boxIndex: Int, corner: Corner, newX: Double, newY: Double): Boolean = boxes.moveCornerWithValidation(boxIndex, corner, newX, newY)
 
-            // Save for undo
-            _undoRedoManager.push(box.id, box)
+    /** Saves a box undo snapshot. Delegates to [BoxInteractionState]. */
+    fun saveBoxUndoSnapshot(boxIndex: Int) = boxes.saveBoxUndoSnapshot(boxIndex)
 
-            // Move corner
-            val moved = box.moveCorner(corner, Point(newX, newY))
-            updateBox(boxIndex, moved)
-        }
-    }
+    /** Moves the selected corner by delta. Delegates to [BoxInteractionState]. */
+    fun moveSelectedCorner(deltaX: Double, deltaY: Double) = boxes.moveSelectedCorner(deltaX, deltaY)
 
-    /** Moves a corner without saving to undo (for drag intermediate frames). */
-    fun moveCornerWithoutUndo(boxIndex: Int, corner: Corner, newX: Double, newY: Double) {
-        val list = _boundingBoxList.value
-        if (boxIndex >= 0 && boxIndex < list.size()) {
-            val box = list.boxes[boxIndex]
-            val moved = box.moveCorner(corner, Point(newX, newY))
-            if (!moved.corners.wouldCreateInvalidShape()) {
-                updateBox(boxIndex, moved)
-            }
-        }
-    }
+    // ========== Box Scale/Rotate (delegated to BoxInteractionState) ==========
 
-    /**
-     * Moves a corner with validation to prevent invalid shapes (bowties, self-intersecting).
-     * Returns true if the move was applied, false if it was rejected. Pushes to undo stack.
-     */
-    fun moveCornerWithValidation(
-        boxIndex: Int,
-        corner: Corner,
-        newX: Double,
-        newY: Double,
-    ): Boolean {
-        val list = _boundingBoxList.value
-        if (boxIndex < 0 || boxIndex >= list.size()) return false
+    /** Expands the selected box. Delegates to [BoxInteractionState]. */
+    fun expandSelectedBox(scaleFactor: Double) = boxes.expandSelectedBox(scaleFactor)
 
-        val box = list.boxes[boxIndex]
-        val moved = box.moveCorner(corner, Point(newX, newY))
-
-        // Check if the resulting shape would be valid (no crossing edges)
-        if (moved.corners.wouldCreateInvalidShape()) {
-            return false
-        }
-
-        // Save for undo
-        _undoRedoManager.push(box.id, box)
-
-        // Apply the move
-        updateBox(boxIndex, moved)
-        return true
-    }
-
-    /**
-     * Saves the current state of a box to the undo stack. Call this once at the start of a drag
-     * operation, then use moveCornerWithoutUndo/moveSelectedBoxWithoutUndo for intermediate frames.
-     */
-    fun saveBoxUndoSnapshot(boxIndex: Int) {
-        val list = _boundingBoxList.value
-        if (boxIndex >= 0 && boxIndex < list.size()) {
-            val box = list.boxes[boxIndex]
-            _undoRedoManager.push(box.id, box)
-        }
-    }
-
-    /** Moves the selected corner by the given delta (arrow key movement, pushes to undo). */
-    fun moveSelectedCorner(deltaX: Double, deltaY: Double) {
-        val index = _selectedBoxIndex.value
-        val corner = _selectedCorner.value
-        if (index >= 0 && corner != null) {
-            val list = _boundingBoxList.value
-            val box = list.boxes[index]
-            val cornerPoint = box.corners.forCorner(corner)
-
-            // Save for undo
-            _undoRedoManager.push(box.id, box)
-
-            // Move corner
-            val moved =
-                box.moveCorner(corner, Point(cornerPoint.x + deltaX, cornerPoint.y + deltaY))
-            updateBox(index, moved)
-        }
-    }
-
-    // ========== Box Scale/Rotate ==========
-
-    /** Expands or contracts the selected box by the given scale factor. Pushes to undo stack. */
-    fun expandSelectedBox(scaleFactor: Double) {
-        val index = _selectedBoxIndex.value
-        if (index >= 0) {
-            val list = _boundingBoxList.value
-            if (index < list.size()) {
-                val box = list.boxes[index]
-                _undoRedoManager.push(box.id, box)
-                val expanded = box.expand(scaleFactor)
-                if (!expanded.corners.wouldCreateInvalidShape()) {
-                    updateBox(index, expanded)
-                }
-            }
-        }
-    }
-
-    /**
-     * Rotates the selected box by the given angle in degrees around its center. Pushes to undo
-     * stack.
-     */
-    fun rotateSelectedBox(angleDegrees: Double) {
-        val index = _selectedBoxIndex.value
-        if (index >= 0) {
-            val list = _boundingBoxList.value
-            if (index < list.size()) {
-                val box = list.boxes[index]
-                _undoRedoManager.push(box.id, box)
-                val rotated = box.rotate(angleDegrees)
-                updateBox(index, rotated)
-            }
-        }
-    }
+    /** Rotates the selected box. Delegates to [BoxInteractionState]. */
+    fun rotateSelectedBox(angleDegrees: Double) = boxes.rotateSelectedBox(angleDegrees)
 
     // ========== Navigation ==========
 
     /** Navigates to the next box. */
     fun nextBox() {
-        val current = _refinementBoxIndex.value
-        val list = _boundingBoxList.value
-        if (list.isNotEmpty()) {
-            val nextIndex = (current + 1) % list.size()
+        val current = boxes.refinementBoxIndex.value
+        val count = boxes.boxCount()
+        if (count > 0) {
+            val nextIndex = (current + 1) % count
             enterRefinement(nextIndex)
         }
     }
 
     /** Navigates to the previous box. */
     fun previousBox() {
-        val current = _refinementBoxIndex.value
-        val list = _boundingBoxList.value
-        if (list.isNotEmpty()) {
-            val prevIndex = if (current <= 0) list.size() - 1 else current - 1
+        val current = boxes.refinementBoxIndex.value
+        val count = boxes.boxCount()
+        if (count > 0) {
+            val prevIndex = if (current <= 0) count - 1 else current - 1
             enterRefinement(prevIndex)
         }
     }
 
-    // ========== Undo/Redo ==========
+    // ========== Undo/Redo (delegated to BoxInteractionState) ==========
 
-    /** Undoes the last operation. */
-    fun undo() {
-        val index = _selectedBoxIndex.value
-        if (index >= 0) {
-            val list = _boundingBoxList.value
-            val box = list.boxes[index]
+    /** Undoes the last operation. Delegates to [BoxInteractionState]. */
+    fun undo() = boxes.undo()
 
-            val previousState = _undoRedoManager.undo(box, box.id)
-            if (previousState != null) {
-                updateBox(index, previousState)
-            }
-        }
-        _undoRedoVersion.value++
-    }
+    /** Redoes the last undone operation. Delegates to [BoxInteractionState]. */
+    fun redo() = boxes.redo()
 
-    /** Redoes the last undone operation. */
-    fun redo() {
-        val index = _selectedBoxIndex.value
-        if (index >= 0) {
-            val list = _boundingBoxList.value
-            val box = list.boxes[index]
+    /** Returns true if undo is available. Delegates to [BoxInteractionState]. */
+    fun canUndo(): Boolean = boxes.canUndo()
 
-            val restoredState = _undoRedoManager.redo(box, box.id)
-            if (restoredState != null) {
-                updateBox(index, restoredState)
-            }
-        }
-        _undoRedoVersion.value++
-    }
-
-    /** Returns true if undo is available. */
-    fun canUndo(): Boolean {
-        return _undoRedoManager.totalUndoOperations() > 0
-    }
-
-    /** Returns true if redo is available. */
-    fun canRedo(): Boolean {
-        val index = _selectedBoxIndex.value
-        if (index >= 0) {
-            val list = _boundingBoxList.value
-            val box = list.boxes[index]
-            return _undoRedoManager.canRedo(box.id)
-        }
-        return false
-    }
+    /** Returns true if redo is available. Delegates to [BoxInteractionState]. */
+    fun canRedo(): Boolean = boxes.canRedo()
 
     // ========== Zoom ==========
 
@@ -1054,9 +799,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     /** Fits the view to the current refinement box. */
     fun fitToBox(viewportWidth: Double = 800.0, viewportHeight: Double = 600.0) {
-        val index = _refinementBoxIndex.value
-        if (index >= 0 && index < _boundingBoxList.value.size()) {
-            val box = _boundingBoxList.value.boxes[index]
+        val box = boxes.refinementBox()
+        if (box != null) {
             _zoomController.value =
                 _zoomController.value.fitToBox(box.corners, viewportWidth, viewportHeight)
         }
@@ -1064,9 +808,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     /** Fits the view to the currently selected box (used on overview page). */
     fun fitToSelectedBox(viewportWidth: Double = 800.0, viewportHeight: Double = 600.0) {
-        val index = _selectedBoxIndex.value
-        if (index >= 0 && index < _boundingBoxList.value.size()) {
-            val box = _boundingBoxList.value.boxes[index]
+        val box = boxes.selectedBox()
+        if (box != null) {
             _zoomController.value =
                 _zoomController.value.fitToBox(box.corners, viewportWidth, viewportHeight)
         }
@@ -1100,15 +843,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _image.value = null
         _imageFile.value = null
         _singlePhotoMode.value = false
-        _boundingBoxList.value = BoundingBoxList.empty()
-        _selectedBoxIndex.value = -1
-        _refinementBoxIndex.value = -1
-        _selectedCorner.value = null
+        boxes.clearBoxes()
+        boxes.clearUndoAndSelection()
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
         navigation.step.value = WizardStep.IMPORT
-        _undoRedoManager.clearAll()
-        _undoRedoVersion.value++
         _photoConfigurations.value = emptyMap()
         _zoomController.value = ZoomController()
         // Reset metadata selection
@@ -1124,14 +863,10 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
      * while the source file list and current index are maintained.
      */
     fun resetPerImageState() {
-        _boundingBoxList.value = BoundingBoxList.empty()
-        _selectedBoxIndex.value = -1
-        _refinementBoxIndex.value = -1
-        _selectedCorner.value = null
+        boxes.clearBoxes()
+        boxes.clearUndoAndSelection()
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
-        _undoRedoManager.clearAll()
-        _undoRedoVersion.value++
         _photoConfigurations.value = emptyMap()
         _zoomController.value = ZoomController()
         configs.deselectAllMetadata()
@@ -1150,20 +885,12 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         return _zoomController.value.imageToScreen(imageX, imageY)
     }
 
-    /** Returns the current box count. */
-    fun boxCount(): Int = _boundingBoxList.value.size()
+    /** Returns the current box count. Delegates to [BoxInteractionState]. */
+    fun boxCount(): Int = boxes.boxCount()
 
-    /** Returns the currently selected box. */
-    fun selectedBox(): BoundingBox? {
-        val index = _selectedBoxIndex.value
-        val list = _boundingBoxList.value
-        return if (index >= 0 && index < list.size()) list.boxes[index] else null
-    }
+    /** Returns the currently selected box. Delegates to [BoxInteractionState]. */
+    fun selectedBox(): BoundingBox? = boxes.selectedBox()
 
-    /** Returns the box at refinement index. */
-    fun refinementBox(): BoundingBox? {
-        val index = _refinementBoxIndex.value
-        val list = _boundingBoxList.value
-        return if (index >= 0 && index < list.size()) list.boxes[index] else null
-    }
+    /** Returns the box at refinement index. Delegates to [BoxInteractionState]. */
+    fun refinementBox(): BoundingBox? = boxes.refinementBox()
 }

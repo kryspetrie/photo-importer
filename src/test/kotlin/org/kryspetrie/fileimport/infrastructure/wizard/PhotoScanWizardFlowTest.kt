@@ -104,7 +104,7 @@ class PhotoScanWizardFlowTest {
             state.initializeWithImage(testImage, File("scan.jpg"))
             state.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0))
             state.setPhotoConfiguration(
-                state.boxes[0].id, PhotoScanConfiguration(description = "Test")
+                state.allBoxes[0].id, PhotoScanConfiguration(description = "Test")
             )
             state.goToSummary()
             state.goToProcessing()
@@ -143,27 +143,27 @@ class PhotoScanWizardFlowTest {
             state.selectBox(0)
             assertEquals(0, state.selectedBoxIndex.value)
             state.moveSelectedBox(10.0, 20.0)
-            val movedBox1 = state.boxes[0]
+            val movedBox1 = state.allBoxes[0]
             assertEquals(box1.corners.topLeft.x + 10.0, movedBox1.corners.topLeft.x, 0.01)
             assertEquals(box1.corners.topLeft.y + 20.0, movedBox1.corners.topLeft.y, 0.01)
 
             // Move a corner
             state.moveCorner(0, Corner.BOTTOM_RIGHT, 500.0, 600.0)
-            assertEquals(500.0, state.boxes[0].corners.bottomRight.x, 0.01)
-            assertEquals(600.0, state.boxes[0].corners.bottomRight.y, 0.01)
+            assertEquals(500.0, state.allBoxes[0].corners.bottomRight.x, 0.01)
+            assertEquals(600.0, state.allBoxes[0].corners.bottomRight.y, 0.01)
 
             // Undo the corner move
             state.undo()
-            assertEquals(box1.corners.bottomRight.x + 10.0, state.boxes[0].corners.bottomRight.x, 0.01)
+            assertEquals(box1.corners.bottomRight.x + 10.0, state.allBoxes[0].corners.bottomRight.x, 0.01)
 
             // Undo the box move
             state.undo()
             // Back to original position (before move)
-            assertEquals(box1.corners.topLeft.x, state.boxes[0].corners.topLeft.x, 0.01)
+            assertEquals(box1.corners.topLeft.x, state.allBoxes[0].corners.topLeft.x, 0.01)
 
             // Redo
             state.redo()
-            assertEquals(box1.corners.topLeft.x + 10.0, state.boxes[0].corners.topLeft.x, 0.01)
+            assertEquals(box1.corners.topLeft.x + 10.0, state.allBoxes[0].corners.topLeft.x, 0.01)
         }
 
         @Test
@@ -175,8 +175,8 @@ class PhotoScanWizardFlowTest {
 
             // Rotate all CW — updates rotation in per-photo configs
             state.rotateAllBoxesCW()
-            val box1Id = state.boxes[0].id
-            val box2Id = state.boxes[1].id
+            val box1Id = state.allBoxes[0].id
+            val box2Id = state.allBoxes[1].id
             val config1 = state.photoConfigurations.value[box1Id] ?: PhotoScanConfiguration()
             val config2 = state.photoConfigurations.value[box2Id] ?: PhotoScanConfiguration()
             assertEquals(90, config1.rotationDegrees)
@@ -475,7 +475,7 @@ class PhotoScanWizardFlowTest {
         fun faceRegionLifecycleFlow() {
             state.initializeWithImage(testImage, File("scan.jpg"))
             state.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 400.0, 300.0))
-            val boxId = state.boxes[0].id
+            val boxId = state.allBoxes[0].id
 
             // Enter face select mode for photo 0
             state.enterFaceSelectMode(0)
@@ -513,7 +513,7 @@ class PhotoScanWizardFlowTest {
         fun multipleFaceRegionsSubjects() {
             state.initializeWithImage(testImage, File("scan.jpg"))
             state.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 400.0, 300.0))
-            val boxId = state.boxes[0].id
+            val boxId = state.allBoxes[0].id
 
             // Add two face regions with names
             state.addFaceRegion(0, "Alice", 0.5, 0.4, RegionType.FACE)
@@ -556,7 +556,7 @@ class PhotoScanWizardFlowTest {
             assertFalse(state.perspectiveCorrectionEnabled.value)
 
             // Override one photo's strategy
-            val box1Id = state.boxes[0].id
+            val box1Id = state.allBoxes[0].id
             state.setPhotoConfiguration(
                 box1Id,
                 PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.PERSPECTIVE),
@@ -569,7 +569,7 @@ class PhotoScanWizardFlowTest {
             )
 
             // Second photo still uses global default (null per-photo)
-            val box2Id = state.boxes[1].id
+            val box2Id = state.allBoxes[1].id
             assertNull(state.photoConfigurations.value[box2Id]?.correctionStrategy)
         }
 
