@@ -53,7 +53,7 @@ class SummaryScreenTest {
                         Point(100.0, 200.0),
                     )
             )
-        wizardState.addBox(box)
+        wizardState.boxes.addBox(box)
     }
 
     @Test

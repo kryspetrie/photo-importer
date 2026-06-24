@@ -108,32 +108,32 @@ fun Modifier.withWizardKeyboardShortcuts(
         if (context == ShortcutContext.CANVAS) {
             when (keyEvent.key) {
                 Key.DirectionUp -> {
-                    if (wizardState.selectedCorner.value != null) {
-                        wizardState.moveSelectedCorner(0.0, -cornerDelta)
+                    if (wizardState.boxes.selectedCorner.value != null) {
+                        wizardState.boxes.moveSelectedCorner(0.0, -cornerDelta)
                     } else {
                         wizardState.pan(0.0, panDelta)
                     }
                     return@onKeyEvent true
                 }
                 Key.DirectionDown -> {
-                    if (wizardState.selectedCorner.value != null) {
-                        wizardState.moveSelectedCorner(0.0, cornerDelta)
+                    if (wizardState.boxes.selectedCorner.value != null) {
+                        wizardState.boxes.moveSelectedCorner(0.0, cornerDelta)
                     } else {
                         wizardState.pan(0.0, -panDelta)
                     }
                     return@onKeyEvent true
                 }
                 Key.DirectionLeft -> {
-                    if (wizardState.selectedCorner.value != null) {
-                        wizardState.moveSelectedCorner(-cornerDelta, 0.0)
+                    if (wizardState.boxes.selectedCorner.value != null) {
+                        wizardState.boxes.moveSelectedCorner(-cornerDelta, 0.0)
                     } else {
                         wizardState.pan(panDelta, 0.0)
                     }
                     return@onKeyEvent true
                 }
                 Key.DirectionRight -> {
-                    if (wizardState.selectedCorner.value != null) {
-                        wizardState.moveSelectedCorner(cornerDelta, 0.0)
+                    if (wizardState.boxes.selectedCorner.value != null) {
+                        wizardState.boxes.moveSelectedCorner(cornerDelta, 0.0)
                     } else {
                         wizardState.pan(-panDelta, 0.0)
                     }
@@ -152,8 +152,8 @@ fun Modifier.withWizardKeyboardShortcuts(
                     return@onKeyEvent true
                 }
                 Key.R -> {
-                    if (wizardState.selectedBoxIndex.value >= 0) {
-                        wizardState.enterRefinement(wizardState.selectedBoxIndex.value)
+                    if (wizardState.boxes.selectedBoxIndex.value >= 0) {
+                        wizardState.enterRefinement(wizardState.boxes.selectedBoxIndex.value)
                     }
                     return@onKeyEvent true
                 }
@@ -181,13 +181,13 @@ fun Modifier.withWizardKeyboardShortcuts(
                 Key.N -> {
                     // Context-aware: cycle corners forward when one is selected, otherwise
                     // next box
-                    if (wizardState.selectedCorner.value != null) {
+                    if (wizardState.boxes.selectedCorner.value != null) {
                         cycleCorner(wizardState, reverse = false)
                     } else {
-                        val current = wizardState.selectedBoxIndex.value
-                        val count = wizardState.boxCount()
+                        val current = wizardState.boxes.selectedBoxIndex.value
+                        val count = wizardState.boxes.boxCount()
                         if (count > 0 && current >= 0) {
-                            wizardState.selectBox((current + 1) % count)
+                            wizardState.boxes.selectBox((current + 1) % count)
                         }
                     }
                     return@onKeyEvent true
@@ -195,13 +195,13 @@ fun Modifier.withWizardKeyboardShortcuts(
                 Key.P -> {
                     // Context-aware: cycle corners backward when one is selected, otherwise
                     // previous box
-                    if (wizardState.selectedCorner.value != null) {
+                    if (wizardState.boxes.selectedCorner.value != null) {
                         cycleCorner(wizardState, reverse = true)
                     } else {
-                        val current = wizardState.selectedBoxIndex.value
-                        val count = wizardState.boxCount()
+                        val current = wizardState.boxes.selectedBoxIndex.value
+                        val count = wizardState.boxes.boxCount()
                         if (count > 0 && current >= 0) {
-                            wizardState.selectBox((current - 1 + count) % count)
+                            wizardState.boxes.selectBox((current - 1 + count) % count)
                         }
                     }
                     return@onKeyEvent true
@@ -210,10 +210,10 @@ fun Modifier.withWizardKeyboardShortcuts(
                 Key.Period -> {
                     // Next corner (same as N when corner selected)
                     // If no corner selected, select first corner of selected box
-                    val corner = wizardState.selectedCorner.value
+                    val corner = wizardState.boxes.selectedCorner.value
                     if (corner != null) {
                         cycleCorner(wizardState, reverse = false)
-                    } else if (wizardState.selectedBoxIndex.value >= 0) {
+                    } else if (wizardState.boxes.selectedBoxIndex.value >= 0) {
                         cycleCorner(wizardState, reverse = false)
                     }
                     return@onKeyEvent true
@@ -221,25 +221,25 @@ fun Modifier.withWizardKeyboardShortcuts(
                 Key.Comma -> {
                     // Previous corner (same as P when corner selected)
                     // If no corner selected, select last corner of selected box
-                    val corner = wizardState.selectedCorner.value
+                    val corner = wizardState.boxes.selectedCorner.value
                     if (corner != null) {
                         cycleCorner(wizardState, reverse = true)
-                    } else if (wizardState.selectedBoxIndex.value >= 0) {
+                    } else if (wizardState.boxes.selectedBoxIndex.value >= 0) {
                         cycleCorner(wizardState, reverse = true)
                     }
                     return@onKeyEvent true
                 }
                 // Space: cycle to next photo/box; first press selects the first one
                 Key.Spacebar -> {
-                    val current = wizardState.selectedBoxIndex.value
-                    val count = wizardState.boxCount()
+                    val current = wizardState.boxes.selectedBoxIndex.value
+                    val count = wizardState.boxes.boxCount()
                     if (count == 0) return@onKeyEvent true // no boxes
                     if (current < 0) {
                         // Nothing selected yet — select the first box
-                        wizardState.selectBox(0)
+                        wizardState.boxes.selectBox(0)
                     } else {
                         // Advance to next box (wrapping)
-                        wizardState.selectBox((current + 1) % count)
+                        wizardState.boxes.selectBox((current + 1) % count)
                     }
                     return@onKeyEvent true
                 }
@@ -261,8 +261,8 @@ fun Modifier.withWizardKeyboardShortcuts(
                         wizardState.exitAddBoxMode()
                     }
                     else -> {
-                        if (wizardState.selectedBoxIndex.value >= 0) {
-                            wizardState.deselectAll()
+                        if (wizardState.boxes.selectedBoxIndex.value >= 0) {
+                            wizardState.boxes.deselectAll()
                         } else {
                             onCancel?.invoke()
                         }
@@ -287,9 +287,9 @@ fun Modifier.withWizardKeyboardShortcuts(
                 // Ctrl+Z = Undo, Ctrl+Shift+Z = Redo
                 if (isCtrlPressed) {
                     if (isShiftPressed) {
-                        wizardState.redo()
+                        wizardState.boxes.redo()
                     } else {
-                        wizardState.undo()
+                        wizardState.boxes.undo()
                     }
                     return@onKeyEvent true
                 }
@@ -317,11 +317,11 @@ internal fun isCtrlPressed(keyEvent: androidx.compose.ui.input.key.KeyEvent): Bo
 
 /** Cycles through the corners of the selected box. */
 private fun cycleCorner(state: PhotoScanWizardState, reverse: Boolean = false) {
-    val currentCorner = state.selectedCorner.value
+    val currentCorner = state.boxes.selectedCorner.value
     val corners = org.kryspetrie.fileimport.infrastructure.wizard.Corner.entries
 
     if (currentCorner == null) {
-        state.selectCorner(if (reverse) corners.last() else corners.first())
+        state.boxes.selectCorner(if (reverse) corners.last() else corners.first())
     } else {
         val currentIndex = corners.indexOf(currentCorner)
         val nextIndex =
@@ -330,7 +330,7 @@ private fun cycleCorner(state: PhotoScanWizardState, reverse: Boolean = false) {
             } else {
                 (currentIndex + 1) % corners.size
             }
-        state.selectCorner(corners[nextIndex])
+        state.boxes.selectCorner(corners[nextIndex])
     }
 }
 

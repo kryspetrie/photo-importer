@@ -43,7 +43,7 @@ internal fun RefinementCanvas(
     modifier: Modifier = Modifier,
 ) {
     val zoomController by state.zoomController.collectAsState()
-    val selectedCorner by state.selectedCorner.collectAsState()
+    val selectedCorner by state.boxes.selectedCorner.collectAsState()
     val boundingBoxList by state.boundingBoxList.collectAsState()
 
     // Get zoom/pan values
@@ -52,7 +52,7 @@ internal fun RefinementCanvas(
     val panY = zoomController.panY.toFloat()
 
     // Throttled display state - only updates during dragging
-    val displayBox by state.displayRefinementBox.collectAsState()
+    val displayBox by state.boxes.displayRefinementBox.collectAsState()
 
     // Track whether we're dragging (for 30Hz throttle)
     var isDragging by remember { mutableStateOf(false) }
@@ -107,7 +107,7 @@ internal fun RefinementCanvas(
     // 30Hz ticker to sync pending drag position to display state
     LaunchedEffect(isDragging, boxIndex) {
         while (isDragging) {
-            state.syncPendingDrag(boxIndex)
+            state.boxes.syncPendingDrag(boxIndex)
             delay(33L) // 30Hz = every 33ms
         }
     }
@@ -143,14 +143,14 @@ internal fun RefinementCanvas(
                                             (pos - screenPos).getDistance() < 25f
                                         }
                                     if (hit != null) {
-                                        state.selectCorner(hit.first)
+                                        state.boxes.selectCorner(hit.first)
                                         isCornerDrag = true
                                         dragging = true
                                         isDragging = true
                                         // Initialize pending position
                                         lastDragX = ((pos.x - currentPanX) / zoom).toDouble()
                                         lastDragY = ((pos.y - currentPanY) / zoom).toDouble()
-                                        state.updatePendingDrag(lastDragX, lastDragY)
+                                        state.boxes.updatePendingDrag(lastDragX, lastDragY)
                                     } else {
                                         // 2. Check for corner hit on ANY other box
                                         // (click-to-switch)
@@ -164,7 +164,7 @@ internal fun RefinementCanvas(
                                             if (cornerHit != null) {
                                                 // Switch to that box and select that corner
                                                 state.enterRefinement(bIndex)
-                                                state.selectCorner(cornerHit.first)
+                                                state.boxes.selectCorner(cornerHit.first)
                                                 switchedBox = true
                                                 break
                                             }
@@ -206,7 +206,7 @@ internal fun RefinementCanvas(
                                         ) { // ~0.5 pixel threshold squared
                                             val updateStart =
                                                 if (DEBUG_TIMING) System.nanoTime() else 0L
-                                            state.updatePendingDrag(imgX, imgY)
+                                            state.boxes.updatePendingDrag(imgX, imgY)
                                             if (DEBUG_TIMING) {
                                                 val elapsed =
                                                     (System.nanoTime() - updateStart) / 1000
@@ -230,15 +230,15 @@ internal fun RefinementCanvas(
                                     if (dragging && isCornerDrag) {
                                         // Commit final position to state (immediate, not
                                         // throttled)
-                                        val corner = state.selectedCorner.value
+                                        val corner = state.boxes.selectedCorner.value
                                         if (corner != null) {
-                                            state.moveCornerWithValidation(
+                                            state.boxes.moveCornerWithValidation(
                                                 boxIndex,
                                                 corner,
-                                                state.pendingDragX,
-                                                state.pendingDragY,
+                                                state.boxes.pendingDragX,
+                                                state.boxes.pendingDragY,
                                             )
-                                            state.syncDisplayBox()
+                                            state.boxes.syncDisplayBox()
                                         }
                                     }
                                     isDragging = false

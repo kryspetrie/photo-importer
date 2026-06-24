@@ -49,8 +49,8 @@ class RefinementScreenTest {
                         Point(100.0, 200.0),
                     )
             )
-        wizardState.addBox(box)
-        wizardState.selectBox(0)
+        wizardState.boxes.addBox(box)
+        wizardState.boxes.selectBox(0)
         wizardState.enterRefinement(0)
     }
 

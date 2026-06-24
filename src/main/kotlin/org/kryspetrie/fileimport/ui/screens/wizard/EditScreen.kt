@@ -123,7 +123,7 @@ fun EditScreen(
 
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
-    val selectedIndices by state.selectedMetadataIndices.collectAsState()
+    val selectedIndices by state.configs.selectedMetadataIndices.collectAsState()
     val sourceExif by state.sourceExif.collectAsState()
     val currentImageFile by state.imageFile.collectAsState()
 
@@ -163,7 +163,7 @@ fun EditScreen(
     // Auto-select first photo when entering the screen
     LaunchedEffect(boundingBoxList.size()) {
         if (selectedIndices.isEmpty() && boundingBoxList.size() > 0) {
-            state.selectSingleMetadata(0)
+            state.configs.selectSingleMetadata(0)
         }
     }
 
@@ -354,7 +354,7 @@ fun EditScreen(
                     val idx = locationPickerTargetIndex
                     if (idx != null && idx < boundingBoxList.size()) {
                         val boxId = boundingBoxList.boxes[idx].id
-                        state.updatePhotoConfiguration(boxId) {
+                        state.configs.updatePhotoConfiguration(boxId) {
                             it.copy(
                                 city = result.city ?: it.city,
                                 state = it.state,
@@ -378,12 +378,12 @@ fun EditScreen(
     // ── Back-of-photo image picker dialog ──
     if (showBackImagePicker) {
         BackImagePickerDialog(
-            batchFiles = state.sourceFiles.value.ifEmpty { null },
+            batchFiles = state.batch.sourceFiles.value.ifEmpty { null },
             onConfirm = { sourcePath, cropRect, rotation, mode ->
                 val idx = selectedIndices.firstOrNull() ?: return@BackImagePickerDialog
                 if (idx < boundingBoxList.size()) {
                     val boxId = boundingBoxList.boxes[idx].id
-                    state.updatePhotoConfiguration(boxId) {
+                    state.configs.updatePhotoConfiguration(boxId) {
                         it.copy(
                             backImageMode = mode,
                             backImageSourcePath = sourcePath,
@@ -399,10 +399,10 @@ fun EditScreen(
                             backCropRotation = rotation,
                         )
                     }
-                    state.sourceFiles.value
+                    state.batch.sourceFiles.value
                         .indexOfFirst { it.absolutePath == sourcePath }
                         .takeIf { it >= 0 }
-                        ?.let { state.markBatchIndexSkipped(it) }
+                        ?.let { state.batch.markBatchIndexSkipped(it) }
                 }
                 showBackImagePicker = false
             },
@@ -419,14 +419,14 @@ fun EditScreen(
                         isMeta && keyEvent.key == Key.Comma -> {
                             val currentIdx =
                                 if (selectedIndices.size == 1) selectedIndices.first() else -1
-                            if (currentIdx > 0) state.selectSingleMetadata(currentIdx - 1)
+                            if (currentIdx > 0) state.configs.selectSingleMetadata(currentIdx - 1)
                             true
                         }
                         isMeta && keyEvent.key == Key.Period -> {
                             val currentIdx =
                                 if (selectedIndices.size == 1) selectedIndices.first() else -1
                             if (currentIdx >= 0 && currentIdx < boundingBoxList.size() - 1)
-                                state.selectSingleMetadata(currentIdx + 1)
+                                state.configs.selectSingleMetadata(currentIdx + 1)
                             true
                         }
                         else -> false
@@ -492,7 +492,7 @@ fun EditScreen(
                                 if (selectedIndices.size == 1) selectedIndices.first() else -1
                             OutlinedButton(
                                 onClick = {
-                                    if (currentIdx > 0) state.selectSingleMetadata(currentIdx - 1)
+                                    if (currentIdx > 0) state.configs.selectSingleMetadata(currentIdx - 1)
                                 },
                                 enabled = currentIdx > 0,
                                 modifier = Modifier.height(32.dp),
@@ -509,7 +509,7 @@ fun EditScreen(
                             OutlinedButton(
                                 onClick = {
                                     if (currentIdx < boundingBoxList.size() - 1 && currentIdx >= 0)
-                                        state.selectSingleMetadata(currentIdx + 1)
+                                        state.configs.selectSingleMetadata(currentIdx + 1)
                                 },
                                 enabled =
                                     currentIdx >= 0 && currentIdx < boundingBoxList.size() - 1,
@@ -537,7 +537,7 @@ fun EditScreen(
                                 OutlinedButton(
                                     onClick = {
                                         isMultiEditMode = false
-                                        state.deselectAllMetadata()
+                                        state.configs.deselectAllMetadata()
                                     },
                                     modifier = Modifier.height(28.dp),
                                     contentPadding = PaddingValues(horizontal = 8.dp),
@@ -571,10 +571,10 @@ fun EditScreen(
                     selectedIndices = selectedIndices,
                     isMultiEditMode = isMultiEditMode,
                     onSelect = { index ->
-                        if (isMultiEditMode) state.toggleMetadataSelection(index)
-                        else state.selectSingleMetadata(index)
+                        if (isMultiEditMode) state.configs.toggleMetadataSelection(index)
+                        else state.configs.selectSingleMetadata(index)
                     },
-                    onDeselectAll = { state.deselectAllMetadata() },
+                    onDeselectAll = { state.configs.deselectAllMetadata() },
                 )
                 Box(
                     modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -601,16 +601,16 @@ fun EditScreen(
                         isMultiEditMode = isMultiEditMode,
                         onSelect = { index ->
                             if (isMultiEditMode) {
-                                state.toggleMetadataSelection(index)
+                                state.configs.toggleMetadataSelection(index)
                             } else {
                                 if (index in selectedIndices && selectedIndices.size == 1) {
-                                    state.deselectAllMetadata()
+                                    state.configs.deselectAllMetadata()
                                 } else {
-                                    state.selectSingleMetadata(index)
+                                    state.configs.selectSingleMetadata(index)
                                 }
                             }
                         },
-                        onDeselectAll = { state.deselectAllMetadata() },
+                        onDeselectAll = { state.configs.deselectAllMetadata() },
                     )
 
                     // Large preview — only in single-select mode
@@ -681,7 +681,7 @@ fun EditScreen(
                                             }
                                             OutlinedButton(
                                                 onClick = {
-                                                    state.updatePhotoConfiguration(box.id) {
+                                                    state.configs.updatePhotoConfiguration(box.id) {
                                                         it.copy(
                                                             backImageMode = null,
                                                             backImageSourcePath = null,
@@ -751,7 +751,7 @@ fun EditScreen(
                                 val idx = selectedIndices.firstOrNull() ?: return@RotateEditorPanel
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.updatePhotoConfiguration(box.id) {
+                                    state.configs.updatePhotoConfiguration(box.id) {
                                         it.copy(
                                             backImageMode = null,
                                             backImageSourcePath = null,
@@ -798,7 +798,7 @@ fun EditScreen(
                                     selectedIndices.firstOrNull() ?: return@MetadataEditorPanel
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.updatePhotoConfiguration(box.id) {
+                                    state.configs.updatePhotoConfiguration(box.id) {
                                         it.copy(
                                             backImageMode = null,
                                             backImageSourcePath = null,

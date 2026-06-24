@@ -44,8 +44,8 @@ fun RefinementScreen(
 ) {
     // State flows
     val image by state.image.collectAsState()
-    val refinementBoxIndex by state.refinementBoxIndex.collectAsState()
-    val selectedCorner by state.selectedCorner.collectAsState()
+    val refinementBoxIndex by state.boxes.refinementBoxIndex.collectAsState()
+    val selectedCorner by state.boxes.selectedCorner.collectAsState()
     val zoomController by state.zoomController.collectAsState()
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val boxCount by remember { derivedStateOf { boundingBoxList.size() } }
@@ -67,7 +67,7 @@ fun RefinementScreen(
     androidx.compose.runtime.LaunchedEffect(canvasSize, refinementBoxIndex) {
         if (canvasSize.width > 0 && canvasSize.height > 0) {
             state.fitToBox(canvasSize.width.toDouble(), canvasSize.height.toDouble())
-            state.syncDisplayBox()
+            state.boxes.syncDisplayBox()
         }
     }
 
@@ -79,8 +79,8 @@ fun RefinementScreen(
                         showDeleteConfirmDialog = true
                     }
                 },
-                onUndo = { state.undo() },
-                onRedo = { state.redo() },
+                onUndo = { state.boxes.undo() },
+                onRedo = { state.boxes.redo() },
                 onShowHelp = { showHelpDialog = true },
                 refocus = { focusRequester.requestFocus() },
             )
@@ -151,7 +151,7 @@ fun RefinementScreen(
                     selectedCorner = selectedCorner,
                     onPrevious = { state.previousBox() },
                     onNext = { state.nextBox() },
-                    onDeselect = { state.deselectCorner() },
+                    onDeselect = { state.boxes.deselectCorner() },
                     refocus = { focusRequester.requestFocus() },
                 )
             }
@@ -179,7 +179,7 @@ fun RefinementScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        state.removeBox(refinementBoxIndex)
+                        state.boxes.removeBox(refinementBoxIndex)
                         state.exitRefinement()
                         showDeleteConfirmDialog = false
                         onBack()

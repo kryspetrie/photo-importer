@@ -85,7 +85,7 @@ fun WizardContainer(
 ) {
     val state = remember { PhotoScanWizardState() }
     state.setLogger(appLogger)
-    val currentStep by state.currentStep.collectAsState()
+    val currentStep by state.navigation.currentStep.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
     var loadingMessage by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -222,7 +222,7 @@ private fun WizardStepContent(
             OperationType.EXPORT_COMPLETE,
             "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
         )
-        state.goToComplete()
+        state.navigation.goToComplete()
     }
 
     when (currentStep) {
@@ -260,7 +260,7 @@ private fun WizardStepContent(
                         state.resetToImportStep()
                         onCancel()
                     },
-                    onToSummary = { state.goToSummary() },
+                    onToSummary = { state.navigation.goToSummary() },
                 )
             } else {
                 LoadingContent(message = "Loading image...")
@@ -285,12 +285,12 @@ private fun WizardStepContent(
                     perspectiveService = perspectiveService,
                     previewCache = previewCache,
                     onBack = { state.goToOverview() },
-                    onExport = { state.goToEdit() },
+                    onExport = { state.navigation.goToEdit() },
                     onSkipMetadata = {
                         scope.launch {
                             onFailedCountChange(0)
                             onExportResults(emptyList())
-                            state.goToProcessing()
+                            state.navigation.goToProcessing()
                             exportPhotos(
                                 state = state,
                                 image = image,
@@ -342,12 +342,12 @@ private fun WizardStepContent(
                             settingsPort.saveSettings(updated)
                         }
                     },
-                    onBack = { state.goToSummary() },
+                    onBack = { state.navigation.goToSummary() },
                     onExport = {
                         scope.launch {
                             onFailedCountChange(0)
                             onExportResults(emptyList())
-                            state.goToProcessing()
+                            state.navigation.goToProcessing()
                             exportPhotos(
                                 state = state,
                                 image = image,
@@ -367,7 +367,7 @@ private fun WizardStepContent(
                         scope.launch {
                             onFailedCountChange(0)
                             onExportResults(emptyList())
-                            state.goToProcessing()
+                            state.navigation.goToProcessing()
                             exportPhotos(
                                 state = state,
                                 image = image,
@@ -395,7 +395,7 @@ private fun WizardStepContent(
             ProcessingScreen(
                 progress = processingProgress,
                 currentFile = processingCurrentFile,
-                totalPhotos = state.boxCount(),
+                totalPhotos = state.boxes.boxCount(),
                 destination = exportDestination,
                 onBack = { state.resetToImportStep() },
             )
@@ -403,13 +403,13 @@ private fun WizardStepContent(
 
         WizardStep.COMPLETE -> {
             CompletionScreen(
-                photoCount = state.boxCount(),
+                photoCount = state.boxes.boxCount(),
                 exportDestination = exportDestination,
-                isBatchMode = state.isBatchMode,
-                hasMoreBatchImages = state.hasMoreBatchImages,
-                currentBatchIndex = state.currentImageIndex.value,
-                batchTotal = state.batchTotal,
-                skippedCount = state.skippedBatchIndices.value.size,
+                isBatchMode = state.batch.isBatchMode,
+                hasMoreBatchImages = state.batch.hasMoreBatchImages,
+                currentBatchIndex = state.batch.currentImageIndex.value,
+                batchTotal = state.batch.batchTotal,
+                skippedCount = state.batch.skippedBatchIndices.value.size,
                 failedCount = failedExportCount,
                 exportResults = exportResults,
                 onDone = {
@@ -455,7 +455,7 @@ private fun WizardStepContent(
                         }
                     }
                 },
-                nextBatchFile = state.peekNextBatchFile(),
+                nextBatchFile = state.batch.peekNextBatchFile(),
                 onContinueToNextPhoto = {
                     continueToNextBatchPhoto(
                         state,
@@ -469,7 +469,7 @@ private fun WizardStepContent(
                     )
                 },
                 onSkipNextPhoto =
-                    if (state.hasMoreBatchImages) {
+                    if (state.batch.hasMoreBatchImages) {
                         { skipNextBatchPhoto(state) }
                     } else null,
                 onCancelImport = { state.resetToImportStep() },

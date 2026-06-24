@@ -134,7 +134,7 @@ fun startNewImport(
     scope.launch {
         val isSinglePhoto = state.singlePhotoMode.value && batchFiles == null
         if (batchFiles != null && batchFiles.size > 1) {
-            state.initializeBatch(batchFiles)
+            state.batch.initializeBatch(batchFiles)
         }
         if (isSinglePhoto) {
             // Single photo mode: load image, skip detection, go straight to Quick Edit
@@ -187,9 +187,9 @@ fun continueToNextBatchPhoto(
     scope: kotlinx.coroutines.CoroutineScope,
 ) {
     // Auto-skip files that have been marked as "backs" of other photos
-    var nextFile = state.advanceToNextBatchFile()
-    while (nextFile != null && state.skippedBatchIndices.value.contains(state.currentImageIndex.value)) {
-        nextFile = state.advanceToNextBatchFile()
+    var nextFile = state.batch.advanceToNextBatchFile()
+    while (nextFile != null && state.batch.skippedBatchIndices.value.contains(state.batch.currentImageIndex.value)) {
+        nextFile = state.batch.advanceToNextBatchFile()
     }
     if (nextFile == null) return
     state.resetPerImageState()
@@ -216,5 +216,5 @@ fun continueToNextBatchPhoto(
  * physical photo).
  */
 fun skipNextBatchPhoto(state: PhotoScanWizardState) {
-    state.skipNextBatchFile()
+    state.batch.skipNextBatchFile()
 }

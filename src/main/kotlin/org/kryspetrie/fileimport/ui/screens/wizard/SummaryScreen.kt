@@ -106,9 +106,9 @@ fun SummaryScreen(
         topBar = {
             SummaryTopAppBar(
                 photoCount = boundingBoxList.size(),
-                onRotateAllCW = { state.rotateAllBoxesCW() },
-                onRotateAllCCW = { state.rotateAllBoxesCCW() },
-                onClearAll = { state.clearAllConfigurations() },
+                onRotateAllCW = { state.configs.rotateAllBoxesCW() },
+                onRotateAllCCW = { state.configs.rotateAllBoxesCCW() },
+                onClearAll = { state.configs.clearAllConfigurations() },
                 currentStep = WizardStep.SUMMARY,
             )
         },
@@ -121,9 +121,9 @@ fun SummaryScreen(
                 photoConfigurations = photoConfigurations,
                 selectedIndex = selectedIndex,
                 onSelectedIndexChange = { selectedIndex = it },
-                onConfigChange = state::setPhotoConfiguration,
+                onConfigChange = { boxId, config -> state.configs.setPhotoConfiguration(boxId, config) },
                 onBoxDelete = { index ->
-                    state.removeBox(index)
+                    state.boxes.removeBox(index)
                     val newSize = boundingBoxList.size() - 1
                     if (selectedIndex >= newSize && newSize > 0) {
                         selectedIndex = newSize - 1
@@ -131,11 +131,11 @@ fun SummaryScreen(
                 },
                 onDetectionModeChange = { boxId, mode ->
                     val current = photoConfigurations[boxId] ?: PhotoConfiguration()
-                    state.setPhotoConfiguration(boxId, current.copy(detectionMode = mode))
+                    state.configs.setPhotoConfiguration(boxId, current.copy(detectionMode = mode))
                 },
-                onRotateAllCW = { state.rotateAllBoxesCW() },
-                onRotateAllCCW = { state.rotateAllBoxesCCW() },
-                onClearAllConfigurations = { state.clearAllConfigurations() },
+                onRotateAllCW = { state.configs.rotateAllBoxesCW() },
+                onRotateAllCCW = { state.configs.rotateAllBoxesCCW() },
+                onClearAllConfigurations = { state.configs.clearAllConfigurations() },
                 state = state,
             )
         },

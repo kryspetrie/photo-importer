@@ -29,10 +29,10 @@ class PhotoScanWizardStateTest {
     // WS-01: Initial state
     @Test
     fun `initial state has correct defaults`() {
-        assertEquals(WizardStep.IMPORT, state.currentStep.value)
+        assertEquals(WizardStep.IMPORT, state.navigation.currentStep.value)
         assertNull(state.image.value)
         assertTrue(state.boundingBoxList.value.isEmpty())
-        assertEquals(-1, state.selectedBoxIndex.value)
+        assertEquals(-1, state.boxes.selectedBoxIndex.value)
         assertTrue(state.cvAutoDetectEnabled.value)
     }
 
@@ -45,7 +45,7 @@ class PhotoScanWizardStateTest {
         assertEquals(sampleImage, state.image.value)
         assertEquals(file, state.imageFile.value)
         assertTrue(state.boundingBoxList.value.isEmpty())
-        assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
+        assertEquals(WizardStep.OVERVIEW, state.navigation.currentStep.value)
     }
 
     // WS-03: Set detected boxes
@@ -59,14 +59,14 @@ class PhotoScanWizardStateTest {
         state.setDetectedBoxes(boxes)
 
         assertEquals(2, state.boundingBoxList.value.size())
-        assertEquals(-1, state.selectedBoxIndex.value)
+        assertEquals(-1, state.boxes.selectedBoxIndex.value)
     }
 
     // WS-04: Add box
     @Test
     fun `add box increases list size`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
         assertEquals(1, state.boundingBoxList.value.size())
     }
@@ -75,10 +75,10 @@ class PhotoScanWizardStateTest {
     @Test
     fun `remove box decreases list size`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
         assertEquals(1, state.boundingBoxList.value.size())
 
-        state.removeBox(0)
+        state.boxes.removeBox(0)
         assertEquals(0, state.boundingBoxList.value.size())
     }
 
@@ -86,11 +86,11 @@ class PhotoScanWizardStateTest {
     @Test
     fun `select box updates selection`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
-        state.selectBox(0)
+        state.boxes.selectBox(0)
 
-        assertEquals(0, state.selectedBoxIndex.value)
+        assertEquals(0, state.boxes.selectedBoxIndex.value)
         assertTrue(state.boundingBoxList.value.boxes[0].isSelected)
     }
 
@@ -98,12 +98,12 @@ class PhotoScanWizardStateTest {
     @Test
     fun `deselect all clears selection`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-        state.selectBox(0)
+        state.boxes.addBox(box)
+        state.boxes.selectBox(0)
 
-        state.deselectAll()
+        state.boxes.deselectAll()
 
-        assertEquals(-1, state.selectedBoxIndex.value)
+        assertEquals(-1, state.boxes.selectedBoxIndex.value)
         assertFalse(state.boundingBoxList.value.boxes[0].isSelected)
     }
 
@@ -111,39 +111,39 @@ class PhotoScanWizardStateTest {
     @Test
     fun `enter refinement selects box and stays on overview`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
         state.enterRefinement(0)
 
         // Refinement is now inline — stays on OVERVIEW step
-        assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
-        assertEquals(0, state.refinementBoxIndex.value)
-        assertEquals(0, state.selectedBoxIndex.value)
+        assertEquals(WizardStep.OVERVIEW, state.navigation.currentStep.value)
+        assertEquals(0, state.boxes.refinementBoxIndex.value)
+        assertEquals(0, state.boxes.selectedBoxIndex.value)
     }
 
     // WS-09: Exit refinement returns to overview
     @Test
     fun `exit refinement returns to overview`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
         state.enterRefinement(0)
 
         state.exitRefinement()
 
-        assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
-        assertEquals(-1, state.refinementBoxIndex.value)
+        assertEquals(WizardStep.OVERVIEW, state.navigation.currentStep.value)
+        assertEquals(-1, state.boxes.refinementBoxIndex.value)
     }
 
     // WS-10: Move selected box
     @Test
     fun `move selected box translates corners`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-        state.selectBox(0)
+        state.boxes.addBox(box)
+        state.boxes.selectBox(0)
 
         val originalCorners = state.boundingBoxList.value.boxes[0].corners.topLeft.copy()
 
-        state.moveSelectedBox(10.0, -5.0)
+        state.boxes.moveSelectedBox(10.0, -5.0)
 
         val movedBox = state.boundingBoxList.value.boxes[0]
         // Check that the top-left corner moved by the expected amount
@@ -155,10 +155,10 @@ class PhotoScanWizardStateTest {
     @Test
     fun `move corner updates specific corner`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-        state.selectBox(0)
+        state.boxes.addBox(box)
+        state.boxes.selectBox(0)
 
-        state.moveCorner(0, Corner.TOP_LEFT, 50.0, 50.0)
+        state.boxes.moveCorner(0, Corner.TOP_LEFT, 50.0, 50.0)
 
         val movedBox = state.boundingBoxList.value.boxes[0]
         assertEquals(50.0, movedBox.corners.topLeft.x, 0.01)
@@ -178,12 +178,12 @@ class PhotoScanWizardStateTest {
                         bottomLeft = Point(50.0, 150.0),
                     )
             )
-        state.addBox(box)
-        state.selectBox(0)
-        state.selectCorner(Corner.BOTTOM_LEFT)
+        state.boxes.addBox(box)
+        state.boxes.selectBox(0)
+        state.boxes.selectCorner(Corner.BOTTOM_LEFT)
 
         // Move bottom-left right by 10px — it should stay at y=150, just shift x
-        state.moveSelectedCorner(10.0, 0.0)
+        state.boxes.moveSelectedCorner(10.0, 0.0)
 
         val movedBox = state.boundingBoxList.value.boxes[0]
         // BEFORE FIX: read bottomRight (200,150) as start, so bottomLeft jumped to (210, 150)
@@ -207,12 +207,12 @@ class PhotoScanWizardStateTest {
                         bottomLeft = Point(50.0, 150.0),
                     )
             )
-        state.addBox(box)
-        state.selectBox(0)
-        state.selectCorner(Corner.BOTTOM_RIGHT)
+        state.boxes.addBox(box)
+        state.boxes.selectBox(0)
+        state.boxes.selectCorner(Corner.BOTTOM_RIGHT)
 
         // Move bottom-right up by 10px — it should stay at x=200, just shift y
-        state.moveSelectedCorner(0.0, -10.0)
+        state.boxes.moveSelectedCorner(0.0, -10.0)
 
         val movedBox = state.boundingBoxList.value.boxes[0]
         // BEFORE FIX: read bottomLeft (50,150) as start, so bottomRight jumped to (50, 140)
@@ -297,61 +297,61 @@ class PhotoScanWizardStateTest {
     @Test
     fun `workflow navigation moves through steps`() {
         state.goToOverview()
-        assertEquals(WizardStep.OVERVIEW, state.currentStep.value)
+        assertEquals(WizardStep.OVERVIEW, state.navigation.currentStep.value)
 
-        state.goToSummary()
-        assertEquals(WizardStep.SUMMARY, state.currentStep.value)
+        state.navigation.goToSummary()
+        assertEquals(WizardStep.SUMMARY, state.navigation.currentStep.value)
 
-        state.goToProcessing()
-        assertEquals(WizardStep.PROCESSING, state.currentStep.value)
+        state.navigation.goToProcessing()
+        assertEquals(WizardStep.PROCESSING, state.navigation.currentStep.value)
 
-        state.goToComplete()
-        assertEquals(WizardStep.COMPLETE, state.currentStep.value)
+        state.navigation.goToComplete()
+        assertEquals(WizardStep.COMPLETE, state.navigation.currentStep.value)
     }
 
     // WS-19: Next box navigation
     @Test
     fun `next box navigates to next box`() {
-        state.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
-        state.addBox(BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0))
+        state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
+        state.boxes.addBox(BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0))
         state.enterRefinement(0)
 
         state.nextBox()
 
-        assertEquals(1, state.refinementBoxIndex.value)
+        assertEquals(1, state.boxes.refinementBoxIndex.value)
     }
 
     // WS-20: Previous box navigation
     @Test
     fun `previous box navigates to previous box`() {
-        state.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
-        state.addBox(BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0))
+        state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
+        state.boxes.addBox(BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0))
         state.enterRefinement(1)
 
         state.previousBox()
 
-        assertEquals(0, state.refinementBoxIndex.value)
+        assertEquals(0, state.boxes.refinementBoxIndex.value)
     }
 
     // WS-21: Next box wraps around
     @Test
     fun `next box wraps around`() {
-        state.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
+        state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
         state.enterRefinement(0)
 
         state.nextBox()
 
-        assertEquals(0, state.refinementBoxIndex.value) // Wrapped back
+        assertEquals(0, state.boxes.refinementBoxIndex.value) // Wrapped back
     }
 
     // WS-22: Set photo configuration
     @Test
     fun `set photo configuration stores config`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
         val config = PhotoConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
-        state.setPhotoConfiguration(box.id, config)
+        state.configs.setPhotoConfiguration(box.id, config)
 
         val storedConfig = state.photoConfigurations.value[box.id]
         assertNotNull(storedConfig)
@@ -363,10 +363,10 @@ class PhotoScanWizardStateTest {
     @Test
     fun `update photo configuration merges with existing`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
-        state.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
-        state.updatePhotoConfiguration(box.id) { it.copy(rotationDegrees = 90) }
+        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.updatePhotoConfiguration(box.id) { it.copy(rotationDegrees = 90) }
 
         val config = state.photoConfigurations.value[box.id]
         assertTrue(config!!.perspectiveCorrectionEnabled)
@@ -377,10 +377,10 @@ class PhotoScanWizardStateTest {
     @Test
     fun `clear photo configuration removes config`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-        state.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.boxes.addBox(box)
+        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
 
-        state.clearPhotoConfiguration(box.id)
+        state.configs.clearPhotoConfiguration(box.id)
 
         assertFalse(state.photoConfigurations.value.containsKey(box.id))
     }
@@ -390,10 +390,10 @@ class PhotoScanWizardStateTest {
     fun `rotate all boxes updates all configs`() {
         val box1 = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         val box2 = BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0)
-        state.addBox(box1)
-        state.addBox(box2)
+        state.boxes.addBox(box1)
+        state.boxes.addBox(box2)
 
-        state.rotateAllBoxesCW()
+        state.configs.rotateAllBoxesCW()
 
         assertEquals(90, state.photoConfigurations.value[box1.id]?.rotationDegrees)
         assertEquals(90, state.photoConfigurations.value[box2.id]?.rotationDegrees)
@@ -404,10 +404,10 @@ class PhotoScanWizardStateTest {
     fun `set perspective correction all enables for all`() {
         val box1 = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         val box2 = BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0)
-        state.addBox(box1)
-        state.addBox(box2)
+        state.boxes.addBox(box1)
+        state.boxes.addBox(box2)
 
-        state.setPerspectiveCorrectionAll(true)
+        state.configs.setPerspectiveCorrectionAll(true)
 
         assertTrue(state.photoConfigurations.value[box1.id]?.perspectiveCorrectionEnabled ?: false)
         assertTrue(state.photoConfigurations.value[box2.id]?.perspectiveCorrectionEnabled ?: false)
@@ -417,10 +417,10 @@ class PhotoScanWizardStateTest {
     @Test
     fun `clear all configurations removes all configs`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-        state.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.boxes.addBox(box)
+        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
 
-        state.clearAllConfigurations()
+        state.configs.clearAllConfigurations()
 
         assertTrue(state.photoConfigurations.value.isEmpty())
     }
@@ -429,13 +429,13 @@ class PhotoScanWizardStateTest {
     @Test
     fun `reset to import step clears everything`() {
         state.initializeWithImage(sampleImage, java.io.File("/test/image.jpg"))
-        state.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
-        state.selectBox(0)
-        state.setPhotoConfiguration(state.boundingBoxList.value.boxes[0].id, PhotoConfiguration())
+        state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
+        state.boxes.selectBox(0)
+        state.configs.setPhotoConfiguration(state.boundingBoxList.value.boxes[0].id, PhotoConfiguration())
 
         state.resetToImportStep()
 
-        assertEquals(WizardStep.IMPORT, state.currentStep.value)
+        assertEquals(WizardStep.IMPORT, state.navigation.currentStep.value)
         assertNull(state.image.value)
         assertTrue(state.boundingBoxList.value.isEmpty())
         assertTrue(state.photoConfigurations.value.isEmpty())
@@ -454,23 +454,23 @@ class PhotoScanWizardStateTest {
     // WS-31: Box count
     @Test
     fun `box count returns correct size`() {
-        assertEquals(0, state.boxCount())
+        assertEquals(0, state.boxes.boxCount())
 
-        state.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
-        assertEquals(1, state.boxCount())
+        state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
+        assertEquals(1, state.boxes.boxCount())
 
-        state.addBox(BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0))
-        assertEquals(2, state.boxCount())
+        state.boxes.addBox(BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0))
+        assertEquals(2, state.boxes.boxCount())
     }
 
     // WS-32: Selected box accessor
     @Test
     fun `selected box returns correct box`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-        state.selectBox(0)
+        state.boxes.addBox(box)
+        state.boxes.selectBox(0)
 
-        val selected = state.selectedBox()
+        val selected = state.boxes.selectedBox()
         assertNotNull(selected)
         assertEquals(box.id, selected!!.id)
     }
@@ -479,10 +479,10 @@ class PhotoScanWizardStateTest {
     @Test
     fun `refinement box returns correct box`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
         state.enterRefinement(0)
 
-        val refinementBox = state.refinementBox()
+        val refinementBox = state.boxes.refinementBox()
         assertNotNull(refinementBox)
         assertEquals(box.id, refinementBox!!.id)
     }
@@ -504,15 +504,15 @@ class PhotoScanWizardStateTest {
     @Test
     fun `undo restores previous state`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
-        state.selectBox(0)
+        state.boxes.addBox(box)
+        state.boxes.selectBox(0)
 
         // Move the box (pushes to undo stack)
-        state.moveSelectedBox(10.0, 0.0)
+        state.boxes.moveSelectedBox(10.0, 0.0)
         val movedBox = state.boundingBoxList.value.boxes[0]
 
         // Undo
-        state.undo()
+        state.boxes.undo()
 
         // Should be back to original position
         val undoneBox = state.boundingBoxList.value.boxes[0]
@@ -539,7 +539,7 @@ class PhotoScanWizardStateTest {
         state.setLogger(mockLogger)
 
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
         // Logger should have received the log
         val logs = mockLogger.getRecentLogs()
@@ -554,10 +554,10 @@ class PhotoScanWizardStateTest {
         state.setLogger(mockLogger)
 
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
         mockLogger.getRecentLogs().drop(0) // Clear logs from addBox
 
-        state.removeBox(0)
+        state.boxes.removeBox(0)
 
         val logs = mockLogger.getRecentLogs()
         assertTrue(logs.any { it.message.contains("Removed") || it.message.contains("Delete") })
@@ -612,12 +612,12 @@ class PhotoScanWizardStateTest {
     // WS-42: Batch state defaults
     @Test
     fun `batch state has correct defaults`() {
-        assertFalse(state.isBatchMode)
-        assertEquals(0, state.batchTotal)
-        assertTrue(state.sourceFiles.value.isEmpty())
-        assertEquals(0, state.currentImageIndex.value)
-        assertTrue(state.preProcessedCache.value.isEmpty())
-        assertFalse(state.preProcessing.value)
+        assertFalse(state.batch.isBatchMode)
+        assertEquals(0, state.batch.batchTotal)
+        assertTrue(state.batch.sourceFiles.value.isEmpty())
+        assertEquals(0, state.batch.currentImageIndex.value)
+        assertTrue(state.batch.preProcessedCache.value.isEmpty())
+        assertFalse(state.batch.preProcessing.value)
     }
 
     // WS-43: Initialize batch mode
@@ -629,14 +629,14 @@ class PhotoScanWizardStateTest {
                 java.io.File("/test/img2.jpg"),
                 java.io.File("/test/img3.jpg"),
             )
-        state.initializeBatch(files)
+        state.batch.initializeBatch(files)
 
-        assertEquals(3, state.batchTotal)
-        assertTrue(state.isBatchMode)
-        assertEquals(files, state.sourceFiles.value)
-        assertEquals(0, state.currentImageIndex.value)
-        assertTrue(state.preProcessedCache.value.isEmpty())
-        assertEquals(0, state.preProcessCount.value)
+        assertEquals(3, state.batch.batchTotal)
+        assertTrue(state.batch.isBatchMode)
+        assertEquals(files, state.batch.sourceFiles.value)
+        assertEquals(0, state.batch.currentImageIndex.value)
+        assertTrue(state.batch.preProcessedCache.value.isEmpty())
+        assertEquals(0, state.batch.preProcessCount.value)
     }
 
     // WS-44: Put and retrieve pre-processed image
@@ -645,10 +645,10 @@ class PhotoScanWizardStateTest {
         val file = java.io.File("/test/img1.jpg")
         val boxes = listOf(BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0))
 
-        state.putPreProcessed(0, PreProcessedImage(file, sampleImage, boxes))
+        state.batch.putPreProcessed(0, PreProcessedImage(file, sampleImage, boxes))
 
-        assertEquals(1, state.preProcessCount.value)
-        val cached = state.preProcessedCache.value[0]
+        assertEquals(1, state.batch.preProcessCount.value)
+        val cached = state.batch.preProcessedCache.value[0]
         assertNotNull(cached)
         assertEquals(file, cached!!.file)
         assertEquals(1, cached.boxes.size)
@@ -670,15 +670,15 @@ class PhotoScanWizardStateTest {
 
         // Set up batch and cache second image
         val files = listOf(file1, file2)
-        state.initializeBatch(files)
-        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, boxes1))
-        state.putPreProcessed(1, PreProcessedImage(file2, image2, boxes2))
+        state.batch.initializeBatch(files)
+        state.batch.putPreProcessed(0, PreProcessedImage(file1, sampleImage, boxes1))
+        state.batch.putPreProcessed(1, PreProcessedImage(file2, image2, boxes2))
 
         // Switch to second image
         val result = state.switchToImage(1)
 
         assertTrue(result)
-        assertEquals(1, state.currentImageIndex.value)
+        assertEquals(1, state.batch.currentImageIndex.value)
         assertEquals(image2, state.image.value)
         assertEquals(file2, state.imageFile.value)
         assertEquals(1, state.boundingBoxList.value.size())
@@ -691,14 +691,14 @@ class PhotoScanWizardStateTest {
         state.initializeWithImage(sampleImage, file1)
 
         val files = listOf(file1, java.io.File("/test/img2.jpg"))
-        state.initializeBatch(files)
+        state.batch.initializeBatch(files)
         // Only cache first image, not second
-        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
+        state.batch.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
 
         val result = state.switchToImage(1)
         assertFalse(result)
         // Current index should not change
-        assertEquals(0, state.currentImageIndex.value)
+        assertEquals(0, state.batch.currentImageIndex.value)
     }
 
     // WS-47: Next and prev image navigation
@@ -711,17 +711,17 @@ class PhotoScanWizardStateTest {
         state.initializeWithImage(sampleImage, file1)
 
         val files = listOf(file1, file2)
-        state.initializeBatch(files)
-        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
-        state.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
+        state.batch.initializeBatch(files)
+        state.batch.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
+        state.batch.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
 
         // Navigate forward
         assertTrue(state.nextImage())
-        assertEquals(1, state.currentImageIndex.value)
+        assertEquals(1, state.batch.currentImageIndex.value)
 
         // Navigate backward
         assertTrue(state.prevImage())
-        assertEquals(0, state.currentImageIndex.value)
+        assertEquals(0, state.batch.currentImageIndex.value)
     }
 
     // WS-48: isNextImageReady and isPrevImageReady
@@ -734,21 +734,21 @@ class PhotoScanWizardStateTest {
         state.initializeWithImage(sampleImage, file1)
 
         val files = listOf(file1, file2)
-        state.initializeBatch(files)
-        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
+        state.batch.initializeBatch(files)
+        state.batch.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
 
         // Next image not ready yet (not cached)
-        assertFalse(state.isNextImageReady)
+        assertFalse(state.batch.isNextImageReady)
         // Prev image not ready (at start)
-        assertFalse(state.isPrevImageReady)
+        assertFalse(state.batch.isPrevImageReady)
 
         // Cache second image
-        state.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
+        state.batch.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
 
         // Now next image is ready
-        assertTrue(state.isNextImageReady)
+        assertTrue(state.batch.isNextImageReady)
         // Prev still not ready (at index 0)
-        assertFalse(state.isPrevImageReady)
+        assertFalse(state.batch.isPrevImageReady)
     }
 
     // WS-49: Reset clears batch state
@@ -756,26 +756,26 @@ class PhotoScanWizardStateTest {
     fun `resetToImportStep clears batch state`() {
         val file1 = java.io.File("/test/img1.jpg")
         state.initializeWithImage(sampleImage, file1)
-        state.initializeBatch(listOf(file1, java.io.File("/test/img2.jpg")))
-        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
-        state.setPreProcessing(true)
+        state.batch.initializeBatch(listOf(file1, java.io.File("/test/img2.jpg")))
+        state.batch.putPreProcessed(0, PreProcessedImage(file1, sampleImage, emptyList()))
+        state.batch.setPreProcessing(true)
 
         state.resetToImportStep()
 
-        assertFalse(state.isBatchMode)
-        assertEquals(0, state.batchTotal)
-        assertTrue(state.preProcessedCache.value.isEmpty())
-        assertEquals(0, state.preProcessCount.value)
-        assertFalse(state.preProcessing.value)
+        assertFalse(state.batch.isBatchMode)
+        assertEquals(0, state.batch.batchTotal)
+        assertTrue(state.batch.preProcessedCache.value.isEmpty())
+        assertEquals(0, state.batch.preProcessCount.value)
+        assertFalse(state.batch.preProcessing.value)
     }
 
     // WS-50: setPreProcessing toggles state
     @Test
     fun `setPreProcessing toggles state`() {
-        state.setPreProcessing(true)
-        assertTrue(state.preProcessing.value)
-        state.setPreProcessing(false)
-        assertFalse(state.preProcessing.value)
+        state.batch.setPreProcessing(true)
+        assertTrue(state.batch.preProcessing.value)
+        state.batch.setPreProcessing(false)
+        assertFalse(state.batch.preProcessing.value)
     }
 
     // WS-51: switchToImage clears photo configurations and undo state
@@ -787,16 +787,16 @@ class PhotoScanWizardStateTest {
 
         state.initializeWithImage(sampleImage, file1)
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
         // Set some photo configuration
-        state.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
         assertTrue(state.photoConfigurations.value.isNotEmpty())
 
         val files = listOf(file1, file2)
-        state.initializeBatch(files)
-        state.putPreProcessed(0, PreProcessedImage(file1, sampleImage, listOf(box)))
-        state.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
+        state.batch.initializeBatch(files)
+        state.batch.putPreProcessed(0, PreProcessedImage(file1, sampleImage, listOf(box)))
+        state.batch.putPreProcessed(1, PreProcessedImage(file2, image2, emptyList()))
 
         // Switch to second image — should clear configurations
         state.switchToImage(1)
@@ -810,9 +810,9 @@ class PhotoScanWizardStateTest {
         val file2 = java.io.File("/test/img2.jpg")
         val file3 = java.io.File("/test/img3.jpg")
         val files = listOf(file1, file2, file3)
-        state.initializeBatch(files)
+        state.batch.initializeBatch(files)
         // After initialize, index is 0 — more images exist
-        assertTrue(state.hasMoreBatchImages)
+        assertTrue(state.batch.hasMoreBatchImages)
     }
 
     @Test
@@ -820,15 +820,15 @@ class PhotoScanWizardStateTest {
         val file1 = java.io.File("/test/img1.jpg")
         val file2 = java.io.File("/test/img2.jpg")
         val files = listOf(file1, file2)
-        state.initializeBatch(files)
+        state.batch.initializeBatch(files)
         // Advance to last image
-        state.advanceToNextBatchFile()
-        assertFalse(state.hasMoreBatchImages)
+        state.batch.advanceToNextBatchFile()
+        assertFalse(state.batch.hasMoreBatchImages)
     }
 
     @Test
     fun `hasMoreBatchImages returns false in single file mode`() {
-        assertFalse(state.hasMoreBatchImages)
+        assertFalse(state.batch.hasMoreBatchImages)
     }
 
     @Test
@@ -837,17 +837,17 @@ class PhotoScanWizardStateTest {
         val file2 = java.io.File("/test/img2.jpg")
         val file3 = java.io.File("/test/img3.jpg")
         val files = listOf(file1, file2, file3)
-        state.initializeBatch(files)
+        state.batch.initializeBatch(files)
 
-        assertEquals(0, state.currentImageIndex.value)
+        assertEquals(0, state.batch.currentImageIndex.value)
 
-        val next = state.advanceToNextBatchFile()
+        val next = state.batch.advanceToNextBatchFile()
         assertEquals(file2, next)
-        assertEquals(1, state.currentImageIndex.value)
+        assertEquals(1, state.batch.currentImageIndex.value)
 
-        val next2 = state.advanceToNextBatchFile()
+        val next2 = state.batch.advanceToNextBatchFile()
         assertEquals(file3, next2)
-        assertEquals(2, state.currentImageIndex.value)
+        assertEquals(2, state.batch.currentImageIndex.value)
     }
 
     @Test
@@ -855,12 +855,12 @@ class PhotoScanWizardStateTest {
         val file1 = java.io.File("/test/img1.jpg")
         val file2 = java.io.File("/test/img2.jpg")
         val files = listOf(file1, file2)
-        state.initializeBatch(files)
-        state.advanceToNextBatchFile() // move to index 1
+        state.batch.initializeBatch(files)
+        state.batch.advanceToNextBatchFile() // move to index 1
 
-        val result = state.advanceToNextBatchFile()
+        val result = state.batch.advanceToNextBatchFile()
         assertNull(result)
-        assertEquals(1, state.currentImageIndex.value) // index unchanged
+        assertEquals(1, state.batch.currentImageIndex.value) // index unchanged
     }
 
     @Test
@@ -869,42 +869,42 @@ class PhotoScanWizardStateTest {
         val file2 = java.io.File("/test/img2.jpg")
         val files = listOf(file1, file2)
 
-        state.initializeBatch(files)
+        state.batch.initializeBatch(files)
         val sampleImage = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
         state.initializeWithImage(sampleImage, file1)
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
-        state.addBox(box)
-        state.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.boxes.addBox(box)
+        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
 
         // Before reset: has boxes and configs
-        assertEquals(1, state.boxCount())
+        assertEquals(1, state.boxes.boxCount())
         assertTrue(state.photoConfigurations.value.isNotEmpty())
-        assertEquals(2, state.sourceFiles.value.size)
+        assertEquals(2, state.batch.sourceFiles.value.size)
 
         state.resetPerImageState()
 
         // After reset: boxes and configs cleared
-        assertEquals(0, state.boxCount())
+        assertEquals(0, state.boxes.boxCount())
         assertTrue(state.photoConfigurations.value.isEmpty())
         // But batch state is preserved
-        assertEquals(2, state.sourceFiles.value.size)
-        assertTrue(state.isBatchMode)
+        assertEquals(2, state.batch.sourceFiles.value.size)
+        assertTrue(state.batch.isBatchMode)
     }
 
     // WS-52: selectCorner should NOT reset selectedBoxIndex (overview page corner drag bug)
     @Test
     fun `selectCorner does not reset selectedBoxIndex`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
         // Select box 0 (sets selectedBoxIndex = 0)
-        state.selectBox(0)
-        assertEquals(0, state.selectedBoxIndex.value)
+        state.boxes.selectBox(0)
+        assertEquals(0, state.boxes.selectedBoxIndex.value)
 
         // Select a corner — this should NOT reset selectedBoxIndex to -1
-        state.selectCorner(Corner.TOP_LEFT)
-        assertEquals(0, state.selectedBoxIndex.value) // WAS -1 before the fix (bug!)
-        assertEquals(Corner.TOP_LEFT, state.selectedCorner.value)
+        state.boxes.selectCorner(Corner.TOP_LEFT)
+        assertEquals(0, state.boxes.selectedBoxIndex.value) // WAS -1 before the fix (bug!)
+        assertEquals(Corner.TOP_LEFT, state.boxes.selectedCorner.value)
     }
 
     // WS-53: selectCorner preserves selectedBoxIndex even without refinement mode
@@ -912,51 +912,51 @@ class PhotoScanWizardStateTest {
     fun `selectCorner preserves selectedBoxIndex without refinement mode`() {
         val box1 = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         val box2 = BoundingBox.createRectangular(Point(300.0, 100.0), 100.0, 80.0)
-        state.addBox(box1)
-        state.addBox(box2)
+        state.boxes.addBox(box1)
+        state.boxes.addBox(box2)
 
         // refinementBoxIndex is -1 (no refinement mode)
-        assertEquals(-1, state.refinementBoxIndex.value)
+        assertEquals(-1, state.boxes.refinementBoxIndex.value)
 
         // Select box 1 (not 0)
-        state.selectBox(1)
-        assertEquals(1, state.selectedBoxIndex.value)
+        state.boxes.selectBox(1)
+        assertEquals(1, state.boxes.selectedBoxIndex.value)
 
         // Select a corner — should preserve selectedBoxIndex = 1, not set it to
         // refinementBoxIndex(-1)
-        state.selectCorner(Corner.BOTTOM_RIGHT)
-        assertEquals(1, state.selectedBoxIndex.value) // WAS -1 before the fix
-        assertEquals(Corner.BOTTOM_RIGHT, state.selectedCorner.value)
+        state.boxes.selectCorner(Corner.BOTTOM_RIGHT)
+        assertEquals(1, state.boxes.selectedBoxIndex.value) // WAS -1 before the fix
+        assertEquals(Corner.BOTTOM_RIGHT, state.boxes.selectedCorner.value)
     }
 
     // WS-54: selectCorner after enterRefinement preserves selectedBoxIndex
     @Test
     fun `selectCorner after enterRefinement preserves selectedBoxIndex`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
         state.enterRefinement(0)
-        assertEquals(0, state.selectedBoxIndex.value)
-        assertEquals(0, state.refinementBoxIndex.value)
+        assertEquals(0, state.boxes.selectedBoxIndex.value)
+        assertEquals(0, state.boxes.refinementBoxIndex.value)
 
-        state.selectCorner(Corner.TOP_RIGHT)
-        assertEquals(0, state.selectedBoxIndex.value)
-        assertEquals(Corner.TOP_RIGHT, state.selectedCorner.value)
+        state.boxes.selectCorner(Corner.TOP_RIGHT)
+        assertEquals(0, state.boxes.selectedBoxIndex.value)
+        assertEquals(Corner.TOP_RIGHT, state.boxes.selectedCorner.value)
     }
 
     // WS-55: deselectCorner does not change selectedBoxIndex
     @Test
     fun `deselectCorner does not change selectedBoxIndex`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
 
-        state.selectBox(0)
-        state.selectCorner(Corner.TOP_LEFT)
-        assertEquals(0, state.selectedBoxIndex.value)
+        state.boxes.selectBox(0)
+        state.boxes.selectCorner(Corner.TOP_LEFT)
+        assertEquals(0, state.boxes.selectedBoxIndex.value)
 
-        state.deselectCorner()
-        assertEquals(0, state.selectedBoxIndex.value) // Should still be 0
-        assertNull(state.selectedCorner.value)
+        state.boxes.deselectCorner()
+        assertEquals(0, state.boxes.selectedBoxIndex.value) // Should still be 0
+        assertNull(state.boxes.selectedCorner.value)
     }
 
     // ==================== Export Settings ====================
@@ -1023,15 +1023,15 @@ class PhotoScanWizardStateTest {
 
     private fun addSampleBox(): BoundingBox {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
-        state.addBox(box)
+        state.boxes.addBox(box)
         return box
     }
 
     @Test
     fun `addFaceRegion creates default-sized region with name and type`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.5, 0.4)
-        val config = state.photoConfigurations.value[state.allBoxes[0].id]
+        state.faceRegions.addFaceRegion(0, "Alice", 0.5, 0.4)
+        val config = state.photoConfigurations.value[state.configs.boxes[0].id]
         assertNotNull(config)
         assertEquals(1, config!!.faceRegions.size)
         val region = config.faceRegions[0]
@@ -1047,8 +1047,8 @@ class PhotoScanWizardStateTest {
     @Test
     fun `addFaceRegion with type PET stores correct type`() {
         addSampleBox()
-        state.addFaceRegion(0, "Fido", 0.3, 0.5, RegionType.PET)
-        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
+        state.faceRegions.addFaceRegion(0, "Fido", 0.3, 0.5, RegionType.PET)
+        val config = state.photoConfigurations.value[state.configs.boxes[0].id]!!
         assertEquals("Pet", config.faceRegions[0].type)
         assertEquals("Fido", config.subjects)
     }
@@ -1056,25 +1056,25 @@ class PhotoScanWizardStateTest {
     @Test
     fun `addFaceRegion with type BODY stores correct type`() {
         addSampleBox()
-        state.addFaceRegion(0, "Torso", 0.3, 0.5, RegionType.BODY)
-        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
+        state.faceRegions.addFaceRegion(0, "Torso", 0.3, 0.5, RegionType.BODY)
+        val config = state.photoConfigurations.value[state.configs.boxes[0].id]!!
         assertEquals("Body", config.faceRegions[0].type)
     }
 
     @Test
     fun `addFaceRegion with type OBJECT stores correct type`() {
         addSampleBox()
-        state.addFaceRegion(0, "Car", 0.3, 0.5, RegionType.OBJECT)
-        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
+        state.faceRegions.addFaceRegion(0, "Car", 0.3, 0.5, RegionType.OBJECT)
+        val config = state.photoConfigurations.value[state.configs.boxes[0].id]!!
         assertEquals("Object", config.faceRegions[0].type)
     }
 
     @Test
     fun `addFaceRegion auto-populates subjects with multiple names`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.3, 0.3)
-        state.addFaceRegion(0, "Bob", 0.6, 0.6, RegionType.PET)
-        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
+        state.faceRegions.addFaceRegion(0, "Alice", 0.3, 0.3)
+        state.faceRegions.addFaceRegion(0, "Bob", 0.6, 0.6, RegionType.PET)
+        val config = state.photoConfigurations.value[state.configs.boxes[0].id]!!
         assertEquals("Alice, Bob", config.subjects)
         assertEquals(2, config.faceRegions.size)
     }
@@ -1082,8 +1082,8 @@ class PhotoScanWizardStateTest {
     @Test
     fun `addFaceRegion coerces coordinates to 0-1 range`() {
         addSampleBox()
-        state.addFaceRegion(0, "Edge", 1.5, -0.3)
-        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
+        state.faceRegions.addFaceRegion(0, "Edge", 1.5, -0.3)
+        val region = state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions[0]
         assertEquals(1.0, region.x)
         assertEquals(0.0, region.y)
     }
@@ -1091,8 +1091,8 @@ class PhotoScanWizardStateTest {
     @Test
     fun `addFaceRegion ignores invalid photoIndex`() {
         addSampleBox()
-        state.addFaceRegion(-1, "Nope", 0.5, 0.5)
-        state.addFaceRegion(99, "Nope", 0.5, 0.5)
+        state.faceRegions.addFaceRegion(-1, "Nope", 0.5, 0.5)
+        state.faceRegions.addFaceRegion(99, "Nope", 0.5, 0.5)
         // No crash, no face regions added
         assertTrue(state.photoConfigurations.value.isEmpty())
     }
@@ -1100,13 +1100,13 @@ class PhotoScanWizardStateTest {
     @Test
     fun `removeFaceRegion removes region and updates subjects`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.3, 0.3)
-        state.addFaceRegion(0, "Bob", 0.6, 0.6)
-        val config0 = state.photoConfigurations.value[state.allBoxes[0].id]!!
+        state.faceRegions.addFaceRegion(0, "Alice", 0.3, 0.3)
+        state.faceRegions.addFaceRegion(0, "Bob", 0.6, 0.6)
+        val config0 = state.photoConfigurations.value[state.configs.boxes[0].id]!!
         assertEquals("Alice, Bob", config0.subjects)
 
-        state.removeFaceRegion(0, 0) // Remove Alice
-        val config1 = state.photoConfigurations.value[state.allBoxes[0].id]!!
+        state.faceRegions.removeFaceRegion(0, 0) // Remove Alice
+        val config1 = state.photoConfigurations.value[state.configs.boxes[0].id]!!
         assertEquals(1, config1.faceRegions.size)
         assertEquals("Bob", config1.faceRegions[0].name)
         assertEquals("Bob", config1.subjects)
@@ -1115,9 +1115,9 @@ class PhotoScanWizardStateTest {
     @Test
     fun `removeFaceRegion removes name from subjects`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.3, 0.3)
-        state.removeFaceRegion(0, 0)
-        val config = state.photoConfigurations.value[state.allBoxes[0].id]!!
+        state.faceRegions.addFaceRegion(0, "Alice", 0.3, 0.3)
+        state.faceRegions.removeFaceRegion(0, 0)
+        val config = state.photoConfigurations.value[state.configs.boxes[0].id]!!
         assertEquals("", config.subjects)
         assertEquals(0, config.faceRegions.size)
     }
@@ -1125,9 +1125,9 @@ class PhotoScanWizardStateTest {
     @Test
     fun `updateFaceRegion changes position`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.5, 0.5)
-        state.updateFaceRegion(0, 0, x = 0.3, y = 0.7)
-        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
+        state.faceRegions.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.faceRegions.updateFaceRegion(0, 0, x = 0.3, y = 0.7)
+        val region = state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions[0]
         assertEquals(0.3, region.x)
         assertEquals(0.7, region.y)
         assertEquals("Alice", region.name) // unchanged
@@ -1136,9 +1136,9 @@ class PhotoScanWizardStateTest {
     @Test
     fun `updateFaceRegion coerces values to 0-1 range`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.5, 0.5)
-        state.updateFaceRegion(0, 0, x = 2.0, y = -1.0)
-        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
+        state.faceRegions.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.faceRegions.updateFaceRegion(0, 0, x = 2.0, y = -1.0)
+        val region = state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions[0]
         assertEquals(1.0, region.x)
         assertEquals(0.0, region.y)
     }
@@ -1146,9 +1146,9 @@ class PhotoScanWizardStateTest {
     @Test
     fun `updateFaceRegion preserves unchanged y when only x given`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.5, 0.5)
-        state.updateFaceRegion(0, 0, x = 0.3) // only change x
-        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
+        state.faceRegions.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.faceRegions.updateFaceRegion(0, 0, x = 0.3) // only change x
+        val region = state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions[0]
         assertEquals(0.3, region.x)
         assertEquals(0.5, region.y) // unchanged
     }
@@ -1156,9 +1156,9 @@ class PhotoScanWizardStateTest {
     @Test
     fun `resizeFaceRegion changes size to preset diameter`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.5, 0.5)
-        state.resizeFaceRegion(0, 0, FaceSize.LARGE)
-        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
+        state.faceRegions.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.faceRegions.resizeFaceRegion(0, 0, FaceSize.LARGE)
+        val region = state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions[0]
         assertEquals(FaceSize.LARGE.diameter, region.w)
         assertEquals(FaceSize.LARGE.diameter, region.h)
         assertEquals(0.5, region.x) // position unchanged
@@ -1168,21 +1168,21 @@ class PhotoScanWizardStateTest {
     @Test
     fun `clearAllFaceRegions removes all regions and clears subjects`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.3, 0.4)
-        state.addFaceRegion(0, "Bob", 0.6, 0.5)
-        assertEquals(2, state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions.size)
-        assertEquals("Alice, Bob", state.photoConfigurations.value[state.allBoxes[0].id]!!.subjects)
-        state.clearAllFaceRegions(0)
-        assertEquals(0, state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions.size)
-        assertEquals("", state.photoConfigurations.value[state.allBoxes[0].id]!!.subjects)
+        state.faceRegions.addFaceRegion(0, "Alice", 0.3, 0.4)
+        state.faceRegions.addFaceRegion(0, "Bob", 0.6, 0.5)
+        assertEquals(2, state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions.size)
+        assertEquals("Alice, Bob", state.photoConfigurations.value[state.configs.boxes[0].id]!!.subjects)
+        state.faceRegions.clearAllFaceRegions(0)
+        assertEquals(0, state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions.size)
+        assertEquals("", state.photoConfigurations.value[state.configs.boxes[0].id]!!.subjects)
     }
 
     @Test
     fun `moveFaceRegion offsets center position`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.5, 0.5)
-        state.moveFaceRegion(0, 0, dx = 0.1, dy = -0.2)
-        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
+        state.faceRegions.addFaceRegion(0, "Alice", 0.5, 0.5)
+        state.faceRegions.moveFaceRegion(0, 0, dx = 0.1, dy = -0.2)
+        val region = state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions[0]
         assertEquals(0.6, region.x)
         assertEquals(0.3, region.y)
         // w/h unchanged (default FaceSize.MEDIUM diameter)
@@ -1193,9 +1193,9 @@ class PhotoScanWizardStateTest {
     @Test
     fun `moveFaceRegion coerces to 0-1 range`() {
         addSampleBox()
-        state.addFaceRegion(0, "Alice", 0.9, 0.1)
-        state.moveFaceRegion(0, 0, dx = 0.5, dy = -0.5)
-        val region = state.photoConfigurations.value[state.allBoxes[0].id]!!.faceRegions[0]
+        state.faceRegions.addFaceRegion(0, "Alice", 0.9, 0.1)
+        state.faceRegions.moveFaceRegion(0, 0, dx = 0.5, dy = -0.5)
+        val region = state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions[0]
         assertEquals(1.0, region.x)
         assertEquals(0.0, region.y)
         // w/h unchanged
@@ -1222,17 +1222,17 @@ class PhotoScanWizardStateTest {
     @Test
     fun `enterFaceSelectMode sets state correctly`() {
         addSampleBox()
-        state.enterFaceSelectMode(0)
-        assertTrue(state.faceSelectMode.value)
-        assertEquals(0, state.faceSelectPhotoIndex.value)
+        state.faceRegions.enterFaceSelectMode(0)
+        assertTrue(state.faceRegions.faceSelectMode.value)
+        assertEquals(0, state.faceRegions.faceSelectPhotoIndex.value)
     }
 
     @Test
     fun `exitFaceSelectMode clears state`() {
         addSampleBox()
-        state.enterFaceSelectMode(0)
-        state.exitFaceSelectMode()
-        assertFalse(state.faceSelectMode.value)
-        assertNull(state.faceSelectPhotoIndex.value)
+        state.faceRegions.enterFaceSelectMode(0)
+        state.faceRegions.exitFaceSelectMode()
+        assertFalse(state.faceRegions.faceSelectMode.value)
+        assertNull(state.faceRegions.faceSelectPhotoIndex.value)
     }
 }

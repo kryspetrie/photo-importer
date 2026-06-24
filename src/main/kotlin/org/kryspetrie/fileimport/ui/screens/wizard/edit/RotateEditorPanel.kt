@@ -70,7 +70,7 @@ internal fun RotateEditorPanel(
                             selectedIndices.forEach { idx ->
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
+                                    state.configs.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
                                 }
                             }
                         }
@@ -82,7 +82,7 @@ internal fun RotateEditorPanel(
                             selectedIndices.forEach { idx ->
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.updatePhotoConfiguration(box.id) {
+                                    state.configs.updatePhotoConfiguration(box.id) {
                                         it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
                                     }
                                 }
@@ -96,7 +96,7 @@ internal fun RotateEditorPanel(
                             selectedIndices.forEach { idx ->
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
+                                    state.configs.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
                                 }
                             }
                         }
@@ -117,13 +117,13 @@ internal fun RotateEditorPanel(
                 RotationSection(
                     rotationDegrees = config.rotationDegrees,
                     onRotateCW = {
-                        state.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
+                        state.configs.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
                     },
                     onRotateCCW = {
-                        state.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
+                        state.configs.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
                     },
                     onRotate180 = {
-                        state.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoConfiguration(box.id) {
                             it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
                         }
                     },

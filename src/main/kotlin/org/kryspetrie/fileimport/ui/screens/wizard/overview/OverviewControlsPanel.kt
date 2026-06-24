@@ -140,7 +140,7 @@ private fun ActionButtonsRow(
             IconButton(
                 onClick = {
                     val prevIndex = (selectedBoxIndex - 1 + boxCount) % boxCount
-                    state.selectBox(prevIndex)
+                    state.boxes.selectBox(prevIndex)
                     state.fitToSelectedBox(viewportWidth, viewportHeight)
                     refocus()
                 },
@@ -156,7 +156,7 @@ private fun ActionButtonsRow(
             IconButton(
                 onClick = {
                     val nextIndex = (selectedBoxIndex + 1) % boxCount
-                    state.selectBox(nextIndex)
+                    state.boxes.selectBox(nextIndex)
                     state.fitToSelectedBox(viewportWidth, viewportHeight)
                     refocus()
                 },
@@ -169,7 +169,7 @@ private fun ActionButtonsRow(
             // Undo / Redo
             IconButton(
                 onClick = {
-                    state.undo()
+                    state.boxes.undo()
                     refocus()
                 },
                 modifier = Modifier.size(32.dp),
@@ -178,7 +178,7 @@ private fun ActionButtonsRow(
             }
             IconButton(
                 onClick = {
-                    state.redo()
+                    state.boxes.redo()
                     refocus()
                 },
                 modifier = Modifier.size(32.dp),
@@ -241,7 +241,7 @@ fun OverviewControlsPanel(
     viewportWidth: Double = 800.0,
     viewportHeight: Double = 600.0,
 ) {
-    val selectedCorner by state.selectedCorner.collectAsState()
+    val selectedCorner by state.boxes.selectedCorner.collectAsState()
 
     Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {

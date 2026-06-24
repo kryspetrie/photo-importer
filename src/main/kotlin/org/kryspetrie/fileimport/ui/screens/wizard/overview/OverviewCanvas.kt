@@ -43,7 +43,7 @@ fun OverviewCanvas(
     onBoxRejected: () -> Unit,
 ) {
     val boundingBoxList by state.boundingBoxList.collectAsState()
-    val selectedBoxIndex by state.selectedBoxIndex.collectAsState()
+    val selectedBoxIndex by state.boxes.selectedBoxIndex.collectAsState()
     val zoomController by state.zoomController.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
 
@@ -126,19 +126,19 @@ private fun canvasPointerHandler(
                             val cornerHit = findCornerHit(pos, boundingBoxList, zoomController)
                             if (cornerHit != null) {
                                 // Select the box and start dragging the corner
-                                state.selectBox(cornerHit.first)
-                                state.selectCorner(cornerHit.second)
+                                state.boxes.selectBox(cornerHit.first)
+                                state.boxes.selectCorner(cornerHit.second)
                                 // Save one undo snapshot before the drag starts
-                                state.saveBoxUndoSnapshot(cornerHit.first)
+                                state.boxes.saveBoxUndoSnapshot(cornerHit.first)
                                 draggedCorner = cornerHit.second
                                 isCornerDrag = true
                             } else {
                                 // Check if pressing inside a box
                                 val boxHit = findBoxHit(pos, boundingBoxList, zoomController)
                                 if (boxHit >= 0) {
-                                    state.selectBox(boxHit)
+                                    state.boxes.selectBox(boxHit)
                                     // Save one undo snapshot before the drag starts
-                                    state.saveBoxUndoSnapshot(boxHit)
+                                    state.boxes.saveBoxUndoSnapshot(boxHit)
                                     isPhotoDrag = true
                                     draggedBoxIndex = boxHit
                                 }
@@ -158,7 +158,7 @@ private fun canvasPointerHandler(
                             }
 
                             val zoomController = state.zoomController.value
-                            val currentBoxIndex = state.selectedBoxIndex.value
+                            val currentBoxIndex = state.boxes.selectedBoxIndex.value
                             when {
                                 isCornerDrag && draggedCorner != null && currentBoxIndex >= 0 -> {
                                     val screenPos =
@@ -167,7 +167,7 @@ private fun canvasPointerHandler(
                                             pos.y.toDouble(),
                                         )
                                     // Use withoutUndo variant — undo was saved on Press
-                                    state.moveCornerWithoutUndo(
+                                    state.boxes.moveCornerWithoutUndo(
                                         currentBoxIndex,
                                         draggedCorner,
                                         screenPos.x,
@@ -178,7 +178,7 @@ private fun canvasPointerHandler(
                                     val deltaX = (pos.x - lastDragPos.x) / zoomController.zoom
                                     val deltaY = (pos.y - lastDragPos.y) / zoomController.zoom
                                     // Use withoutUndo variant — undo was saved on Press
-                                    state.moveSelectedBoxWithoutUndo(deltaX, deltaY)
+                                    state.boxes.moveSelectedBoxWithoutUndo(deltaX, deltaY)
                                 }
                                 else -> {
                                     val deltaX = (pos.x - lastDragPos.x).toDouble()
@@ -216,8 +216,8 @@ private fun canvasPointerHandler(
                                                     zoomController,
                                                 )
                                             if (cornerHit != null) {
-                                                state.selectBox(cornerHit.first)
-                                                state.selectCorner(cornerHit.second)
+                                                state.boxes.selectBox(cornerHit.first)
+                                                state.boxes.selectCorner(cornerHit.second)
                                             } else {
                                                 val boxHit =
                                                     findBoxHit(
@@ -226,9 +226,9 @@ private fun canvasPointerHandler(
                                                         zoomController,
                                                     )
                                                 if (boxHit >= 0) {
-                                                    state.selectBox(boxHit)
+                                                    state.boxes.selectBox(boxHit)
                                                 } else {
-                                                    state.deselectAll()
+                                                    state.boxes.deselectAll()
                                                 }
                                             }
                                         }
@@ -252,17 +252,17 @@ private fun canvasPointerHandler(
                                 isShiftHeld() && hoveredBoxIndex >= 0 -> {
                                     // Shift+scroll over box: rotate the box around its center
                                     val rotationStep = 2.0 // degrees per scroll tick
-                                    state.selectBox(hoveredBoxIndex)
+                                    state.boxes.selectBox(hoveredBoxIndex)
                                     if (scrollDelta.y < 0) {
-                                        state.rotateSelectedBox(-rotationStep)
+                                        state.boxes.rotateSelectedBox(-rotationStep)
                                     } else {
-                                        state.rotateSelectedBox(rotationStep)
+                                        state.boxes.rotateSelectedBox(rotationStep)
                                     }
                                 }
-                                hoveredBoxIndex >= 0 && state.selectedBoxIndex.value >= 0 -> {
+                                hoveredBoxIndex >= 0 && state.boxes.selectedBoxIndex.value >= 0 -> {
                                     // Scroll over box (no shift): expand/contract the selected box
                                     val scaleFactor = if (scrollDelta.y < 0) 1.05 else 0.95
-                                    state.expandSelectedBox(scaleFactor)
+                                    state.boxes.expandSelectedBox(scaleFactor)
                                 }
                                 else -> {
                                     // Scroll on empty space: zoom

@@ -71,7 +71,7 @@ fun OverviewScreen(
     val wizardMode by state.wizardMode.collectAsState()
     val fourPointState by state.fourPointState.collectAsState()
     val boundingBoxList by state.boundingBoxList.collectAsState()
-    val selectedBoxIndex by state.selectedBoxIndex.collectAsState()
+    val selectedBoxIndex by state.boxes.selectedBoxIndex.collectAsState()
     val zoomController by state.zoomController.collectAsState()
     val image by state.image.collectAsState()
 

@@ -166,7 +166,7 @@ suspend fun exportPhotos(
     isLoading(true)
 
     try {
-        val boxes = state.allBoxes
+        val boxes = state.configs.boxes
         val configurations = state.photoConfigurations.value
 
         appLogger.logOperationStart(

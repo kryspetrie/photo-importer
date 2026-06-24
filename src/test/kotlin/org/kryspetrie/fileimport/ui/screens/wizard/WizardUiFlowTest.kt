@@ -67,7 +67,7 @@ class WizardUiFlowTest {
         state.initializeWithImage(image, File("test-scan.jpg"))
 
         repeat(boxCount) { i ->
-            state.addBox(createTestBox(x = 100.0 + i * 250.0, y = 100.0))
+            state.boxes.addBox(createTestBox(x = 100.0 + i * 250.0, y = 100.0))
         }
         return state
     }
@@ -106,7 +106,7 @@ class WizardUiFlowTest {
 
             composeTestRule.onNodeWithText("1 box(es)").assertIsDisplayed()
 
-            wizardState.addBox(createTestBox(x = 400.0, y = 100.0))
+            wizardState.boxes.addBox(createTestBox(x = 400.0, y = 100.0))
 
             composeTestRule.onNodeWithText("2 box(es)").assertIsDisplayed()
         }
@@ -623,7 +623,7 @@ class WizardUiFlowTest {
             wizardState = setUpWizardWithBoxes()
             testImage = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(testImage, File("test-refinement.jpg"))
-            wizardState.selectBox(0)
+            wizardState.boxes.selectBox(0)
             wizardState.enterRefinement(0)
         }
 

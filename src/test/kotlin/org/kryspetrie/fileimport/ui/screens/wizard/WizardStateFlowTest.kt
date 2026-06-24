@@ -61,7 +61,7 @@ class WizardStateFlowTest {
         state.initializeWithImage(image, File("test-scan.jpg"))
 
         repeat(boxCount) { i ->
-            state.addBox(createTestBox(x = 100.0 + i * 250.0, y = 100.0))
+            state.boxes.addBox(createTestBox(x = 100.0 + i * 250.0, y = 100.0))
         }
         return state
     }
@@ -78,7 +78,7 @@ class WizardStateFlowTest {
         @DisplayName("should start at IMPORT step")
         fun shouldStartAtImportStep() {
             val state = PhotoScanWizardState()
-            assertThat(state.currentStep.value)
+            assertThat(state.navigation.currentStep.value)
                 .isEqualTo(WizardStep.IMPORT)
         }
 
@@ -90,7 +90,7 @@ class WizardStateFlowTest {
             state.initializeWithImage(image, File("test.jpg"))
             state.goToOverview()
 
-            assertThat(state.currentStep.value)
+            assertThat(state.navigation.currentStep.value)
                 .isEqualTo(WizardStep.OVERVIEW)
         }
 
@@ -99,9 +99,9 @@ class WizardStateFlowTest {
         fun shouldTransitionToSummary() {
             val state = createWizardWithBoxes()
             state.goToOverview()
-            state.goToSummary()
+            state.navigation.goToSummary()
 
-            assertThat(state.currentStep.value)
+            assertThat(state.navigation.currentStep.value)
                 .isEqualTo(WizardStep.SUMMARY)
         }
 
@@ -110,10 +110,10 @@ class WizardStateFlowTest {
         fun shouldTransitionToEdit() {
             val state = createWizardWithBoxes()
             state.goToOverview()
-            state.goToSummary()
-            state.goToEdit()
+            state.navigation.goToSummary()
+            state.navigation.goToEdit()
 
-            assertThat(state.currentStep.value)
+            assertThat(state.navigation.currentStep.value)
                 .isEqualTo(WizardStep.EDIT)
         }
 
@@ -122,11 +122,11 @@ class WizardStateFlowTest {
         fun shouldTransitionToProcessing() {
             val state = createWizardWithBoxes()
             state.goToOverview()
-            state.goToSummary()
-            state.goToEdit()
-            state.goToProcessing()
+            state.navigation.goToSummary()
+            state.navigation.goToEdit()
+            state.navigation.goToProcessing()
 
-            assertThat(state.currentStep.value)
+            assertThat(state.navigation.currentStep.value)
                 .isEqualTo(WizardStep.PROCESSING)
         }
 
@@ -135,12 +135,12 @@ class WizardStateFlowTest {
         fun shouldTransitionToComplete() {
             val state = createWizardWithBoxes()
             state.goToOverview()
-            state.goToSummary()
-            state.goToEdit()
-            state.goToProcessing()
-            state.goToComplete()
+            state.navigation.goToSummary()
+            state.navigation.goToEdit()
+            state.navigation.goToProcessing()
+            state.navigation.goToComplete()
 
-            assertThat(state.currentStep.value)
+            assertThat(state.navigation.currentStep.value)
                 .isEqualTo(WizardStep.COMPLETE)
         }
 
@@ -150,19 +150,19 @@ class WizardStateFlowTest {
             val state = createWizardWithBoxes()
 
             state.goToOverview()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
 
-            state.goToSummary()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.SUMMARY)
+            state.navigation.goToSummary()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.SUMMARY)
 
-            state.goToEdit()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.EDIT)
+            state.navigation.goToEdit()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.EDIT)
 
-            state.goToProcessing()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.PROCESSING)
+            state.navigation.goToProcessing()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.PROCESSING)
 
-            state.goToComplete()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.COMPLETE)
+            state.navigation.goToComplete()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.COMPLETE)
         }
 
         @Test
@@ -171,13 +171,13 @@ class WizardStateFlowTest {
             val state = createWizardWithBoxes()
 
             state.goToOverview()
-            state.goToSummary()
-            state.goToEdit()
-            state.goToProcessing()
-            state.goToComplete()
+            state.navigation.goToSummary()
+            state.navigation.goToEdit()
+            state.navigation.goToProcessing()
+            state.navigation.goToComplete()
 
             state.resetToImportStep()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.IMPORT)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.IMPORT)
             assertThat(state.image.value).isNull()
         }
 
@@ -186,11 +186,11 @@ class WizardStateFlowTest {
         fun shouldGoBackFromSummaryToOverview() {
             val state = createWizardWithBoxes()
             state.goToOverview()
-            state.goToSummary()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.SUMMARY)
+            state.navigation.goToSummary()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.SUMMARY)
 
             state.goToOverview()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
         }
 
         @Test
@@ -198,12 +198,12 @@ class WizardStateFlowTest {
         fun shouldGoBackFromEditToSummary() {
             val state = createWizardWithBoxes()
             state.goToOverview()
-            state.goToSummary()
-            state.goToEdit()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.EDIT)
+            state.navigation.goToSummary()
+            state.navigation.goToEdit()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.EDIT)
 
-            state.goToSummary()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.SUMMARY)
+            state.navigation.goToSummary()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.SUMMARY)
         }
 
         @Test
@@ -241,7 +241,7 @@ class WizardStateFlowTest {
         fun shouldSetAndRetrievePerPhotoConfiguration() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.setPhotoConfiguration(boxId, PhotoConfiguration(rotationDegrees = 90))
+            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration(rotationDegrees = 90))
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(90)
         }
@@ -250,9 +250,9 @@ class WizardStateFlowTest {
         @DisplayName("should update existing configuration")
         fun shouldUpdateExistingConfiguration() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
-            wizardState.setPhotoConfiguration(boxId, PhotoConfiguration())
+            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration())
 
-            wizardState.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 45) }
+            wizardState.configs.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 45) }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(45)
         }
@@ -261,11 +261,11 @@ class WizardStateFlowTest {
         @DisplayName("should rotate box clockwise via configuration")
         fun shouldRotateBoxClockwiseViaConfiguration() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
-            wizardState.setPhotoConfiguration(boxId, PhotoConfiguration())
+            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration())
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(0)
 
-            wizardState.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 90) }
+            wizardState.configs.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 90) }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(90)
         }
@@ -276,11 +276,11 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.setPhotoConfiguration(
+            wizardState.configs.setPhotoConfiguration(
                 box1Id,
                 PhotoConfiguration(rotationDegrees = 90, correctionStrategy = CorrectionStrategy.CROP),
             )
-            wizardState.setPhotoConfiguration(
+            wizardState.configs.setPhotoConfiguration(
                 box2Id,
                 PhotoConfiguration(rotationDegrees = 180, correctionStrategy = CorrectionStrategy.PERSPECTIVE),
             )
@@ -298,11 +298,11 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.setPhotoConfiguration(box1Id, PhotoConfiguration(rotationDegrees = 90))
-            wizardState.setPhotoConfiguration(box2Id, PhotoConfiguration(rotationDegrees = 180))
+            wizardState.configs.setPhotoConfiguration(box1Id, PhotoConfiguration(rotationDegrees = 90))
+            wizardState.configs.setPhotoConfiguration(box2Id, PhotoConfiguration(rotationDegrees = 180))
             assertThat(wizardState.photoConfigurations.value).hasSize(2)
 
-            wizardState.clearAllConfigurations()
+            wizardState.configs.clearAllConfigurations()
             assertThat(wizardState.photoConfigurations.value).isEmpty()
         }
 
@@ -312,10 +312,10 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.setPhotoConfiguration(box1Id, PhotoConfiguration(rotationDegrees = 0))
-            wizardState.setPhotoConfiguration(box2Id, PhotoConfiguration(rotationDegrees = 90))
+            wizardState.configs.setPhotoConfiguration(box1Id, PhotoConfiguration(rotationDegrees = 0))
+            wizardState.configs.setPhotoConfiguration(box2Id, PhotoConfiguration(rotationDegrees = 90))
 
-            wizardState.rotateAllBoxesCW()
+            wizardState.configs.rotateAllBoxesCW()
 
             val configs = wizardState.photoConfigurations.value
             assertThat(configs[box1Id]?.rotationDegrees).isEqualTo(90)
@@ -381,7 +381,7 @@ class WizardStateFlowTest {
         fun shouldSetPerPhotoCorrectionStrategyOverride() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.setPhotoConfiguration(
+            wizardState.configs.setPhotoConfiguration(
                 boxId,
                 PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP_AND_ROTATE),
             )
@@ -395,14 +395,14 @@ class WizardStateFlowTest {
         fun shouldClearPerPhotoCorrectionStrategy() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.setPhotoConfiguration(
+            wizardState.configs.setPhotoConfiguration(
                 boxId,
                 PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP),
             )
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy)
                 .isEqualTo(CorrectionStrategy.CROP)
 
-            wizardState.setPhotoConfiguration(boxId, PhotoConfiguration(correctionStrategy = null))
+            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration(correctionStrategy = null))
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy).isNull()
         }
 
@@ -412,11 +412,11 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.setPhotoConfiguration(
+            wizardState.configs.setPhotoConfiguration(
                 box1Id,
                 PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP),
             )
-            wizardState.setPhotoConfiguration(
+            wizardState.configs.setPhotoConfiguration(
                 box2Id,
                 PhotoConfiguration(correctionStrategy = CorrectionStrategy.PERSPECTIVE),
             )
@@ -432,7 +432,7 @@ class WizardStateFlowTest {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
             wizardState.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
-            wizardState.setPhotoConfiguration(boxId, PhotoConfiguration(correctionStrategy = null))
+            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration(correctionStrategy = null))
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy).isNull()
             assertThat(wizardState.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP)
@@ -444,7 +444,7 @@ class WizardStateFlowTest {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
             wizardState.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
-            wizardState.setPhotoConfiguration(
+            wizardState.configs.setPhotoConfiguration(
                 boxId,
                 PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP),
             )
@@ -483,75 +483,75 @@ class WizardStateFlowTest {
         fun shouldAddBoxesAndTrackCount() {
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(0)
 
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(1)
 
-            wizardState.addBox(createTestBox(x = 400.0))
+            wizardState.boxes.addBox(createTestBox(x = 400.0))
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(2)
         }
 
         @Test
         @DisplayName("should select and deselect boxes")
         fun shouldSelectAndDeselectBoxes() {
-            wizardState.addBox(createTestBox())
-            wizardState.addBox(createTestBox(x = 400.0))
+            wizardState.boxes.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox(x = 400.0))
 
-            assertThat(wizardState.selectedBoxIndex.value).isEqualTo(-1)
+            assertThat(wizardState.boxes.selectedBoxIndex.value).isEqualTo(-1)
 
-            wizardState.selectBox(0)
-            assertThat(wizardState.selectedBoxIndex.value).isEqualTo(0)
+            wizardState.boxes.selectBox(0)
+            assertThat(wizardState.boxes.selectedBoxIndex.value).isEqualTo(0)
 
-            wizardState.selectBox(1)
-            assertThat(wizardState.selectedBoxIndex.value).isEqualTo(1)
+            wizardState.boxes.selectBox(1)
+            assertThat(wizardState.boxes.selectedBoxIndex.value).isEqualTo(1)
 
-            wizardState.deselectAll()
-            assertThat(wizardState.selectedBoxIndex.value).isEqualTo(-1)
+            wizardState.boxes.deselectAll()
+            assertThat(wizardState.boxes.selectedBoxIndex.value).isEqualTo(-1)
         }
 
         @Test
         @DisplayName("should enter and exit refinement mode")
         fun shouldEnterAndExitRefinementMode() {
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
 
             wizardState.enterRefinement(0)
-            assertThat(wizardState.refinementBoxIndex.value).isEqualTo(0)
+            assertThat(wizardState.boxes.refinementBoxIndex.value).isEqualTo(0)
 
             wizardState.exitRefinement()
-            assertThat(wizardState.refinementBoxIndex.value).isEqualTo(-1)
+            assertThat(wizardState.boxes.refinementBoxIndex.value).isEqualTo(-1)
         }
 
         @Test
         @DisplayName("should navigate boxes in refinement mode")
         fun shouldNavigateBoxesInRefinementMode() {
-            wizardState.addBox(createTestBox(x = 10.0, y = 10.0, width = 100.0, height = 80.0))
-            wizardState.addBox(createTestBox(x = 250.0, y = 10.0, width = 100.0, height = 80.0))
-            wizardState.addBox(createTestBox(x = 500.0, y = 10.0, width = 100.0, height = 80.0))
+            wizardState.boxes.addBox(createTestBox(x = 10.0, y = 10.0, width = 100.0, height = 80.0))
+            wizardState.boxes.addBox(createTestBox(x = 250.0, y = 10.0, width = 100.0, height = 80.0))
+            wizardState.boxes.addBox(createTestBox(x = 500.0, y = 10.0, width = 100.0, height = 80.0))
 
             wizardState.enterRefinement(0)
-            assertThat(wizardState.refinementBoxIndex.value).isEqualTo(0)
+            assertThat(wizardState.boxes.refinementBoxIndex.value).isEqualTo(0)
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(3)
 
             // nextBox() cycles through boxes using modular arithmetic
             wizardState.nextBox()
-            assertThat(wizardState.refinementBoxIndex.value).isEqualTo(1)
+            assertThat(wizardState.boxes.refinementBoxIndex.value).isEqualTo(1)
 
             // previousBox() goes back
             wizardState.previousBox()
-            assertThat(wizardState.refinementBoxIndex.value).isEqualTo(0)
+            assertThat(wizardState.boxes.refinementBoxIndex.value).isEqualTo(0)
 
             // Wrapping behavior: previousBox from 0 goes to last box
             wizardState.previousBox()
-            assertThat(wizardState.refinementBoxIndex.value).isEqualTo(2)
+            assertThat(wizardState.boxes.refinementBoxIndex.value).isEqualTo(2)
         }
 
         @Test
         @DisplayName("should remove box by index")
         fun shouldRemoveBoxByIndex() {
-            wizardState.addBox(createTestBox())
-            wizardState.addBox(createTestBox(x = 400.0))
+            wizardState.boxes.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox(x = 400.0))
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(2)
 
-            wizardState.removeBox(0)
+            wizardState.boxes.removeBox(0)
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(1)
         }
 
@@ -651,11 +651,11 @@ class WizardStateFlowTest {
             val state = PhotoScanWizardState()
             val files = listOf(File("photo1.jpg"), File("photo2.jpg"), File("photo3.jpg"))
 
-            state.initializeBatch(files)
+            state.batch.initializeBatch(files)
 
-            assertThat(state.isBatchMode).isTrue()
-            assertThat(state.batchTotal).isEqualTo(3)
-            assertThat(state.currentImageIndex.value).isEqualTo(0)
+            assertThat(state.batch.isBatchMode).isTrue()
+            assertThat(state.batch.batchTotal).isEqualTo(3)
+            assertThat(state.batch.currentImageIndex.value).isEqualTo(0)
         }
 
         @Test
@@ -664,8 +664,8 @@ class WizardStateFlowTest {
             val state = PhotoScanWizardState()
             val files = listOf(File("photo1.jpg"), File("photo2.jpg"), File("photo3.jpg"))
 
-            state.initializeBatch(files)
-            assertThat(state.hasMoreBatchImages).isTrue()
+            state.batch.initializeBatch(files)
+            assertThat(state.batch.hasMoreBatchImages).isTrue()
         }
 
         @Test
@@ -674,11 +674,11 @@ class WizardStateFlowTest {
             val state = PhotoScanWizardState()
             val files = listOf(File("photo1.jpg"), File("photo2.jpg"), File("photo3.jpg"))
 
-            state.initializeBatch(files)
-            assertThat(state.currentImageIndex.value).isEqualTo(0)
+            state.batch.initializeBatch(files)
+            assertThat(state.batch.currentImageIndex.value).isEqualTo(0)
 
-            state.advanceToNextBatchFile()
-            assertThat(state.currentImageIndex.value).isEqualTo(1)
+            state.batch.advanceToNextBatchFile()
+            assertThat(state.batch.currentImageIndex.value).isEqualTo(1)
         }
 
         @Test
@@ -687,10 +687,10 @@ class WizardStateFlowTest {
             val state = PhotoScanWizardState()
             val files = listOf(File("photo1.jpg"), File("photo2.jpg"), File("photo3.jpg"))
 
-            state.initializeBatch(files)
-            state.skipNextBatchFile()
+            state.batch.initializeBatch(files)
+            state.batch.skipNextBatchFile()
 
-            assertThat(state.skippedBatchIndices.value).contains(1)
+            assertThat(state.batch.skippedBatchIndices.value).contains(1)
         }
     }
 
@@ -711,11 +711,11 @@ class WizardStateFlowTest {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             state.initializeWithImage(image, File("family-photo.jpg"))
             state.goToOverview()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
 
             // 2. DETECT: Simulate CV detection — add boxes
-            state.addBox(createTestBox(x = 50.0, y = 50.0, width = 300.0, height = 200.0))
-            state.addBox(createTestBox(x = 400.0, y = 50.0, width = 300.0, height = 200.0))
+            state.boxes.addBox(createTestBox(x = 50.0, y = 50.0, width = 300.0, height = 200.0))
+            state.boxes.addBox(createTestBox(x = 400.0, y = 50.0, width = 300.0, height = 200.0))
             assertThat(state.boundingBoxList.value.size()).isEqualTo(2)
 
             // 3. CONFIGURE: Set per-photo strategies and rotations
@@ -723,41 +723,41 @@ class WizardStateFlowTest {
             val box2Id = state.boundingBoxList.value.boxes[1].id
 
             state.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
-            state.setPhotoConfiguration(box1Id, PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP))
-            state.updatePhotoConfiguration(box2Id) { it.copy(rotationDegrees = 90) }
+            state.configs.setPhotoConfiguration(box1Id, PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP))
+            state.configs.updatePhotoConfiguration(box2Id) { it.copy(rotationDegrees = 90) }
 
             assertThat(state.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.PERSPECTIVE)
             assertThat(state.photoConfigurations.value[box1Id]?.correctionStrategy).isEqualTo(CorrectionStrategy.CROP)
             assertThat(state.photoConfigurations.value[box2Id]?.rotationDegrees).isEqualTo(90)
 
             // 4. NAVIGATE: Overview → Summary
-            state.goToSummary()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.SUMMARY)
+            state.navigation.goToSummary()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.SUMMARY)
 
             // 5. CONFIGURE MORE: Rotate all, change strategy
-            state.rotateAllBoxesCW()
+            state.configs.rotateAllBoxesCW()
             state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
 
             assertThat(state.photoConfigurations.value[box1Id]?.rotationDegrees).isEqualTo(90)
             assertThat(state.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP_AND_ROTATE)
 
             // 6. NAVIGATE: Summary → Edit
-            state.goToEdit()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.EDIT)
+            state.navigation.goToEdit()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.EDIT)
 
             // 7. NAVIGATE: Edit → Processing → Complete
-            state.goToProcessing()
-            state.goToComplete()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.COMPLETE)
+            state.navigation.goToProcessing()
+            state.navigation.goToComplete()
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.COMPLETE)
 
             // 8. Verify batch info
-            assertThat(state.boxCount()).isEqualTo(2)
+            assertThat(state.boxes.boxCount()).isEqualTo(2)
             assertThat(state.imageFile.value).isNotNull()
             assertThat(state.imageFile.value?.name).isEqualTo("family-photo.jpg")
 
             // 9. RESET: Back to start
             state.resetToImportStep()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.IMPORT)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.IMPORT)
             assertThat(state.image.value).isNull()
             assertThat(state.boundingBoxList.value.size()).isEqualTo(0)
             assertThat(state.photoConfigurations.value).isEmpty()
@@ -769,25 +769,25 @@ class WizardStateFlowTest {
             val state = PhotoScanWizardState()
             val files = listOf(File("photo1.jpg"), File("photo2.jpg"), File("photo3.jpg"))
 
-            state.initializeBatch(files)
+            state.batch.initializeBatch(files)
 
-            assertThat(state.isBatchMode).isTrue()
-            assertThat(state.batchTotal).isEqualTo(3)
-            assertThat(state.currentImageIndex.value).isEqualTo(0)
-            assertThat(state.hasMoreBatchImages).isTrue()
+            assertThat(state.batch.isBatchMode).isTrue()
+            assertThat(state.batch.batchTotal).isEqualTo(3)
+            assertThat(state.batch.currentImageIndex.value).isEqualTo(0)
+            assertThat(state.batch.hasMoreBatchImages).isTrue()
 
             // Advance to next batch image (0 -> 1)
-            state.advanceToNextBatchFile()
-            assertThat(state.currentImageIndex.value).isEqualTo(1)
-            assertThat(state.hasMoreBatchImages).isTrue() // index 1 < size-1=2
+            state.batch.advanceToNextBatchFile()
+            assertThat(state.batch.currentImageIndex.value).isEqualTo(1)
+            assertThat(state.batch.hasMoreBatchImages).isTrue() // index 1 < size-1=2
 
             // Skip next image: skips index 2, and also advances to it
-            state.skipNextBatchFile()
-            assertThat(state.skippedBatchIndices.value).contains(2)
+            state.batch.skipNextBatchFile()
+            assertThat(state.batch.skippedBatchIndices.value).contains(2)
             // After skip, currentImageIndex has advanced past the skipped image
-            assertThat(state.currentImageIndex.value).isEqualTo(2)
+            assertThat(state.batch.currentImageIndex.value).isEqualTo(2)
             // At last image, no more batch images
-            assertThat(state.hasMoreBatchImages).isFalse()
+            assertThat(state.batch.hasMoreBatchImages).isFalse()
         }
 
         @Test
@@ -800,7 +800,7 @@ class WizardStateFlowTest {
             assertThat(state.singlePhotoMode.value).isTrue()
             assertThat(state.image.value).isNotNull()
             assertThat(state.boundingBoxList.value.size()).isEqualTo(1)
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.EDIT)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.EDIT)
 
             state.resetToImportStep()
             assertThat(state.image.value).isNull()

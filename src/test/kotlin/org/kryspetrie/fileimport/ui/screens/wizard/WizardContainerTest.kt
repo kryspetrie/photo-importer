@@ -50,7 +50,7 @@ class WizardContainerTest {
         @DisplayName("should have correct initial wizard step")
         fun shouldHaveCorrectInitialStep() {
             val state = PhotoScanWizardState()
-            assertThat(state.currentStep.value).isEqualTo(WizardStep.IMPORT)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.IMPORT)
         }
     }
 
@@ -62,7 +62,7 @@ class WizardContainerTest {
         @DisplayName("should reset to import step")
         fun shouldResetToImportStep() {
             wizardState.resetToImportStep()
-            assertThat(wizardState.currentStep.value)
+            assertThat(wizardState.navigation.currentStep.value)
                 .isEqualTo(WizardStep.IMPORT)
         }
     }
@@ -128,7 +128,7 @@ class WizardContainerTest {
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
 
             val box = createTestBox()
-            wizardState.addBox(box)
+            wizardState.boxes.addBox(box)
 
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(1)
         }
@@ -139,10 +139,10 @@ class WizardContainerTest {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
 
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(1)
 
-            wizardState.removeBox(0)
+            wizardState.boxes.removeBox(0)
             assertThat(wizardState.boundingBoxList.value.size()).isEqualTo(0)
         }
 
@@ -151,11 +151,11 @@ class WizardContainerTest {
         fun shouldSelectBox() {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
 
-            wizardState.selectBox(0)
+            wizardState.boxes.selectBox(0)
 
-            assertThat(wizardState.selectedBoxIndex.value).isEqualTo(0)
+            assertThat(wizardState.boxes.selectedBoxIndex.value).isEqualTo(0)
         }
 
         @Test
@@ -163,12 +163,12 @@ class WizardContainerTest {
         fun shouldDeselectAll() {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
-            wizardState.addBox(createTestBox())
-            wizardState.selectBox(0)
+            wizardState.boxes.addBox(createTestBox())
+            wizardState.boxes.selectBox(0)
 
-            wizardState.deselectAll()
+            wizardState.boxes.deselectAll()
 
-            assertThat(wizardState.selectedBoxIndex.value).isEqualTo(-1)
+            assertThat(wizardState.boxes.selectedBoxIndex.value).isEqualTo(-1)
         }
 
         @Test
@@ -177,7 +177,7 @@ class WizardContainerTest {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
 
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
 
             // Verify box was added - the count should increase
             assertThat(wizardState.boundingBoxList.value.size()).isGreaterThan(0)
@@ -189,9 +189,9 @@ class WizardContainerTest {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
 
-            wizardState.addBox(createTestBox(100.0, 100.0))
-            wizardState.addBox(createTestBox(400.0, 100.0))
-            wizardState.addBox(createTestBox(100.0, 400.0))
+            wizardState.boxes.addBox(createTestBox(100.0, 100.0))
+            wizardState.boxes.addBox(createTestBox(400.0, 100.0))
+            wizardState.boxes.addBox(createTestBox(100.0, 400.0))
 
             // Verify multiple boxes were added
             assertThat(wizardState.boundingBoxList.value.size()).isGreaterThan(1)
@@ -203,9 +203,9 @@ class WizardContainerTest {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
 
-            wizardState.addBox(createTestBox())
-            wizardState.addBox(createTestBox())
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
 
             // Verify count is greater than zero
             assertThat(wizardState.boundingBoxList.value.size()).isGreaterThan(0)
@@ -308,12 +308,12 @@ class WizardContainerTest {
         fun shouldSetPhotoConfiguration() {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
 
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
             val config =
                 PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 90)
-            wizardState.setPhotoConfiguration(boxId, config)
+            wizardState.configs.setPhotoConfiguration(boxId, config)
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.perspectiveCorrectionEnabled)
                 .isFalse()
@@ -325,12 +325,12 @@ class WizardContainerTest {
         fun shouldUpdateExistingConfiguration() {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
 
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
-            wizardState.setPhotoConfiguration(boxId, PhotoConfiguration())
+            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration())
 
-            wizardState.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 45) }
+            wizardState.configs.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 45) }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(45)
         }
@@ -340,11 +340,11 @@ class WizardContainerTest {
         fun shouldClearSpecificConfiguration() {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
-            wizardState.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox())
 
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
-            wizardState.setPhotoConfiguration(boxId, PhotoConfiguration())
-            wizardState.clearPhotoConfiguration(boxId)
+            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration())
+            wizardState.configs.clearPhotoConfiguration(boxId)
 
             assertThat(wizardState.photoConfigurations.value).doesNotContainKey(boxId)
         }
@@ -354,15 +354,15 @@ class WizardContainerTest {
         fun shouldClearAllConfigurations() {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
-            wizardState.addBox(createTestBox())
-            wizardState.addBox(createTestBox(400.0, 100.0))
+            wizardState.boxes.addBox(createTestBox())
+            wizardState.boxes.addBox(createTestBox(400.0, 100.0))
 
             val boxId1 = wizardState.boundingBoxList.value.boxes[0].id
             val boxId2 = wizardState.boundingBoxList.value.boxes[1].id
-            wizardState.setPhotoConfiguration(boxId1, PhotoConfiguration())
-            wizardState.setPhotoConfiguration(boxId2, PhotoConfiguration())
+            wizardState.configs.setPhotoConfiguration(boxId1, PhotoConfiguration())
+            wizardState.configs.setPhotoConfiguration(boxId2, PhotoConfiguration())
 
-            wizardState.clearAllConfigurations()
+            wizardState.configs.clearAllConfigurations()
 
             assertThat(wizardState.photoConfigurations.value).isEmpty()
         }
