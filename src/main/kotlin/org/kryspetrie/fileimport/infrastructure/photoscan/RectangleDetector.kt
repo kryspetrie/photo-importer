@@ -2,8 +2,6 @@ package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import java.awt.image.BufferedImage
 import kotlin.math.abs
-import kotlin.math.atan2
-import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 
@@ -99,7 +97,7 @@ class RectangleDetector(
 
         // Step 6: Sort by area (largest first) and remove overlapping ones
         quads.sortByDescending { it.area }
-        val suppressed = nonMaxSuppress(quads)
+        val suppressed = NonMaxSuppression.suppress(quads)
 
         // Scale coordinates and area back to original image space
         return suppressed.map { quad ->
@@ -113,12 +111,10 @@ class RectangleDetector(
         }
     }
 
-    /**
-     * Returns the input image unchanged if both dimensions are ≤ [maxImageDimension], otherwise
-     * returns a resized copy scaled down to fit within that bound. The returned [Float] is the
-     * scale factor (original / downsampled) — divide coordinates by this to go from original →
-     * downsampled, multiply to go from downsampled → original.
-     */
+    // -----------------------------------------------------------------------
+    // Image preprocessing
+    // -----------------------------------------------------------------------
+
     private fun maybeDownsample(image: BufferedImage): Pair<BufferedImage, Float> {
         if (image.width <= maxImageDimension && image.height <= maxImageDimension) {
             return image to 1.0f
@@ -138,8 +134,6 @@ class RectangleDetector(
         return resized to (1.0f / scale)
     }
 
-    // ===== Step 1: Grayscale =====
-
     private fun toGrayscale(image: BufferedImage): BufferedImage {
         if (
             image.type == BufferedImage.TYPE_BYTE_GRAY ||
@@ -153,8 +147,6 @@ class RectangleDetector(
         g.dispose()
         return gray
     }
-
-    // ===== Step 1b: Gamma correction =====
 
     private fun applyGamma(gray: BufferedImage): BufferedImage {
         if (gamma == 1.0) return gray
@@ -177,7 +169,9 @@ class RectangleDetector(
         return result
     }
 
-    // ===== Step 2: Adaptive threshold (mean-based) =====
+    // -----------------------------------------------------------------------
+    // Adaptive thresholding
+    // -----------------------------------------------------------------------
 
     private fun adaptiveThreshold(
         gray: BufferedImage,
@@ -240,7 +234,9 @@ class RectangleDetector(
         return sum to count
     }
 
-    // ===== Step 3: Morphological closing =====
+    // -----------------------------------------------------------------------
+    // Morphological operations
+    // -----------------------------------------------------------------------
 
     private fun morphologicalClose(binary: BufferedImage, kernelSize: Int = 5): BufferedImage {
         // Dilation followed by erosion
@@ -305,7 +301,9 @@ class RectangleDetector(
         return result
     }
 
-    // ===== Step 4: Contour finding =====
+    // -----------------------------------------------------------------------
+    // Contour finding
+    // -----------------------------------------------------------------------
 
     @Suppress("NestedBlockDepth")
     private fun findContours(binary: BufferedImage): List<List<Point>> {
@@ -368,7 +366,9 @@ class RectangleDetector(
         return contour
     }
 
-    // ===== Step 5: Polygon approximation + quadrilateral extraction =====
+    // -----------------------------------------------------------------------
+    // Polygon approximation & quadrilateral extraction
+    // -----------------------------------------------------------------------
 
     private fun approximateToQuadrilateral(
         contour: List<Point>,
@@ -382,21 +382,21 @@ class RectangleDetector(
         var bestQuality = 0f
 
         for (epsilon in listOf(1.0, 2.0, 3.0, 4.0, 5.0, 7.0)) {
-            val simplified = douglasPeucker(contour, epsilon)
+            val simplified = GeometryUtils.douglasPeucker(contour, epsilon)
             if (simplified.size < 4) continue
 
             // If we have more than 4 points, try to merge and extract best 4
-            val quadPoints = extractBestQuad(simplified)
+            val quadPoints = GeometryUtils.extractBestQuad(simplified)
             if (quadPoints.size != 4) continue
 
             // Sort corners: top-left, top-right, bottom-right, bottom-left
-            val sorted = sortCorners(quadPoints)
+            val sorted = GeometryUtils.sortCorners(quadPoints)
 
-            val area = polygonArea(sorted)
+            val area = GeometryUtils.polygonArea(sorted)
             if (area < minArea) continue
 
             // Check quadrilateral quality
-            val quality = quadrilateralQuality(sorted)
+            val quality = GeometryUtils.quadrilateralQuality(sorted)
             if (quality > bestQuality) {
                 bestQuality = quality
                 bestQuad = sorted
@@ -406,200 +406,18 @@ class RectangleDetector(
         if (bestQuad == null) return null
         if (bestQuality < minQuadRatio) return null
 
-        val area = polygonArea(bestQuad)
+        val area = GeometryUtils.polygonArea(bestQuad)
         return DetectedQuadrilateral(
             corners = bestQuad,
             area = area,
-            centroid = centroid(bestQuad),
-            aspectRatio = aspectRatio(bestQuad),
+            centroid = GeometryUtils.centroid(bestQuad),
+            aspectRatio = GeometryUtils.aspectRatio(bestQuad),
         )
     }
 
-    private fun douglasPeucker(points: List<Point>, epsilon: Double): List<Point> {
-        if (points.size < 3) return points
-
-        var maxDist = 0.0
-        var maxIdx = 0
-        val first = points.first()
-        val last = points.last()
-
-        for (i in 1 until points.size - 1) {
-            val dist = perpendicularDistance(points[i], first, last)
-            if (dist > maxDist) {
-                maxDist = dist
-                maxIdx = i
-            }
-        }
-
-        return if (maxDist > epsilon) {
-            val left = douglasPeucker(points.subList(0, maxIdx + 1), epsilon)
-            val right = douglasPeucker(points.subList(maxIdx, points.size), epsilon)
-            left.dropLast(1) + right
-        } else {
-            listOf(first, last)
-        }
-    }
-
-    private fun perpendicularDistance(point: Point, lineStart: Point, lineEnd: Point): Double {
-        val dx = lineEnd.x - lineStart.x.toDouble()
-        val dy = lineEnd.y - lineStart.y.toDouble()
-        val len = hypot(dx, dy)
-        if (len < 1e-9)
-            return hypot(point.x - lineStart.x.toDouble(), point.y - lineStart.y.toDouble())
-        return abs(
-            (dy * point.x - dx * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x)
-        ) / len
-    }
-
-    private fun extractBestQuad(points: List<Point>): List<Point> {
-        if (points.size == 4) return points
-
-        // Use convex hull if we have more than 4 points
-        val hull = convexHull(points)
-        if (hull.size <= 4) return hull
-
-        // For convex hull with > 4 points, keep the 4 most "corner-like" points
-        return selectMostAcuteCorners(hull)
-    }
-
-    private fun convexHull(points: List<Point>): List<Point> {
-        if (points.size < 3) return points
-        val sorted = points.sortedWith(compareBy({ it.y }, { it.x }))
-        val n = sorted.size
-        val lower = mutableListOf<Point>()
-        for (p in sorted) {
-            while (lower.size >= 2 && cross(lower[lower.size - 2], lower.last(), p) <= 0) {
-                lower.removeLast()
-            }
-            lower.add(p)
-        }
-        val upper = mutableListOf<Point>()
-        for (p in sorted.reversed()) {
-            while (upper.size >= 2 && cross(upper[upper.size - 2], upper.last(), p) <= 0) {
-                upper.removeLast()
-            }
-            upper.add(p)
-        }
-        lower.removeLast()
-        upper.removeLast()
-        return lower + upper
-    }
-
-    private fun selectMostAcuteCorners(hull: List<Point>): List<Point> {
-        // Score each point by its interior angle — lower angle = more acute = better corner
-        val n = hull.size
-        val scored = mutableListOf<Pair<Point, Double>>()
-        for (i in hull.indices) {
-            val prev = hull[(i - 1 + n) % n]
-            val curr = hull[i]
-            val next = hull[(i + 1) % n]
-            val angle = angleBetween(prev, curr, next)
-            // Convert to "corner-ness" score (180° = straight, lower = more acute)
-            val cornerScore = 180.0 - abs(angle - 90.0)
-            scored.add(curr to cornerScore)
-        }
-        scored.sortByDescending { it.second }
-        return scored.take(4).map { it.first }.toList()
-    }
-
-    private fun angleBetween(a: Point, b: Point, c: Point): Double {
-        val dx1 = a.x - b.x.toDouble()
-        val dy1 = a.y - b.y.toDouble()
-        val dx2 = c.x - b.x.toDouble()
-        val dy2 = c.y - b.y.toDouble()
-        val dot = dx1 * dx2 + dy1 * dy2
-        val cross = dx1 * dy2 - dy1 * dx2
-        return Math.toDegrees(atan2(cross, dot))
-    }
-
-    private fun sortCorners(corners: List<Point>): List<Point> {
-        if (corners.size != 4) return corners
-
-        // Sort by sum (x+y): smallest = top-left, largest = bottom-right
-        val sorted = corners.sortedBy { it.x + it.y }
-        val topLeft = sorted[0]
-        val bottomRight = sorted[3]
-
-        // Sort remaining two by difference (x-y): smaller = top-right, larger = bottom-left
-        val remaining = listOf(sorted[1], sorted[2]).sortedBy { it.x - it.y }
-        val topRight = remaining[0]
-        val bottomLeft = remaining[1]
-
-        return listOf(topLeft, topRight, bottomRight, bottomLeft)
-    }
-
-    private fun polygonArea(points: List<Point>): Int {
-        var area = 0
-        val n = points.size
-        for (i in points.indices) {
-            val j = (i + 1) % n
-            area += points[i].x * points[j].y
-            area -= points[j].x * points[i].y
-        }
-        return abs(area / 2)
-    }
-
-    private fun centroid(points: List<Point>): Point {
-        var cx = 0.0
-        var cy = 0.0
-        for (p in points) {
-            cx += p.x
-            cy += p.y
-        }
-        return Point((cx / points.size).toInt(), (cy / points.size).toInt())
-    }
-
-    private fun aspectRatio(sorted: List<Point>): Float {
-        val tl = sorted[0]
-        val tr = sorted[1]
-        val bl = sorted[3]
-        val width = hypot((tr.x - tl.x).toDouble(), (tr.y - tl.y).toDouble())
-        val height = hypot((bl.x - tl.x).toDouble(), (bl.y - tl.y).toDouble())
-        return if (height > 0) (width / height).toFloat() else 1f
-    }
-
-    private fun quadrilateralQuality(corners: List<Point>): Float {
-        if (corners.size != 4) return 0f
-        // Check if all four internal angles are approximately 90°
-        val n = corners.size
-        var totalDeviation = 0.0
-        for (i in corners.indices) {
-            val prev = corners[(i - 1 + n) % n]
-            val curr = corners[i]
-            val next = corners[(i + 1) % n]
-            val angle = abs(angleBetween(prev, curr, next))
-            val deviation = abs(angle - 90.0)
-            totalDeviation += deviation
-        }
-        // Average deviation from 90° — lower is better
-        // Max deviation would be ~180°, quality = 1 - avg_deviation/90
-        val avgDev = totalDeviation / 4.0
-        return max(0.0, 1.0 - avgDev / 90.0).toFloat()
-    }
-
-    /**
-     * Validates that all four corners of a quadrilateral have angles between 60° and 120°.
-     *
-     * Photos on a flat surface should have corners very close to 90°. Allowing 60-120° range
-     * accounts for significant perspective distortion, camera angle, and edge detection imprecision
-     * while still filtering out obviously non-rectangular shapes (e.g., triangles, pentagons,
-     * highly skewed quads).
-     */
-    private fun hasValidAngles(corners: List<Point>): Boolean {
-        if (corners.size != 4) return false
-        for (i in corners.indices) {
-            val prev = corners[(i - 1 + 4) % 4]
-            val curr = corners[i]
-            val next = corners[(i + 1) % 4]
-            val angle = abs(angleBetween(prev, curr, next))
-            if (angle < minAngleDiff || angle > maxAngleDiff) {
-                return false
-            }
-        }
-        return true
-    }
-
-    // ===== Step 6: Filtering =====
+    // -----------------------------------------------------------------------
+    // Filtering
+    // -----------------------------------------------------------------------
 
     private fun filterQuadrilateral(quad: DetectedQuadrilateral, expectedCount: Int?): Boolean {
         // Aspect ratio filter
@@ -610,24 +428,53 @@ class RectangleDetector(
         // Area bounds
         if (quad.area < minArea) return false
 
-        // Angle validation: all corners must be between 70° and 110°
-        if (!hasValidAngles(quad.corners)) return false
+        // Angle validation: all corners must be between configured bounds
+        if (!GeometryUtils.hasValidAngles(quad.corners, minAngleDiff, maxAngleDiff)) return false
 
         // Quadrilateral quality (angles close to 90°)
-        if (quadrilateralQuality(quad.corners) < minQuadRatio) return false
+        if (GeometryUtils.quadrilateralQuality(quad.corners) < minQuadRatio) return false
 
         // If we expect a specific count, be more lenient with smaller quads
         if (expectedCount != null && expectedCount > 0) {
             val sizePenalty = max(0.2f, 1.0f - (expectedCount * 0.1f))
-            if (quadrilateralQuality(quad.corners) < minQuadRatio * sizePenalty) return false
+            if (GeometryUtils.quadrilateralQuality(quad.corners) < minQuadRatio * sizePenalty)
+                return false
         }
 
         return true
     }
 
-    // ===== Step 7: Non-maximum suppression =====
+    // -----------------------------------------------------------------------
+    // Simple point class
+    // -----------------------------------------------------------------------
 
-    private fun nonMaxSuppress(quads: List<DetectedQuadrilateral>): List<DetectedQuadrilateral> {
+    data class Point(val x: Int, val y: Int)
+}
+
+/** Result of rectangle detection. */
+data class DetectedQuadrilateral(
+    val corners: List<RectangleDetector.Point>,
+    val area: Int,
+    val centroid: RectangleDetector.Point,
+    val aspectRatio: Float,
+)
+
+/**
+ * Non-maximum suppression for overlapping quadrilateral detections.
+ * Removes detections with IoU > threshold (default 0.3).
+ */
+object NonMaxSuppression {
+    /** Default IoU threshold for suppression. */
+    private const val DEFAULT_IOU_THRESHOLD = 0.3f
+
+    /**
+     * Suppress overlapping detections, keeping the highest-scoring (first in sorted order).
+     * Assumes [quads] is already sorted by confidence/area (largest first).
+     */
+    fun suppress(
+        quads: List<DetectedQuadrilateral>,
+        iouThreshold: Float = DEFAULT_IOU_THRESHOLD,
+    ): List<DetectedQuadrilateral> {
         if (quads.isEmpty()) return quads
         val suppressed = mutableListOf<DetectedQuadrilateral>()
         val used = BooleanArray(quads.size) { false }
@@ -638,7 +485,7 @@ class RectangleDetector(
             used[i] = true
             for (j in i + 1 until quads.size) {
                 if (used[j]) continue
-                if (iou(quads[i], quads[j]) > 0.3f) {
+                if (iou(quads[i], quads[j]) > iouThreshold) {
                     used[j] = true
                 }
             }
@@ -646,8 +493,8 @@ class RectangleDetector(
         return suppressed
     }
 
-    private fun iou(a: DetectedQuadrilateral, b: DetectedQuadrilateral): Float {
-        // Compute intersection over union using bounding boxes
+    /** Compute intersection over union using bounding boxes. */
+    fun iou(a: DetectedQuadrilateral, b: DetectedQuadrilateral): Float {
         val ax1 = a.corners.minOf { it.x }
         val ay1 = a.corners.minOf { it.y }
         val ax2 = a.corners.maxOf { it.x }
@@ -661,28 +508,11 @@ class RectangleDetector(
         val interY1 = max(ay1, by1)
         val interX2 = min(ax2, bx2)
         val interY2 = min(ay2, by2)
+        @Suppress("ReplaceJavaStaticFieldWithKotlinConstant")
         val interArea = max(0, interX2 - interX1) * max(0, interY2 - interY1)
         val areaA = (ax2 - ax1) * (ay2 - ay1)
         val areaB = (bx2 - bx1) * (by2 - by1)
         val unionArea = areaA + areaB - interArea
         return if (unionArea > 0) interArea.toFloat() / unionArea else 0f
     }
-
-    // ===== Cross product =====
-
-    private fun cross(o: Point, a: Point, b: Point): Int {
-        return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
-    }
-
-    // ===== Simple point class =====
-
-    data class Point(val x: Int, val y: Int)
 }
-
-/** Result of rectangle detection. */
-data class DetectedQuadrilateral(
-    val corners: List<RectangleDetector.Point>,
-    val area: Int,
-    val centroid: RectangleDetector.Point,
-    val aspectRatio: Float,
-)
