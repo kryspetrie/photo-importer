@@ -28,6 +28,14 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         this.appLogger = logger
     }
 
+    // ========== Sub-states (independent, no constructor dependencies) ==========
+
+    /** Navigation state (wizard step transitions). Delegated sub-state. */
+    val navigation = WizardNavigationState()
+
+    /** Batch/folder image processing state. Delegated sub-state. */
+    val batch = ImageBatchState()
+
     // ========== Import Configuration ==========
 
     private val _cvAutoDetectEnabled = MutableStateFlow(true)
@@ -103,61 +111,46 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _sourceExif.value = summary
     }
 
-    // ========== Batch Processing ==========
+    // ========== Batch Processing (delegated to ImageBatchState) ==========
 
-    /** List of all source image files for batch processing. Empty for single-image mode. */
-    private val _sourceFiles = MutableStateFlow<List<File>>(emptyList())
-    val sourceFiles: StateFlow<List<File>> = _sourceFiles.asStateFlow()
+    /** Source image files for batch processing. Delegates to [ImageBatchState]. */
+    val sourceFiles: StateFlow<List<File>> = batch.sourceFiles
 
-    /** Index of the currently displayed image within [sourceFiles]. */
-    private val _currentImageIndex = MutableStateFlow(0)
-    val currentImageIndex: StateFlow<Int> = _currentImageIndex.asStateFlow()
+    /** Index of the currently displayed batch image. Delegates to [ImageBatchState]. */
+    val currentImageIndex: StateFlow<Int> = batch.currentImageIndex
 
-    /** Cache of pre-processed images (loaded + detected). Keyed by index in sourceFiles. */
-    private val _preProcessedCache = MutableStateFlow<Map<Int, PreProcessedImage>>(emptyMap())
-    val preProcessedCache: StateFlow<Map<Int, PreProcessedImage>> = _preProcessedCache.asStateFlow()
+    /** Cache of pre-processed images. Delegates to [ImageBatchState]. */
+    val preProcessedCache: StateFlow<Map<Int, PreProcessedImage>> = batch.preProcessedCache
 
-    /** Progress of batch pre-processing: count of images that have been processed. */
-    private val _preProcessCount = MutableStateFlow(0)
-    val preProcessCount: StateFlow<Int> = _preProcessCount.asStateFlow()
+    /** Count of pre-processed images. Delegates to [ImageBatchState]. */
+    val preProcessCount: StateFlow<Int> = batch.preProcessCount
 
-    /** Whether batch pre-processing is currently running. */
-    private val _preProcessing = MutableStateFlow(false)
-    val preProcessing: StateFlow<Boolean> = _preProcessing.asStateFlow()
+    /** Whether batch pre-processing is running. Delegates to [ImageBatchState]. */
+    val preProcessing: StateFlow<Boolean> = batch.preProcessing
 
-    /** True when in batch mode (multiple source files). */
-    val isBatchMode: Boolean
-        get() = _sourceFiles.value.size > 1
+    /** Indices of skipped batch files. Delegates to [ImageBatchState]. */
+    val skippedBatchIndices: StateFlow<Set<Int>> = batch.skippedBatchIndices
 
-    /** Total number of source images in the batch. */
-    val batchTotal: Int
-        get() = _sourceFiles.value.size
+    /** True when in batch mode. Delegates to [ImageBatchState]. */
+    val isBatchMode: Boolean get() = batch.isBatchMode
 
-    /** Initializes batch mode with a list of source files. */
-    fun initializeBatch(files: List<File>) {
-        _sourceFiles.value = files
-        _currentImageIndex.value = 0
-        _preProcessedCache.value = emptyMap()
-        _preProcessCount.value = 0
-    }
+    /** Total number of batch images. Delegates to [ImageBatchState]. */
+    val batchTotal: Int get() = batch.batchTotal
 
-    /** Stores a pre-processed result in the cache. */
-    fun putPreProcessed(index: Int, result: PreProcessedImage) {
-        _preProcessedCache.value = _preProcessedCache.value + (index to result)
-        _preProcessCount.value = _preProcessedCache.value.size
-    }
+    /** Initializes batch mode. Delegates to [ImageBatchState]. */
+    fun initializeBatch(files: List<File>) = batch.initializeBatch(files)
 
-    /** Marks batch pre-processing as started or finished. */
-    fun setPreProcessing(active: Boolean) {
-        _preProcessing.value = active
-    }
+    /** Stores a pre-processed result. Delegates to [ImageBatchState]. */
+    fun putPreProcessed(index: Int, result: PreProcessedImage) = batch.putPreProcessed(index, result)
+
+    /** Marks batch pre-processing as started/finished. Delegates to [ImageBatchState]. */
+    fun setPreProcessing(active: Boolean) = batch.setPreProcessing(active)
 
     /** Switches to a pre-processed image at the given index. Returns false if not cached yet. */
     fun switchToImage(index: Int): Boolean {
-        if (index < 0 || index >= _sourceFiles.value.size) return false
-        val cached = _preProcessedCache.value[index] ?: return false
+        val cached = batch.getCachedImage(index) ?: return false
 
-        _currentImageIndex.value = index
+        batch.setCurrentImageIndex(index)
         _image.value = cached.image
         _imageFile.value = cached.file
         _boundingBoxList.value =
@@ -175,97 +168,38 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         return true
     }
 
-    /** Navigates to the next image in the batch. Returns false if can't (not cached or at end). */
-    fun nextImage(): Boolean {
-        return switchToImage(_currentImageIndex.value + 1)
-    }
+    /** Navigates to the next image in the batch. Returns false if can't. */
+    fun nextImage(): Boolean = switchToImage(batch.currentImageIndex.value + 1)
 
-    /**
-     * Navigates to the previous image in the batch. Returns false if can't (not cached or at
-     * start).
-     */
-    fun prevImage(): Boolean {
-        return switchToImage(_currentImageIndex.value - 1)
-    }
+    /** Navigates to the previous image in the batch. Returns false if can't. */
+    fun prevImage(): Boolean = switchToImage(batch.currentImageIndex.value - 1)
 
-    /** Returns true when in batch mode and there are more images after the current one. */
-    val hasMoreBatchImages: Boolean
-        get() = isBatchMode && _currentImageIndex.value < _sourceFiles.value.size - 1
+    /** True when more batch images remain. Delegates to [ImageBatchState]. */
+    val hasMoreBatchImages: Boolean get() = batch.hasMoreBatchImages
 
-    /**
-     * Advances the batch index to the next image and returns that file, or null if there are no
-     * more. Does not load or detect — caller is responsible for calling initializeWithImage or
-     * loadImageAndDetect afterwards.
-     */
-    fun advanceToNextBatchFile(): File? {
-        val nextIndex = _currentImageIndex.value + 1
-        if (nextIndex >= _sourceFiles.value.size) return null
-        _currentImageIndex.value = nextIndex
-        return _sourceFiles.value[nextIndex]
-    }
+    /** Advances batch index, returns next file or null. Delegates to [ImageBatchState]. */
+    fun advanceToNextBatchFile(): File? = batch.advanceToNextBatchFile()
 
-    /**
-     * Peeks at the next file in the batch without advancing the index. Returns null if there is no
-     * next file. Use this to preview the next photo before the user decides to continue or skip.
-     */
-    fun peekNextBatchFile(): File? {
-        val nextIndex = _currentImageIndex.value + 1
-        return if (nextIndex < _sourceFiles.value.size) _sourceFiles.value[nextIndex] else null
-    }
+    /** Peeks at next batch file. Delegates to [ImageBatchState]. */
+    fun peekNextBatchFile(): File? = batch.peekNextBatchFile()
 
-    /**
-     * Skips the next file in the batch by advancing the index without loading or detecting. The
-     * caller remains on the COMPLETE screen — the UI recomposes with updated
-     * [hasMoreBatchImages]/[peekNextBatchFile] values. Returns the new "next file" after skipping,
-     * or null if there are no more files to process.
-     */
-    fun skipNextBatchFile(): File? {
-        val skippedIndex = _currentImageIndex.value + 1
-        if (skippedIndex >= _sourceFiles.value.size) return null
-        _currentImageIndex.value = skippedIndex
-        _skippedBatchIndices.value = _skippedBatchIndices.value + skippedIndex
-        // Return the file after the skipped one (the new "next" preview)
-        return peekNextBatchFile()
-    }
+    /** Skips next batch file. Delegates to [ImageBatchState]. */
+    fun skipNextBatchFile(): File? = batch.skipNextBatchFile()
 
-    /** Returns true if the next image in the batch is pre-processed and ready. */
-    val isNextImageReady: Boolean
-        get() =
-            _currentImageIndex.value < _sourceFiles.value.size - 1 &&
-                _preProcessedCache.value.containsKey(_currentImageIndex.value + 1)
+    /** True if next batch image is ready. Delegates to [ImageBatchState]. */
+    val isNextImageReady: Boolean get() = batch.isNextImageReady
 
-    /** Returns true if the previous image in the batch is pre-processed and ready. */
-    val isPrevImageReady: Boolean
-        get() =
-            _currentImageIndex.value > 0 &&
-                _preProcessedCache.value.containsKey(_currentImageIndex.value - 1)
+    /** True if previous batch image is ready. Delegates to [ImageBatchState]. */
+    val isPrevImageReady: Boolean get() = batch.isPrevImageReady
 
-    // ========== Back-of-Photo / Auto-Skip ==========
+    /** Marks a batch file index as skipped. Delegates to [ImageBatchState]. */
+    fun markBatchIndexSkipped(index: Int) = batch.markBatchIndexSkipped(index)
 
-    /**
-     * Set of batch file indices that should be automatically skipped during folder processing.
-     * These are files identified as "backs" of photographs — they've been selected as back images
-     * for other photos and should not be processed as standalone photos.
-     */
-    private val _skippedBatchIndices = MutableStateFlow<Set<Int>>(emptySet())
-    val skippedBatchIndices: StateFlow<Set<Int>> = _skippedBatchIndices.asStateFlow()
+    /** Removes a batch file index from skipped set. Delegates to [ImageBatchState]. */
+    fun unmarkBatchIndexSkipped(index: Int) = batch.unmarkBatchIndexSkipped(index)
 
-    /**
-     * Marks a batch file index as skipped (it's a "back" of an already-processed photo). The file
-     * will be skipped during automatic batch progression.
-     */
-    fun markBatchIndexSkipped(index: Int) {
-        _skippedBatchIndices.value = _skippedBatchIndices.value + index
-    }
-
-    /** Removes a batch file index from the skipped set. */
-    fun unmarkBatchIndexSkipped(index: Int) {
-        _skippedBatchIndices.value = _skippedBatchIndices.value - index
-    }
-
-    /** Returns the set of source files that are marked as skipped (backs of photos). */
-    val skippedBatchFiles: Set<File>
-        get() = _skippedBatchIndices.value.mapNotNull { _sourceFiles.value.getOrNull(it) }.toSet()
+    /** Source files marked as skipped (backs of photos). Delegates to [ImageBatchState]. */
+    val skippedBatchFiles: Set<File> get() = batch.skippedBatchFiles
 
     // ========== Mode and State ==========
 
@@ -375,9 +309,6 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     private val _photoConfigurations = MutableStateFlow<Map<String, PhotoConfiguration>>(emptyMap())
     val photoConfigurations: StateFlow<Map<String, PhotoConfiguration>> =
         _photoConfigurations.asStateFlow()
-
-    /** Navigation state (wizard step transitions). Delegated sub-state. */
-    val navigation = WizardNavigationState()
 
     /** Face region state (selection mode, face region CRUD). Delegated sub-state. */
     val faceRegions = FaceRegionState(_photoConfigurations, _boundingBoxList)
@@ -1183,14 +1114,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         // Reset metadata selection
         configs.deselectAllMetadata()
         // Reset batch processing state
-        _sourceFiles.value = emptyList()
-        _currentImageIndex.value = 0
-        _preProcessedCache.value = emptyMap()
-        _preProcessCount.value = 0
-        _preProcessing.value = false
+        batch.reset()
         _sourceExif.value = null
-        // Reset back-of-photo skip state
-        _skippedBatchIndices.value = emptySet()
     }
 
     /**
