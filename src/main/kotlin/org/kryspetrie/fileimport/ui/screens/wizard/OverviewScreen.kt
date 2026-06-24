@@ -72,7 +72,7 @@ fun OverviewScreen(
     val fourPointState by state.fourPointState.collectAsState()
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val selectedBoxIndex by state.boxes.selectedBoxIndex.collectAsState()
-    val zoomController by state.zoomController.collectAsState()
+    val zoomController by state.zoom.zoomController.collectAsState()
     val image by state.image.collectAsState()
 
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
@@ -303,13 +303,13 @@ private fun ColumnScope.OverviewCanvasSection(
         ZoomControls(
             zoomController = zoomController,
             onZoomIn = {
-                state.zoomIn(
+                state.zoom.zoomIn(
                     containerSize.width.toDouble() / 2,
                     containerSize.height.toDouble() / 2,
                 )
             },
             onZoomOut = {
-                state.zoomOut(
+                state.zoom.zoomOut(
                     containerSize.width.toDouble() / 2,
                     containerSize.height.toDouble() / 2,
                 )

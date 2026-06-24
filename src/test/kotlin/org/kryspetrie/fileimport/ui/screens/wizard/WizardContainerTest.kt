@@ -43,7 +43,7 @@ class WizardContainerTest {
         @DisplayName("should have CV auto-detect enabled by default")
         fun shouldHaveCvAutoDetectEnabledByDefault() {
             val state = PhotoScanWizardState()
-            assertThat(state.cvAutoDetectEnabled.value).isTrue()
+            assertThat(state.importSettings.cvAutoDetectEnabled.value).isTrue()
         }
 
         @Test
@@ -231,33 +231,33 @@ class WizardContainerTest {
         @Test
         @DisplayName("should have default zoom of 1.0")
         fun shouldHaveDefaultZoom() {
-            assertThat(wizardState.zoomController.value.zoom).isEqualTo(1.0)
+            assertThat(wizardState.zoom.zoomController.value.zoom).isEqualTo(1.0)
         }
 
         @Test
         @DisplayName("should zoom in")
         fun shouldZoomIn() {
-            val initialZoom = wizardState.zoomController.value.zoom
-            wizardState.zoomIn()
-            assertThat(wizardState.zoomController.value.zoom).isGreaterThan(initialZoom)
+            val initialZoom = wizardState.zoom.zoomController.value.zoom
+            wizardState.zoom.zoomIn()
+            assertThat(wizardState.zoom.zoomController.value.zoom).isGreaterThan(initialZoom)
         }
 
         @Test
         @DisplayName("should zoom out")
         fun shouldZoomOut() {
-            wizardState.zoomIn()
-            val initialZoom = wizardState.zoomController.value.zoom
-            wizardState.zoomOut()
-            assertThat(wizardState.zoomController.value.zoom).isLessThan(initialZoom)
+            wizardState.zoom.zoomIn()
+            val initialZoom = wizardState.zoom.zoomController.value.zoom
+            wizardState.zoom.zoomOut()
+            assertThat(wizardState.zoom.zoomController.value.zoom).isLessThan(initialZoom)
         }
 
         @Test
         @DisplayName("should not zoom below minimum")
         fun shouldNotZoomBelowMinimum() {
             // Zoom out multiple times
-            repeat(21) { wizardState.zoomOut() }
-            assertThat(wizardState.zoomController.value.zoom)
-                .isGreaterThanOrEqualTo(wizardState.zoomController.value.minZoom)
+            repeat(21) { wizardState.zoom.zoomOut() }
+            assertThat(wizardState.zoom.zoomController.value.zoom)
+                .isGreaterThanOrEqualTo(wizardState.zoom.zoomController.value.minZoom)
         }
     }
 

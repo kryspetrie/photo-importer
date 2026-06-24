@@ -123,7 +123,7 @@ class OverviewScreenTest {
     @Test
     @DisplayName("should zoom in when zoom in clicked")
     fun shouldZoomInWhenZoomInClicked() {
-        val initialZoom = wizardState.zoomController.value.zoom
+        val initialZoom = wizardState.zoom.zoomController.value.zoom
 
         composeTestRule.setContent {
             OverviewScreen(state = wizardState, onBack = {}, onToSummary = {})
@@ -132,7 +132,7 @@ class OverviewScreenTest {
         composeTestRule.onNodeWithContentDescription("Zoom in").performClick()
         composeTestRule.waitForIdle()
 
-        assertThat(wizardState.zoomController.value.zoom).isGreaterThan(initialZoom)
+        assertThat(wizardState.zoom.zoomController.value.zoom).isGreaterThan(initialZoom)
     }
 
     @Test

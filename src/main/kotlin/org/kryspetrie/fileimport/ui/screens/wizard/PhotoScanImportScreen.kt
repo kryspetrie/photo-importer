@@ -58,8 +58,8 @@ fun PhotoScanImportScreen(
     val settings by settingsPort.observeSettings().collectAsState()
     val scope = rememberCoroutineScope()
 
-    val cvAutoDetectEnabled by state.cvAutoDetectEnabled.collectAsState()
-    val singlePhotoMode by state.singlePhotoMode.collectAsState()
+    val cvAutoDetectEnabled by state.importSettings.cvAutoDetectEnabled.collectAsState()
+    val singlePhotoMode by state.importSettings.singlePhotoMode.collectAsState()
 
     // Settings expanded state
     var settingsExpanded by remember { mutableStateOf(false) }
@@ -178,13 +178,13 @@ fun PhotoScanImportScreen(
                     // ── Auto-detect Option ──
                     AutoDetectCard(
                         cvAutoDetectEnabled = cvAutoDetectEnabled,
-                        onCvAutoDetectChange = { state.setCvAutoDetectEnabled(it) },
+                        onCvAutoDetectChange = { state.importSettings.setCvAutoDetectEnabled(it) },
                     )
 
                     // ── Single Photo Mode ──
                     SinglePhotoModeCard(
                         singlePhotoMode = singlePhotoMode,
-                        onSinglePhotoModeChange = { state.setSinglePhotoMode(it) },
+                        onSinglePhotoModeChange = { state.importSettings.setSinglePhotoMode(it) },
                     )
 
                     // ── Source Selection ──
@@ -263,7 +263,7 @@ fun PhotoScanImportScreen(
     )
 
     // Save config to wizard state when it changes
-    LaunchedEffect(customConfig) { state.setConfiguration(customConfig) }
+    LaunchedEffect(customConfig) { state.importSettings.setConfiguration(customConfig) }
 
     // Save paths and config when they change
     LaunchedEffect(sourcePath, destinationPath, customConfig) {

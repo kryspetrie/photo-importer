@@ -5,8 +5,6 @@ import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
-import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 
 // Debug flag for performance timing - set to true to log timing data
@@ -34,63 +32,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     /** Batch/folder image processing state. */
     val batch = ImageBatchState()
 
-    // ========== Import Configuration ==========
+    /** Import settings state (CV auto-detect, single photo mode, configuration). */
+    val importSettings = ImportSettingsState()
 
-    private val _cvAutoDetectEnabled = MutableStateFlow(true)
-    val cvAutoDetectEnabled: StateFlow<Boolean> = _cvAutoDetectEnabled.asStateFlow()
-
-    fun setCvAutoDetectEnabled(enabled: Boolean) {
-        _cvAutoDetectEnabled.value = enabled
-    }
-
-    /**
-     * Whether single photo mode is active (skip multi-box detection, import one photo directly).
-     */
-    private val _singlePhotoMode = MutableStateFlow(false)
-    val singlePhotoMode: StateFlow<Boolean> = _singlePhotoMode.asStateFlow()
-
-    fun setSinglePhotoMode(enabled: Boolean) {
-        _singlePhotoMode.value = enabled
-    }
-
-    private val _configuration = MutableStateFlow(ImportConfiguration())
-    val configuration: StateFlow<ImportConfiguration> = _configuration.asStateFlow()
-
-    fun setConfiguration(config: ImportConfiguration) {
-        _configuration.value = config
-    }
-
-    // ========== Export Settings ==========
-
-    /** Whether to apply perspective correction (warp-stretch) when exporting. Default: true. */
-    private val _perspectiveCorrectionEnabled = MutableStateFlow(true)
-    val perspectiveCorrectionEnabled: StateFlow<Boolean> =
-        _perspectiveCorrectionEnabled.asStateFlow()
-
-    fun setPerspectiveCorrectionEnabled(enabled: Boolean) {
-        _perspectiveCorrectionEnabled.value = enabled
-    }
-
-    /**
-     * Margin to add around each photo during export, expressed as a fraction of the photo's
-     * diagonal length. Default: 0.02 (2%). For perspective correction: corners are pushed outward
-     * from the quad center. For simple crop: the bounding box is expanded.
-     */
-    private val _exportMarginPercent = MutableStateFlow(0.02)
-    val exportMarginPercent: StateFlow<Double> = _exportMarginPercent.asStateFlow()
-
-    fun setExportMarginPercent(percent: Double) {
-        _exportMarginPercent.value = percent.coerceIn(0.0, 0.2)
-    }
-
-    /** Default correction strategy for photos that don't have an explicit per-photo strategy. */
-    private val _defaultCorrectionStrategy = MutableStateFlow(CorrectionStrategy.PERSPECTIVE)
-    val defaultCorrectionStrategy: StateFlow<CorrectionStrategy> =
-        _defaultCorrectionStrategy.asStateFlow()
-
-    fun setDefaultCorrectionStrategy(strategy: CorrectionStrategy) {
-        _defaultCorrectionStrategy.value = strategy
-    }
+    /** Export settings state (perspective correction, margin, default strategy). */
+    val exportSettings = ExportSettingsState()
 
     // ========== Image ==========
 
@@ -164,8 +110,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     // ========== Zoom ==========
 
-    private val _zoomController = MutableStateFlow(ZoomController())
-    val zoomController: StateFlow<ZoomController> = _zoomController.asStateFlow()
+    /** Zoom state (view transform, pan, coordinate conversion). */
+    val zoom = ZoomState()
 
     // ========== Summary Screen Settings ==========
 
@@ -203,7 +149,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     fun initializeSinglePhoto(image: BufferedImage, file: File) {
         _image.value = image
         _imageFile.value = file
-        _singlePhotoMode.value = true
+        importSettings.setSinglePhotoMode(true)
 
         // Create a single bounding box covering the entire image
         val w = image.width.toDouble()
@@ -447,29 +393,10 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     fun updateZoomController(viewportWidth: Double = 800.0, viewportHeight: Double = 600.0) {
         val image = _image.value
         if (image != null) {
-            _zoomController.value =
-                ZoomController.fit(
-                    image.width.toDouble(),
-                    image.height.toDouble(),
-                    viewportWidth,
-                    viewportHeight,
-                )
+            zoom.fitToImage(
+                image.width.toDouble(), image.height.toDouble(), viewportWidth, viewportHeight
+            )
         }
-    }
-
-    /** Zooms in the view. */
-    fun zoomIn(cursorX: Double? = null, cursorY: Double? = null) {
-        _zoomController.value = _zoomController.value.zoomIn(cursorX, cursorY)
-    }
-
-    /** Zooms out the view. */
-    fun zoomOut(cursorX: Double? = null, cursorY: Double? = null) {
-        _zoomController.value = _zoomController.value.zoomOut(cursorX, cursorY)
-    }
-
-    /** Pans the view by the given delta. */
-    fun pan(deltaX: Double, deltaY: Double) {
-        _zoomController.value = _zoomController.value.pan(deltaX, deltaY)
     }
 
     /** Fits the view to the current image. */
@@ -481,8 +408,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     fun fitToBox(viewportWidth: Double = 800.0, viewportHeight: Double = 600.0) {
         val box = boxes.refinementBox()
         if (box != null) {
-            _zoomController.value =
-                _zoomController.value.fitToBox(box.corners, viewportWidth, viewportHeight)
+            zoom.fitToBox(box.corners, viewportWidth, viewportHeight)
         }
     }
 
@@ -490,8 +416,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     fun fitToSelectedBox(viewportWidth: Double = 800.0, viewportHeight: Double = 600.0) {
         val box = boxes.selectedBox()
         if (box != null) {
-            _zoomController.value =
-                _zoomController.value.fitToBox(box.corners, viewportWidth, viewportHeight)
+            zoom.fitToBox(box.corners, viewportWidth, viewportHeight)
         }
     }
 
@@ -510,14 +435,14 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     fun resetToImportStep() {
         _image.value = null
         _imageFile.value = null
-        _singlePhotoMode.value = false
+        importSettings.setSinglePhotoMode(false)
         boxes.clearBoxes()
         boxes.clearUndoAndSelection()
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
         navigation.step.value = WizardStep.IMPORT
         _photoConfigurations.value = emptyMap()
-        _zoomController.value = ZoomController()
+        zoom.reset()
         // Reset metadata selection
         configs.deselectAllMetadata()
         // Reset batch processing state
@@ -536,20 +461,11 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
         _photoConfigurations.value = emptyMap()
-        _zoomController.value = ZoomController()
+        zoom.reset()
         configs.deselectAllMetadata()
         _sourceExif.value = null
     }
 
     // ========== Utility ==========
 
-    /** Converts screen coordinates to image coordinates. */
-    fun screenToImage(screenX: Double, screenY: Double): Point {
-        return _zoomController.value.screenToImage(screenX, screenY)
-    }
-
-    /** Converts image coordinates to screen coordinates. */
-    fun imageToScreen(imageX: Double, imageY: Double): Point {
-        return _zoomController.value.imageToScreen(imageX, imageY)
-    }
 }

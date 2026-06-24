@@ -33,7 +33,7 @@ class PhotoScanWizardStateTest {
         assertNull(state.image.value)
         assertTrue(state.boundingBoxList.value.isEmpty())
         assertEquals(-1, state.boxes.selectedBoxIndex.value)
-        assertTrue(state.cvAutoDetectEnabled.value)
+        assertTrue(state.importSettings.cvAutoDetectEnabled.value)
     }
 
     // WS-02: Initialize with image
@@ -444,11 +444,11 @@ class PhotoScanWizardStateTest {
     // WS-30: CV auto-detect toggle
     @Test
     fun `set CV auto detect changes setting`() {
-        state.setCvAutoDetectEnabled(false)
-        assertFalse(state.cvAutoDetectEnabled.value)
+        state.importSettings.setCvAutoDetectEnabled(false)
+        assertFalse(state.importSettings.cvAutoDetectEnabled.value)
 
-        state.setCvAutoDetectEnabled(true)
-        assertTrue(state.cvAutoDetectEnabled.value)
+        state.importSettings.setCvAutoDetectEnabled(true)
+        assertTrue(state.importSettings.cvAutoDetectEnabled.value)
     }
 
     // WS-31: Box count
@@ -493,8 +493,8 @@ class PhotoScanWizardStateTest {
         state.initializeWithImage(sampleImage, java.io.File("/test/image.jpg"))
 
         val original = Point(500.0, 400.0)
-        val screen = state.imageToScreen(original.x, original.y)
-        val back = state.screenToImage(screen.x, screen.y)
+        val screen = state.zoom.imageToScreen(original.x, original.y)
+        val back = state.zoom.screenToImage(screen.x, screen.y)
 
         assertEquals(original.x, back.x, 0.01)
         assertEquals(original.y, back.y, 0.01)
@@ -964,38 +964,38 @@ class PhotoScanWizardStateTest {
     // WS-56: perspectiveCorrectionEnabled defaults to true
     @Test
     fun `perspectiveCorrectionEnabled defaults to true`() {
-        assertTrue(state.perspectiveCorrectionEnabled.value)
+        assertTrue(state.exportSettings.perspectiveCorrectionEnabled.value)
     }
 
     // WS-57: setPerspectiveCorrectionEnabled toggles the state
     @Test
     fun `setPerspectiveCorrectionEnabled toggles the state`() {
-        state.setPerspectiveCorrectionEnabled(false)
-        assertFalse(state.perspectiveCorrectionEnabled.value)
-        state.setPerspectiveCorrectionEnabled(true)
-        assertTrue(state.perspectiveCorrectionEnabled.value)
+        state.exportSettings.setPerspectiveCorrectionEnabled(false)
+        assertFalse(state.exportSettings.perspectiveCorrectionEnabled.value)
+        state.exportSettings.setPerspectiveCorrectionEnabled(true)
+        assertTrue(state.exportSettings.perspectiveCorrectionEnabled.value)
     }
 
     // WS-58: exportMarginPercent defaults to 0.02
     @Test
     fun `exportMarginPercent defaults to 2 percent`() {
-        assertEquals(0.02, state.exportMarginPercent.value)
+        assertEquals(0.02, state.exportSettings.exportMarginPercent.value)
     }
 
     // WS-59: setExportMarginPercent updates the state
     @Test
     fun `setExportMarginPercent updates the state`() {
-        state.setExportMarginPercent(0.05)
-        assertEquals(0.05, state.exportMarginPercent.value)
+        state.exportSettings.setExportMarginPercent(0.05)
+        assertEquals(0.05, state.exportSettings.exportMarginPercent.value)
     }
 
     // WS-60: setExportMarginPercent clamps to 0.0-0.2
     @Test
     fun `setExportMarginPercent clamps to valid range`() {
-        state.setExportMarginPercent(-0.1)
-        assertEquals(0.0, state.exportMarginPercent.value)
-        state.setExportMarginPercent(0.5)
-        assertEquals(0.2, state.exportMarginPercent.value)
+        state.exportSettings.setExportMarginPercent(-0.1)
+        assertEquals(0.0, state.exportSettings.exportMarginPercent.value)
+        state.exportSettings.setExportMarginPercent(0.5)
+        assertEquals(0.2, state.exportSettings.exportMarginPercent.value)
     }
 
     // ==================== Correction Strategy Default ====================
@@ -1003,20 +1003,20 @@ class PhotoScanWizardStateTest {
     // WS-61: defaultCorrectionStrategy defaults to PERSPECTIVE
     @Test
     fun `defaultCorrectionStrategy defaults to PERSPECTIVE`() {
-        assertEquals(CorrectionStrategy.PERSPECTIVE, state.defaultCorrectionStrategy.value)
+        assertEquals(CorrectionStrategy.PERSPECTIVE, state.exportSettings.defaultCorrectionStrategy.value)
     }
 
     // WS-62: setDefaultCorrectionStrategy changes the strategy
     @Test
     fun `setDefaultCorrectionStrategy changes the strategy`() {
-        state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
-        assertEquals(CorrectionStrategy.CROP, state.defaultCorrectionStrategy.value)
+        state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
+        assertEquals(CorrectionStrategy.CROP, state.exportSettings.defaultCorrectionStrategy.value)
 
-        state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
-        assertEquals(CorrectionStrategy.CROP_AND_ROTATE, state.defaultCorrectionStrategy.value)
+        state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
+        assertEquals(CorrectionStrategy.CROP_AND_ROTATE, state.exportSettings.defaultCorrectionStrategy.value)
 
-        state.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
-        assertEquals(CorrectionStrategy.PERSPECTIVE, state.defaultCorrectionStrategy.value)
+        state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
+        assertEquals(CorrectionStrategy.PERSPECTIVE, state.exportSettings.defaultCorrectionStrategy.value)
     }
 
     // ==================== Face Region Tests ====================

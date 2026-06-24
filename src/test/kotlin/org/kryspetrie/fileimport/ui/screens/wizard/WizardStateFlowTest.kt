@@ -325,20 +325,20 @@ class WizardStateFlowTest {
         @Test
         @DisplayName("should toggle perspective correction")
         fun shouldTogglePerspectiveCorrection() {
-            assertThat(wizardState.perspectiveCorrectionEnabled.value).isTrue()
+            assertThat(wizardState.exportSettings.perspectiveCorrectionEnabled.value).isTrue()
 
-            wizardState.setPerspectiveCorrectionEnabled(false)
-            assertThat(wizardState.perspectiveCorrectionEnabled.value).isFalse()
+            wizardState.exportSettings.setPerspectiveCorrectionEnabled(false)
+            assertThat(wizardState.exportSettings.perspectiveCorrectionEnabled.value).isFalse()
 
-            wizardState.setPerspectiveCorrectionEnabled(true)
-            assertThat(wizardState.perspectiveCorrectionEnabled.value).isTrue()
+            wizardState.exportSettings.setPerspectiveCorrectionEnabled(true)
+            assertThat(wizardState.exportSettings.perspectiveCorrectionEnabled.value).isTrue()
         }
 
         @Test
         @DisplayName("should change export margin")
         fun shouldChangeExportMargin() {
-            wizardState.setExportMarginPercent(0.05)
-            assertThat(wizardState.exportMarginPercent.value).isCloseTo(
+            wizardState.exportSettings.setExportMarginPercent(0.05)
+            assertThat(wizardState.exportSettings.exportMarginPercent.value).isCloseTo(
                 0.05,
                 org.assertj.core.data.Offset.offset(0.001),
             )
@@ -361,18 +361,18 @@ class WizardStateFlowTest {
         @Test
         @DisplayName("should default to PERSPECTIVE correction strategy")
         fun shouldDefaultToPerspectiveStrategy() {
-            assertThat(wizardState.defaultCorrectionStrategy.value)
+            assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value)
                 .isEqualTo(CorrectionStrategy.PERSPECTIVE)
         }
 
         @Test
         @DisplayName("should change default correction strategy")
         fun shouldChangeDefaultCorrectionStrategy() {
-            wizardState.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
-            assertThat(wizardState.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP)
+            wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
+            assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP)
 
-            wizardState.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
-            assertThat(wizardState.defaultCorrectionStrategy.value)
+            wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
+            assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value)
                 .isEqualTo(CorrectionStrategy.CROP_AND_ROTATE)
         }
 
@@ -431,11 +431,11 @@ class WizardStateFlowTest {
         fun nullCorrectionStrategyMeansUseGlobalDefault() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
+            wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
             wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration(correctionStrategy = null))
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy).isNull()
-            assertThat(wizardState.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP)
+            assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP)
         }
 
         @Test
@@ -443,7 +443,7 @@ class WizardStateFlowTest {
         fun photoLevelOverrideShouldTakePrecedenceOverGlobalDefault() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
+            wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
             wizardState.configs.setPhotoConfiguration(
                 boxId,
                 PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP),
@@ -457,8 +457,8 @@ class WizardStateFlowTest {
         @DisplayName("should persist strategy change across all three strategies")
         fun shouldPersistStrategyChangeAcrossAllThreeStrategies() {
             for (strategy in CorrectionStrategy.entries) {
-                wizardState.setDefaultCorrectionStrategy(strategy)
-                assertThat(wizardState.defaultCorrectionStrategy.value).isEqualTo(strategy)
+                wizardState.exportSettings.setDefaultCorrectionStrategy(strategy)
+                assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value).isEqualTo(strategy)
             }
         }
     }
@@ -597,43 +597,43 @@ class WizardStateFlowTest {
         @Test
         @DisplayName("should start with default zoom")
         fun shouldStartWithDefaultZoom() {
-            assertThat(wizardState.zoomController.value.zoom).isEqualTo(1.0)
+            assertThat(wizardState.zoom.zoomController.value.zoom).isEqualTo(1.0)
         }
 
         @Test
         @DisplayName("should zoom in and increase zoom level")
         fun shouldZoomIn() {
-            val initialZoom = wizardState.zoomController.value.zoom
-            wizardState.zoomIn()
-            assertThat(wizardState.zoomController.value.zoom).isGreaterThan(initialZoom)
+            val initialZoom = wizardState.zoom.zoomController.value.zoom
+            wizardState.zoom.zoomIn()
+            assertThat(wizardState.zoom.zoomController.value.zoom).isGreaterThan(initialZoom)
         }
 
         @Test
         @DisplayName("should zoom out and decrease zoom level")
         fun shouldZoomOut() {
-            wizardState.zoomIn()
-            val zoomedIn = wizardState.zoomController.value.zoom
-            wizardState.zoomOut()
-            assertThat(wizardState.zoomController.value.zoom).isLessThan(zoomedIn)
+            wizardState.zoom.zoomIn()
+            val zoomedIn = wizardState.zoom.zoomController.value.zoom
+            wizardState.zoom.zoomOut()
+            assertThat(wizardState.zoom.zoomController.value.zoom).isLessThan(zoomedIn)
         }
 
         @Test
         @DisplayName("should not zoom below minimum")
         fun shouldNotZoomBelowMinimum() {
-            repeat(20) { wizardState.zoomOut() }
-            val minZoom = wizardState.zoomController.value.minZoom
-            assertThat(wizardState.zoomController.value.zoom).isGreaterThanOrEqualTo(minZoom)
+            repeat(20) { wizardState.zoom.zoomOut() }
+            val minZoom = wizardState.zoom.zoomController.value.minZoom
+            assertThat(wizardState.zoom.zoomController.value.zoom).isGreaterThanOrEqualTo(minZoom)
         }
 
         @Test
         @DisplayName("should fit to view resetting zoom to calculated level")
         fun shouldFitToView() {
-            wizardState.zoomIn()
-            wizardState.zoomIn()
-            assertThat(wizardState.zoomController.value.zoom).isGreaterThan(1.0)
+            wizardState.zoom.zoomIn()
+            wizardState.zoom.zoomIn()
+            assertThat(wizardState.zoom.zoomController.value.zoom).isGreaterThan(1.0)
 
             wizardState.fitToView(800.0, 600.0)
-            assertThat(wizardState.zoomController.value.zoom).isGreaterThan(0.0)
+            assertThat(wizardState.zoom.zoomController.value.zoom).isGreaterThan(0.0)
         }
     }
 
@@ -722,11 +722,11 @@ class WizardStateFlowTest {
             val box1Id = state.boundingBoxList.value.boxes[0].id
             val box2Id = state.boundingBoxList.value.boxes[1].id
 
-            state.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
+            state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
             state.configs.setPhotoConfiguration(box1Id, PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP))
             state.configs.updatePhotoConfiguration(box2Id) { it.copy(rotationDegrees = 90) }
 
-            assertThat(state.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.PERSPECTIVE)
+            assertThat(state.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.PERSPECTIVE)
             assertThat(state.photoConfigurations.value[box1Id]?.correctionStrategy).isEqualTo(CorrectionStrategy.CROP)
             assertThat(state.photoConfigurations.value[box2Id]?.rotationDegrees).isEqualTo(90)
 
@@ -736,10 +736,10 @@ class WizardStateFlowTest {
 
             // 5. CONFIGURE MORE: Rotate all, change strategy
             state.configs.rotateAllBoxesCW()
-            state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
+            state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
 
             assertThat(state.photoConfigurations.value[box1Id]?.rotationDegrees).isEqualTo(90)
-            assertThat(state.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP_AND_ROTATE)
+            assertThat(state.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP_AND_ROTATE)
 
             // 6. NAVIGATE: Summary → Edit
             state.navigation.goToEdit()
@@ -797,14 +797,14 @@ class WizardStateFlowTest {
 
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             state.initializeSinglePhoto(image, File("portrait.jpg"))
-            assertThat(state.singlePhotoMode.value).isTrue()
+            assertThat(state.importSettings.singlePhotoMode.value).isTrue()
             assertThat(state.image.value).isNotNull()
             assertThat(state.boundingBoxList.value.size()).isEqualTo(1)
             assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.EDIT)
 
             state.resetToImportStep()
             assertThat(state.image.value).isNull()
-            assertThat(state.singlePhotoMode.value).isFalse()
+            assertThat(state.importSettings.singlePhotoMode.value).isFalse()
         }
     }
 }

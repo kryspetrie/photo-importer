@@ -111,7 +111,7 @@ fun Modifier.withWizardKeyboardShortcuts(
                     if (wizardState.boxes.selectedCorner.value != null) {
                         wizardState.boxes.moveSelectedCorner(0.0, -cornerDelta)
                     } else {
-                        wizardState.pan(0.0, panDelta)
+                        wizardState.zoom.pan(0.0, panDelta)
                     }
                     return@onKeyEvent true
                 }
@@ -119,7 +119,7 @@ fun Modifier.withWizardKeyboardShortcuts(
                     if (wizardState.boxes.selectedCorner.value != null) {
                         wizardState.boxes.moveSelectedCorner(0.0, cornerDelta)
                     } else {
-                        wizardState.pan(0.0, -panDelta)
+                        wizardState.zoom.pan(0.0, -panDelta)
                     }
                     return@onKeyEvent true
                 }
@@ -127,7 +127,7 @@ fun Modifier.withWizardKeyboardShortcuts(
                     if (wizardState.boxes.selectedCorner.value != null) {
                         wizardState.boxes.moveSelectedCorner(-cornerDelta, 0.0)
                     } else {
-                        wizardState.pan(panDelta, 0.0)
+                        wizardState.zoom.pan(panDelta, 0.0)
                     }
                     return@onKeyEvent true
                 }
@@ -135,7 +135,7 @@ fun Modifier.withWizardKeyboardShortcuts(
                     if (wizardState.boxes.selectedCorner.value != null) {
                         wizardState.boxes.moveSelectedCorner(cornerDelta, 0.0)
                     } else {
-                        wizardState.pan(-panDelta, 0.0)
+                        wizardState.zoom.pan(-panDelta, 0.0)
                     }
                     return@onKeyEvent true
                 }
@@ -166,11 +166,11 @@ fun Modifier.withWizardKeyboardShortcuts(
                 }
                 Key.Equals,
                 Key.Plus -> {
-                    wizardState.zoomIn(viewportCenterX, viewportCenterY)
+                    wizardState.zoom.zoomIn(viewportCenterX, viewportCenterY)
                     return@onKeyEvent true
                 }
                 Key.Minus -> {
-                    wizardState.zoomOut(viewportCenterX, viewportCenterY)
+                    wizardState.zoom.zoomOut(viewportCenterX, viewportCenterY)
                     return@onKeyEvent true
                 }
                 Key.Zero,

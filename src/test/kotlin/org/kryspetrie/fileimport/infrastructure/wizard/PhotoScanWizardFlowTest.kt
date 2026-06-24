@@ -244,7 +244,7 @@ class PhotoScanWizardFlowTest {
         @DisplayName("Photo with no per-photo strategy uses global default")
         fun photoWithoutStrategyUsesGlobalDefault() {
             state.initializeWithImage(testImage, File("scan.jpg"))
-            state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
+            state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
 
             val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
             state.boxes.addBox(box)
@@ -255,7 +255,7 @@ class PhotoScanWizardFlowTest {
             // Export logic: null strategy → use global default (CROP)
             // This is tested in PhotoScanExportServiceTest
             // Here we verify the state is consistent: null per-photo means "use global"
-            val globalStrategy = state.defaultCorrectionStrategy.value
+            val globalStrategy = state.exportSettings.defaultCorrectionStrategy.value
             assertEquals(CorrectionStrategy.CROP, globalStrategy)
         }
 
@@ -263,7 +263,7 @@ class PhotoScanWizardFlowTest {
         @DisplayName("Per-photo strategy overrides global default")
         fun perPhotoStrategyOverridesGlobal() {
             state.initializeWithImage(testImage, File("scan.jpg"))
-            state.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
+            state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
 
             val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
             state.boxes.addBox(box)
@@ -279,7 +279,7 @@ class PhotoScanWizardFlowTest {
                 state.photoConfigurations.value[box.id]?.correctionStrategy
             )
             // Global default is still PERSPECTIVE for other photos
-            assertEquals(CorrectionStrategy.PERSPECTIVE, state.defaultCorrectionStrategy.value)
+            assertEquals(CorrectionStrategy.PERSPECTIVE, state.exportSettings.defaultCorrectionStrategy.value)
         }
 
         @Test
@@ -294,7 +294,7 @@ class PhotoScanWizardFlowTest {
             )
 
             // Change global default
-            state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
+            state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
 
             // Per-photo strategy is still CROP, unchanged
             assertEquals(
@@ -309,19 +309,19 @@ class PhotoScanWizardFlowTest {
             state.initializeWithImage(testImage, File("scan.jpg"))
 
             // Default: perspective correction enabled
-            assertTrue(state.perspectiveCorrectionEnabled.value)
+            assertTrue(state.exportSettings.perspectiveCorrectionEnabled.value)
 
             // Disable perspective correction — strategy dropdown becomes visible
-            state.setPerspectiveCorrectionEnabled(false)
-            assertFalse(state.perspectiveCorrectionEnabled.value)
+            state.exportSettings.setPerspectiveCorrectionEnabled(false)
+            assertFalse(state.exportSettings.perspectiveCorrectionEnabled.value)
 
             // Set global strategy to CROP (only matters when perspective correction OFF)
-            state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
-            assertEquals(CorrectionStrategy.CROP, state.defaultCorrectionStrategy.value)
+            state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
+            assertEquals(CorrectionStrategy.CROP, state.exportSettings.defaultCorrectionStrategy.value)
 
             // Re-enable perspective correction — strategy dropdown hidden, PERSPECTIVE implied
-            state.setPerspectiveCorrectionEnabled(true)
-            assertTrue(state.perspectiveCorrectionEnabled.value)
+            state.exportSettings.setPerspectiveCorrectionEnabled(true)
+            assertTrue(state.exportSettings.perspectiveCorrectionEnabled.value)
         }
 
         @Test
@@ -547,13 +547,13 @@ class PhotoScanWizardFlowTest {
             state.boxes.addBox(BoundingBox.createRectangular(Point(400.0, 100.0), 200.0, 150.0))
 
             // Configure global defaults
-            state.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
-            state.setExportMarginPercent(0.05)
-            state.setPerspectiveCorrectionEnabled(false)
+            state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
+            state.exportSettings.setExportMarginPercent(0.05)
+            state.exportSettings.setPerspectiveCorrectionEnabled(false)
 
-            assertEquals(CorrectionStrategy.CROP_AND_ROTATE, state.defaultCorrectionStrategy.value)
-            assertEquals(0.05, state.exportMarginPercent.value, 0.001)
-            assertFalse(state.perspectiveCorrectionEnabled.value)
+            assertEquals(CorrectionStrategy.CROP_AND_ROTATE, state.exportSettings.defaultCorrectionStrategy.value)
+            assertEquals(0.05, state.exportSettings.exportMarginPercent.value, 0.001)
+            assertFalse(state.exportSettings.perspectiveCorrectionEnabled.value)
 
             // Override one photo's strategy
             val box1Id = state.configs.boxes[0].id
@@ -695,26 +695,26 @@ class PhotoScanWizardFlowTest {
         fun zoomPanFitToViewFlow() {
             state.initializeWithImage(testImage, File("scan.jpg"))
 
-            val initialZoom = state.zoomController.value.zoom
+            val initialZoom = state.zoom.zoomController.value.zoom
 
             // Zoom in
-            state.zoomIn()
-            assertTrue(state.zoomController.value.zoom > initialZoom)
+            state.zoom.zoomIn()
+            assertTrue(state.zoom.zoomController.value.zoom > initialZoom)
 
             // Zoom out
-            val zoomedIn = state.zoomController.value.zoom
-            state.zoomOut()
-            assertTrue(state.zoomController.value.zoom < zoomedIn)
+            val zoomedIn = state.zoom.zoomController.value.zoom
+            state.zoom.zoomOut()
+            assertTrue(state.zoom.zoomController.value.zoom < zoomedIn)
 
             // Pan
-            val initialPanX = state.zoomController.value.panX
-            state.pan(50.0, 30.0)
-            assertTrue(state.zoomController.value.panX > initialPanX)
+            val initialPanX = state.zoom.zoomController.value.panX
+            state.zoom.pan(50.0, 30.0)
+            assertTrue(state.zoom.zoomController.value.panX > initialPanX)
 
             // Fit to view resets zoom to a calculated fit level
             state.fitToView()
             // After fitToView, zoom should be positive and non-zero
-            assertTrue(state.zoomController.value.zoom > 0)
+            assertTrue(state.zoom.zoomController.value.zoom > 0)
         }
     }
 }

@@ -76,8 +76,8 @@ suspend fun exportSinglePhoto(
     val progress = (index + 1).toFloat() / totalCount
     onProgress(progress * 0.9f, fileName)
 
-    val perspectiveEnabled = state.perspectiveCorrectionEnabled.value
-    val marginFraction = state.exportMarginPercent.value
+    val perspectiveEnabled = state.exportSettings.perspectiveCorrectionEnabled.value
+    val marginFraction = state.exportSettings.exportMarginPercent.value
 
     val corrections = mutableListOf<String>()
     corrections.add(if (perspectiveEnabled) "Warp-stretch" else "Simple crop")
@@ -219,7 +219,7 @@ suspend fun exportPhotos(
         }
 
         val baseName = state.imageFile.value?.nameWithoutExtension ?: "scan"
-        val globalStrategy = state.defaultCorrectionStrategy.value
+        val globalStrategy = state.exportSettings.defaultCorrectionStrategy.value
         val results = mutableListOf<ExportResult>()
 
         boxes.forEachIndexed { index, box ->

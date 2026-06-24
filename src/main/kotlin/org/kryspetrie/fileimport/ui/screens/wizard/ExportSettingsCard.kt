@@ -40,9 +40,9 @@ fun ExportSettingsCard(
     onStrategyChange: ((CorrectionStrategy) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val perspectiveEnabled by state.perspectiveCorrectionEnabled.collectAsState()
-    val marginPercent by state.exportMarginPercent.collectAsState()
-    val defaultStrategy by state.defaultCorrectionStrategy.collectAsState()
+    val perspectiveEnabled by state.exportSettings.perspectiveCorrectionEnabled.collectAsState()
+    val marginPercent by state.exportSettings.exportMarginPercent.collectAsState()
+    val defaultStrategy by state.exportSettings.defaultCorrectionStrategy.collectAsState()
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -82,7 +82,7 @@ fun ExportSettingsCard(
                 }
                 Switch(
                     checked = perspectiveEnabled,
-                    onCheckedChange = { state.setPerspectiveCorrectionEnabled(it) },
+                    onCheckedChange = { state.exportSettings.setPerspectiveCorrectionEnabled(it) },
                 )
             }
 
@@ -109,7 +109,7 @@ fun ExportSettingsCard(
                     CorrectionStrategyDropdown(
                         selectedStrategy = defaultStrategy,
                         onStrategyChange = { strategy: CorrectionStrategy ->
-                            state.setDefaultCorrectionStrategy(strategy)
+                            state.exportSettings.setDefaultCorrectionStrategy(strategy)
                             onStrategyChange?.invoke(strategy)
                         },
                     )
@@ -143,7 +143,7 @@ fun ExportSettingsCard(
                     )
                     Slider(
                         value = marginPercent.toFloat(),
-                        onValueChange = { state.setExportMarginPercent(it.toDouble()) },
+                        onValueChange = { state.exportSettings.setExportMarginPercent(it.toDouble()) },
                         valueRange = 0f..0.1f,
                         steps = 9,
                         modifier = Modifier.fillMaxWidth(),

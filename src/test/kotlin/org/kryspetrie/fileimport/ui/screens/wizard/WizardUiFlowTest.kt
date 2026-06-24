@@ -148,11 +148,11 @@ class WizardUiFlowTest {
                 OverviewScreen(state = wizardState, onBack = {}, onToSummary = {})
             }
 
-            val initialZoom = wizardState.zoomController.value.zoom
+            val initialZoom = wizardState.zoom.zoomController.value.zoom
             composeTestRule.onNodeWithContentDescription("Zoom in").performClick()
             composeTestRule.waitForIdle()
 
-            assertThat(wizardState.zoomController.value.zoom).isGreaterThan(initialZoom)
+            assertThat(wizardState.zoom.zoomController.value.zoom).isGreaterThan(initialZoom)
         }
     }
 
@@ -349,7 +349,7 @@ class WizardUiFlowTest {
         @Test
         @DisplayName("should display correction strategy when perspective is off")
         fun shouldDisplayCorrectionStrategyWhenPerspectiveOff() {
-            wizardState.setPerspectiveCorrectionEnabled(false)
+            wizardState.exportSettings.setPerspectiveCorrectionEnabled(false)
 
             composeTestRule.setContent {
                 ExportSettingsCard(state = wizardState)
@@ -361,7 +361,7 @@ class WizardUiFlowTest {
         @Test
         @DisplayName("should not display correction strategy when perspective is on")
         fun shouldNotDisplayCorrectionStrategyWhenPerspectiveOn() {
-            wizardState.setPerspectiveCorrectionEnabled(true)
+            wizardState.exportSettings.setPerspectiveCorrectionEnabled(true)
 
             composeTestRule.setContent {
                 ExportSettingsCard(state = wizardState)

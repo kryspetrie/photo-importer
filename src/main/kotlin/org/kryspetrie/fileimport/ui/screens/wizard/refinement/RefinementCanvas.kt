@@ -42,7 +42,7 @@ internal fun RefinementCanvas(
     onCanvasSizeChanged: (IntSize) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val zoomController by state.zoomController.collectAsState()
+    val zoomController by state.zoom.zoomController.collectAsState()
     val selectedCorner by state.boxes.selectedCorner.collectAsState()
     val boundingBoxList by state.boundingBoxList.collectAsState()
 
@@ -221,7 +221,7 @@ internal fun RefinementCanvas(
                                         // Background pan
                                         val dx = (pos.x.toDouble() - lastDragX)
                                         val dy = (pos.y.toDouble() - lastDragY)
-                                        state.pan(dx, dy)
+                                        state.zoom.pan(dx, dy)
                                         lastDragX = pos.x.toDouble()
                                         lastDragY = pos.y.toDouble()
                                     }
@@ -249,9 +249,9 @@ internal fun RefinementCanvas(
                                     val scrollDelta = event.changes.firstOrNull()?.scrollDelta
                                     if (scrollDelta != null) {
                                         if (scrollDelta.y < 0) {
-                                            state.zoomIn(pos.x.toDouble(), pos.y.toDouble())
+                                            state.zoom.zoomIn(pos.x.toDouble(), pos.y.toDouble())
                                         } else if (scrollDelta.y > 0) {
-                                            state.zoomOut(pos.x.toDouble(), pos.y.toDouble())
+                                            state.zoom.zoomOut(pos.x.toDouble(), pos.y.toDouble())
                                         }
                                     }
                                 }

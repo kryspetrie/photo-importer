@@ -214,8 +214,8 @@ fun EditScreen(
                     faceSelectIndex != null && faceRegionTransformer != null && sourceFile != null
                 ) {
                     try {
-                        val marginFraction = state.exportMarginPercent.value
-                        val perspectiveEnabled = state.perspectiveCorrectionEnabled.value
+                        val marginFraction = state.exportSettings.exportMarginPercent.value
+                        val perspectiveEnabled = state.exportSettings.perspectiveCorrectionEnabled.value
                         val detectedPhoto =
                             boxToDetectedPhoto(box, perspectiveEnabled, config.rotationDegrees)
                         val marginedPhoto =

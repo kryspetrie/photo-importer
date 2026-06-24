@@ -44,7 +44,7 @@ fun OverviewCanvas(
 ) {
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val selectedBoxIndex by state.boxes.selectedBoxIndex.collectAsState()
-    val zoomController by state.zoomController.collectAsState()
+    val zoomController by state.zoom.zoomController.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
 
     // Track Shift key state for scroll modifiers (e.g., Shift+scroll to rotate).
@@ -121,7 +121,7 @@ private fun canvasPointerHandler(
 
                         if (wizardMode == WizardMode.NORMAL) {
                             val boundingBoxList = state.boundingBoxList.value
-                            val zoomController = state.zoomController.value
+                            val zoomController = state.zoom.zoomController.value
                             // Check if pressing a corner of any box
                             val cornerHit = findCornerHit(pos, boundingBoxList, zoomController)
                             if (cornerHit != null) {
@@ -151,13 +151,13 @@ private fun canvasPointerHandler(
 
                             // Update mouse position for 4-point creation preview
                             if (wizardMode == WizardMode.FOUR_POINT) {
-                                val zoomController = state.zoomController.value
+                                val zoomController = state.zoom.zoomController.value
                                 val point =
                                     zoomController.screenToImage(pos.x.toDouble(), pos.y.toDouble())
                                 state.updateCreationMousePosition(Point(point.x, point.y))
                             }
 
-                            val zoomController = state.zoomController.value
+                            val zoomController = state.zoom.zoomController.value
                             val currentBoxIndex = state.boxes.selectedBoxIndex.value
                             when {
                                 isCornerDrag && draggedCorner != null && currentBoxIndex >= 0 -> {
@@ -183,7 +183,7 @@ private fun canvasPointerHandler(
                                 else -> {
                                     val deltaX = (pos.x - lastDragPos.x).toDouble()
                                     val deltaY = (pos.y - lastDragPos.y).toDouble()
-                                    state.pan(deltaX, deltaY)
+                                    state.zoom.pan(deltaX, deltaY)
                                 }
                             }
                             lastDragPos = pos
@@ -195,7 +195,7 @@ private fun canvasPointerHandler(
                             if (totalMovement < tapThreshold) {
                                 // Treat as tap — perform selection / 4-point placement
                                 val boundingBoxList = state.boundingBoxList.value
-                                val zoomController = state.zoomController.value
+                                val zoomController = state.zoom.zoomController.value
                                 when (wizardMode) {
                                     WizardMode.FOUR_POINT -> {
                                         val point =
@@ -246,7 +246,7 @@ private fun canvasPointerHandler(
                         val scrollDelta = event.changes.firstOrNull()?.scrollDelta
                         if (scrollDelta != null) {
                             val boundingBoxList = state.boundingBoxList.value
-                            val zoomCtrl = state.zoomController.value
+                            val zoomCtrl = state.zoom.zoomController.value
                             val hoveredBoxIndex = findBoxHit(pos, boundingBoxList, zoomCtrl)
                             when {
                                 isShiftHeld() && hoveredBoxIndex >= 0 -> {
@@ -267,9 +267,9 @@ private fun canvasPointerHandler(
                                 else -> {
                                     // Scroll on empty space: zoom
                                     if (scrollDelta.y < 0) {
-                                        state.zoomIn(pos.x.toDouble(), pos.y.toDouble())
+                                        state.zoom.zoomIn(pos.x.toDouble(), pos.y.toDouble())
                                     } else {
-                                        state.zoomOut(pos.x.toDouble(), pos.y.toDouble())
+                                        state.zoom.zoomOut(pos.x.toDouble(), pos.y.toDouble())
                                     }
                                 }
                             }

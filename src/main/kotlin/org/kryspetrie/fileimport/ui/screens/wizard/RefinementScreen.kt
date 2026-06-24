@@ -46,7 +46,7 @@ fun RefinementScreen(
     val image by state.image.collectAsState()
     val refinementBoxIndex by state.boxes.refinementBoxIndex.collectAsState()
     val selectedCorner by state.boxes.selectedCorner.collectAsState()
-    val zoomController by state.zoomController.collectAsState()
+    val zoomController by state.zoom.zoomController.collectAsState()
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val boxCount by remember { derivedStateOf { boundingBoxList.size() } }
 
@@ -121,13 +121,13 @@ fun RefinementScreen(
                     ZoomControls(
                         zoomController = zoomController,
                         onZoomIn = {
-                            state.zoomIn(
+                            state.zoom.zoomIn(
                                 canvasSize.width.toDouble() / 2,
                                 canvasSize.height.toDouble() / 2,
                             )
                         },
                         onZoomOut = {
-                            state.zoomOut(
+                            state.zoom.zoomOut(
                                 canvasSize.width.toDouble() / 2,
                                 canvasSize.height.toDouble() / 2,
                             )

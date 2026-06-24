@@ -132,7 +132,7 @@ fun startNewImport(
 ) {
     state.resetToImportStep()
     scope.launch {
-        val isSinglePhoto = state.singlePhotoMode.value && batchFiles == null
+        val isSinglePhoto = state.importSettings.singlePhotoMode.value && batchFiles == null
         if (batchFiles != null && batchFiles.size > 1) {
             state.batch.initializeBatch(batchFiles)
         }
@@ -160,7 +160,7 @@ fun startNewImport(
                 state = state,
                 file = file,
                 detectorService = detectorService,
-                cvAutoDetect = state.cvAutoDetectEnabled.value,
+                cvAutoDetect = state.importSettings.cvAutoDetectEnabled.value,
                 appLogger = appLogger,
                 dispatcherProvider = dispatcherProvider,
                 isLoading = isLoading,
@@ -198,7 +198,7 @@ fun continueToNextBatchPhoto(
             state = state,
             file = nextFile,
             detectorService = detectorService,
-            cvAutoDetect = state.cvAutoDetectEnabled.value,
+            cvAutoDetect = state.importSettings.cvAutoDetectEnabled.value,
             appLogger = appLogger,
             dispatcherProvider = dispatcherProvider,
             isLoading = isLoading,
