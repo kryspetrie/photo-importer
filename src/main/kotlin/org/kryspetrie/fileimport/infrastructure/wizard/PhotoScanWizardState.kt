@@ -379,37 +379,27 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     /** Face region state (selection mode, face region CRUD). Delegated sub-state. */
     val faceRegions = FaceRegionState(_photoConfigurations, _boundingBoxList)
 
-    // ========== Metadata Screen Selection ==========
+    /** Photo configuration state (per-photo configs, metadata selection, bulk ops). Delegated sub-state. */
+    val configs = PhotoConfigurationState(_photoConfigurations, _boundingBoxList)
 
-    /** Indices of photos selected on the metadata screen. Used for multi-edit. */
-    private val _selectedMetadataIndices = MutableStateFlow<Set<Int>>(emptySet())
-    val selectedMetadataIndices: StateFlow<Set<Int>> = _selectedMetadataIndices.asStateFlow()
+    // ========== Metadata Selection (delegated to PhotoConfigurationState) ==========
 
-    /** Toggles metadata selection for a photo index (for shift-click multi-select). */
-    fun toggleMetadataSelection(index: Int) {
-        val current = _selectedMetadataIndices.value
-        _selectedMetadataIndices.value = if (index in current) current - index else current + index
-    }
+    /** Indices of selected metadata photos. Delegates to [PhotoConfigurationState]. */
+    val selectedMetadataIndices: StateFlow<Set<Int>> get() = configs.selectedMetadataIndices
 
-    /** Selects a single photo for metadata editing, replacing any previous selection. */
-    fun selectSingleMetadata(index: Int) {
-        _selectedMetadataIndices.value = setOf(index)
-    }
+    /** Toggles metadata selection. Delegates to [PhotoConfigurationState]. */
+    fun toggleMetadataSelection(index: Int) = configs.toggleMetadataSelection(index)
 
-    /** Selects all photos for metadata editing. */
-    fun selectAllMetadata() {
-        _selectedMetadataIndices.value = (0 until _boundingBoxList.value.size()).toSet()
-    }
+    /** Selects a single metadata photo. Delegates to [PhotoConfigurationState]. */
+    fun selectSingleMetadata(index: Int) = configs.selectSingleMetadata(index)
 
-    /** Deselects all photos on the metadata screen. */
-    fun deselectAllMetadata() {
-        _selectedMetadataIndices.value = emptySet()
-    }
+    /** Selects all metadata photos. Delegates to [PhotoConfigurationState]. */
+    fun selectAllMetadata() = configs.selectAllMetadata()
 
-    /**
-     * Applies metadata fields to all selected photos on the metadata screen. Only non-empty fields
-     * are applied — empty fields are left unchanged on each photo.
-     */
+    /** Deselects all metadata photos. Delegates to [PhotoConfigurationState]. */
+    fun deselectAllMetadata() = configs.deselectAllMetadata()
+
+    /** Applies metadata to selected photos. Delegates to [PhotoConfigurationState]. */
     fun applyMetadataToSelected(
         description: String = "",
         keywords: String = "",
@@ -429,70 +419,43 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         gpsLatitude: String = "",
         gpsLongitude: String = "",
         subjects: String = "",
-    ) {
-        val indices = _selectedMetadataIndices.value
-        val list = _boundingBoxList.value
-        for (index in indices) {
-            if (index >= 0 && index < list.size()) {
-                val boxId = list.boxes[index].id
-                updatePhotoConfiguration(boxId) { existing ->
-                    existing.copy(
-                        description =
-                            if (description.isNotBlank()) description else existing.description,
-                        keywords = if (keywords.isNotBlank()) keywords else existing.keywords,
-                        originalDate =
-                            if (originalDate.isNotBlank()) originalDate else existing.originalDate,
-                        year = if (year.isNotBlank()) year else existing.year,
-                        cameraModel =
-                            if (cameraModel.isNotBlank()) cameraModel else existing.cameraModel,
-                        cameraMake =
-                            if (cameraMake.isNotBlank()) cameraMake else existing.cameraMake,
-                        lensModel = if (lensModel.isNotBlank()) lensModel else existing.lensModel,
-                        focalLength =
-                            if (focalLength.isNotBlank()) focalLength else existing.focalLength,
-                        aperture = if (aperture.isNotBlank()) aperture else existing.aperture,
-                        shutterSpeed =
-                            if (shutterSpeed.isNotBlank()) shutterSpeed else existing.shutterSpeed,
-                        iso = if (iso.isNotBlank()) iso else existing.iso,
-                        locationName =
-                            if (locationName.isNotBlank()) locationName else existing.locationName,
-                        city = if (city.isNotBlank()) city else existing.city,
-                        state = if (state.isNotBlank()) state else existing.state,
-                        country = if (country.isNotBlank()) country else existing.country,
-                        gpsLatitude =
-                            if (gpsLatitude.isNotBlank()) gpsLatitude else existing.gpsLatitude,
-                        gpsLongitude =
-                            if (gpsLongitude.isNotBlank()) gpsLongitude else existing.gpsLongitude,
-                        subjects = if (subjects.isNotBlank()) subjects else existing.subjects,
-                    )
-                }
-            }
-        }
-    }
+    ) = configs.applyMetadataToSelected(
+        description = description,
+        keywords = keywords,
+        originalDate = originalDate,
+        year = year,
+        cameraModel = cameraModel,
+        cameraMake = cameraMake,
+        lensModel = lensModel,
+        focalLength = focalLength,
+        aperture = aperture,
+        shutterSpeed = shutterSpeed,
+        iso = iso,
+        locationName = locationName,
+        city = city,
+        state = state,
+        country = country,
+        gpsLatitude = gpsLatitude,
+        gpsLongitude = gpsLongitude,
+        subjects = subjects,
+    )
 
-    /**
-     * Convenience overload that applies buffered metadata from a [MetadataEditState]. Only
-     * non-blank fields are applied — blank fields are left unchanged.
-     */
+    /** Applies metadata from a MetadataEditState. Adapts UI type to primitive parameters. */
     fun applyMetadataToSelected(
         editState: org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
-    ) {
-        applyMetadataToSelected(
-            description = editState.description,
-            keywords = editState.keywords,
-            originalDate = editState.originalDate,
-            year = editState.year,
-            cameraModel = editState.cameraModel,
-            cameraMake = editState.cameraMake,
-            lensModel = editState.lensModel,
-            focalLength = editState.focalLength,
-            aperture = editState.aperture,
-            shutterSpeed = editState.shutterSpeed,
-            iso = editState.iso,
-        )
-    }
-
-    // ========== Face Selection (delegated to FaceRegionState) ==========
+    ) = configs.applyMetadataToSelected(
+        description = editState.description,
+        keywords = editState.keywords,
+        originalDate = editState.originalDate,
+        year = editState.year,
+        cameraModel = editState.cameraModel,
+        cameraMake = editState.cameraMake,
+        lensModel = editState.lensModel,
+        focalLength = editState.focalLength,
+        aperture = editState.aperture,
+        shutterSpeed = editState.shutterSpeed,
+        iso = editState.iso,
+    )    // ========== Face Selection (delegated to FaceRegionState) ==========
 
     /** Whether face selection mode is active. Delegates to [FaceRegionState]. */
     val faceSelectMode: StateFlow<Boolean> get() = faceRegions.faceSelectMode
@@ -647,191 +610,37 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         }
     }
 
-    /**
-     * Sets the photo configuration for a specific box.
-     *
-     * @param boxId The ID of the box to configure
-     * @param config The configuration to apply
-     */
-    /**
-     * Sets the photo configuration for a specific box.
-     *
-     * This method stores correction preferences (perspective, rotation, aspect ratio) that will be
-     * applied during export. Each box can have its own unique configuration.
-     *
-     * ## Example
-     *
-     * ```kotlin
-     * state.setPhotoConfiguration(box.id, PhotoConfiguration(
-     *     perspectiveCorrectionEnabled = true,
-     *     rotationDegrees = 90
-     * ))
-     * ```
-     *
-     * @param boxId The unique identifier of the bounding box to configure
-     * @param config The [PhotoConfiguration] containing correction settings
-     * @see PhotoConfiguration
-     * @see updatePhotoConfiguration
-     * @see clearPhotoConfiguration
-     */
-    fun setPhotoConfiguration(boxId: String, config: PhotoConfiguration) {
-        _photoConfigurations.value = _photoConfigurations.value + (boxId to config)
-    }
+    // ========== Photo Configuration (delegated to PhotoConfigurationState) ==========
 
-    /**
-     * Updates the photo configuration for a specific box, preserving existing values.
-     *
-     * @param boxId The ID of the box to configure
-     * @param update A function that takes the existing config and returns a new one
-     */
-    /**
-     * Updates the photo configuration for a specific box, preserving existing values.
-     *
-     * Unlike [setPhotoConfiguration] which replaces the entire config, this method applies a
-     * transformation function to the existing config. Useful for updating a single field while
-     * preserving others.
-     *
-     * ## Example
-     *
-     * ```kotlin
-     * // Enable perspective without changing rotation
-     * state.updatePhotoConfiguration(box.id) { config ->
-     *     config.copy(perspectiveCorrectionEnabled = true)
-     * }
-     * ```
-     *
-     * @param boxId The ID of the box to update
-     * @param update A function that takes existing config and returns new config
-     * @see setPhotoConfiguration
-     * @see clearPhotoConfiguration
-     */
+    /** Sets photo configuration for a box. Delegates to [PhotoConfigurationState]. */
+    fun setPhotoConfiguration(boxId: String, config: PhotoConfiguration) =
+        configs.setPhotoConfiguration(boxId, config)
+
+    /** Updates photo configuration for a box. Delegates to [PhotoConfigurationState]. */
     fun updatePhotoConfiguration(
         boxId: String,
         update: (PhotoConfiguration) -> PhotoConfiguration,
-    ) {
-        val existing = _photoConfigurations.value[boxId] ?: PhotoConfiguration()
-        _photoConfigurations.value = _photoConfigurations.value + (boxId to update(existing))
-    }
+    ) = configs.updatePhotoConfiguration(boxId, update)
 
-    /**
-     * Clears the photo configuration for a specific box.
-     *
-     * @param boxId The ID of the box to clear configuration for
-     */
-    /**
-     * Clears the photo configuration for a specific box.
-     *
-     * Removes any correction settings for the specified box, reverting it to default configuration
-     * (no corrections enabled).
-     *
-     * @param boxId The ID of the box to clear configuration for
-     * @see setPhotoConfiguration
-     * @see updatePhotoConfiguration
-     */
-    fun clearPhotoConfiguration(boxId: String) {
-        _photoConfigurations.value = _photoConfigurations.value - boxId
-    }
+    /** Clears photo configuration for a box. Delegates to [PhotoConfigurationState]. */
+    fun clearPhotoConfiguration(boxId: String) = configs.clearPhotoConfiguration(boxId)
 
-    /**
-     * Applies a rotation to all boxes.
-     *
-     * @param degrees Rotation in degrees (-90, 90, 180, or 0 to clear)
-     */
-    /**
-     * Applies a rotation to all bounding boxes in the current state.
-     *
-     * This bulk operation sets the rotation degrees for all existing boxes. Useful when you want to
-     * rotate all detected photos uniformly.
-     *
-     * ## Common Use Cases
-     * - Rotate all photos 90° clockwise for scanning orientation correction
-     * - Rotate all photos 180° for upside-down scans
-     *
-     * ## Example
-     *
-     * ```kotlin
-     * // Cycle all boxes 90° clockwise
-     * state.rotateAllBoxesCW()
-     * // Cycle all boxes 90° counter-clockwise
-     * state.rotateAllBoxesCCW()
-     * ```
-     */
-    fun rotateAllBoxesCW() {
-        boxes.forEach { box -> updatePhotoConfiguration(box.id) { it.cycleRotationCW() } }
-    }
+    /** Rotates all boxes CW. Delegates to [PhotoConfigurationState]. */
+    fun rotateAllBoxesCW() = configs.rotateAllBoxesCW()
 
-    /**
-     * Cycles rotation 90° counter-clockwise for all bounding boxes.
-     *
-     * Each box's rotation cycles: 0°→270°→180°→90°→0°
-     *
-     * @see rotateAllBoxesCW
-     */
-    fun rotateAllBoxesCCW() {
-        boxes.forEach { box -> updatePhotoConfiguration(box.id) { it.cycleRotationCCW() } }
-    }
+    /** Rotates all boxes CCW. Delegates to [PhotoConfigurationState]. */
+    fun rotateAllBoxesCCW() = configs.rotateAllBoxesCCW()
 
-    /**
-     * Enables or disables perspective correction for all boxes.
-     *
-     * @param enabled True to enable, false to disable
-     */
-    /**
-     * Enables or disables perspective correction for all bounding boxes.
-     *
-     * This bulk operation sets the perspective correction flag for all existing boxes. When
-     * enabled, photos will be transformed to correct trapezoidal distortion.
-     *
-     * ## Common Use Cases
-     * - Enable perspective on all photos after reviewing scan results
-     * - Batch-apply perspective correction before export
-     *
-     * ## Example
-     *
-     * ```kotlin
-     * // Enable perspective correction for all boxes
-     * state.setPerspectiveCorrectionAll(true)
-     * ```
-     *
-     * @param enabled True to enable perspective correction, false to disable
-     * @see rotateAllBoxesCW
-     * @see clearAllConfigurations
-     */
-    fun setPerspectiveCorrectionAll(enabled: Boolean) {
-        boxes.forEach { box ->
-            updatePhotoConfiguration(box.id) { it.copy(perspectiveCorrectionEnabled = enabled) }
-        }
-    }
+    /** Sets perspective correction for all boxes. Delegates to [PhotoConfigurationState]. */
+    fun setPerspectiveCorrectionAll(enabled: Boolean) =
+        configs.setPerspectiveCorrectionAll(enabled)
 
-    /** Clears all photo configurations. */
-    /**
-     * Clears all photo configurations, resetting every box to default settings.
-     *
-     * This removes all correction settings (perspective, rotation, aspect ratio) for all bounding
-     * boxes. Each box will use default configuration with no corrections applied.
-     *
-     * ## Common Use Cases
-     * - Reset all photos before re-configuring from scratch
-     * - Clear user mistakes and start over
-     *
-     * ## Example
-     *
-     * ```kotlin
-     * // Clear all configurations and start fresh
-     * state.clearAllConfigurations()
-     * ```
-     *
-     * @see setPhotoConfiguration
-     * @see rotateAllBoxesCW
-     * @see setPerspectiveCorrectionAll
-     */
-    fun clearAllConfigurations() {
-        _photoConfigurations.value = emptyMap()
-    }
+    /** Clears all configurations. Delegates to [PhotoConfigurationState]. */
+    fun clearAllConfigurations() = configs.clearAllConfigurations()
 
     /** Returns all bounding boxes as a list. */
     val boxes: List<BoundingBox>
-        get() = _boundingBoxList.value.boxes
+        get() = configs.boxes
 
     /** Adds a bounding box. Respects overlap detection from [BoundingBoxList]. */
     fun addBox(box: BoundingBox): Boolean {
@@ -1377,7 +1186,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _photoConfigurations.value = emptyMap()
         _zoomController.value = ZoomController()
         // Reset metadata selection
-        _selectedMetadataIndices.value = emptySet()
+        configs.deselectAllMetadata()
         // Reset batch processing state
         _sourceFiles.value = emptyList()
         _currentImageIndex.value = 0
@@ -1405,7 +1214,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _undoRedoVersion.value++
         _photoConfigurations.value = emptyMap()
         _zoomController.value = ZoomController()
-        _selectedMetadataIndices.value = emptySet()
+        configs.deselectAllMetadata()
         _sourceExif.value = null
     }
 
