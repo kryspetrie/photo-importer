@@ -205,7 +205,7 @@ fun FaceSelectorOverlay(
         }
         // Commit current name
         if (namingFaceIndex in faceRegions.indices && namingInput.isNotBlank()) {
-            state.updateFaceRegionName(idx, namingFaceIndex, namingInput.trim())
+            state.faceRegions.updateFaceRegionName(idx, namingFaceIndex, namingInput.trim())
         }
         // Find next unnamed face after current
         var nextIdx = -1
@@ -411,7 +411,7 @@ fun FaceSelectorOverlay(
                             color = Color(0xFFFF6666),
                             style = MaterialTheme.typography.labelSmall,
                             modifier = Modifier.clickable {
-                                state.clearAllFaceRegions(idx)
+                                state.faceRegions.clearAllFaceRegions(idx)
                                 namingFaceIndex = -1
                                 namingInput = ""
                             },
@@ -440,7 +440,7 @@ fun FaceSelectorOverlay(
                             Surface(
                                 modifier =
                                     Modifier.clickable {
-                                        state.addFaceRegion(
+                                        state.faceRegions.addFaceRegion(
                                             idx,
                                             region.name,
                                             region.x,
@@ -536,7 +536,7 @@ fun FaceSelectorOverlay(
                                             Key.Enter -> {
                                                 // Commit name and advance
                                                 if (namingInput.isNotBlank()) {
-                                                    state.updateFaceRegionName(
+                                                    state.faceRegions.updateFaceRegionName(
                                                         idx,
                                                         namingFaceIndex,
                                                         namingInput.trim(),
@@ -676,7 +676,7 @@ fun FaceSelectorOverlay(
                                                                 bounds.height.toDouble())
                                                         .coerceIn(0.0, 1.0)
                                                 // Single state commit on drag end
-                                                state.updateFaceRegion(
+                                                state.faceRegions.updateFaceRegion(
                                                     idx,
                                                     draggingFaceIdx,
                                                     x = newX,
@@ -722,7 +722,7 @@ fun FaceSelectorOverlay(
                                                             (offset.y - deleteY).pow(2)
                                                     )
                                                 if (distToDelete < 14f) {
-                                                    state.removeFaceRegion(idx, tappedIdx)
+                                                    state.faceRegions.removeFaceRegion(idx, tappedIdx)
                                                     return@detectTapGestures
                                                 }
                                             }

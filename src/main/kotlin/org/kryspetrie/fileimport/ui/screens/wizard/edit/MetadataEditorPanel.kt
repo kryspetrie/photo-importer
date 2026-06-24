@@ -540,8 +540,8 @@ internal fun MetadataEditorPanel(
                     onMetadataHistoryRemove = onMetadataHistoryRemove,
                     onSelectFaces = { onSelectFaces(selectedIndex) },
                     faceRegions = config.faceRegions,
-                    onRemoveFace = { faceIdx -> state.removeFaceRegion(selectedIndex, faceIdx) },
-                    onClearAllFaces = { state.clearAllFaceRegions(selectedIndex) },
+                    onRemoveFace = { faceIdx -> state.faceRegions.removeFaceRegion(selectedIndex, faceIdx) },
+                    onClearAllFaces = { state.faceRegions.clearAllFaceRegions(selectedIndex) },
                 )
 
                 // ── Back-of-photo Image ──

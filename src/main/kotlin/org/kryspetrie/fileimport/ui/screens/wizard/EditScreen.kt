@@ -288,7 +288,7 @@ fun EditScreen(
                                         h = width,
                                     )
                                 }
-                                state.addDetectedFaceRegions(idx, detectedRegions)
+                                state.faceRegions.addDetectedFaceRegions(idx, detectedRegions)
                             }
                         } catch (_: Exception) {
                             // Detection failed silently — user can still place faces manually
@@ -315,7 +315,7 @@ fun EditScreen(
                 onConfirm = {
                     if (faceNameInput.isNotBlank()) {
                         val (photoIdx, normX, normY) = pendingFaceCoords!!
-                        state.addFaceRegion(
+                        state.faceRegions.addFaceRegion(
                             photoIdx,
                             faceNameInput.trim(),
                             normX,
