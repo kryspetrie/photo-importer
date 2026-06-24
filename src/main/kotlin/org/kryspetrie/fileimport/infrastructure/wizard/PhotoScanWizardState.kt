@@ -376,6 +376,9 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     val photoConfigurations: StateFlow<Map<String, PhotoConfiguration>> =
         _photoConfigurations.asStateFlow()
 
+    /** Navigation state (wizard step transitions). Delegated sub-state. */
+    val navigation = WizardNavigationState()
+
     /** Face region state (selection mode, face region CRUD). Delegated sub-state. */
     val faceRegions = FaceRegionState(_photoConfigurations, _boundingBoxList)
 
@@ -508,8 +511,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     // ========== Workflow ==========
 
-    private val _currentStep = MutableStateFlow(WizardStep.IMPORT)
-    val currentStep: StateFlow<WizardStep> = _currentStep.asStateFlow()
+    /** Current wizard step. Delegates to [WizardNavigationState]. */
+    val currentStep: StateFlow<WizardStep> = navigation.currentStep
 
     /** Initializes the wizard with an image file. */
     fun initializeWithImage(image: BufferedImage, file: File) {
@@ -525,7 +528,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _selectedCorner.value = null
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
-        _currentStep.value = WizardStep.OVERVIEW
+        navigation.step.value = WizardStep.OVERVIEW
         _undoRedoManager.clearAll()
         _undoRedoVersion.value++
     }
@@ -550,7 +553,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _selectedCorner.value = null
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
-        _currentStep.value = WizardStep.EDIT
+        navigation.step.value = WizardStep.EDIT
         _undoRedoManager.clearAll()
         _undoRedoVersion.value++
     }
@@ -851,14 +854,14 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _selectedBoxIndex.value = boxIndex
         _selectedCorner.value = null // Clear any previous corner selection
         // Stay on OVERVIEW step — corner editing is now inline
-        _currentStep.value = WizardStep.OVERVIEW
+        navigation.step.value = WizardStep.OVERVIEW
     }
 
     /** Exits refinement mode and returns to overview. */
     fun exitRefinement() {
         _refinementBoxIndex.value = -1
         _selectedCorner.value = null
-        _currentStep.value = WizardStep.OVERVIEW
+        navigation.step.value = WizardStep.OVERVIEW
     }
 
     // ========== Box Manipulation ==========
@@ -1140,31 +1143,23 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     // ========== Workflow Steps ==========
 
-    /** Goes to the overview step. */
+    /** Goes to the overview step. Delegates to [WizardNavigationState]. */
     fun goToOverview() {
-        _currentStep.value = WizardStep.OVERVIEW
+        navigation.goToOverview()
         exitRefinement()
     }
 
-    /** Goes to the summary step. */
-    fun goToSummary() {
-        _currentStep.value = WizardStep.SUMMARY
-    }
+    /** Goes to the summary step. Delegates to [WizardNavigationState]. */
+    fun goToSummary() = navigation.goToSummary()
 
-    /** Goes to the edit step (rotation or metadata mode). */
-    fun goToEdit() {
-        _currentStep.value = WizardStep.EDIT
-    }
+    /** Goes to the edit step. Delegates to [WizardNavigationState]. */
+    fun goToEdit() = navigation.goToEdit()
 
-    /** Goes to processing step. */
-    fun goToProcessing() {
-        _currentStep.value = WizardStep.PROCESSING
-    }
+    /** Goes to processing step. Delegates to [WizardNavigationState]. */
+    fun goToProcessing() = navigation.goToProcessing()
 
-    /** Goes to complete step. */
-    fun goToComplete() {
-        _currentStep.value = WizardStep.COMPLETE
-    }
+    /** Goes to complete step. Delegates to [WizardNavigationState]. */
+    fun goToComplete() = navigation.goToComplete()
 
     /**
      * Resets the wizard to the import step, clearing all state. Use this when user cancels or
@@ -1180,7 +1175,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         _selectedCorner.value = null
         _fourPointState.value = FourPointState.inactive()
         _wizardMode.value = WizardMode.NORMAL
-        _currentStep.value = WizardStep.IMPORT
+        navigation.step.value = WizardStep.IMPORT
         _undoRedoManager.clearAll()
         _undoRedoVersion.value++
         _photoConfigurations.value = emptyMap()
