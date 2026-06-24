@@ -11,10 +11,13 @@ import kotlinx.coroutines.runBlocking
 import org.kryspetrie.fileimport.application.ImportExecutor
 import org.kryspetrie.fileimport.application.ImportScanner
 import org.kryspetrie.fileimport.application.ImportService
+import org.kryspetrie.fileimport.application.FileOperationExecutor
+import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.infrastructure.adapter.DeduplicationAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
+import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.NamingAdapter
@@ -185,10 +188,18 @@ fun main(args: Array<String>) {
     val scanner = ImportScanner(imageRepo, null, dispatcherProvider)
     val timeProvider = DefaultTimeProvider()
     val executor = ImportExecutor(imageRepo, NamingAdapter(), timeProvider)
+    val surfService = SurfDeduplicationService(dispatcherProvider)
     val importService =
-        ImportService(scanner, executor, DeduplicationAdapter(dispatcherProvider), NamingAdapter())
+        ImportService(scanner, executor, DeduplicationAdapter(surfService, dispatcherProvider), NamingAdapter())
     val reorganizeService =
-        ReorganizeService(imageRepo, NamingAdapter(), timeProvider, dispatcherProvider)
+        ReorganizeService(
+            imageRepo,
+            NamingAdapter(),
+            timeProvider,
+            dispatcherProvider,
+            ReorganizeJournalRepository(),
+            FileOperationExecutor(dispatcherProvider),
+        )
     val cli = PhotoImportCli(importService, reorganizeService)
     cli.subcommands(
             ImportCommand(importService),

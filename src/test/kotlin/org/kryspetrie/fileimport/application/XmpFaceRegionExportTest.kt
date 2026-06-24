@@ -15,6 +15,9 @@ import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.application.export.BackImageService
+import org.kryspetrie.fileimport.application.export.JpegImageWriter
+import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 
 /**
@@ -34,7 +37,12 @@ class XmpFaceRegionExportTest {
     @BeforeEach
     fun setup() {
         perspectiveService = PerspectiveCorrectionService()
-        service = PhotoScanExportService(perspectiveService, FaceRegionTransformer())
+        service = PhotoScanExportService(
+            perspectiveService,
+            MetadataWritingService(FaceRegionTransformer()),
+            JpegImageWriter(),
+            BackImageService(),
+        )
     }
 
     private fun createDetectedPhoto(

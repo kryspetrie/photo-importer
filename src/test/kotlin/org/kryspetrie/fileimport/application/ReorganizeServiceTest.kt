@@ -26,6 +26,8 @@ import org.mockito.kotlin.whenever
 class ReorganizeServiceTest {
     private lateinit var imageRepository: ImageRepositoryPort
     private lateinit var namingPort: NamingPort
+    private lateinit var journalRepository: ReorganizeJournalRepository
+    private lateinit var fileOperationExecutor: FileOperationExecutor
     private lateinit var service: ReorganizeService
 
     @TempDir lateinit var tempDir: File
@@ -34,12 +36,17 @@ class ReorganizeServiceTest {
     fun setup() {
         imageRepository = mock(ImageRepositoryPort::class.java)
         namingPort = mock(NamingPort::class.java)
+        val dispatcherProvider = TestDispatcherProvider()
+        journalRepository = ReorganizeJournalRepository()
+        fileOperationExecutor = FileOperationExecutor(dispatcherProvider)
         service =
             ReorganizeService(
                 imageRepository,
                 namingPort,
                 TestTimeProvider(),
-                TestDispatcherProvider(),
+                dispatcherProvider,
+                journalRepository,
+                fileOperationExecutor,
             )
     }
 

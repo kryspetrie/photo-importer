@@ -2,19 +2,13 @@ package org.kryspetrie.fileimport.application
 
 import java.awt.image.BufferedImage
 import java.io.File
-import java.util.Locale
-import javax.imageio.IIOImage
-import javax.imageio.ImageIO
-import javax.imageio.ImageWriteParam
-import javax.imageio.plugins.jpeg.JPEGImageWriteParam
-import org.kryspetrie.fileimport.application.export.ExifMetadataWriter
+import org.kryspetrie.fileimport.application.export.BackImageService
 import org.kryspetrie.fileimport.application.export.FilenameResolver
 import org.kryspetrie.fileimport.application.export.ImageTransformer
-import org.kryspetrie.fileimport.application.export.IptcMetadataWriter
-import org.kryspetrie.fileimport.application.export.XmpMetadataWriter
+import org.kryspetrie.fileimport.application.export.JpegImageWriter
+import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
-import org.kryspetrie.fileimport.domain.model.ExifValueResolver
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
@@ -28,31 +22,25 @@ import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
 
 /**
- * Service for exporting extracted photos with EXIF metadata preservation and modification.
+ * Thin orchestrator for exporting extracted photos with EXIF metadata preservation and modification.
  *
- * Orchestrates the complete export pipeline:
- * 1. Perspective correction of the extracted photo (via [PerspectiveCorrectionService])
- * 2. Image transformation — crop and rotation (via [ImageTransformer])
- * 3. EXIF metadata write (via [ExifMetadataWriter])
- * 4. IPTC metadata write (via [IptcMetadataWriter])
- * 5. XMP face region write (via [XmpMetadataWriter])
- * 6. Filename conflict resolution (via [FilenameResolver])
- *
- * Back-of-photo image handling:
- * - `"combine"` mode: Stitches the back crop below the front photo with a 2px separator
- * - `"append_back"` mode: Exports the back crop as a separate `_back.jpg` file
+ * Delegates to specialized services:
+ * - [PerspectiveCorrectionService] — perspective warping
+ * - [ImageTransformer] — axis-aligned crop and rotation
+ * - [JpegImageWriter] — writing JPEG bytes
+ * - [BackImageService] — loading, cropping, rotating, and compositing back-of-photo images
+ * - [MetadataWritingService] — layering EXIF, IPTC, and XMP metadata onto JPEG files
+ * - [FilenameResolver] — filename conflict resolution
  *
  * @see DetectedPhoto
  * @see PhotoScanConfiguration
- * @see ExifMetadataWriter
  */
 class PhotoScanExportService(
     private val perspectiveService: PerspectiveCorrectionService,
-    private val faceRegionTransformer: FaceRegionTransformer,
+    private val metadataWritingService: MetadataWritingService,
+    private val jpegImageWriter: JpegImageWriter,
+    private val backImageService: BackImageService,
 ) : PhotoScanExportPort {
-
-    /** JPEG quality for output images (0.0 - 1.0). */
-    var jpegQuality = 0.95f
 
     // Type aliases for backward compatibility — actual types now live in domain/model
     typealias ExportResult = PhotoScanExportResult
@@ -80,42 +68,14 @@ class PhotoScanExportService(
             return ExportResult(success = false, errors = errors)
         }
 
-        val marginFraction = 0.02
-
         for ((index, photo) in detectedPhotos.withIndex()) {
             try {
-                val marginedPhoto = GeometryUtils.applyMargin(photo, marginFraction)
-                val strategy =
-                    photo.configuration.correctionStrategy
-                        ?: if (marginedPhoto.applyPerspectiveCorrection)
-                            CorrectionStrategy.PERSPECTIVE
-                        else determineCorrectionStrategy(marginedPhoto.toListOfCorners())
-
-                val correctedImage =
-                    when (strategy) {
-                        CorrectionStrategy.PERSPECTIVE ->
-                            perspectiveService.correctPerspective(bufferedImage, marginedPhoto)
-                        CorrectionStrategy.CROP_AND_ROTATE ->
-                            ImageTransformer.cropAxisAligned(bufferedImage, marginedPhoto)
-                        CorrectionStrategy.CROP ->
-                            ImageTransformer.cropAxisAligned(bufferedImage, marginedPhoto)
-                    }
-
-                val finalImage =
-                    if (photo.rotation != RotationAngle.NONE) {
-                        ImageTransformer.rotateImage(correctedImage, photo.rotation)
-                    } else {
-                        correctedImage
-                    }
-
-                // Handle back-of-photo image based on mode
-                val backMode = photo.configuration.backImageMode
-                val compositeImage =
-                    if (backMode == "combine" && photo.configuration.hasBackImage()) {
-                        compositeBackImage(finalImage, photo.configuration)
-                    } else {
-                        finalImage
-                    }
+                val result = processPhoto(
+                    sourceImage = bufferedImage,
+                    detectedPhoto = photo,
+                    sourceJavaFile = sourceJavaFile,
+                    marginFraction = 0.02,
+                )
 
                 val fileName =
                     if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}.jpg"
@@ -125,16 +85,17 @@ class PhotoScanExportService(
                     FilenameResolver.resolveFilenameConflict(File(destinationPath), fileName)
                 val outputFile = File(resolvedPath)
 
-                writeImageWithMetadata(
-                    compositeImage,
-                    outputFile,
-                    photo.configuration,
-                    sourceJavaFile,
-                    detectedPhoto = marginedPhoto,
-                    marginFraction = marginFraction,
+                metadataWritingService.writeImageWithMetadata(
+                    image = result.compositedImage,
+                    outputFile = outputFile,
+                    config = photo.configuration,
+                    sourceFile = sourceJavaFile,
+                    detectedPhoto = result.marginedPhoto,
+                    marginFraction = 0.02,
                     sourceImage = bufferedImage,
-                    preRotationWidth = correctedImage.width,
-                    preRotationHeight = correctedImage.height,
+                    preRotationWidth = result.preRotationWidth,
+                    preRotationHeight = result.preRotationHeight,
+                    jpegQuality = jpegImageWriter.jpegQuality,
                 )
 
                 exportedFiles.add(
@@ -142,15 +103,15 @@ class PhotoScanExportService(
                         sourceFile = sourceFile,
                         destinationPath = resolvedPath,
                         photoId = photo.id,
-                        width = compositeImage.width,
-                        height = compositeImage.height,
+                        width = result.compositedImage.width,
+                        height = result.compositedImage.height,
                         fileSize = outputFile.length(),
                     )
                 )
 
                 // Export back image as separate "_back" file if mode is append_back
-                if (backMode == "append_back" && photo.configuration.hasBackImage()) {
-                    val backImageResult = prepareBackImage(photo.configuration)
+                if (result.backMode == "append_back" && photo.configuration.hasBackImage()) {
+                    val backImageResult = backImageService.prepareBackImage(photo.configuration)
                     if (backImageResult != null) {
                         val backFileName =
                             if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}_back.jpg"
@@ -161,7 +122,7 @@ class PhotoScanExportService(
                                 backFileName,
                             )
                         val backOutputFile = File(backResolvedPath)
-                        writeJpegImage(backImageResult, backOutputFile)
+                        jpegImageWriter.writeJpegImage(backImageResult, backOutputFile)
                         exportedFiles.add(
                             ExportedFile(
                                 sourceFile = sourceFile,
@@ -196,60 +157,35 @@ class PhotoScanExportService(
     ): SingleExportResult {
         val bufferedImage = sourceImage.toBufferedImage()
         val sourceJavaFile = sourceFile?.toFile()
-        val marginFraction = 0.02
 
         return try {
-            val marginedPhoto = GeometryUtils.applyMargin(detectedPhoto, marginFraction)
-            val strategy =
-                detectedPhoto.configuration.correctionStrategy
-                    ?: if (marginedPhoto.applyPerspectiveCorrection) CorrectionStrategy.PERSPECTIVE
-                    else determineCorrectionStrategy(marginedPhoto.toListOfCorners())
-
-            val correctedImage =
-                when (strategy) {
-                    CorrectionStrategy.PERSPECTIVE ->
-                        perspectiveService.correctPerspective(bufferedImage, marginedPhoto)
-                    CorrectionStrategy.CROP_AND_ROTATE ->
-                        ImageTransformer.cropAxisAligned(bufferedImage, marginedPhoto)
-                    CorrectionStrategy.CROP ->
-                        ImageTransformer.cropAxisAligned(bufferedImage, marginedPhoto)
-                }
-
-            val finalImage =
-                if (detectedPhoto.rotation != RotationAngle.NONE) {
-                    ImageTransformer.rotateImage(correctedImage, detectedPhoto.rotation)
-                } else {
-                    correctedImage
-                }
-
-            // Handle back-of-photo image based on mode
-            val backMode = detectedPhoto.configuration.backImageMode
-            val compositeImage =
-                if (backMode == "combine" && detectedPhoto.configuration.hasBackImage()) {
-                    compositeBackImage(finalImage, detectedPhoto.configuration)
-                } else {
-                    finalImage
-                }
+            val result = processPhoto(
+                sourceImage = bufferedImage,
+                detectedPhoto = detectedPhoto,
+                sourceJavaFile = sourceJavaFile,
+                marginFraction = 0.02,
+            )
 
             val resolvedPath =
                 FilenameResolver.resolveFilenameConflict(File(destinationPath), "$baseFileName.jpg")
             val outputFile = File(resolvedPath)
 
-            writeImageWithMetadata(
-                compositeImage,
-                outputFile,
-                detectedPhoto.configuration,
-                sourceJavaFile,
-                detectedPhoto = marginedPhoto,
-                marginFraction = marginFraction,
+            metadataWritingService.writeImageWithMetadata(
+                image = result.compositedImage,
+                outputFile = outputFile,
+                config = detectedPhoto.configuration,
+                sourceFile = sourceJavaFile,
+                detectedPhoto = result.marginedPhoto,
+                marginFraction = 0.02,
                 sourceImage = bufferedImage,
-                preRotationWidth = correctedImage.width,
-                preRotationHeight = correctedImage.height,
+                preRotationWidth = result.preRotationWidth,
+                preRotationHeight = result.preRotationHeight,
+                jpegQuality = jpegImageWriter.jpegQuality,
             )
 
             // Export back image as separate "_back" file if mode is append_back
-            if (backMode == "append_back" && detectedPhoto.configuration.hasBackImage()) {
-                val backImageResult = prepareBackImage(detectedPhoto.configuration)
+            if (result.backMode == "append_back" && detectedPhoto.configuration.hasBackImage()) {
+                val backImageResult = backImageService.prepareBackImage(detectedPhoto.configuration)
                 if (backImageResult != null) {
                     val backResolvedPath =
                         FilenameResolver.resolveFilenameConflict(
@@ -257,15 +193,15 @@ class PhotoScanExportService(
                             "${baseFileName}_back.jpg",
                         )
                     val backOutputFile = File(backResolvedPath)
-                    writeJpegImage(backImageResult, backOutputFile)
+                    jpegImageWriter.writeJpegImage(backImageResult, backOutputFile)
                 }
             }
 
             SingleExportResult(
                 success = true,
                 destinationPath = resolvedPath,
-                width = compositeImage.width,
-                height = compositeImage.height,
+                width = result.compositedImage.width,
+                height = result.compositedImage.height,
             )
         } catch (e: Exception) {
             SingleExportResult(
@@ -279,202 +215,65 @@ class PhotoScanExportService(
     }
 
     /**
-     * Writes an image to file as a JPEG with the configured quality. Used for back-of-photo images
-     * that don't need metadata.
-     */
-    private fun writeJpegImage(image: BufferedImage, outputFile: File) {
-        outputFile.parentFile?.mkdirs()
-        val writer = ImageIO.getImageWritersByFormatName("jpg").next()
-        val writeParam =
-            JPEGImageWriteParam(Locale.US).apply {
-                compressionMode = ImageWriteParam.MODE_EXPLICIT
-                compressionQuality = jpegQuality
-            }
-        val fileOs = ImageIO.createImageOutputStream(outputFile)
-        fileOs.use {
-            writer.output = it
-            writer.write(null, IIOImage(image, null, null), writeParam)
-        }
-        writer.dispose()
-    }
-
-    /**
-     * Writes an image to file with EXIF, IPTC, and XMP metadata.
-     * 1. Write plain JPEG
-     * 2. Layer EXIF overrides (via [ExifMetadataWriter])
-     * 3. Layer IPTC keywords/location (via [IptcMetadataWriter])
-     * 4. Layer XMP face regions (via [XmpMetadataWriter])
-     */
-    private fun writeImageWithMetadata(
-        image: BufferedImage,
-        outputFile: File,
-        config: PhotoScanConfiguration,
-        sourceFile: File? = null,
-        detectedPhoto: DetectedPhoto? = null,
-        marginFraction: Double = 0.02,
-        sourceImage: BufferedImage? = null,
-        preRotationWidth: Int = image.width,
-        preRotationHeight: Int = image.height,
-    ) {
-        outputFile.parentFile?.mkdirs()
-
-        // Write the plain JPEG image
-        val writer = ImageIO.getImageWritersByFormatName("jpg").next()
-        val writeParam =
-            JPEGImageWriteParam(Locale.US).apply {
-                compressionMode = ImageWriteParam.MODE_EXPLICIT
-                compressionQuality = jpegQuality
-            }
-
-        val fileOs = ImageIO.createImageOutputStream(outputFile)
-        fileOs.use {
-            writer.output = it
-            writer.write(null, IIOImage(image, null, null), writeParam)
-        }
-        writer.dispose()
-
-        // Layer 1: EXIF
-        if (config.hasExifOverrides()) {
-            ExifMetadataWriter.writeExifMetadata(outputFile, config, sourceFile)
-        }
-
-        // Layer 2: IPTC
-        val keywordsValue = ExifValueResolver.resolveKeywords(config)
-        val hasLocationData =
-            config.locationName.isNotBlank() ||
-                config.city.isNotBlank() ||
-                config.state.isNotBlank() ||
-                config.country.isNotBlank() ||
-                config.subjects.isNotBlank()
-        if (keywordsValue != null || hasLocationData) {
-            IptcMetadataWriter.writeIptcData(outputFile, keywordsValue, config)
-        }
-
-        // Layer 3: XMP face regions
-        val allFaceRegions = mutableListOf(config.faceRegions)
-
-        if (sourceFile != null && detectedPhoto != null && sourceImage != null) {
-            try {
-                val transformedRegions =
-                    faceRegionTransformer.transformFaceRegionsFromSource(
-                        sourceFile = sourceFile,
-                        detectedPhoto = detectedPhoto,
-                        outputWidth = preRotationWidth,
-                        outputHeight = preRotationHeight,
-                        sourceWidth = sourceImage.width,
-                        sourceHeight = sourceImage.height,
-                        marginFraction = marginFraction,
-                    )
-                if (transformedRegions.isNotEmpty()) {
-                    allFaceRegions.add(transformedRegions)
-                }
-            } catch (_: Exception) {
-                // Source face region transformation is best-effort
-            }
-        }
-
-        val mergedConfig = config.copy(faceRegions = allFaceRegions.flatten())
-        if (mergedConfig.faceRegions.isNotEmpty()) {
-            XmpMetadataWriter.writeXmpFaceRegions(outputFile, mergedConfig)
-        }
-    }
-
-    /**
-     * Prepares the back-of-photo image: loads, crops, and rotates it. Returns null if the back
-     * image cannot be loaded.
-     */
-    private fun prepareBackImage(config: PhotoScanConfiguration): BufferedImage? {
-        val sourcePath = config.backImageSourcePath ?: return null
-        val sourceFile = File(sourcePath)
-        if (!sourceFile.exists()) return null
-
-        val backImage =
-            try {
-                ImageIO.read(sourceFile) ?: return null
-            } catch (_: Exception) {
-                return null
-            }
-
-        // Apply crop if normalized crop coordinates are provided
-        val croppedBack =
-            if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
-                val cropNorm = config.backCropNormalized
-                val left = cropNorm[0]
-                val top = cropNorm[1]
-                val right = cropNorm[2]
-                val bottom = cropNorm[3]
-                val cropX = (left * backImage.width).toInt().coerceIn(0, backImage.width)
-                val cropY = (top * backImage.height).toInt().coerceIn(0, backImage.height)
-                val cropW =
-                    ((right - left) * backImage.width).toInt().coerceIn(1, backImage.width - cropX)
-                val cropH =
-                    ((bottom - top) * backImage.height)
-                        .toInt()
-                        .coerceIn(1, backImage.height - cropY)
-                backImage.getSubimage(cropX, cropY, cropW, cropH)
-            } else {
-                backImage
-            }
-
-        // Apply rotation (0, 90, 180, 270 degrees)
-        return when (config.backCropRotation) {
-            90 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CW_90)
-            180 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CW_180)
-            270 -> ImageTransformer.rotateImage(croppedBack, RotationAngle.CCW_90)
-            else -> croppedBack
-        }
-    }
-
-    /**
-     * Composites a back-of-photo image below the front (extracted) photo.
+     * Shared processing pipeline for a single photo: apply margin, determine correction strategy,
+     * correct/crop, rotate, and handle back-image compositing.
      *
-     * The back image is loaded from [PhotoScanConfiguration.backImageSourcePath], optionally
-     * cropped using [PhotoScanConfiguration.backCropNormalized] coordinates, and optionally rotated
-     * by [PhotoScanConfiguration.backCropRotation]. The front and back images are stacked
-     * vertically with the back image scaled to match the front image width.
+     * Returns a [ProcessedPhoto] containing all intermediate and final results needed for metadata
+     * writing and file export.
      */
-    private fun compositeBackImage(
-        frontImage: BufferedImage,
-        config: PhotoScanConfiguration,
-    ): BufferedImage {
-        val preparedBack = prepareBackImage(config) ?: return frontImage
+    private fun processPhoto(
+        sourceImage: BufferedImage,
+        detectedPhoto: DetectedPhoto,
+        sourceJavaFile: File?,
+        marginFraction: Double,
+    ): ProcessedPhoto {
+        val marginedPhoto = GeometryUtils.applyMargin(detectedPhoto, marginFraction)
+        val strategy =
+            detectedPhoto.configuration.correctionStrategy
+                ?: if (marginedPhoto.applyPerspectiveCorrection) CorrectionStrategy.PERSPECTIVE
+                else determineCorrectionStrategy(marginedPhoto.toListOfCorners())
 
-        // Scale back image to match front image width
-        val targetWidth = frontImage.width
-        val scale = targetWidth.toFloat() / preparedBack.width.toFloat()
-        val targetHeight = (preparedBack.height * scale).toInt()
+        val correctedImage =
+            when (strategy) {
+                CorrectionStrategy.PERSPECTIVE ->
+                    perspectiveService.correctPerspective(sourceImage, marginedPhoto)
+                CorrectionStrategy.CROP_AND_ROTATE ->
+                    ImageTransformer.cropAxisAligned(sourceImage, marginedPhoto)
+                CorrectionStrategy.CROP ->
+                    ImageTransformer.cropAxisAligned(sourceImage, marginedPhoto)
+            }
 
-        val scaledBack =
-            java.awt.image.BufferedImage(
-                targetWidth,
-                targetHeight,
-                java.awt.image.BufferedImage.TYPE_INT_RGB,
-            )
-        val g2d = scaledBack.createGraphics()
-        g2d.drawImage(preparedBack, 0, 0, targetWidth, targetHeight, null)
-        g2d.dispose()
+        val finalImage =
+            if (detectedPhoto.rotation != RotationAngle.NONE) {
+                ImageTransformer.rotateImage(correctedImage, detectedPhoto.rotation)
+            } else {
+                correctedImage
+            }
 
-        // Stack front and back vertically with a 2px separator
-        val separatorHeight = 2
-        val compositeWidth = frontImage.width
-        val compositeHeight = frontImage.height + separatorHeight + scaledBack.height
+        // Handle back-of-photo compositing
+        val backMode = detectedPhoto.configuration.backImageMode
+        val compositedImage =
+            if (backMode == "combine" && detectedPhoto.configuration.hasBackImage()) {
+                backImageService.compositeBackImage(finalImage, detectedPhoto.configuration)
+            } else {
+                finalImage
+            }
 
-        val composite =
-            java.awt.image.BufferedImage(
-                compositeWidth,
-                compositeHeight,
-                java.awt.image.BufferedImage.TYPE_INT_RGB,
-            )
-        val g = composite.createGraphics()
-        // Draw front image at top
-        g.drawImage(frontImage, 0, 0, null)
-        // Draw separator line
-        g.color = java.awt.Color.LIGHT_GRAY
-        g.fillRect(0, frontImage.height, compositeWidth, separatorHeight)
-        // Draw back image below
-        g.drawImage(scaledBack, 0, frontImage.height + separatorHeight, null)
-        g.dispose()
-
-        return composite
+        return ProcessedPhoto(
+            marginedPhoto = marginedPhoto,
+            preRotationWidth = correctedImage.width,
+            preRotationHeight = correctedImage.height,
+            compositedImage = compositedImage,
+            backMode = backMode,
+        )
     }
+
+    /** Intermediate results from processing a single photo through the pipeline. */
+    private data class ProcessedPhoto(
+        val marginedPhoto: DetectedPhoto,
+        val preRotationWidth: Int,
+        val preRotationHeight: Int,
+        val compositedImage: BufferedImage,
+        val backMode: String?,
+    )
 }

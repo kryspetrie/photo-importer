@@ -19,19 +19,29 @@ import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
+import org.kryspetrie.fileimport.application.export.BackImageService
+import org.kryspetrie.fileimport.application.export.JpegImageWriter
+import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 
 @DisplayName("PhotoScanExportService")
 class PhotoScanExportServiceTest {
     private lateinit var service: PhotoScanExportService
     private lateinit var perspectiveService: PerspectiveCorrectionService
+    private lateinit var jpegImageWriter: JpegImageWriter
 
     @TempDir lateinit var tempDir: File
 
     @BeforeEach
     fun setup() {
         perspectiveService = PerspectiveCorrectionService()
-        service = PhotoScanExportService(perspectiveService, FaceRegionTransformer())
+        jpegImageWriter = JpegImageWriter()
+        service = PhotoScanExportService(
+            perspectiveService,
+            MetadataWritingService(FaceRegionTransformer()),
+            jpegImageWriter,
+            BackImageService(),
+        )
     }
 
     private fun createTestImage(width: Int, height: Int, color: Int): File {
@@ -74,14 +84,14 @@ class PhotoScanExportServiceTest {
         @DisplayName("should initialize with perspective service")
         fun shouldInitialize() {
             assertThat(service).isNotNull
-            assertThat(service.jpegQuality).isEqualTo(0.95f)
+            assertThat(jpegImageWriter.jpegQuality).isEqualTo(0.95f)
         }
 
         @Test
         @DisplayName("should allow jpeg quality configuration")
         fun shouldAllowQualityConfiguration() {
-            service.jpegQuality = 0.5f
-            assertThat(service.jpegQuality).isEqualTo(0.5f)
+            jpegImageWriter.jpegQuality = 0.5f
+            assertThat(jpegImageWriter.jpegQuality).isEqualTo(0.5f)
         }
     }
 

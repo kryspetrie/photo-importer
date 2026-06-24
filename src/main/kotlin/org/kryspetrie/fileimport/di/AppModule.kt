@@ -9,6 +9,11 @@ import org.kryspetrie.fileimport.application.ImportService
 import org.kryspetrie.fileimport.application.LocationSearchService
 import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
+import org.kryspetrie.fileimport.application.export.BackImageService
+import org.kryspetrie.fileimport.application.export.JpegImageWriter
+import org.kryspetrie.fileimport.application.export.MetadataWritingService
+import org.kryspetrie.fileimport.application.FileOperationExecutor
+import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.application.WatchFolderService
@@ -33,6 +38,7 @@ import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.ClasspathModelResourceAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.DeduplicationAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultIdGenerator
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
@@ -63,7 +69,8 @@ val appModule = module {
     single<ImageRepositoryPort> { ImageRepositoryAdapter(dispatcherProvider = get()) }
     single<SettingsPort> { SettingsAdapter(timeProvider = get()) }
     single<NamingPort> { NamingAdapter() }
-    single<DeduplicationPort> { DeduplicationAdapter(dispatcherProvider = get()) }
+    single { SurfDeduplicationService(dispatcherProvider = get()) }
+    single<DeduplicationPort> { DeduplicationAdapter(surfService = get(), dispatcherProvider = get()) }
     single<HashCachePort> { HashCacheAdapter(dispatcherProvider = get(), timeProvider = get()) }
     single<FileSystemPort> { FileSystemAdapter() }
     single<DevicePort> { DeviceAdapter(dispatcherProvider = get()) }
@@ -92,7 +99,9 @@ val appModule = module {
             devicePort = get(),
         )
     }
-    single { ReorganizeService(get(), get(), get(), get()) }
+    single { ReorganizeJournalRepository() }
+    single { FileOperationExecutor(get()) }
+    single { ReorganizeService(get(), get(), get(), get(), get(), get()) }
     single {
         DuplicateScannerService(
             imageRepository = get(),
@@ -118,8 +127,11 @@ val appModule = module {
     single { PerspectiveCorrectionService() }
     single<FaceRegionTransformerPort> { FaceRegionTransformer() }
     single { FaceRegionTransformer() }
+    single { JpegImageWriter() }
+    single { BackImageService() }
+    single { MetadataWritingService(faceRegionTransformer = get()) }
     single<PhotoScanExportPort> { get<PhotoScanExportService>() }
-    single { PhotoScanExportService(get(), get()) }
+    single { PhotoScanExportService(get(), get(), get(), get()) }
 
     // ── Location Search ─────────────────────────────────────────────
 
