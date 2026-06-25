@@ -1,8 +1,8 @@
 # Petrie File Importer — Session Progress Notes
 
-**Session ID**: `20260623_9`  
-**Date**: 2026-06-23  
-**Git HEAD**: `4e85a95 refactor: extract export orchestration and import handler from WizardContainer`  
+**Session ID**: `20260625_1`  
+**Date**: 2026-06-25  
+**Git HEAD**: `28b2c5c refactor: remove geometry typealiases from ui/wizard/state, use domain.model.geometry directly`  
 **Working directory**: `/Users/krys.petrie/dev/petrie-file-importer`
 
 ---
@@ -11,7 +11,7 @@
 
 Use the Goose CLI command:
 ```
-goose session resume 20260623_9
+goose session resume 20260625_1
 ```
 
 ---
@@ -24,108 +24,41 @@ Kotlin/Compose Desktop photo scanning application using hexagonal architecture (
 
 ## Completed This Session
 
-### 1. Phase 7 Completion Screen Enhancement
+### 1. Phase 3: Remove PhotoConfiguration typealias (commit `8a04b16`)
 
-**Per-photo export results summary** (`CompletionScreen.kt`):
-- Added `exportResults: List<ExportResult>` parameter to CompletionScreen
-- Created `ExportResultsSummary` composable (~107 lines): shows per-photo success/failure with icons, filenames, dimensions, error messages
-- Wired through WizardContainer: `var exportResults by remember { mutableStateOf<List<ExportResult>>(emptyList()) }`
+Deleted `ui/wizard/state/PhotoConfiguration.kt` which was a `typealias PhotoConfiguration = PhotoScanConfiguration`. Replaced all 24 files (15 production, 9 test) that imported from the old path with direct imports from `domain.model.PhotoScanConfiguration`. All `PhotoConfiguration` type references now use `PhotoScanConfiguration` directly.
 
-**Enhanced ProcessingScreen**:
-- Added `totalPhotos` and `destination` parameters
-- Shows "Photo X of N" counter during processing
-- Displays export destination path
+### 2. Phase 8a: Remove geometry typealiases (commit `28b2c5c`)
 
-**Refactored duplicate export callbacks**:
-- Extracted shared `handleExportComplete` lambda from 3 identical copies (skip-metadata, edit-export, edit-skip-to-export triggers)
-- Lambda: captures `onFailedCountChange`, `onExportResults`, `appLogger`, and `state.goToComplete()`
-
-### 2. WizardContainer Decomposition (1118 → 649 lines, 42% reduction)
-
-**Created `WizardExportOrchestrator.kt`** (267 lines):
-- `validateExportDestination(state, destinationPath, appLogger)` — validates export folder exists
-- `openExportFolder(destinationPath, appLogger)` — opens folder in OS file browser
-- `exportPhotos(state, image, exportService, destinationPath, appLogger, isLoading, onMessage, onError, onProgress, onComplete, dispatcherProvider)` — full export pipeline
-- `exportSinglePhoto(state, image, exportService, destinationPath, appLogger, isLoading, onProgress, onComplete, dispatcherProvider)` — single photo export
-
-All are **top-level functions** (not class methods) for easy composition. They take `PhotoScanWizardState` as a parameter and operate on its public API.
-
-**Created `WizardImportHandler.kt`** (219 lines):
-- `collectImageFiles(batchImagesDir, appLogger)` — scans directory for image files
-- `loadImageAndDetect(state, batchImagesDir, appLogger, scanService, onMessage)` — loads image and runs detection
-- `startNewImport(state, batchImagesDir, scanService, appLogger, onMessage)` — starts fresh import flow
-- `continueToNextBatchPhoto(state, batchImagesDir, scanService, appLogger, onMessage)` — advances to next photo
-- `skipNextBatchPhoto(state, batchImagesDir, scanService, appLogger, onMessage)` — skips current photo
-
-**WizardContainer changes**:
-- Removed 457 lines of private orchestration functions
-- Removed 10+ unused imports (DetectedPhoto, FilePath, PhotoCorner, BoundingBox, BoundingBoxCorners, PhotoConfiguration, PhotoScanConstants, Point, ImageIO, Dispatchers, withContext, isImageFile, BufferedImage, toProcessedImage, RecentMetadataSet)
-- Added `exportResults` state and `onExportResults` callback
-- Restored `@Composable` on `LoadingContent` (was accidentally removed during bulk line deletion)
-
-### Compilation Errors Fixed During Extraction
-
-1. **`rotationFromDegrees` unresolved reference**: Imported from `infrastructure.wizard` but actually in `ui.screens.wizard.SharedImageUtils`. Fixed import path.
-2. **Overload resolution ambiguity**: Old private functions in WizardContainer conflicted with new top-level functions in extracted files. Fixed by deleting old private functions.
-3. **Missing `@Composable` on `LoadingContent`**: Bulk line deletion accidentally removed the annotation. Added it back.
-4. **Unused imports after extraction**: Removed 10+ imports no longer referenced after extraction.
+Deleted `ui/wizard/state/BoundingBox.kt` and `ui/wizard/state/BoundingBoxList.kt` which re-exported `Point`, `BoundingBox`, `BoundingBoxCorners`, `Corner`, and `BoundingBoxList` from `domain.model.geometry`. All 40+ files updated to import directly from the domain module. Same-package files in `ui/wizard/state/` and their tests now have explicit `domain.model.geometry` imports instead of relying on implicit same-package access to typealiases.
 
 ---
 
-## Remaining God Class Decomposition
-
-### PhotoScanWizardState (1612 lines) — NEXT TARGET
-
-Located at: `src/main/kotlin/org/kryspetrie/fileimport/infrastructure/wizard/PhotoScanWizardState.kt`
-
-Identified extraction targets with approximate line counts:
-
-#### FaceRegionState (~230 lines, lines 492-720)
-- `_faceSelectMode: MutableStateFlow<Boolean>`
-- `_faceSelectPhotoIndex: MutableStateFlow<Int?>`
-- `enterFaceSelectMode(photoIndex: Int)`
-- `exitFaceSelectMode()`
-- `addFaceRegion(region: FaceRegion)`
-- `removeFaceRegion(regionId: String)`
-- `updateFaceRegion(regionId: String, region: FaceRegion)`
-- `getFaceRegionsForPhoto(photoIndex: Int): List<FaceRegion>`
-- All face region mutations operate on `photoConfigurations` StateFlow
-
-**Extraction approach**:
-1. Create `infrastructure/wizard/FaceRegionState.kt`
-2. FaceRegionState holds its own `_faceSelectMode` and `_faceSelectPhotoIndex` StateFlows
-3. FaceRegionState takes a reference to `_photoConfigurations` StateFlow (or receives it via constructor)
-4. Add `FaceRegionState` as a composed property in `PhotoScanWizardState`
-5. Update callers: `state.enterFaceSelectMode(i)` → `state.faceRegions.enterFaceSelectMode(i)`
-6. Write tests, verify build, commit
-
-#### PhotoConfigurationState (~300 lines)
-- Per-photo configurations: access, mutation, metadata application
-- `_photoConfigurations: MutableStateFlow<List<PhotoConfiguration>>`
-- `currentPhotoConfig`, `updateCurrentPhotoConfig`, `applyMetadata`, etc.
-
-#### BoxInteractionState (~200 lines)
-- Box selection, corners, drag state, four-point mode
-- `_selectedBoxIndex`, `_dragState`, `_fourPointState`, etc.
-
-#### ImageBatchState (~150 lines)
-- Current image, batch files, pre-processing cache
-- `_currentImage`, `_batchImageFiles`, `_preProcessedImageCache`
-
-#### WizardNavigationState (~50 lines)
-- Step transitions: `_currentStep`, `goToStep()`, `goToComplete()`, etc.
-
-### Other Refactoring (from REFACTORING_PLAN.md)
+## Refactoring Plan Status
 
 | Phase | Description | Status |
 |-------|-------------|--------|
-| 1 | FaceRegion, OverrideState, AspectRatio unification | ✅ Done |
-| 2 | DomainDefaults, ScanService, ExifValueResolver, GeometryUtils | ✅ Done |
-| 3 | PhotoConfiguration ↔ PhotoScanConfiguration unification | Partial (typealias only) |
-| 4 | Extract shared MetadataEditorPane from EditScreen/MetadataEditorPanel | Not started |
-| 5 | Decompose PhotoScanExportService (export/ subpackage) | Partial |
-| 8 | Move BoundingBox, BoundingBoxList, FourPointState to domain/model/ | Not started |
+| 1 | FaceRegion, OverrideState, AspectRatio unification | ✅ Done (prior sessions) |
+| 2 | DomainDefaults, ScanService, ExifValueResolver, GeometryUtils, pickKeeper | ✅ Done (prior sessions) |
+| 3 | PhotoConfiguration ↔ PhotoScanConfiguration unification | ✅ Done (this session — typealias removed) |
+| 4 | Extract shared MetadataEditorPane from EditScreen/MetadataEditorPanel | ⚠️ Partial (MetadataEditState exists, shared pane not extracted yet) |
+| 5 | Decompose PhotoScanExportService (export/ subpackage) | ✅ Done (prior sessions — 1322→281 lines) |
+| 6 | Introduce DomainImage | Not started |
+| 7 | Decompose PhotoScanWizardState (God Object) | ✅ Done (prior sessions — 1681→470 lines) |
+| 8a | Move BoundingBox, BoundingBoxList typealiases to domain | ✅ Done (this session — typealiases removed) |
+| 8b | Split ImportProfile.kt | ✅ Done (prior sessions — now 78 lines) |
+| 9 | Create FileSystemPort | Not started |
 | 10 | Coordinate system unification (PercentPoint/PhotoCorner/Point) | Not started |
+
+### Next Targets
+
+1. **Phase 4** (medium effort, medium risk): Extract shared `MetadataEditorPane` composable to deduplicate ~400 lines of metadata field rendering between `MetadataScreen` and `QuickEditScreen`. `MetadataEditState.kt` (164 lines) already exists.
+
+2. **Phase 6** (large effort, high risk): Introduce `DomainImage` wrapper to remove `BufferedImage` from domain ports.
+
+3. **Phase 9** (medium effort, medium risk): Create `FileSystemPort` to abstract `java.io.File` operations.
+
+4. **Phase 10** (medium effort, medium risk): Consolidate `PercentPoint`/`PhotoCorner`/`Point` into a single canonical `Point2D`.
 
 ---
 
@@ -133,18 +66,20 @@ Identified extraction targets with approximate line counts:
 
 ### Key File Locations
 - **Domain models**: `src/main/kotlin/org/kryspetrie/fileimport/domain/model/`
+- **Domain geometry**: `src/main/kotlin/org/kryspetrie/fileimport/domain/model/geometry/`
 - **Domain ports**: `src/main/kotlin/org/kryspetrie/fileimport/domain/port/`
-- **Infrastructure wizard**: `src/main/kotlin/org/kryspetrie/fileimport/infrastructure/wizard/`
+- **Wizard state**: `src/main/kotlin/org/kryspetrie/fileimport/ui/wizard/state/`
 - **UI screens**: `src/main/kotlin/org/kryspetrie/fileimport/ui/screens/wizard/`
 - **Edit screen sub-files**: `src/main/kotlin/org/kryspetrie/fileimport/ui/screens/wizard/edit/`
+- **Export service**: `src/main/kotlin/org/kryspetrie/fileimport/application/PhotoScanExportService.kt` + `application/export/`
 
 ### Key Patterns
-- `PhotoScanWizardState` is the central state holder, accessed by all wizard screens
+- `PhotoScanWizardState` (470 lines) is the central state holder, composed of sub-states: `navigation`, `batch`, `importSettings`, `exportSettings`, `boxes`, `faceRegions`, `configs`, `zoom`
 - `WizardContainer` is the orchestrator that wires state to screens
 - Top-level functions preferred over class methods for extracted orchestration code
-- `PhotoConfiguration` is currently a `typealias` for `PhotoScanConfiguration`
+- `PhotoScanConfiguration` is now the single canonical type (no more `PhotoConfiguration` alias)
+- Geometry types (`Point`, `BoundingBox`, etc.) now live only in `domain.model.geometry`
 - `ExportResult` sealed class (Success/Failure) is the domain type for per-photo export results
-- `ProcessedPhoto` is the backward-compat wrapper that includes `toExportResult()`
 
 ### Testing
 - Run tests: `cd /Users/krys.petrie/dev/petrie-file-importer && ./gradlew test`

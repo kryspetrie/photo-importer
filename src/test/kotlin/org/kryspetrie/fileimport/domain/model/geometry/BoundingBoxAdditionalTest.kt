@@ -1,4 +1,4 @@
-package org.kryspetrie.fileimport.ui.wizard.state
+package org.kryspetrie.fileimport.domain.model.geometry
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName

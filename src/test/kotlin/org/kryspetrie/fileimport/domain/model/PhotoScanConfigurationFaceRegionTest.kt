@@ -1,4 +1,4 @@
-package org.kryspetrie.fileimport.ui.wizard.state
+package org.kryspetrie.fileimport.domain.model
 
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -11,7 +11,7 @@ import org.kryspetrie.fileimport.domain.model.FaceRegion
 
 /** Tests for FaceRegion data class and PhotoScanConfiguration face region behavior. */
 @DisplayName("PhotoScanConfiguration Face Regions")
-class PhotoScanConfigurationFaceRegionTest {
+class PhotoScanConfigurationFaceRegionExtTest {
 
     @Nested
     @DisplayName("FaceRegion")
