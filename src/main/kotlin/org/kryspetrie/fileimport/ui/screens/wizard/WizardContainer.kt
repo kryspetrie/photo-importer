@@ -67,7 +67,10 @@ import org.kryspetrie.fileimport.ui.components.pickImageFile
 
 /**
  * Main container for the Photo Import Wizard. Manages the step-by-step workflow: Import → Overview
- * → Summary → Processing → Complete
+ * → Summary → Edit → Processing → Complete
+ *
+ * When [AppSettings.skipCropAndRotate] is true, the Summary (Crop & Rotate) step is skipped
+ * entirely, going directly from Overview to Edit (starting in metadata mode).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,13 +89,6 @@ fun WizardContainer(
     val state = remember { PhotoScanWizardState() }
     state.setLogger(appLogger)
     val currentStep by state.navigation.currentStep.collectAsState()
-    var forceMetadataMode by remember { mutableStateOf(false) }
-    // Reset forceMetadataMode when navigating away from EDIT step
-    LaunchedEffect(currentStep) {
-        if (currentStep != WizardStep.EDIT) {
-            forceMetadataMode = false
-        }
-    }
     var isLoading by remember { mutableStateOf(false) }
     var loadingMessage by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -170,8 +166,6 @@ fun WizardContainer(
             onFailedCountChange = { count -> failedExportCount = count },
             onExportResults = { results -> exportResults = results },
             exportResults = exportResults,
-            forceMetadataMode = forceMetadataMode,
-            onForceMetadataMode = { forceMetadataMode = it },
             onComplete = onComplete,
             onCancel = onCancel,
         )
@@ -220,8 +214,6 @@ private fun WizardStepContent(
     onFailedCountChange: (Int) -> Unit,
     onExportResults: (List<ExportResult>) -> Unit,
     exportResults: List<ExportResult>,
-    forceMetadataMode: Boolean,
-    onForceMetadataMode: (Boolean) -> Unit,
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -271,7 +263,13 @@ private fun WizardStepContent(
                         state.resetToImportStep()
                         onCancel()
                     },
-                    onToSummary = { state.navigation.goToSummary() },
+                    onToSummary = {
+                        if (settings.skipCropAndRotate) {
+                            state.navigation.goToEdit()
+                        } else {
+                            state.navigation.goToSummary()
+                        }
+                    },
                 )
             } else {
                 LoadingContent(message = "Loading image...")
@@ -297,30 +295,6 @@ private fun WizardStepContent(
                     previewCache = previewCache,
                     onBack = { state.goToOverview() },
                     onExport = { state.navigation.goToEdit() },
-                    onEditMetadata = {
-                        onForceMetadataMode(true)
-                        state.navigation.goToEdit()
-                    },
-                    onSkipMetadata = {
-                        scope.launch {
-                            onFailedCountChange(0)
-                            onExportResults(emptyList())
-                            state.navigation.goToProcessing()
-                            exportPhotos(
-                                state = state,
-                                image = image,
-                                exportService = exportService,
-                                destinationPath = exportDestination,
-                                appLogger = appLogger,
-                                dispatcherProvider = dispatcherProvider,
-                                isLoading = isLoading,
-                                onMessage = onMessage,
-                                onError = onError,
-                                onProgress = onProgress,
-                                onComplete = handleExportComplete,
-                            )
-                        }
-                    },
                 )
             } else {
                 LoadingContent(message = "Loading image...")
@@ -357,7 +331,13 @@ private fun WizardStepContent(
                             settingsPort.saveSettings(updated)
                         }
                     },
-                    onBack = { state.navigation.goToSummary() },
+                    onBack = {
+                        if (settings.skipCropAndRotate) {
+                            state.goToOverview()
+                        } else {
+                            state.navigation.goToSummary()
+                        }
+                    },
                     onExport = {
                         scope.launch {
                             onFailedCountChange(0)
@@ -398,7 +378,7 @@ private fun WizardStepContent(
                             )
                         }
                     },
-                    startWithMetadata = settings.alwaysEditMetadata || forceMetadataMode,
+                    startWithMetadata = settings.alwaysEditMetadata || settings.skipCropAndRotate,
                     faceRegionTransformer = faceRegionTransformer,
                 )
             } else {
@@ -513,7 +493,6 @@ private fun LoadingContent(message: String) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Animated loading indicator
             AnimatedLoadingIndicator()
             Text(message, style = MaterialTheme.typography.bodyMedium)
         }
@@ -661,4 +640,3 @@ private fun ProcessingScreen(
         )
     }
 }
-

@@ -62,7 +62,6 @@ import java.awt.Cursor
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.AspectRatio
-import org.kryspetrie.fileimport.domain.model.DetectionMode
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
@@ -73,8 +72,6 @@ import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.AspectRatioDropdown
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.BulkActionButtons
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.CorrectionStrategyDropdown
-import org.kryspetrie.fileimport.ui.screens.wizard.summary.DetectionModeBadge
-import org.kryspetrie.fileimport.ui.screens.wizard.summary.DetectionModeDropdown
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 import androidx.compose.material.icons.automirrored.filled.ArrowLeft
 import androidx.compose.material.icons.automirrored.filled.ArrowRight
@@ -82,9 +79,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowRight
 /**
  * Summary screen with a two-panel layout: scrollable photo list on the left, large preview on the
  * right. Each list item shows a thumbnail with metadata; the right panel shows a large
- * perspective-corrected preview with rotation, aspect ratio, detection mode, and correction
- * strategy controls. Uses [PreviewCache] to avoid recomputing perspective correction. Supports
- * full-screen preview on image click.
+ * perspective-corrected preview with rotation, aspect ratio, and correction strategy controls.
+ * Uses [PreviewCache] to avoid recomputing perspective correction. Supports full-screen preview on
+ * image click.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,8 +92,6 @@ fun SummaryScreen(
     previewCache: PreviewCache,
     onBack: () -> Unit,
     onExport: () -> Unit,
-    onEditMetadata: (() -> Unit)? = null,
-    onSkipMetadata: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val boundingBoxList by state.boundingBoxList.collectAsState()
@@ -130,10 +125,6 @@ fun SummaryScreen(
                         selectedIndex = newSize - 1
                     }
                 },
-                onDetectionModeChange = { boxId, mode ->
-                    val current = photoConfigurations[boxId] ?: PhotoScanConfiguration()
-                    state.configs.setPhotoScanConfiguration(boxId, current.copy(detectionMode = mode))
-                },
                 onRotateAllCW = { state.configs.rotateAllBoxesCW() },
                 onRotateAllCCW = { state.configs.rotateAllBoxesCCW() },
                 onClearAllConfigurations = { state.configs.clearAllConfigurations() },
@@ -145,8 +136,6 @@ fun SummaryScreen(
                 photoCount = boundingBoxList.size(),
                 onBack = onBack,
                 onExport = onExport,
-                onEditMetadata = onEditMetadata,
-                onSkipMetadata = onSkipMetadata,
             )
         },
     )
@@ -164,7 +153,6 @@ private fun SummaryScreenContent(
     onSelectedIndexChange: (Int) -> Unit,
     onConfigChange: (String, PhotoScanConfiguration) -> Unit,
     onBoxDelete: (Int) -> Unit,
-    onDetectionModeChange: (String, DetectionMode?) -> Unit,
     onRotateAllCW: () -> Unit,
     onRotateAllCCW: () -> Unit,
     onClearAllConfigurations: () -> Unit,
@@ -184,7 +172,6 @@ private fun SummaryScreenContent(
             onSelectedIndexChange = onSelectedIndexChange,
             onConfigChange = onConfigChange,
             onBoxDelete = onBoxDelete,
-            onDetectionModeChange = onDetectionModeChange,
             onRotateAllCW = onRotateAllCW,
             onRotateAllCCW = onRotateAllCCW,
             onClearAllConfigurations = onClearAllConfigurations,
@@ -217,7 +204,6 @@ private fun TwoPanelLayout(
     onSelectedIndexChange: (Int) -> Unit,
     onConfigChange: (String, PhotoScanConfiguration) -> Unit,
     onBoxDelete: (Int) -> Unit,
-    onDetectionModeChange: (String, DetectionMode?) -> Unit,
     onRotateAllCW: () -> Unit,
     onRotateAllCCW: () -> Unit,
     onClearAllConfigurations: () -> Unit,
@@ -234,8 +220,6 @@ private fun TwoPanelLayout(
             photoConfigurations = photoConfigurations,
             selectedIndex = selectedIndex,
             onSelectedIndexChange = onSelectedIndexChange,
-            onConfigChange = onConfigChange,
-            onDetectionModeChange = onDetectionModeChange,
             onDelete = onBoxDelete,
             onRotateAllCW = onRotateAllCW,
             onRotateAllCCW = onRotateAllCCW,
@@ -257,9 +241,6 @@ private fun TwoPanelLayout(
             totalPhotos = boundingBoxList.size(),
             onConfigChange = { config ->
                 selectedBox?.let { onConfigChange(it.id, config) }
-            },
-            onDetectionModeChange = { mode ->
-                selectedBox?.let { onDetectionModeChange(it.id, mode) }
             },
             onRotateCW = {
                 selectedBox?.let {
@@ -371,8 +352,6 @@ private fun PhotoSidebarList(
     photoConfigurations: Map<String, PhotoScanConfiguration>,
     selectedIndex: Int,
     onSelectedIndexChange: (Int) -> Unit,
-    onConfigChange: (String, PhotoScanConfiguration) -> Unit,
-    onDetectionModeChange: (String, DetectionMode?) -> Unit,
     onDelete: (Int) -> Unit,
     onRotateAllCW: () -> Unit,
     onRotateAllCCW: () -> Unit,
@@ -438,8 +417,8 @@ private fun PhotoSidebarList(
 }
 
 /**
- * A single card in the sidebar list. Shows a small thumbnail, photo number, detection mode badge,
- * and rotation state. Selected cards are highlighted.
+ * A single card in the sidebar list. Shows a small thumbnail, photo number, and rotation state.
+ * Selected cards are highlighted.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -473,7 +452,7 @@ private fun SidebarPhotoCard(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            SidebarThumbnail(index = index, thumbnail = thumbnail, config = config)
+            SidebarThumbnail(index = index, thumbnail = thumbnail)
             SidebarInfoColumn(index = index, box = box, config = config, modifier = Modifier.weight(1f))
             IconButton(onClick = onDelete, modifier = Modifier.height(24.dp).width(24.dp)) {
                 Icon(
@@ -487,9 +466,9 @@ private fun SidebarPhotoCard(
     }
 }
 
-/** Thumbnail box within a sidebar card, including detection mode badge if set. */
+/** Thumbnail box within a sidebar card. */
 @Composable
-private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?, config: PhotoScanConfiguration) {
+private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?) {
     Box(
         modifier =
             Modifier.width(60.dp)
@@ -507,9 +486,6 @@ private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?, config: PhotoS
             )
         } else {
             Text("?", style = MaterialTheme.typography.labelSmall)
-        }
-        config.detectionMode?.let { mode ->
-            DetectionModeBadge(mode = mode, modifier = Modifier.align(Alignment.TopStart))
         }
     }
 }
@@ -571,7 +547,6 @@ private fun DetailPreviewPanel(
     index: Int,
     totalPhotos: Int,
     onConfigChange: (PhotoScanConfiguration) -> Unit,
-    onDetectionModeChange: (DetectionMode?) -> Unit,
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit,
     onPrev: () -> Unit,
@@ -599,7 +574,6 @@ private fun DetailPreviewPanel(
                     onPrev = onPrev,
                     onNext = onNext,
                     onConfigChange = onConfigChange,
-                    onDetectionModeChange = onDetectionModeChange,
                     onRotateCW = onRotateCW,
                     onRotateCCW = onRotateCCW,
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -684,7 +658,6 @@ private fun DetailControlsRow(
     onPrev: () -> Unit,
     onNext: () -> Unit,
     onConfigChange: (PhotoScanConfiguration) -> Unit,
-    onDetectionModeChange: (DetectionMode?) -> Unit,
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit,
     modifier: Modifier = Modifier,
@@ -707,13 +680,12 @@ private fun DetailControlsRow(
                 config = config,
                 box = box,
                 onConfigChange = onConfigChange,
-                onDetectionModeChange = onDetectionModeChange,
             )
         }
     }
 }
 
-/** Photo label with detection mode badge, prev/next navigation, and rotation buttons. */
+/** Photo label with prev/next navigation and rotation buttons. */
 @Composable
 private fun DetailLabelAndRotation(
     config: PhotoScanConfiguration,
@@ -737,7 +709,6 @@ private fun DetailLabelAndRotation(
             IconButton(onClick = onNext, enabled = index < totalPhotos - 1) {
                 Icon(Icons.AutoMirrored.Filled.ArrowRight, "Next photo")
             }
-            config.detectionMode?.let { mode -> DetectionModeBadge(mode = mode) }
             if (config.rotationDegrees != 0) {
                 Text(
                     "${config.rotationDegrees}°",
@@ -757,23 +728,18 @@ private fun DetailLabelAndRotation(
     }
 }
 
-/** Row of dropdown controls: aspect ratio, detection mode, correction strategy. */
+/** Row of dropdown controls: aspect ratio and correction strategy. */
 @Composable
 private fun DetailDropdownRow(
     config: PhotoScanConfiguration,
     box: BoundingBox,
     onConfigChange: (PhotoScanConfiguration) -> Unit,
-    onDetectionModeChange: (DetectionMode?) -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         AspectRatioDropdown(
             selectedRatio = config.aspectRatio,
             onRatioChange = { ratio -> onConfigChange(config.copy(aspectRatio = ratio)) },
             boxAspectRatio = box.aspectRatio(),
-        )
-        DetectionModeDropdown(
-            selectedMode = config.detectionMode,
-            onModeChange = onDetectionModeChange,
         )
         CorrectionStrategyDropdown(
             selectedStrategy = config.correctionStrategy,

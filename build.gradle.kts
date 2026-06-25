@@ -136,6 +136,14 @@ dependencies {
         testClassesDirs = sourceSets["test"].output.classesDirs
     }
 
+    tasks.register<JavaExec>("runMapTileTest") {
+        description = "Launches a standalone window to test OsmMapView tile rendering"
+        group = "verification"
+        classpath = sourceSets.main.get().runtimeClasspath
+        mainClass.set("org.kryspetrie.fileimport.ui.screens.wizard.metadata.MapTileRenderTestAppKt")
+        dependsOn("classes")
+    }
+
     tasks.register<JavaExec>("generateIcons") {
         description = "Generates application icon files for native packaging"
         group = "build setup"

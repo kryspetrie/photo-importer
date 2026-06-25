@@ -215,6 +215,24 @@ fun PhotoScanImportScreen(
                                 )
                             }
                         },
+                        skipCropAndRotate = settings.skipCropAndRotate,
+                        onSkipCropAndRotateChange = { newValue ->
+                            scope.launch {
+                                val currentSettings = settingsPort.observeSettings().first()
+                                settingsPort.saveSettings(
+                                    currentSettings.copy(skipCropAndRotate = newValue)
+                                )
+                            }
+                        },
+                        defaultDetectionMode = settings.defaultDetectionMode,
+                        onDetectionModeChange = { mode ->
+                            scope.launch {
+                                val currentSettings = settingsPort.observeSettings().first()
+                                settingsPort.saveSettings(
+                                    currentSettings.copy(defaultDetectionMode = mode)
+                                )
+                            }
+                        },
                         onStrategyChange = { strategy ->
                             scope.launch {
                                 val currentSettings = settingsPort.observeSettings().first()

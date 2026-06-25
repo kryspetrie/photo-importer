@@ -252,63 +252,9 @@ class WizardUiFlowTest {
             assertThat(backCalled).isTrue()
         }
 
-        @Test
-        @DisplayName("should show Export Now when onSkipMetadata provided")
-        fun shouldShowExportNowWhenSkipMetadataProvided() {
-            composeTestRule.setContent {
-                SummaryScreen(
-                    state = wizardState,
-                    image = testImage,
-                    perspectiveService = perspectiveService,
-                    previewCache = previewCache,
-                    onBack = {},
-                    onExport = {},
-                    onSkipMetadata = {},
-                )
-            }
-
-            composeTestRule.onNodeWithText("Export Now").assertIsDisplayed()
-        }
-
-        @Test
-        @DisplayName("should not show Export Now when onSkipMetadata is null")
-        fun shouldNotShowExportNowWhenSkipMetadataIsNull() {
-            composeTestRule.setContent {
-                SummaryScreen(
-                    state = wizardState,
-                    image = testImage,
-                    perspectiveService = perspectiveService,
-                    previewCache = previewCache,
-                    onBack = {},
-                    onExport = {},
-                    onSkipMetadata = null,
-                )
-            }
-
-            composeTestRule.onNodeWithText("Export Now").assertDoesNotExist()
-        }
-
-        @Test
-        @DisplayName("should call onSkipMetadata when Export Now clicked")
-        fun shouldCallOnSkipMetadataWhenExportNowClicked() {
-            var skipCalled = false
-
-            composeTestRule.setContent {
-                SummaryScreen(
-                    state = wizardState,
-                    image = testImage,
-                    perspectiveService = perspectiveService,
-                    previewCache = previewCache,
-                    onBack = {},
-                    onExport = {},
-                    onSkipMetadata = { skipCalled = true },
-                )
-            }
-
-            composeTestRule.onNodeWithText("Export Now").performClick()
-
-            assertThat(skipCalled).isTrue()
-        }
+        // Note: The "Export Now" / "Skip Metadata" functionality was removed from
+        // SummaryScreen. The workflow now uses "Skip Crop & Rotate" setting on the
+        // import screen to skip the Crop & Rotate step entirely.
     }
 
     // ================================================================
