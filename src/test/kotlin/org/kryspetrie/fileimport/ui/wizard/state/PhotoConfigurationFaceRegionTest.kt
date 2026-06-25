@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -8,9 +9,9 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 
-/** Tests for FaceRegion data class and PhotoConfiguration face region behavior. */
-@DisplayName("PhotoConfiguration Face Regions")
-class PhotoConfigurationFaceRegionTest {
+/** Tests for FaceRegion data class and PhotoScanConfiguration face region behavior. */
+@DisplayName("PhotoScanConfiguration Face Regions")
+class PhotoScanConfigurationFaceRegionTest {
 
     @Nested
     @DisplayName("FaceRegion")
@@ -52,62 +53,62 @@ class PhotoConfigurationFaceRegionTest {
     }
 
     @Nested
-    @DisplayName("PhotoConfiguration face region behavior")
+    @DisplayName("PhotoScanConfiguration face region behavior")
     inner class ConfigFaceRegionTests {
 
         @Test
         @DisplayName("default configuration has empty faceRegions")
         fun shouldHaveEmptyFaceRegions() {
-            val config = PhotoConfiguration()
+            val config = PhotoScanConfiguration()
             assertTrue(config.faceRegions.isEmpty())
         }
 
         @Test
         @DisplayName("hasMetadata returns true when faceRegions is non-empty")
         fun shouldReturnTrueWhenFaceRegionsNonEmpty() {
-            val config = PhotoConfiguration(faceRegions = listOf(FaceRegion(name = "Alice")))
+            val config = PhotoScanConfiguration(faceRegions = listOf(FaceRegion(name = "Alice")))
             assertTrue(config.hasMetadata())
         }
 
         @Test
         @DisplayName("hasMetadata returns false when faceRegions is empty but subjects is blank")
         fun shouldReturnFalseWhenFaceRegionsEmptyAndSubjectsBlank() {
-            val config = PhotoConfiguration(faceRegions = emptyList(), subjects = "")
+            val config = PhotoScanConfiguration(faceRegions = emptyList(), subjects = "")
             assertFalse(config.hasMetadata())
         }
 
         @Test
         @DisplayName("hasMetadata returns true when subjects is non-blank even without faceRegions")
         fun shouldReturnTrueWhenSubjectsNonBlank() {
-            val config = PhotoConfiguration(subjects = "Alice, Bob")
+            val config = PhotoScanConfiguration(subjects = "Alice, Bob")
             assertTrue(config.hasMetadata())
         }
 
         @Test
         @DisplayName("subjectList parses comma-separated names")
         fun shouldParseSubjectList() {
-            val config = PhotoConfiguration(subjects = "Alice, Bob, Charlie")
+            val config = PhotoScanConfiguration(subjects = "Alice, Bob, Charlie")
             assertEquals(listOf("Alice", "Bob", "Charlie"), config.subjectList())
         }
 
         @Test
         @DisplayName("subjectList handles leading/trailing whitespace")
         fun shouldHandleWhitespaceInSubjectList() {
-            val config = PhotoConfiguration(subjects = " Alice , Bob , Charlie ")
+            val config = PhotoScanConfiguration(subjects = " Alice , Bob , Charlie ")
             assertEquals(listOf("Alice", "Bob", "Charlie"), config.subjectList())
         }
 
         @Test
         @DisplayName("subjectList handles empty string")
         fun shouldHandleEmptySubjectList() {
-            val config = PhotoConfiguration(subjects = "")
+            val config = PhotoScanConfiguration(subjects = "")
             assertEquals(emptyList<String>(), config.subjectList())
         }
 
         @Test
         @DisplayName("subjectList handles single name")
         fun shouldHandleSingleName() {
-            val config = PhotoConfiguration(subjects = "Alice")
+            val config = PhotoScanConfiguration(subjects = "Alice")
             assertEquals(listOf("Alice"), config.subjectList())
         }
 
@@ -120,7 +121,7 @@ class PhotoConfigurationFaceRegionTest {
                     FaceRegion(name = "Bob", x = 0.7, y = 0.5, w = 0.15, h = 0.20),
                     FaceRegion(name = "Charlie", x = 0.5, y = 0.6, w = 0.15, h = 0.20),
                 )
-            val config = PhotoConfiguration(faceRegions = regions)
+            val config = PhotoScanConfiguration(faceRegions = regions)
             assertEquals(3, config.faceRegions.size)
             assertEquals("Alice", config.faceRegions[0].name)
             assertEquals("Bob", config.faceRegions[1].name)
@@ -131,7 +132,7 @@ class PhotoConfigurationFaceRegionTest {
         @DisplayName("configuration preserves faceRegions through copy")
         fun shouldPreserveFaceRegionsThroughCopy() {
             val regions = listOf(FaceRegion(name = "Alice", x = 0.3, y = 0.4, w = 0.15, h = 0.20))
-            val config = PhotoConfiguration(faceRegions = regions, description = "Test")
+            val config = PhotoScanConfiguration(faceRegions = regions, description = "Test")
             val copied = config.copy(description = "Updated")
             assertEquals(1, copied.faceRegions.size)
             assertEquals("Alice", copied.faceRegions[0].name)
@@ -142,7 +143,7 @@ class PhotoConfigurationFaceRegionTest {
         @DisplayName("hasMetadata returns true with both subjects and faceRegions")
         fun shouldReturnTrueWithBothSubjectsAndFaceRegions() {
             val config =
-                PhotoConfiguration(
+                PhotoScanConfiguration(
                     subjects = "Alice",
                     faceRegions = listOf(FaceRegion(name = "Alice")),
                 )

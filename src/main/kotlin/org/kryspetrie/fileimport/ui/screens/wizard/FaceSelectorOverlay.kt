@@ -75,7 +75,7 @@ import kotlin.math.sqrt
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /** Interaction mode for the face selector overlay. */
@@ -162,7 +162,7 @@ private fun FaceRegion.toRenderData(): FaceRenderData =
 fun FaceSelectorOverlay(
     fullPreview: BufferedImage,
     idx: Int,
-    photoConfig: PhotoConfiguration,
+    photoConfig: PhotoScanConfiguration,
     state: PhotoScanWizardState,
     selectedRegionType: RegionType,
     selectedFaceSize: FaceSize,

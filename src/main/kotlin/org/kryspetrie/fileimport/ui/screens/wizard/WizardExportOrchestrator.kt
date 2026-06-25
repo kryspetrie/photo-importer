@@ -14,7 +14,6 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanConstants
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.screens.wizard.rotationFromDegrees
@@ -62,7 +61,7 @@ fun openExportFolder(exportDestination: String) {
 suspend fun exportSinglePhoto(
     image: BufferedImage,
     box: BoundingBox,
-    config: PhotoConfiguration,
+    config: PhotoScanConfiguration,
     outputDir: File,
     fileName: String,
     index: Int,
@@ -90,7 +89,7 @@ suspend fun exportSinglePhoto(
             "(${corrections.joinToString(", ").ifEmpty { "no corrections" }})",
     )
 
-    // PhotoConfiguration is now a typealias for PhotoScanConfiguration — no bridge needed.
+    // PhotoScanConfiguration is now a typealias for PhotoScanConfiguration — no bridge needed.
     val scanConfig = config
 
     val detectedPhoto =
@@ -224,7 +223,7 @@ suspend fun exportPhotos(
 
         boxes.forEachIndexed { index, box ->
             val fileName = if (boxes.size > 1) "${baseName}_${index + 1}" else baseName
-            val rawConfig = configurations[box.id] ?: PhotoConfiguration()
+            val rawConfig = configurations[box.id] ?: PhotoScanConfiguration()
             // Apply global default strategy when per-photo strategy is not set
             val config =
                 if (rawConfig.correctionStrategy == null)

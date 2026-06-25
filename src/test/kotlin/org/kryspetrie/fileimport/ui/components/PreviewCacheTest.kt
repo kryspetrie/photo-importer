@@ -14,7 +14,6 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
 import org.kryspetrie.fileimport.domain.model.geometry.Point
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
 
 @DisplayName("PreviewCache")
 @Tag("UnitTest")
@@ -24,7 +23,7 @@ class PreviewCacheTest {
     private lateinit var previewCache: PreviewCache
     private lateinit var testImage: BufferedImage
     private lateinit var testBox: BoundingBox
-    private lateinit var defaultConfig: PhotoConfiguration
+    private lateinit var defaultConfig: PhotoScanConfiguration
 
     @BeforeEach
     fun setup() {

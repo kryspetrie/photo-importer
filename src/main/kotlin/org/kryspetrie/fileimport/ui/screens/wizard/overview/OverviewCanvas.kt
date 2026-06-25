@@ -27,7 +27,7 @@ import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
 import org.kryspetrie.fileimport.ui.wizard.state.Corner
 import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.Point
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
@@ -289,7 +289,7 @@ private fun DrawScope.drawCanvasContent(
     wizardMode: WizardMode,
     fourPointState: FourPointState,
     zoomController: ZoomController,
-    photoConfigurations: Map<String, PhotoConfiguration>,
+    photoConfigurations: Map<String, PhotoScanConfiguration>,
 ) {
     val scale = zoomController.zoom.toFloat()
     val panX = zoomController.panX.toFloat()

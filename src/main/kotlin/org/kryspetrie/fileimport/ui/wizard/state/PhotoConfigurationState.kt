@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,15 +19,15 @@ import kotlinx.coroutines.flow.asStateFlow
  * @param _boundingBoxList Shared mutable reference to the bounding box list. Used to resolve
  *   photo-index → box-ID lookups and to iterate over all boxes for bulk operations.
  */
-class PhotoConfigurationState(
-    private val _photoConfigurations: MutableStateFlow<Map<String, PhotoConfiguration>>,
+class PhotoScanConfigurationState(
+    private val _photoConfigurations: MutableStateFlow<Map<String, PhotoScanConfiguration>>,
     private val _boundingBoxList: MutableStateFlow<BoundingBoxList>,
 ) {
 
     // ========== Photo Configurations ==========
 
     /** Read-only access to all photo configurations keyed by box ID. */
-    val photoConfigurations: StateFlow<Map<String, PhotoConfiguration>>
+    val photoConfigurations: StateFlow<Map<String, PhotoScanConfiguration>>
         get() = _photoConfigurations.asStateFlow()
 
     /**
@@ -35,25 +36,25 @@ class PhotoConfigurationState(
      * @param boxId The unique identifier of the bounding box to configure
      * @param config The configuration to apply
      */
-    fun setPhotoConfiguration(boxId: String, config: PhotoConfiguration) {
+    fun setPhotoScanConfiguration(boxId: String, config: PhotoScanConfiguration) {
         _photoConfigurations.value = _photoConfigurations.value + (boxId to config)
     }
 
     /**
      * Updates the photo configuration for a specific box, preserving existing values.
      *
-     * Unlike [setPhotoConfiguration] which replaces the entire config, this method applies a
+     * Unlike [setPhotoScanConfiguration] which replaces the entire config, this method applies a
      * transformation function to the existing config. Useful for updating a single field while
      * preserving others.
      *
      * @param boxId The ID of the box to update
      * @param update A function that takes existing config and returns new config
      */
-    fun updatePhotoConfiguration(
+    fun updatePhotoScanConfiguration(
         boxId: String,
-        update: (PhotoConfiguration) -> PhotoConfiguration,
+        update: (PhotoScanConfiguration) -> PhotoScanConfiguration,
     ) {
-        val existing = _photoConfigurations.value[boxId] ?: PhotoConfiguration()
+        val existing = _photoConfigurations.value[boxId] ?: PhotoScanConfiguration()
         _photoConfigurations.value = _photoConfigurations.value + (boxId to update(existing))
     }
 
@@ -62,7 +63,7 @@ class PhotoConfigurationState(
      *
      * @param boxId The ID of the box to clear configuration for
      */
-    fun clearPhotoConfiguration(boxId: String) {
+    fun clearPhotoScanConfiguration(boxId: String) {
         _photoConfigurations.value = _photoConfigurations.value - boxId
     }
 
@@ -76,17 +77,17 @@ class PhotoConfigurationState(
     /**
      * Rotates all bounding boxes 90° clockwise (cycles rotation: 0°→90°→180°→270°→0°).
      *
-     * Each box's configuration is updated via [updatePhotoConfiguration].
+     * Each box's configuration is updated via [updatePhotoScanConfiguration].
      */
     fun rotateAllBoxesCW() {
-        boxes.forEach { box -> updatePhotoConfiguration(box.id) { it.cycleRotationCW() } }
+        boxes.forEach { box -> updatePhotoScanConfiguration(box.id) { it.cycleRotationCW() } }
     }
 
     /**
      * Rotates all bounding boxes 90° counter-clockwise (cycles: 0°→270°→180°→90°→0°).
      */
     fun rotateAllBoxesCCW() {
-        boxes.forEach { box -> updatePhotoConfiguration(box.id) { it.cycleRotationCCW() } }
+        boxes.forEach { box -> updatePhotoScanConfiguration(box.id) { it.cycleRotationCCW() } }
     }
 
     /**
@@ -96,7 +97,7 @@ class PhotoConfigurationState(
      */
     fun setPerspectiveCorrectionAll(enabled: Boolean) {
         boxes.forEach { box ->
-            updatePhotoConfiguration(box.id) { it.copy(perspectiveCorrectionEnabled = enabled) }
+            updatePhotoScanConfiguration(box.id) { it.copy(perspectiveCorrectionEnabled = enabled) }
         }
     }
 
@@ -160,7 +161,7 @@ class PhotoConfigurationState(
         for (index in indices) {
             if (index >= 0 && index < list.size()) {
                 val boxId = list.boxes[index].id
-                updatePhotoConfiguration(boxId) { existing ->
+                updatePhotoScanConfiguration(boxId) { existing ->
                     existing.copy(
                         description =
                             if (description.isNotBlank()) description else existing.description,

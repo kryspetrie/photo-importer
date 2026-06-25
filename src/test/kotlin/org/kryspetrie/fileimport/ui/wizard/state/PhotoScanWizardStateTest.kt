@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import java.awt.image.BufferedImage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -350,8 +351,8 @@ class PhotoScanWizardStateTest {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.boxes.addBox(box)
 
-        val config = PhotoConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
-        state.configs.setPhotoConfiguration(box.id, config)
+        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
+        state.configs.setPhotoScanConfiguration(box.id, config)
 
         val storedConfig = state.photoConfigurations.value[box.id]
         assertNotNull(storedConfig)
@@ -365,8 +366,8 @@ class PhotoScanWizardStateTest {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.boxes.addBox(box)
 
-        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
-        state.configs.updatePhotoConfiguration(box.id) { it.copy(rotationDegrees = 90) }
+        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(rotationDegrees = 90) }
 
         val config = state.photoConfigurations.value[box.id]
         assertTrue(config!!.perspectiveCorrectionEnabled)
@@ -378,9 +379,9 @@ class PhotoScanWizardStateTest {
     fun `clear photo configuration removes config`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.boxes.addBox(box)
-        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
 
-        state.configs.clearPhotoConfiguration(box.id)
+        state.configs.clearPhotoScanConfiguration(box.id)
 
         assertFalse(state.photoConfigurations.value.containsKey(box.id))
     }
@@ -418,7 +419,7 @@ class PhotoScanWizardStateTest {
     fun `clear all configurations removes all configs`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.boxes.addBox(box)
-        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
 
         state.configs.clearAllConfigurations()
 
@@ -431,7 +432,7 @@ class PhotoScanWizardStateTest {
         state.initializeWithImage(sampleImage, java.io.File("/test/image.jpg"))
         state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
         state.boxes.selectBox(0)
-        state.configs.setPhotoConfiguration(state.boundingBoxList.value.boxes[0].id, PhotoConfiguration())
+        state.configs.setPhotoScanConfiguration(state.boundingBoxList.value.boxes[0].id, PhotoScanConfiguration())
 
         state.resetToImportStep()
 
@@ -790,7 +791,7 @@ class PhotoScanWizardStateTest {
         state.boxes.addBox(box)
 
         // Set some photo configuration
-        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
         assertTrue(state.photoConfigurations.value.isNotEmpty())
 
         val files = listOf(file1, file2)
@@ -874,7 +875,7 @@ class PhotoScanWizardStateTest {
         state.initializeWithImage(sampleImage, file1)
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
         state.boxes.addBox(box)
-        state.configs.setPhotoConfiguration(box.id, PhotoConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
 
         // Before reset: has boxes and configs
         assertEquals(1, state.boxes.boxCount())

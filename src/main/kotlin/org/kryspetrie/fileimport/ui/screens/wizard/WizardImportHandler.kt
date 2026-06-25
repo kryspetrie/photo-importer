@@ -13,7 +13,7 @@ import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.Point
 import org.kryspetrie.fileimport.ui.components.isImageFile
@@ -76,7 +76,7 @@ suspend fun loadImageAndDetect(
                     // Carry detection mode from each DetectedPhoto into per-box configuration
                     val configs =
                         detectedPhotos.map { photo ->
-                            PhotoConfiguration(
+                            PhotoScanConfiguration(
                                 detectionMode = photo.detectionMode,
                                 perspectiveCorrectionEnabled = photo.applyPerspectiveCorrection,
                             )

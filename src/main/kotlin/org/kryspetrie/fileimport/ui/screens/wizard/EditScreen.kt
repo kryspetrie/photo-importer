@@ -73,7 +73,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
 import org.kryspetrie.fileimport.infrastructure.adapter.transformFaceRegionsFromSource
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
 import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
@@ -173,7 +173,7 @@ fun EditScreen(
     if (fullscreenPreviewIndex != null && fullscreenPreviewIndex!! < boundingBoxList.size()) {
         val idx = fullscreenPreviewIndex!!
         val box = boundingBoxList.boxes[idx]
-        val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+        val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
         val fullPreview = previewCache.getFullPreview(image, box, config)
         val fullscreenBitmap = remember(fullPreview) {
             fullPreview?.toComposeImageBitmap()
@@ -207,7 +207,7 @@ fun EditScreen(
     if (showFaceSelect && faceSelectIndex != null) {
         val idx = faceSelectIndex!!
         val box = boundingBoxList.boxes[idx]
-        val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+        val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
         val fullPreview = previewCache.getFullPreview(image, box, config)
         val sourceFile = state.imageFile.value
         LaunchedEffect(faceSelectIndex, sourceFile) {
@@ -356,7 +356,7 @@ fun EditScreen(
                     val idx = locationPickerTargetIndex
                     if (idx != null && idx < boundingBoxList.size()) {
                         val boxId = boundingBoxList.boxes[idx].id
-                        state.configs.updatePhotoConfiguration(boxId) {
+                        state.configs.updatePhotoScanConfiguration(boxId) {
                             it.copy(
                                 city = result.city ?: it.city,
                                 state = it.state,
@@ -385,7 +385,7 @@ fun EditScreen(
                 val idx = selectedIndices.firstOrNull() ?: return@BackImagePickerDialog
                 if (idx < boundingBoxList.size()) {
                     val boxId = boundingBoxList.boxes[idx].id
-                    state.configs.updatePhotoConfiguration(boxId) {
+                    state.configs.updatePhotoScanConfiguration(boxId) {
                         it.copy(
                             backImageMode = mode,
                             backImageSourcePath = sourcePath,
@@ -619,8 +619,8 @@ fun EditScreen(
                     if (selectedIndices.size == 1 && !isMultiEditMode) {
                         val selectedIndex = selectedIndices.first()
                         val box = boundingBoxList.boxes[selectedIndex]
-                        val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-                        val visualConfig = PhotoConfiguration(rotationDegrees = config.rotationDegrees)
+                        val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
+                        val visualConfig = PhotoScanConfiguration(rotationDegrees = config.rotationDegrees)
                         val previewImage = previewCache.getFullPreview(image, box, visualConfig)
                         val previewBitmap = remember(previewImage) {
                             previewImage?.toComposeImageBitmap()
@@ -683,7 +683,7 @@ fun EditScreen(
                                             }
                                             OutlinedButton(
                                                 onClick = {
-                                                    state.configs.updatePhotoConfiguration(box.id) {
+                                                    state.configs.updatePhotoScanConfiguration(box.id) {
                                                         it.copy(
                                                             backImageMode = null,
                                                             backImageSourcePath = null,
@@ -753,7 +753,7 @@ fun EditScreen(
                                 val idx = selectedIndices.firstOrNull() ?: return@RotateEditorPanel
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.configs.updatePhotoConfiguration(box.id) {
+                                    state.configs.updatePhotoScanConfiguration(box.id) {
                                         it.copy(
                                             backImageMode = null,
                                             backImageSourcePath = null,
@@ -800,7 +800,7 @@ fun EditScreen(
                                     selectedIndices.firstOrNull() ?: return@MetadataEditorPanel
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.configs.updatePhotoConfiguration(box.id) {
+                                    state.configs.updatePhotoScanConfiguration(box.id) {
                                         it.copy(
                                             backImageMode = null,
                                             backImageSourcePath = null,

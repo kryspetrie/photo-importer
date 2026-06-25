@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.Point
 
@@ -129,14 +129,14 @@ class RefinementScreenTest {
     @Test
     @DisplayName("should have perspective enabled by default")
     fun shouldHavePerspectiveEnabledByDefault() {
-        val config = PhotoConfiguration()
+        val config = PhotoScanConfiguration()
         assertThat(config.perspectiveCorrectionEnabled).isTrue()
     }
 
     @Test
     @DisplayName("should have zero rotation by default")
     fun shouldHaveZeroRotationByDefault() {
-        val config = PhotoConfiguration()
+        val config = PhotoScanConfiguration()
         assertThat(config.rotationDegrees).isEqualTo(0)
     }
 }

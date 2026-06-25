@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +23,7 @@ import org.kryspetrie.fileimport.domain.model.RegionType
  *   photo-index → box-ID lookups.
  */
 class FaceRegionState(
-    private val _photoConfigurations: MutableStateFlow<Map<String, PhotoConfiguration>>,
+    private val _photoConfigurations: MutableStateFlow<Map<String, PhotoScanConfiguration>>,
     private val _boundingBoxList: MutableStateFlow<BoundingBoxList>,
 ) {
 
@@ -83,7 +84,7 @@ class FaceRegionState(
                 h = size.diameter,
             )
 
-        updatePhotoConfiguration(boxId) { existing ->
+        updatePhotoScanConfiguration(boxId) { existing ->
             val newRegions = existing.faceRegions + faceRegion
             // Auto-populate subjects string with face region names
             val names = newRegions.map { it.name }.filter { it.isNotBlank() }
@@ -103,9 +104,9 @@ class FaceRegionState(
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
 
-        updatePhotoConfiguration(boxId) { existing ->
+        updatePhotoScanConfiguration(boxId) { existing ->
             if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
-                return@updatePhotoConfiguration existing
+                return@updatePhotoScanConfiguration existing
             val removed = existing.faceRegions[faceIndex]
             val newRegions = existing.faceRegions.filterIndexed { i, _ -> i != faceIndex }
             // Remove the name from subjects string
@@ -127,7 +128,7 @@ class FaceRegionState(
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
 
-        updatePhotoConfiguration(boxId) { existing ->
+        updatePhotoScanConfiguration(boxId) { existing ->
             existing.copy(faceRegions = emptyList(), subjects = "")
         }
     }
@@ -147,7 +148,7 @@ class FaceRegionState(
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
 
-        updatePhotoConfiguration(boxId) { existing ->
+        updatePhotoScanConfiguration(boxId) { existing ->
             val newRegions = existing.faceRegions + regions
             val names = newRegions.map { it.name }.filter { it.isNotBlank() }
             val newSubjects = names.joinToString(", ")
@@ -167,9 +168,9 @@ class FaceRegionState(
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
 
-        updatePhotoConfiguration(boxId) { existing ->
+        updatePhotoScanConfiguration(boxId) { existing ->
             if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
-                return@updatePhotoConfiguration existing
+                return@updatePhotoScanConfiguration existing
             val old = existing.faceRegions[faceIndex]
             val updated = old.copy(name = name)
             val newRegions =
@@ -193,9 +194,9 @@ class FaceRegionState(
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
 
-        updatePhotoConfiguration(boxId) { existing ->
+        updatePhotoScanConfiguration(boxId) { existing ->
             if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
-                return@updatePhotoConfiguration existing
+                return@updatePhotoScanConfiguration existing
             val old = existing.faceRegions[faceIndex]
             val updated =
                 old.copy(x = x?.coerceIn(0.0, 1.0) ?: old.x, y = y?.coerceIn(0.0, 1.0) ?: old.y)
@@ -218,9 +219,9 @@ class FaceRegionState(
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
 
-        updatePhotoConfiguration(boxId) { existing ->
+        updatePhotoScanConfiguration(boxId) { existing ->
             if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
-                return@updatePhotoConfiguration existing
+                return@updatePhotoScanConfiguration existing
             val old = existing.faceRegions[faceIndex]
             val updated = old.copy(w = size.diameter, h = size.diameter)
             existing.copy(
@@ -243,9 +244,9 @@ class FaceRegionState(
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
 
-        updatePhotoConfiguration(boxId) { existing ->
+        updatePhotoScanConfiguration(boxId) { existing ->
             if (faceIndex < 0 || faceIndex >= existing.faceRegions.size)
-                return@updatePhotoConfiguration existing
+                return@updatePhotoScanConfiguration existing
             val old = existing.faceRegions[faceIndex]
             val updated =
                 old.copy(x = (old.x + dx).coerceIn(0.0, 1.0), y = (old.y + dy).coerceIn(0.0, 1.0))
@@ -260,13 +261,13 @@ class FaceRegionState(
 
     /**
      * Updates the photo configuration for a specific box, preserving existing values. Internal
-     * helper that mirrors [PhotoScanWizardState.updatePhotoConfiguration].
+     * helper that mirrors [PhotoScanWizardState.updatePhotoScanConfiguration].
      */
-    private fun updatePhotoConfiguration(
+    private fun updatePhotoScanConfiguration(
         boxId: String,
-        update: (PhotoConfiguration) -> PhotoConfiguration,
+        update: (PhotoScanConfiguration) -> PhotoScanConfiguration,
     ) {
-        val existing = _photoConfigurations.value[boxId] ?: PhotoConfiguration()
+        val existing = _photoConfigurations.value[boxId] ?: PhotoScanConfiguration()
         _photoConfigurations.value = _photoConfigurations.value + (boxId to update(existing))
     }
 }

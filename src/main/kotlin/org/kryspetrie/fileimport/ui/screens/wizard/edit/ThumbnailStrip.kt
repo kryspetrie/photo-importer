@@ -30,7 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 
@@ -41,7 +41,7 @@ internal fun ThumbnailStrip(
     perspectiveService: PerspectiveCorrectionPort,
     previewCache: PreviewCache,
     boundingBoxList: BoundingBoxList,
-    photoConfigurations: Map<String, PhotoConfiguration>,
+    photoConfigurations: Map<String, PhotoScanConfiguration>,
     selectedIndices: Set<Int>,
     isMultiEditMode: Boolean,
     onSelect: (Int) -> Unit,
@@ -52,8 +52,8 @@ internal fun ThumbnailStrip(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         itemsIndexed(boundingBoxList.boxes) { index, box ->
-            val config = photoConfigurations[box.id] ?: PhotoConfiguration()
-            val visualConfig = PhotoConfiguration(rotationDegrees = config.rotationDegrees)
+            val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
+            val visualConfig = PhotoScanConfiguration(rotationDegrees = config.rotationDegrees)
             val thumbnail = previewCache.getThumbnail(image, box, visualConfig)
             val isSelected = index in selectedIndices
             Card(

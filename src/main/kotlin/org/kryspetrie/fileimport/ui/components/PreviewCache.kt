@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentHashMap
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.screens.wizard.cropAndRotateBoundingBox
 
 /**
@@ -35,7 +35,7 @@ class PreviewCache(
      * Metadata fields (description, keywords, etc.) are intentionally excluded because they
      * don't change the image appearance.
      */
-    fun cacheKey(box: BoundingBox, config: PhotoConfiguration): String {
+    fun cacheKey(box: BoundingBox, config: PhotoScanConfiguration): String {
         val c = box.corners
         return buildString {
             append("${c.topLeft.x.toInt()},${c.topLeft.y.toInt()}")
@@ -54,7 +54,7 @@ class PreviewCache(
      * Returns the full-resolution perspective-corrected preview for the given box+config,
      * computing it if not already cached.
      */
-    fun getFullPreview(sourceImage: BufferedImage, box: BoundingBox, config: PhotoConfiguration): BufferedImage? {
+    fun getFullPreview(sourceImage: BufferedImage, box: BoundingBox, config: PhotoScanConfiguration): BufferedImage? {
         val key = cacheKey(box, config)
         return fullCache.getOrPut(key) {
             cropAndRotateBoundingBox(sourceImage, box, config, perspectiveService) ?: return null
@@ -66,7 +66,7 @@ class PreviewCache(
      * The full preview is computed first (and cached), then downsampled to
      * [thumbnailMaxSize] max dimension for efficient list rendering.
      */
-    fun getThumbnail(sourceImage: BufferedImage, box: BoundingBox, config: PhotoConfiguration): ImageBitmap? {
+    fun getThumbnail(sourceImage: BufferedImage, box: BoundingBox, config: PhotoScanConfiguration): ImageBitmap? {
         val key = cacheKey(box, config)
         thumbnailCache[key]?.let { return it }
 
@@ -80,9 +80,9 @@ class PreviewCache(
      * Pre-warms the cache for multiple boxes, computing full previews off-thread.
      * Call this when entering a screen to avoid lag during first render.
      */
-    fun preWarm(sourceImage: BufferedImage, boxes: List<BoundingBox>, configs: Map<String, PhotoConfiguration>) {
+    fun preWarm(sourceImage: BufferedImage, boxes: List<BoundingBox>, configs: Map<String, PhotoScanConfiguration>) {
         for (box in boxes) {
-            val config = configs[box.id] ?: PhotoConfiguration()
+            val config = configs[box.id] ?: PhotoScanConfiguration()
             val key = cacheKey(box, config)
             if (!fullCache.containsKey(key)) {
                 val result = cropAndRotateBoundingBox(sourceImage, box, config, perspectiveService)
@@ -94,9 +94,9 @@ class PreviewCache(
     }
 
     /** Removes entries for boxes/configs that are no longer in use. */
-    fun retainOnly(boxes: List<BoundingBox>, configs: Map<String, PhotoConfiguration>) {
+    fun retainOnly(boxes: List<BoundingBox>, configs: Map<String, PhotoScanConfiguration>) {
         val retainedKeys = boxes.map { box ->
-            cacheKey(box, configs[box.id] ?: PhotoConfiguration())
+            cacheKey(box, configs[box.id] ?: PhotoScanConfiguration())
         }.toSet()
 
         fullCache.keys.retainAll(retainedKeys)
@@ -110,7 +110,7 @@ class PreviewCache(
     }
 
     /** Invalidates cache entries where the geometric config has changed. */
-    fun invalidate(box: BoundingBox, config: PhotoConfiguration) {
+    fun invalidate(box: BoundingBox, config: PhotoScanConfiguration) {
         val key = cacheKey(box, config)
         fullCache.remove(key)
         thumbnailCache.remove(key)

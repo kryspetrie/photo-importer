@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.wizard.state.Point
@@ -223,7 +223,7 @@ class WizardStateFlowTest {
 
     @Nested
     @DisplayName("Photo Configuration Flow")
-    inner class PhotoConfigurationFlow {
+    inner class PhotoScanConfigurationFlow {
 
         @BeforeEach
         fun setup() {
@@ -238,10 +238,10 @@ class WizardStateFlowTest {
 
         @Test
         @DisplayName("should set and retrieve per-photo configuration")
-        fun shouldSetAndRetrievePerPhotoConfiguration() {
+        fun shouldSetAndRetrievePerPhotoScanConfiguration() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration(rotationDegrees = 90))
+            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration(rotationDegrees = 90))
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(90)
         }
@@ -250,9 +250,9 @@ class WizardStateFlowTest {
         @DisplayName("should update existing configuration")
         fun shouldUpdateExistingConfiguration() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
-            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration())
+            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration())
 
-            wizardState.configs.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 45) }
+            wizardState.configs.updatePhotoScanConfiguration(boxId) { it.copy(rotationDegrees = 45) }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(45)
         }
@@ -261,11 +261,11 @@ class WizardStateFlowTest {
         @DisplayName("should rotate box clockwise via configuration")
         fun shouldRotateBoxClockwiseViaConfiguration() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
-            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration())
+            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration())
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(0)
 
-            wizardState.configs.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 90) }
+            wizardState.configs.updatePhotoScanConfiguration(boxId) { it.copy(rotationDegrees = 90) }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(90)
         }
@@ -276,13 +276,13 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.configs.setPhotoConfiguration(
+            wizardState.configs.setPhotoScanConfiguration(
                 box1Id,
-                PhotoConfiguration(rotationDegrees = 90, correctionStrategy = CorrectionStrategy.CROP),
+                PhotoScanConfiguration(rotationDegrees = 90, correctionStrategy = CorrectionStrategy.CROP),
             )
-            wizardState.configs.setPhotoConfiguration(
+            wizardState.configs.setPhotoScanConfiguration(
                 box2Id,
-                PhotoConfiguration(rotationDegrees = 180, correctionStrategy = CorrectionStrategy.PERSPECTIVE),
+                PhotoScanConfiguration(rotationDegrees = 180, correctionStrategy = CorrectionStrategy.PERSPECTIVE),
             )
 
             val configs = wizardState.photoConfigurations.value
@@ -298,8 +298,8 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.configs.setPhotoConfiguration(box1Id, PhotoConfiguration(rotationDegrees = 90))
-            wizardState.configs.setPhotoConfiguration(box2Id, PhotoConfiguration(rotationDegrees = 180))
+            wizardState.configs.setPhotoScanConfiguration(box1Id, PhotoScanConfiguration(rotationDegrees = 90))
+            wizardState.configs.setPhotoScanConfiguration(box2Id, PhotoScanConfiguration(rotationDegrees = 180))
             assertThat(wizardState.photoConfigurations.value).hasSize(2)
 
             wizardState.configs.clearAllConfigurations()
@@ -312,8 +312,8 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.configs.setPhotoConfiguration(box1Id, PhotoConfiguration(rotationDegrees = 0))
-            wizardState.configs.setPhotoConfiguration(box2Id, PhotoConfiguration(rotationDegrees = 90))
+            wizardState.configs.setPhotoScanConfiguration(box1Id, PhotoScanConfiguration(rotationDegrees = 0))
+            wizardState.configs.setPhotoScanConfiguration(box2Id, PhotoScanConfiguration(rotationDegrees = 90))
 
             wizardState.configs.rotateAllBoxesCW()
 
@@ -381,9 +381,9 @@ class WizardStateFlowTest {
         fun shouldSetPerPhotoCorrectionStrategyOverride() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.configs.setPhotoConfiguration(
+            wizardState.configs.setPhotoScanConfiguration(
                 boxId,
-                PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP_AND_ROTATE),
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP_AND_ROTATE),
             )
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy)
@@ -395,14 +395,14 @@ class WizardStateFlowTest {
         fun shouldClearPerPhotoCorrectionStrategy() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.configs.setPhotoConfiguration(
+            wizardState.configs.setPhotoScanConfiguration(
                 boxId,
-                PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP),
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
             )
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy)
                 .isEqualTo(CorrectionStrategy.CROP)
 
-            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration(correctionStrategy = null))
+            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration(correctionStrategy = null))
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy).isNull()
         }
 
@@ -412,13 +412,13 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.configs.setPhotoConfiguration(
+            wizardState.configs.setPhotoScanConfiguration(
                 box1Id,
-                PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP),
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
             )
-            wizardState.configs.setPhotoConfiguration(
+            wizardState.configs.setPhotoScanConfiguration(
                 box2Id,
-                PhotoConfiguration(correctionStrategy = CorrectionStrategy.PERSPECTIVE),
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.PERSPECTIVE),
             )
 
             val configs = wizardState.photoConfigurations.value
@@ -432,7 +432,7 @@ class WizardStateFlowTest {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
             wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
-            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration(correctionStrategy = null))
+            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration(correctionStrategy = null))
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy).isNull()
             assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP)
@@ -444,9 +444,9 @@ class WizardStateFlowTest {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
             wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
-            wizardState.configs.setPhotoConfiguration(
+            wizardState.configs.setPhotoScanConfiguration(
                 boxId,
-                PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP),
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
             )
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy)
@@ -723,8 +723,8 @@ class WizardStateFlowTest {
             val box2Id = state.boundingBoxList.value.boxes[1].id
 
             state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
-            state.configs.setPhotoConfiguration(box1Id, PhotoConfiguration(correctionStrategy = CorrectionStrategy.CROP))
-            state.configs.updatePhotoConfiguration(box2Id) { it.copy(rotationDegrees = 90) }
+            state.configs.setPhotoScanConfiguration(box1Id, PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP))
+            state.configs.updatePhotoScanConfiguration(box2Id) { it.copy(rotationDegrees = 90) }
 
             assertThat(state.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.PERSPECTIVE)
             assertThat(state.photoConfigurations.value[box1Id]?.correctionStrategy).isEqualTo(CorrectionStrategy.CROP)

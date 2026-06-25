@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import java.awt.image.BufferedImage
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -92,7 +93,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     // ========== Bounding Boxes & Selection ==========
 
-    /** Shared mutable box list — also used by [PhotoConfigurationState] and [FaceRegionState]. */
+    /** Shared mutable box list — also used by [PhotoScanConfigurationState] and [FaceRegionState]. */
     private val _boundingBoxList = MutableStateFlow(BoundingBoxList.empty())
     val boundingBoxList: StateFlow<BoundingBoxList> = _boundingBoxList.asStateFlow()
 
@@ -115,15 +116,15 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     // ========== Summary Screen Settings ==========
 
-    private val _photoConfigurations = MutableStateFlow<Map<String, PhotoConfiguration>>(emptyMap())
-    val photoConfigurations: StateFlow<Map<String, PhotoConfiguration>> =
+    private val _photoConfigurations = MutableStateFlow<Map<String, PhotoScanConfiguration>>(emptyMap())
+    val photoConfigurations: StateFlow<Map<String, PhotoScanConfiguration>> =
         _photoConfigurations.asStateFlow()
 
     /** Face region state (selection mode, face region CRUD). */
     val faceRegions = FaceRegionState(_photoConfigurations, _boundingBoxList)
 
     /** Photo configuration state (per-photo configs, metadata selection, bulk ops). */
-    val configs = PhotoConfigurationState(_photoConfigurations, _boundingBoxList)
+    val configs = PhotoScanConfigurationState(_photoConfigurations, _boundingBoxList)
 
     // ========== Workflow ==========
 
@@ -193,7 +194,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
      */
     fun setDetectedBoxes(
         detectedBoxes: List<BoundingBox>,
-        configs: List<PhotoConfiguration> = emptyList(),
+        configs: List<PhotoScanConfiguration> = emptyList(),
     ) {
         // Sort in reading order, tracking original indices to re-associate configs
         val imageHeight = _image.value?.height?.toDouble() ?: 1.0
@@ -209,7 +210,7 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
         // Apply per-box configurations after sort (re-associated by tracked index)
         if (configs.isNotEmpty()) {
-            val configMap = mutableMapOf<String, PhotoConfiguration>()
+            val configMap = mutableMapOf<String, PhotoScanConfiguration>()
             sorted.forEach { (originalIndex, box) ->
                 if (originalIndex < configs.size) {
                     configMap[box.id] = configs[originalIndex]

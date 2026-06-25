@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
 import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.wizard.state.Point
@@ -295,7 +295,7 @@ class WizardContainerTest {
 
     @Nested
     @DisplayName("Photo Configuration State")
-    inner class PhotoConfigurationStateTest {
+    inner class PhotoScanConfigurationStateTest {
 
         @Test
         @DisplayName("should have empty configurations initially")
@@ -305,15 +305,15 @@ class WizardContainerTest {
 
         @Test
         @DisplayName("should set photo configuration for box")
-        fun shouldSetPhotoConfiguration() {
+        fun shouldSetPhotoScanConfiguration() {
             val image = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
             wizardState.initializeWithImage(image, java.io.File("test.jpg"))
             wizardState.boxes.addBox(createTestBox())
 
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
             val config =
-                PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 90)
-            wizardState.configs.setPhotoConfiguration(boxId, config)
+                PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 90)
+            wizardState.configs.setPhotoScanConfiguration(boxId, config)
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.perspectiveCorrectionEnabled)
                 .isFalse()
@@ -328,9 +328,9 @@ class WizardContainerTest {
             wizardState.boxes.addBox(createTestBox())
 
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
-            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration())
+            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration())
 
-            wizardState.configs.updatePhotoConfiguration(boxId) { it.copy(rotationDegrees = 45) }
+            wizardState.configs.updatePhotoScanConfiguration(boxId) { it.copy(rotationDegrees = 45) }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(45)
         }
@@ -343,8 +343,8 @@ class WizardContainerTest {
             wizardState.boxes.addBox(createTestBox())
 
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
-            wizardState.configs.setPhotoConfiguration(boxId, PhotoConfiguration())
-            wizardState.configs.clearPhotoConfiguration(boxId)
+            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration())
+            wizardState.configs.clearPhotoScanConfiguration(boxId)
 
             assertThat(wizardState.photoConfigurations.value).doesNotContainKey(boxId)
         }
@@ -359,8 +359,8 @@ class WizardContainerTest {
 
             val boxId1 = wizardState.boundingBoxList.value.boxes[0].id
             val boxId2 = wizardState.boundingBoxList.value.boxes[1].id
-            wizardState.configs.setPhotoConfiguration(boxId1, PhotoConfiguration())
-            wizardState.configs.setPhotoConfiguration(boxId2, PhotoConfiguration())
+            wizardState.configs.setPhotoScanConfiguration(boxId1, PhotoScanConfiguration())
+            wizardState.configs.setPhotoScanConfiguration(boxId2, PhotoScanConfiguration())
 
             wizardState.configs.clearAllConfigurations()
 

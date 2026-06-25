@@ -26,7 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 
@@ -38,7 +38,7 @@ import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 internal fun RotateEditorPanel(
     state: PhotoScanWizardState,
     boundingBoxList: BoundingBoxList,
-    photoConfigurations: Map<String, PhotoConfiguration>,
+    photoConfigurations: Map<String, PhotoScanConfiguration>,
     selectedIndices: Set<Int>,
     isMultiEditMode: Boolean,
     onAddBackImage: () -> Unit,
@@ -70,7 +70,7 @@ internal fun RotateEditorPanel(
                             selectedIndices.forEach { idx ->
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.configs.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
+                                    state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCCW() }
                                 }
                             }
                         }
@@ -82,7 +82,7 @@ internal fun RotateEditorPanel(
                             selectedIndices.forEach { idx ->
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.configs.updatePhotoConfiguration(box.id) {
+                                    state.configs.updatePhotoScanConfiguration(box.id) {
                                         it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
                                     }
                                 }
@@ -96,7 +96,7 @@ internal fun RotateEditorPanel(
                             selectedIndices.forEach { idx ->
                                 if (idx < boundingBoxList.size()) {
                                     val box = boundingBoxList.boxes[idx]
-                                    state.configs.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
+                                    state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCW() }
                                 }
                             }
                         }
@@ -107,7 +107,7 @@ internal fun RotateEditorPanel(
             } else if (selectedIndices.size == 1) {
                 val selectedIndex = selectedIndices.first()
                 val box = boundingBoxList.boxes[selectedIndex]
-                val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+                val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
 
                 Text(
                     "Photo ${selectedIndex + 1}",
@@ -117,13 +117,13 @@ internal fun RotateEditorPanel(
                 RotationSection(
                     rotationDegrees = config.rotationDegrees,
                     onRotateCW = {
-                        state.configs.updatePhotoConfiguration(box.id) { it.cycleRotationCW() }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCW() }
                     },
                     onRotateCCW = {
-                        state.configs.updatePhotoConfiguration(box.id) { it.cycleRotationCCW() }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCCW() }
                     },
                     onRotate180 = {
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
                         }
                     },

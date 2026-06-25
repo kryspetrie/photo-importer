@@ -58,7 +58,7 @@ class PhotoScanWizardFlowTest {
 
             // Step 3: Configure — set per-photo metadata
             val config1 = PhotoScanConfiguration(description = "Photo 1")
-            state.configs.setPhotoConfiguration(box1.id, config1)
+            state.configs.setPhotoScanConfiguration(box1.id, config1)
             assertEquals("Photo 1", state.photoConfigurations.value[box1.id]?.description)
 
             // Step 4: Navigate to summary
@@ -103,7 +103,7 @@ class PhotoScanWizardFlowTest {
         fun resetFromComplete() {
             state.initializeWithImage(testImage, File("scan.jpg"))
             state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0))
-            state.configs.setPhotoConfiguration(
+            state.configs.setPhotoScanConfiguration(
                 state.configs.boxes[0].id, PhotoScanConfiguration(description = "Test")
             )
             state.navigation.goToSummary()
@@ -269,7 +269,7 @@ class PhotoScanWizardFlowTest {
             state.boxes.addBox(box)
 
             // Set per-photo strategy to CROP (different from global PERSPECTIVE)
-            state.configs.setPhotoConfiguration(
+            state.configs.setPhotoScanConfiguration(
                 box.id, PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP)
             )
 
@@ -289,7 +289,7 @@ class PhotoScanWizardFlowTest {
 
             val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
             state.boxes.addBox(box)
-            state.configs.setPhotoConfiguration(
+            state.configs.setPhotoScanConfiguration(
                 box.id, PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP)
             )
 
@@ -557,7 +557,7 @@ class PhotoScanWizardFlowTest {
 
             // Override one photo's strategy
             val box1Id = state.configs.boxes[0].id
-            state.configs.setPhotoConfiguration(
+            state.configs.setPhotoScanConfiguration(
                 box1Id,
                 PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.PERSPECTIVE),
             )
@@ -583,7 +583,7 @@ class PhotoScanWizardFlowTest {
             state.boxes.addBox(box2)
 
             // Set metadata for first photo
-            state.configs.setPhotoConfiguration(
+            state.configs.setPhotoScanConfiguration(
                 box1.id,
                 PhotoScanConfiguration(
                     description = "Family photo",
@@ -593,7 +593,7 @@ class PhotoScanWizardFlowTest {
             )
 
             // Set different metadata for second photo
-            state.configs.setPhotoConfiguration(
+            state.configs.setPhotoScanConfiguration(
                 box2.id,
                 PhotoScanConfiguration(
                     description = "Vacation photo",

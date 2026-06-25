@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
@@ -240,10 +241,10 @@ class FaceSelectionTest {
             state.faceRegions.addFaceRegion(0, "Alice", 0.3, 0.4)
 
             // Update other configuration fields
-            state.configs.updatePhotoConfiguration(state.configs.boxes[0].id) {
+            state.configs.updatePhotoScanConfiguration(state.configs.boxes[0].id) {
                 it.copy(description = "Test photo")
             }
-            state.configs.updatePhotoConfiguration(state.configs.boxes[0].id) { it.copy(keywords = "vacation") }
+            state.configs.updatePhotoScanConfiguration(state.configs.boxes[0].id) { it.copy(keywords = "vacation") }
 
             val config = state.photoConfigurations.value[state.configs.boxes[0].id]
             assertEquals(1, config?.faceRegions?.size)
@@ -259,7 +260,7 @@ class FaceSelectionTest {
             addTestBoxes(1)
 
             // Set subjects manually first
-            state.configs.updatePhotoConfiguration(state.configs.boxes[0].id) {
+            state.configs.updatePhotoScanConfiguration(state.configs.boxes[0].id) {
                 it.copy(subjects = "Grandma, Grandpa")
             }
 

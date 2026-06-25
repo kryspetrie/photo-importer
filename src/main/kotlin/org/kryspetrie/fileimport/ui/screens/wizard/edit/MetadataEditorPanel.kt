@@ -33,7 +33,7 @@ import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
@@ -48,7 +48,7 @@ internal fun MetadataEditorPanel(
     image: BufferedImage,
     perspectiveService: PerspectiveCorrectionPort,
     boundingBoxList: BoundingBoxList,
-    photoConfigurations: Map<String, PhotoConfiguration>,
+    photoConfigurations: Map<String, PhotoScanConfiguration>,
     selectedIndices: Set<Int>,
     isMultiEditMode: Boolean,
     metadataHistory: MetadataHistory,
@@ -279,7 +279,7 @@ internal fun MetadataEditorPanel(
                 // ── Single-select: immediate-edit mode ──
                 val selectedIndex = selectedIndices.first()
                 val box = boundingBoxList.boxes[selectedIndex]
-                val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+                val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
 
                 Text(
                     "Photo ${selectedIndex + 1}",
@@ -292,7 +292,7 @@ internal fun MetadataEditorPanel(
                     RecentValuesDropdown(
                         recentSets = metadataHistory.recentSets,
                         onApplySet = { set ->
-                            state.configs.updatePhotoConfiguration(box.id) { set.mergeInto(it) }
+                            state.configs.updatePhotoScanConfiguration(box.id) { set.mergeInto(it) }
                             onRecordMetadataSet(set)
                         },
                     )
@@ -302,19 +302,19 @@ internal fun MetadataEditorPanel(
                 QuickEditMetadataFields(
                     description = config.description,
                     onDescriptionChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(description = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(description = newValue) }
                     },
                     keywords = config.keywords,
                     onKeywordsChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(keywords = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(keywords = newValue) }
                     },
                     originalDate = config.originalDate,
                     onOriginalDateChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(originalDate = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(originalDate = newValue) }
                     },
                     year = config.year,
                     onYearChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(year = newValue.filter { c -> c.isDigit() }.take(4))
                         }
                     },
@@ -326,7 +326,7 @@ internal fun MetadataEditorPanel(
                     state = state,
                     overrideDescription = config.overrideDescription != OverrideState.NULL_OUT,
                     onOverrideDescriptionChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideDescription =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -336,7 +336,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideKeywords = config.overrideKeywords != OverrideState.NULL_OUT,
                     onOverrideKeywordsChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideKeywords =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -346,7 +346,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideOriginalDate = config.overrideOriginalDate != OverrideState.NULL_OUT,
                     onOverrideOriginalDateChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideOriginalDate =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -356,7 +356,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideYear = config.overrideYear != OverrideState.NULL_OUT,
                     onOverrideYearChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideYear =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -373,37 +373,37 @@ internal fun MetadataEditorPanel(
                     onToggle = onToggleCameraSection,
                     cameraMake = config.cameraMake,
                     onCameraMakeChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(cameraMake = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(cameraMake = newValue) }
                     },
                     cameraModel = config.cameraModel,
                     onCameraModelChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(cameraModel = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(cameraModel = newValue) }
                     },
                     lensModel = config.lensModel,
                     onLensModelChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(lensModel = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(lensModel = newValue) }
                     },
                     focalLength = config.focalLength,
                     onFocalLengthChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(focalLength = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(focalLength = newValue) }
                     },
                     aperture = config.aperture,
                     onApertureChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(aperture = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(aperture = newValue) }
                     },
                     shutterSpeed = config.shutterSpeed,
                     onShutterSpeedChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(shutterSpeed = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(shutterSpeed = newValue) }
                     },
                     iso = config.iso,
                     onIsoChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(iso = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(iso = newValue) }
                     },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
                     overrideCameraMake = config.overrideCameraMake != OverrideState.NULL_OUT,
                     onOverrideCameraMakeChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideCameraMake =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -413,7 +413,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideCameraModel = config.overrideCameraModel != OverrideState.NULL_OUT,
                     onOverrideCameraModelChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideCameraModel =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -423,7 +423,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideLensModel = config.overrideLensModel != OverrideState.NULL_OUT,
                     onOverrideLensModelChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideLensModel =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -433,7 +433,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideFocalLength = config.overrideFocalLength != OverrideState.NULL_OUT,
                     onOverrideFocalLengthChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideFocalLength =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -443,7 +443,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideAperture = config.overrideAperture != OverrideState.NULL_OUT,
                     onOverrideApertureChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideAperture =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -453,7 +453,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideShutterSpeed = config.overrideShutterSpeed != OverrideState.NULL_OUT,
                     onOverrideShutterSpeedChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideShutterSpeed =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -463,7 +463,7 @@ internal fun MetadataEditorPanel(
                     },
                     overrideIso = config.overrideIso != OverrideState.NULL_OUT,
                     onOverrideIsoChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideIso =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -480,37 +480,37 @@ internal fun MetadataEditorPanel(
                     onToggle = onToggleLocationSection,
                     locationName = config.locationName,
                     onLocationNameChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(locationName = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(locationName = newValue) }
                     },
                     city = config.city,
                     onCityChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(city = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(city = newValue) }
                     },
                     stateVal = config.state,
                     onStateChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(state = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(state = newValue) }
                     },
                     country = config.country,
                     onCountryChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(country = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(country = newValue) }
                     },
                     gpsLatitude = config.gpsLatitude,
                     onGpsLatitudeChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(gpsLatitude = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(gpsLatitude = newValue) }
                     },
                     gpsLongitude = config.gpsLongitude,
                     onGpsLongitudeChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(gpsLongitude = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(gpsLongitude = newValue) }
                     },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
                     onApplyRecentLocation = { set ->
-                        state.configs.updatePhotoConfiguration(box.id) { set.mergeLocationInto(it) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { set.mergeLocationInto(it) }
                     },
                     onPickLocation = { onPickLocation(selectedIndex) },
                     overrideGps = config.overrideGps != OverrideState.NULL_OUT,
                     onOverrideGpsChange = { included ->
-                        state.configs.updatePhotoConfiguration(box.id) {
+                        state.configs.updatePhotoScanConfiguration(box.id) {
                             it.copy(
                                 overrideGps =
                                     if (included) OverrideState.KEEP_SOURCE
@@ -533,7 +533,7 @@ internal fun MetadataEditorPanel(
                     onToggle = onToggleSubjectsSection,
                     subjects = config.subjects,
                     onSubjectsChange = { newValue ->
-                        state.configs.updatePhotoConfiguration(box.id) { it.copy(subjects = newValue) }
+                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(subjects = newValue) }
                     },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,

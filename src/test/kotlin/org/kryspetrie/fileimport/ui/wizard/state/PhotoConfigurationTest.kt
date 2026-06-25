@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -7,17 +8,17 @@ import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 
 /**
- * Unit tests for PhotoConfiguration.
+ * Unit tests for PhotoScanConfiguration.
  *
  * Tests configuration creation, defaults, rotation cycling, and aspect ratio.
  */
-class PhotoConfigurationTest {
+class PhotoScanConfigurationTest {
 
     // ==================== Default Values ====================
 
     @Test
     fun `default configuration has correct defaults`() {
-        val config = PhotoConfiguration()
+        val config = PhotoScanConfiguration()
 
         assertFalse(config.perspectiveCorrectionEnabled)
         assertEquals(0, config.rotationDegrees)
@@ -27,7 +28,7 @@ class PhotoConfigurationTest {
     @Test
     fun `custom configuration overrides defaults`() {
         val config =
-            PhotoConfiguration(
+            PhotoScanConfiguration(
                 perspectiveCorrectionEnabled = true,
                 rotationDegrees = 90,
                 aspectRatio = 1.5,
@@ -43,7 +44,7 @@ class PhotoConfigurationTest {
     @Test
     fun `copy creates new instance with same values`() {
         val original =
-            PhotoConfiguration(
+            PhotoScanConfiguration(
                 perspectiveCorrectionEnabled = true,
                 rotationDegrees = 180,
                 aspectRatio = 3.0 / 4.0,
@@ -58,7 +59,7 @@ class PhotoConfigurationTest {
 
     @Test
     fun `copy with modification changes only specified field`() {
-        val original = PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 0)
+        val original = PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 0)
 
         val modified = original.copy(perspectiveCorrectionEnabled = true)
 
@@ -70,7 +71,7 @@ class PhotoConfigurationTest {
 
     @Test
     fun `perspective and rotation can both be false-and-zero`() {
-        val config = PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 0)
+        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 0)
 
         assertFalse(config.perspectiveCorrectionEnabled)
         assertEquals(0, config.rotationDegrees)
@@ -78,7 +79,7 @@ class PhotoConfigurationTest {
 
     @Test
     fun `perspective can be true with rotation`() {
-        val config = PhotoConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
+        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
 
         assertTrue(config.perspectiveCorrectionEnabled)
         assertEquals(90, config.rotationDegrees)
@@ -86,7 +87,7 @@ class PhotoConfigurationTest {
 
     @Test
     fun `rotation can be non-zero when perspective is false`() {
-        val config = PhotoConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 270)
+        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 270)
 
         assertFalse(config.perspectiveCorrectionEnabled)
         assertEquals(270, config.rotationDegrees)
@@ -96,25 +97,25 @@ class PhotoConfigurationTest {
 
     @Test
     fun `rotation degrees can be 0`() {
-        val config = PhotoConfiguration(rotationDegrees = 0)
+        val config = PhotoScanConfiguration(rotationDegrees = 0)
         assertEquals(0, config.rotationDegrees)
     }
 
     @Test
     fun `rotation degrees can be 90`() {
-        val config = PhotoConfiguration(rotationDegrees = 90)
+        val config = PhotoScanConfiguration(rotationDegrees = 90)
         assertEquals(90, config.rotationDegrees)
     }
 
     @Test
     fun `rotation degrees can be 180`() {
-        val config = PhotoConfiguration(rotationDegrees = 180)
+        val config = PhotoScanConfiguration(rotationDegrees = 180)
         assertEquals(180, config.rotationDegrees)
     }
 
     @Test
     fun `rotation degrees can be 270`() {
-        val config = PhotoConfiguration(rotationDegrees = 270)
+        val config = PhotoScanConfiguration(rotationDegrees = 270)
         assertEquals(270, config.rotationDegrees)
     }
 
@@ -122,31 +123,31 @@ class PhotoConfigurationTest {
 
     @Test
     fun `cycleRotationCW goes from 0 to 90`() {
-        val config = PhotoConfiguration(rotationDegrees = 0)
+        val config = PhotoScanConfiguration(rotationDegrees = 0)
         assertEquals(90, config.cycleRotationCW().rotationDegrees)
     }
 
     @Test
     fun `cycleRotationCW goes from 90 to 180`() {
-        val config = PhotoConfiguration(rotationDegrees = 90)
+        val config = PhotoScanConfiguration(rotationDegrees = 90)
         assertEquals(180, config.cycleRotationCW().rotationDegrees)
     }
 
     @Test
     fun `cycleRotationCW goes from 180 to 270`() {
-        val config = PhotoConfiguration(rotationDegrees = 180)
+        val config = PhotoScanConfiguration(rotationDegrees = 180)
         assertEquals(270, config.cycleRotationCW().rotationDegrees)
     }
 
     @Test
     fun `cycleRotationCW wraps from 270 to 0`() {
-        val config = PhotoConfiguration(rotationDegrees = 270)
+        val config = PhotoScanConfiguration(rotationDegrees = 270)
         assertEquals(0, config.cycleRotationCW().rotationDegrees)
     }
 
     @Test
     fun `cycleRotationCW preserves other fields`() {
-        val config = PhotoConfiguration(perspectiveCorrectionEnabled = true, aspectRatio = 1.5)
+        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = true, aspectRatio = 1.5)
         val cycled = config.cycleRotationCW()
         assertTrue(cycled.perspectiveCorrectionEnabled)
         assertEquals(1.5, cycled.aspectRatio)
@@ -157,31 +158,31 @@ class PhotoConfigurationTest {
 
     @Test
     fun `cycleRotationCCW goes from 0 to 270`() {
-        val config = PhotoConfiguration(rotationDegrees = 0)
+        val config = PhotoScanConfiguration(rotationDegrees = 0)
         assertEquals(270, config.cycleRotationCCW().rotationDegrees)
     }
 
     @Test
     fun `cycleRotationCCW goes from 270 to 180`() {
-        val config = PhotoConfiguration(rotationDegrees = 270)
+        val config = PhotoScanConfiguration(rotationDegrees = 270)
         assertEquals(180, config.cycleRotationCCW().rotationDegrees)
     }
 
     @Test
     fun `cycleRotationCCW goes from 180 to 90`() {
-        val config = PhotoConfiguration(rotationDegrees = 180)
+        val config = PhotoScanConfiguration(rotationDegrees = 180)
         assertEquals(90, config.cycleRotationCCW().rotationDegrees)
     }
 
     @Test
     fun `cycleRotationCCW goes from 90 to 0`() {
-        val config = PhotoConfiguration(rotationDegrees = 90)
+        val config = PhotoScanConfiguration(rotationDegrees = 90)
         assertEquals(0, config.cycleRotationCCW().rotationDegrees)
     }
 
     @Test
     fun `cycleRotationCCW preserves other fields`() {
-        val config = PhotoConfiguration(perspectiveCorrectionEnabled = true, aspectRatio = 2.0)
+        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = true, aspectRatio = 2.0)
         val cycled = config.cycleRotationCCW()
         assertTrue(cycled.perspectiveCorrectionEnabled)
         assertEquals(2.0, cycled.aspectRatio)
@@ -192,25 +193,25 @@ class PhotoConfigurationTest {
 
     @Test
     fun `aspect ratio of 0 means original`() {
-        val config = PhotoConfiguration(aspectRatio = 0.0)
+        val config = PhotoScanConfiguration(aspectRatio = 0.0)
         assertEquals(0.0, config.aspectRatio)
     }
 
     @Test
     fun `aspect ratio can be 1_0 for square`() {
-        val config = PhotoConfiguration(aspectRatio = 1.0)
+        val config = PhotoScanConfiguration(aspectRatio = 1.0)
         assertEquals(1.0, config.aspectRatio)
     }
 
     @Test
     fun `aspect ratio can be 3_2 for landscape photos`() {
-        val config = PhotoConfiguration(aspectRatio = 3.0 / 2.0)
+        val config = PhotoScanConfiguration(aspectRatio = 3.0 / 2.0)
         assertEquals(3.0 / 2.0, config.aspectRatio)
     }
 
     @Test
     fun `aspect ratio can be 4_3 for standard photos`() {
-        val config = PhotoConfiguration(aspectRatio = 4.0 / 3.0)
+        val config = PhotoScanConfiguration(aspectRatio = 4.0 / 3.0)
         assertEquals(4.0 / 3.0, config.aspectRatio)
     }
 
@@ -218,7 +219,7 @@ class PhotoConfigurationTest {
 
     @Test
     fun `default configuration has empty metadata fields`() {
-        val config = PhotoConfiguration()
+        val config = PhotoScanConfiguration()
         assertEquals("", config.description)
         assertEquals("", config.keywords)
         assertEquals("", config.originalDate)
@@ -230,32 +231,32 @@ class PhotoConfigurationTest {
 
     @Test
     fun `hasMetadata returns true when description is set`() {
-        val config = PhotoConfiguration(description = "Christmas morning")
+        val config = PhotoScanConfiguration(description = "Christmas morning")
         assertTrue(config.hasMetadata())
     }
 
     @Test
     fun `hasMetadata returns true when keywords is set`() {
-        val config = PhotoConfiguration(keywords = "vacation, family")
+        val config = PhotoScanConfiguration(keywords = "vacation, family")
         assertTrue(config.hasMetadata())
     }
 
     @Test
     fun `hasMetadata returns true when originalDate is set`() {
-        val config = PhotoConfiguration(originalDate = "1995-06-15")
+        val config = PhotoScanConfiguration(originalDate = "1995-06-15")
         assertTrue(config.hasMetadata())
     }
 
     @Test
     fun `hasMetadata returns true when camera fields are set`() {
-        val config = PhotoConfiguration(cameraModel = "EOS 5D")
+        val config = PhotoScanConfiguration(cameraModel = "EOS 5D")
         assertTrue(config.hasMetadata())
     }
 
     @Test
     fun `hasMetadata returns false when all fields are empty strings`() {
         val config =
-            PhotoConfiguration(description = "", keywords = "", originalDate = "", year = "")
+            PhotoScanConfiguration(description = "", keywords = "", originalDate = "", year = "")
         assertFalse(config.hasMetadata())
     }
 
@@ -263,33 +264,33 @@ class PhotoConfigurationTest {
 
     @Test
     fun `hasMetadata returns true when locationName is set`() {
-        val config = PhotoConfiguration(locationName = "Grandma's house")
+        val config = PhotoScanConfiguration(locationName = "Grandma's house")
         assertTrue(config.hasMetadata())
     }
 
     @Test
     fun `hasMetadata returns true when city is set`() {
-        val config = PhotoConfiguration(city = "Worcester")
+        val config = PhotoScanConfiguration(city = "Worcester")
         assertTrue(config.hasMetadata())
     }
 
     @Test
     fun `hasMetadata returns true when gpsLatitude and gpsLongitude are set`() {
-        val config = PhotoConfiguration(gpsLatitude = "42.2626", gpsLongitude = "-71.8023")
+        val config = PhotoScanConfiguration(gpsLatitude = "42.2626", gpsLongitude = "-71.8023")
         assertTrue(config.hasMetadata())
         assertTrue(config.hasGpsCoordinates())
     }
 
     @Test
     fun `hasGpsCoordinates returns false when only latitude is set`() {
-        val config = PhotoConfiguration(gpsLatitude = "42.2626")
+        val config = PhotoScanConfiguration(gpsLatitude = "42.2626")
         assertFalse(config.hasGpsCoordinates())
     }
 
     @Test
     fun `locationDisplay combines location name, city, state, country`() {
         val config =
-            PhotoConfiguration(
+            PhotoScanConfiguration(
                 locationName = "Grandma's house",
                 city = "Worcester",
                 state = "MA",
@@ -300,7 +301,7 @@ class PhotoConfigurationTest {
 
     @Test
     fun `locationDisplay skips blank fields`() {
-        val config = PhotoConfiguration(city = "Worcester", state = "MA")
+        val config = PhotoScanConfiguration(city = "Worcester", state = "MA")
         assertEquals("Worcester, MA", config.locationDisplay())
     }
 
@@ -308,31 +309,31 @@ class PhotoConfigurationTest {
 
     @Test
     fun `hasMetadata returns true when subjects is set`() {
-        val config = PhotoConfiguration(subjects = "Alice, Bob")
+        val config = PhotoScanConfiguration(subjects = "Alice, Bob")
         assertTrue(config.hasMetadata())
     }
 
     @Test
     fun `subjectList parses comma-separated names`() {
-        val config = PhotoConfiguration(subjects = "Alice, Bob, Charlie")
+        val config = PhotoScanConfiguration(subjects = "Alice, Bob, Charlie")
         assertEquals(listOf("Alice", "Bob", "Charlie"), config.subjectList())
     }
 
     @Test
     fun `keywordList parses comma-separated keywords`() {
-        val config = PhotoConfiguration(keywords = "vacation, family, holiday")
+        val config = PhotoScanConfiguration(keywords = "vacation, family, holiday")
         assertEquals(listOf("vacation", "family", "holiday"), config.keywordList())
     }
 
     @Test
     fun `withKeywordList joins list into comma-separated string`() {
-        val config = PhotoConfiguration().withKeywordList(listOf("vacation", "family", "holiday"))
+        val config = PhotoScanConfiguration().withKeywordList(listOf("vacation", "family", "holiday"))
         assertEquals("vacation, family, holiday", config.keywords)
     }
 
     @Test
     fun `hasMetadata returns true when faceRegions is non-empty`() {
-        val config = PhotoConfiguration(faceRegions = listOf(FaceRegion(name = "Alice")))
+        val config = PhotoScanConfiguration(faceRegions = listOf(FaceRegion(name = "Alice")))
         assertTrue(config.hasMetadata())
     }
 }

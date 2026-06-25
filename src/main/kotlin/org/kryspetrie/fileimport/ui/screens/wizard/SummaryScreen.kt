@@ -65,7 +65,7 @@ import org.kryspetrie.fileimport.domain.model.AspectRatio
 import org.kryspetrie.fileimport.domain.model.DetectionMode
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
 import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.components.PreviewCache
@@ -121,7 +121,7 @@ fun SummaryScreen(
                 photoConfigurations = photoConfigurations,
                 selectedIndex = selectedIndex,
                 onSelectedIndexChange = { selectedIndex = it },
-                onConfigChange = { boxId, config -> state.configs.setPhotoConfiguration(boxId, config) },
+                onConfigChange = { boxId, config -> state.configs.setPhotoScanConfiguration(boxId, config) },
                 onBoxDelete = { index ->
                     state.boxes.removeBox(index)
                     val newSize = boundingBoxList.size() - 1
@@ -130,8 +130,8 @@ fun SummaryScreen(
                     }
                 },
                 onDetectionModeChange = { boxId, mode ->
-                    val current = photoConfigurations[boxId] ?: PhotoConfiguration()
-                    state.configs.setPhotoConfiguration(boxId, current.copy(detectionMode = mode))
+                    val current = photoConfigurations[boxId] ?: PhotoScanConfiguration()
+                    state.configs.setPhotoScanConfiguration(boxId, current.copy(detectionMode = mode))
                 },
                 onRotateAllCW = { state.configs.rotateAllBoxesCW() },
                 onRotateAllCCW = { state.configs.rotateAllBoxesCCW() },
@@ -157,10 +157,10 @@ private fun SummaryScreenContent(
     image: BufferedImage,
     previewCache: PreviewCache,
     boundingBoxList: BoundingBoxList,
-    photoConfigurations: Map<String, PhotoConfiguration>,
+    photoConfigurations: Map<String, PhotoScanConfiguration>,
     selectedIndex: Int,
     onSelectedIndexChange: (Int) -> Unit,
-    onConfigChange: (String, PhotoConfiguration) -> Unit,
+    onConfigChange: (String, PhotoScanConfiguration) -> Unit,
     onBoxDelete: (Int) -> Unit,
     onDetectionModeChange: (String, DetectionMode?) -> Unit,
     onRotateAllCW: () -> Unit,
@@ -210,10 +210,10 @@ private fun TwoPanelLayout(
     image: BufferedImage,
     previewCache: PreviewCache,
     boundingBoxList: BoundingBoxList,
-    photoConfigurations: Map<String, PhotoConfiguration>,
+    photoConfigurations: Map<String, PhotoScanConfiguration>,
     selectedIndex: Int,
     onSelectedIndexChange: (Int) -> Unit,
-    onConfigChange: (String, PhotoConfiguration) -> Unit,
+    onConfigChange: (String, PhotoScanConfiguration) -> Unit,
     onBoxDelete: (Int) -> Unit,
     onDetectionModeChange: (String, DetectionMode?) -> Unit,
     onRotateAllCW: () -> Unit,
@@ -243,8 +243,8 @@ private fun TwoPanelLayout(
 
         val selectedBox = boundingBoxList.boxes.getOrNull(selectedIndex)
         val selectedConfig =
-            selectedBox?.let { photoConfigurations[it.id] ?: PhotoConfiguration() }
-                ?: PhotoConfiguration()
+            selectedBox?.let { photoConfigurations[it.id] ?: PhotoScanConfiguration() }
+                ?: PhotoScanConfiguration()
 
         DetailPreviewPanel(
             image = image,
@@ -261,13 +261,13 @@ private fun TwoPanelLayout(
             },
             onRotateCW = {
                 selectedBox?.let {
-                    val current = photoConfigurations[it.id] ?: PhotoConfiguration()
+                    val current = photoConfigurations[it.id] ?: PhotoScanConfiguration()
                     onConfigChange(it.id, current.cycleRotationCW())
                 }
             },
             onRotateCCW = {
                 selectedBox?.let {
-                    val current = photoConfigurations[it.id] ?: PhotoConfiguration()
+                    val current = photoConfigurations[it.id] ?: PhotoScanConfiguration()
                     onConfigChange(it.id, current.cycleRotationCCW())
                 }
             },
@@ -366,10 +366,10 @@ private fun PhotoSidebarList(
     image: BufferedImage,
     previewCache: PreviewCache,
     boundingBoxList: BoundingBoxList,
-    photoConfigurations: Map<String, PhotoConfiguration>,
+    photoConfigurations: Map<String, PhotoScanConfiguration>,
     selectedIndex: Int,
     onSelectedIndexChange: (Int) -> Unit,
-    onConfigChange: (String, PhotoConfiguration) -> Unit,
+    onConfigChange: (String, PhotoScanConfiguration) -> Unit,
     onDetectionModeChange: (String, DetectionMode?) -> Unit,
     onDelete: (Int) -> Unit,
     onRotateAllCW: () -> Unit,
@@ -399,7 +399,7 @@ private fun PhotoSidebarList(
             contentPadding = PaddingValues(4.dp),
         ) {
             itemsIndexed(boundingBoxList.boxes) { index, box ->
-                val config = photoConfigurations[box.id] ?: PhotoConfiguration()
+                val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
                 val thumbnail = remember(image, box, config) { previewCache.getThumbnail(image, box, config) }
 
                 SidebarPhotoCard(
@@ -444,7 +444,7 @@ private fun PhotoSidebarList(
 private fun SidebarPhotoCard(
     index: Int,
     box: BoundingBox,
-    config: PhotoConfiguration,
+    config: PhotoScanConfiguration,
     thumbnail: ImageBitmap?,
     isSelected: Boolean,
     onSelect: () -> Unit,
@@ -487,7 +487,7 @@ private fun SidebarPhotoCard(
 
 /** Thumbnail box within a sidebar card, including detection mode badge if set. */
 @Composable
-private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?, config: PhotoConfiguration) {
+private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?, config: PhotoScanConfiguration) {
     Box(
         modifier =
             Modifier.width(60.dp)
@@ -514,7 +514,7 @@ private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?, config: PhotoC
 
 /** Info column within a sidebar card showing photo name and dimensions. */
 @Composable
-private fun SidebarInfoColumn(index: Int, box: BoundingBox, config: PhotoConfiguration, modifier: Modifier = Modifier) {
+private fun SidebarInfoColumn(index: Int, box: BoundingBox, config: PhotoScanConfiguration, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -565,10 +565,10 @@ private fun DetailPreviewPanel(
     image: BufferedImage,
     previewCache: PreviewCache,
     box: BoundingBox?,
-    config: PhotoConfiguration,
+    config: PhotoScanConfiguration,
     index: Int,
     totalPhotos: Int,
-    onConfigChange: (PhotoConfiguration) -> Unit,
+    onConfigChange: (PhotoScanConfiguration) -> Unit,
     onDetectionModeChange: (DetectionMode?) -> Unit,
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit,
@@ -675,13 +675,13 @@ private fun ZoomHintOverlay(modifier: Modifier = Modifier) {
 /** Controls row below the detail preview: photo label, navigation, rotation, dropdowns. */
 @Composable
 private fun DetailControlsRow(
-    config: PhotoConfiguration,
+    config: PhotoScanConfiguration,
     box: BoundingBox,
     index: Int,
     totalPhotos: Int,
     onPrev: () -> Unit,
     onNext: () -> Unit,
-    onConfigChange: (PhotoConfiguration) -> Unit,
+    onConfigChange: (PhotoScanConfiguration) -> Unit,
     onDetectionModeChange: (DetectionMode?) -> Unit,
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit,
@@ -714,7 +714,7 @@ private fun DetailControlsRow(
 /** Photo label with detection mode badge, prev/next navigation, and rotation buttons. */
 @Composable
 private fun DetailLabelAndRotation(
-    config: PhotoConfiguration,
+    config: PhotoScanConfiguration,
     index: Int,
     totalPhotos: Int,
     onPrev: () -> Unit,
@@ -758,9 +758,9 @@ private fun DetailLabelAndRotation(
 /** Row of dropdown controls: aspect ratio, detection mode, correction strategy. */
 @Composable
 private fun DetailDropdownRow(
-    config: PhotoConfiguration,
+    config: PhotoScanConfiguration,
     box: BoundingBox,
-    onConfigChange: (PhotoConfiguration) -> Unit,
+    onConfigChange: (PhotoScanConfiguration) -> Unit,
     onDetectionModeChange: (DetectionMode?) -> Unit,
 ) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
