@@ -6,7 +6,7 @@ import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.RotationAngle
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 
 /**

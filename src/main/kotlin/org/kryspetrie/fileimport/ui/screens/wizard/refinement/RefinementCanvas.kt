@@ -24,8 +24,8 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import java.awt.image.BufferedImage
 import kotlinx.coroutines.delay
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
-import org.kryspetrie.fileimport.ui.wizard.state.Corner
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.Corner
 import org.kryspetrie.fileimport.ui.wizard.state.DEBUG_TIMING
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 

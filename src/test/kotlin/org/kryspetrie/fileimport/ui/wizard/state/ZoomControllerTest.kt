@@ -5,7 +5,8 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 /**
  * Unit tests for ZoomController. Tests zoom calculations, pan offset, cursor-centered zooming, and
  * fit-to-bounds operations.

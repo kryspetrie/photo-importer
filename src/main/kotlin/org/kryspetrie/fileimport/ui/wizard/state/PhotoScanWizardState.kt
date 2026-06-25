@@ -1,6 +1,9 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 import java.awt.image.BufferedImage
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow

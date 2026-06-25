@@ -4,10 +4,10 @@ import androidx.compose.ui.geometry.Offset
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
-import org.kryspetrie.fileimport.ui.wizard.state.Corner
-import org.kryspetrie.fileimport.ui.wizard.state.Point
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
+import org.kryspetrie.fileimport.domain.model.geometry.Corner
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.createSampledImageForRefinement
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.findCornerHit
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.imageToScreen

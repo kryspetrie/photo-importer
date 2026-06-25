@@ -1,6 +1,7 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull

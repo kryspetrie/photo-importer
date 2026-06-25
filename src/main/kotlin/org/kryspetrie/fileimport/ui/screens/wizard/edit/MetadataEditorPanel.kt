@@ -32,7 +32,7 @@ import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary

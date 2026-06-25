@@ -3,6 +3,10 @@ package org.kryspetrie.fileimport.ui.wizard.state
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.Corner
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 

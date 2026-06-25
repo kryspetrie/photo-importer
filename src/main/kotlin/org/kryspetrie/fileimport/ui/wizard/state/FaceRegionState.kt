@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.kryspetrie.fileimport.domain.model.FaceRegion
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.RegionType
 
 /**

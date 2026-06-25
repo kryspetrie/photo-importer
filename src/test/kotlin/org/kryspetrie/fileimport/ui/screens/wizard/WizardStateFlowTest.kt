@@ -8,12 +8,12 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
-import org.kryspetrie.fileimport.ui.wizard.state.Point
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
 
 /**

@@ -25,7 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar

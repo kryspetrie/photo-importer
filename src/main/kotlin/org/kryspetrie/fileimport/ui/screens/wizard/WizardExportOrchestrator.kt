@@ -13,7 +13,7 @@ import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanConstants
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.screens.wizard.rotationFromDegrees

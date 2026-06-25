@@ -1,6 +1,11 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.Corner
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 import java.awt.image.BufferedImage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

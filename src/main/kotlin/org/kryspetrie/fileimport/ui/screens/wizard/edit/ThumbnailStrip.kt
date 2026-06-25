@@ -29,7 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache

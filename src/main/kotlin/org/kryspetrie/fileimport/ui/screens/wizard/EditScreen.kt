@@ -71,7 +71,7 @@ import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
 import org.kryspetrie.fileimport.infrastructure.adapter.transformFaceRegionsFromSource
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState

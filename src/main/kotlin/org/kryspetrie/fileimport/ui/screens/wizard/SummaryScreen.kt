@@ -63,8 +63,8 @@ import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.AspectRatio
 import org.kryspetrie.fileimport.domain.model.DetectionMode
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardStep

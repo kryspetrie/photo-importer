@@ -11,11 +11,11 @@ import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
-import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.Point
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 import org.kryspetrie.fileimport.ui.components.isImageFile
 
 /**

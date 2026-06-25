@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 /**
  * Manages undo/redo history for bounding box operations. Each box maintains its own history stack.
  */

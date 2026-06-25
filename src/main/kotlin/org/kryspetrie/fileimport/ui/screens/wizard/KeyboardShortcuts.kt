@@ -30,6 +30,7 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.geometry.Corner
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanConstants
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
@@ -318,7 +319,7 @@ internal fun isCtrlPressed(keyEvent: androidx.compose.ui.input.key.KeyEvent): Bo
 /** Cycles through the corners of the selected box. */
 private fun cycleCorner(state: PhotoScanWizardState, reverse: Boolean = false) {
     val currentCorner = state.boxes.selectedCorner.value
-    val corners = org.kryspetrie.fileimport.ui.wizard.state.Corner.entries
+    val corners = Corner.entries
 
     if (currentCorner == null) {
         state.boxes.selectCorner(if (reverse) corners.last() else corners.first())

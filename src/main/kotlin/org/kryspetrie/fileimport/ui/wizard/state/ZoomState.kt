@@ -3,7 +3,9 @@ package org.kryspetrie.fileimport.ui.wizard.state
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 /**
  * Sub-state holding zoom/pan state for the wizard canvas view. Wraps a [ZoomController] in a
  * [StateFlow] and provides mutation methods.

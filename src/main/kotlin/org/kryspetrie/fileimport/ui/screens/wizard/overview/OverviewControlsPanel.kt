@@ -30,7 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.ui.wizard.state.Corner
+import org.kryspetrie.fileimport.domain.model.geometry.Corner
 import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
