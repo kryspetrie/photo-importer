@@ -57,8 +57,8 @@ import androidx.compose.ui.window.DialogProperties
 import java.awt.image.BufferedImage
 import kotlinx.coroutines.flow.first
 import org.koin.compose.koinInject
-import org.kryspetrie.fileimport.application.FaceRegionTransformer
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
@@ -69,12 +69,14 @@ import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
-import org.kryspetrie.fileimport.infrastructure.wizard.FaceSize
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
-import org.kryspetrie.fileimport.infrastructure.wizard.SourceExifSummary
+import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
+import org.kryspetrie.fileimport.infrastructure.adapter.transformFaceRegionsFromSource
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
+import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
@@ -102,7 +104,7 @@ import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 fun EditScreen(
     state: PhotoScanWizardState,
     image: BufferedImage,
-    perspectiveService: PerspectiveCorrectionService,
+    perspectiveService: PerspectiveCorrectionPort,
     previewCache: PreviewCache,
     metadataHistory: MetadataHistory,
     onMetadataHistoryUpdate: (String, String) -> Unit,
@@ -113,7 +115,7 @@ fun EditScreen(
     onSkipToExport: (() -> Unit)? = null,
     startWithMetadata: Boolean = false,
     modifier: Modifier = Modifier,
-    faceRegionTransformer: FaceRegionTransformer? = null,
+    faceRegionTransformer: FaceRegionTransformerPort? = null,
 ) {
     val locationSearchService: LocationSearchPort = koinInject()
     val geocodingPort: GeocodingPort = koinInject()

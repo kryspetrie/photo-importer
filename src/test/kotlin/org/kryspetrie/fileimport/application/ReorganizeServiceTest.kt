@@ -15,6 +15,8 @@ import org.kryspetrie.fileimport.domain.model.ImageMetadata
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.ReorganizeMapping
 import org.kryspetrie.fileimport.domain.model.ReorganizePreview
+import org.kryspetrie.fileimport.application.FileOperationExecutor
+import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.mockito.Mockito.mock

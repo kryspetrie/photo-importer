@@ -44,11 +44,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.infrastructure.wizard.FourPointState
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
-import org.kryspetrie.fileimport.infrastructure.wizard.ZoomController
+import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
+import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
+import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.FourPointStatusBar
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewCanvas

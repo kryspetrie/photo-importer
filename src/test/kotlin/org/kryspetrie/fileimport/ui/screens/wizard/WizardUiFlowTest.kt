@@ -14,14 +14,14 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.Point
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.Point
+import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 
 /**

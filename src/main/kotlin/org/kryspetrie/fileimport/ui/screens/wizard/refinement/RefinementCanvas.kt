@@ -24,10 +24,10 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntSize
 import java.awt.image.BufferedImage
 import kotlinx.coroutines.delay
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
-import org.kryspetrie.fileimport.infrastructure.wizard.Corner
-import org.kryspetrie.fileimport.infrastructure.wizard.DEBUG_TIMING
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
+import org.kryspetrie.fileimport.ui.wizard.state.Corner
+import org.kryspetrie.fileimport.ui.wizard.state.DEBUG_TIMING
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /**
  * High-performance refinement canvas using GraphicsLayer for zoom/pan and separate drawing layers.

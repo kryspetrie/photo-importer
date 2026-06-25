@@ -1,7 +1,13 @@
 package org.kryspetrie.fileimport.infrastructure.adapter
 
 import java.awt.image.BufferedImage
+import java.io.File
+import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.FaceRegion
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 
 /**
  * [ProcessedImage] implementation wrapping a [BufferedImage].
@@ -45,3 +51,51 @@ fun ProcessedImage.toBufferedImage(): BufferedImage =
                     "expected AwtProcessedImage"
             )
     }
+
+/**
+ * AWT convenience extension: corrects perspective using [BufferedImage] directly.
+ *
+ * Wraps the [BufferedImage] as a [ProcessedImage] for the port call and unwraps the result.
+ * UI code that works with [BufferedImage] can use this instead of manual conversion.
+ */
+fun PerspectiveCorrectionPort.correctPerspective(
+    sourceImage: BufferedImage,
+    detectedPhoto: DetectedPhoto,
+): BufferedImage {
+    val result = correctPerspective(sourceImage.toProcessedImage(), detectedPhoto)
+    return result.toBufferedImage()
+}
+
+/**
+ * AWT convenience extension: transforms face regions using [File] directly.
+ *
+ * Converts the [File] to a [FilePath] for the port call. UI code that works with [File] can
+ * use this instead of manual conversion.
+ */
+fun FaceRegionTransformerPort.transformFaceRegionsFromSource(
+    sourceFile: File,
+    detectedPhoto: DetectedPhoto,
+    outputWidth: Int,
+    outputHeight: Int,
+    sourceWidth: Int,
+    sourceHeight: Int,
+    marginFraction: Double = 0.02,
+): List<FaceRegion> =
+    transformFaceRegionsFromSource(
+        sourceFile = FilePath(sourceFile.absolutePath),
+        detectedPhoto = detectedPhoto,
+        outputWidth = outputWidth,
+        outputHeight = outputHeight,
+        sourceWidth = sourceWidth,
+        sourceHeight = sourceHeight,
+        marginFraction = marginFraction,
+    )
+
+/**
+ * AWT convenience extension: reads face regions from XMP using [File] directly.
+ *
+ * Converts the [File] to a [FilePath] for the port call.
+ */
+fun FaceRegionTransformerPort.readFaceRegionsFromXmp(
+    file: File
+): List<FaceRegion> = readFaceRegionsFromXmp(FilePath(file.absolutePath))

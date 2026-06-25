@@ -18,6 +18,8 @@ import org.kryspetrie.fileimport.domain.model.ReorganizePreview
 import org.kryspetrie.fileimport.domain.model.ReorganizeProgress
 import org.kryspetrie.fileimport.domain.model.ReorganizeResult
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.application.FileOperationExecutor
+import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider

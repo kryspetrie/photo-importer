@@ -74,9 +74,9 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.RegionType
-import org.kryspetrie.fileimport.infrastructure.wizard.FaceSize
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /** Interaction mode for the face selector overlay. */
 enum class InteractionMode(val displayName: String, val icon: ImageVector) {

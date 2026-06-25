@@ -23,15 +23,15 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.model.DetectionMode
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
-import org.kryspetrie.fileimport.infrastructure.wizard.Corner
-import org.kryspetrie.fileimport.infrastructure.wizard.FourPointState
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.Point
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
-import org.kryspetrie.fileimport.infrastructure.wizard.ZoomController
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.ui.wizard.state.Corner
+import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.Point
+import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
+import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
 
 @Composable
 fun OverviewCanvas(

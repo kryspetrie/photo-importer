@@ -28,14 +28,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.SourceExifSummary
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
 
@@ -46,7 +46,7 @@ import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
 internal fun MetadataEditorPanel(
     state: PhotoScanWizardState,
     image: BufferedImage,
-    perspectiveService: PerspectiveCorrectionService,
+    perspectiveService: PerspectiveCorrectionPort,
     boundingBoxList: BoundingBoxList,
     photoConfigurations: Map<String, PhotoConfiguration>,
     selectedIndices: Set<Int>,

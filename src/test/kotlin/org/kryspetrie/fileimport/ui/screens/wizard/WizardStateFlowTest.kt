@@ -8,13 +8,13 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
-import org.kryspetrie.fileimport.infrastructure.wizard.Point
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardMode
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxCorners
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
+import org.kryspetrie.fileimport.ui.wizard.state.Point
+import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
 
 /**
  * Pure state-based flow tests for the wizard workflow.

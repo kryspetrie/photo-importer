@@ -29,16 +29,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 
 /** Horizontal scrollable thumbnail strip for photo selection. */
 @Composable
 internal fun ThumbnailStrip(
     image: BufferedImage,
-    perspectiveService: PerspectiveCorrectionService,
+    perspectiveService: PerspectiveCorrectionPort,
     previewCache: PreviewCache,
     boundingBoxList: BoundingBoxList,
     photoConfigurations: Map<String, PhotoConfiguration>,

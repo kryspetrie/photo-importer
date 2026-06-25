@@ -1,12 +1,13 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.RotationAngle
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
 
 /**
  * Crops and rotates a bounding box from an image using perspective correction and rotation.
@@ -21,7 +22,7 @@ fun cropAndRotateBoundingBox(
     image: BufferedImage,
     box: BoundingBox,
     config: PhotoConfiguration,
-    perspectiveService: PerspectiveCorrectionService,
+    perspectiveService: PerspectiveCorrectionPort,
 ): BufferedImage? {
     return try {
         val detectedPhoto = boxToDetectedPhoto(box)

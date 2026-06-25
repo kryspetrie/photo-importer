@@ -60,14 +60,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.awt.Cursor
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.AspectRatio
 import org.kryspetrie.fileimport.domain.model.DetectionMode
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox
-import org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBox
+import org.kryspetrie.fileimport.ui.wizard.state.BoundingBoxList
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.AspectRatioDropdown
@@ -91,7 +91,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowRight
 fun SummaryScreen(
     state: PhotoScanWizardState,
     image: BufferedImage,
-    perspectiveService: PerspectiveCorrectionService,
+    perspectiveService: PerspectiveCorrectionPort,
     previewCache: PreviewCache,
     onBack: () -> Unit,
     onExport: () -> Unit,

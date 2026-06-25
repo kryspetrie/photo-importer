@@ -18,7 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.infrastructure.wizard.Corner
+import org.kryspetrie.fileimport.ui.wizard.state.Corner
 
 @Composable
 internal fun RefinementControls(

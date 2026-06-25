@@ -2,12 +2,10 @@ package org.kryspetrie.fileimport.di
 
 import org.koin.dsl.module
 import org.kryspetrie.fileimport.application.DuplicateScannerService
-import org.kryspetrie.fileimport.application.FaceRegionTransformer
 import org.kryspetrie.fileimport.application.ImportExecutor
 import org.kryspetrie.fileimport.application.ImportScanner
 import org.kryspetrie.fileimport.application.ImportService
 import org.kryspetrie.fileimport.application.LocationSearchService
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.application.export.BackImageService
 import org.kryspetrie.fileimport.application.export.JpegImageWriter
@@ -51,8 +49,10 @@ import org.kryspetrie.fileimport.infrastructure.adapter.NamingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.NominatimGeocodingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
-import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceDetectionService
+import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
+import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
+import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
 
@@ -129,7 +129,7 @@ val appModule = module {
     single { FaceRegionTransformer() }
     single { JpegImageWriter() }
     single { BackImageService() }
-    single { MetadataWritingService(faceRegionTransformer = get()) }
+    single { MetadataWritingService(faceRegionTransformer = get<FaceRegionTransformerPort>()) }
     single<PhotoScanExportPort> { get<PhotoScanExportService>() }
     single { PhotoScanExportService(get(), get(), get(), get()) }
 

@@ -4,9 +4,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import java.awt.image.BufferedImage
 import java.util.concurrent.ConcurrentHashMap
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
+import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoConfiguration
 import org.kryspetrie.fileimport.ui.screens.wizard.cropAndRotateBoundingBox
 
 /**
@@ -22,7 +23,7 @@ import org.kryspetrie.fileimport.ui.screens.wizard.cropAndRotateBoundingBox
  * Thread-safe via [ConcurrentHashMap].
  */
 class PreviewCache(
-    private val perspectiveService: PerspectiveCorrectionService,
+    private val perspectiveService: PerspectiveCorrectionPort,
     private val thumbnailMaxSize: Int = DEFAULT_THUMBNAIL_MAX_SIZE,
 ) {
     private val fullCache = ConcurrentHashMap<String, BufferedImage>()

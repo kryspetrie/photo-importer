@@ -8,6 +8,8 @@ import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 import org.assertj.core.api.Assertions.assertThat
+import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
+import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName

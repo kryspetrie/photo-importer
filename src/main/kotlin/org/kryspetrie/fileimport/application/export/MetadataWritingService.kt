@@ -2,7 +2,8 @@ package org.kryspetrie.fileimport.application.export
 
 import java.awt.image.BufferedImage
 import java.io.File
-import org.kryspetrie.fileimport.application.FaceRegionTransformer
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.ExifValueResolver
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
@@ -18,7 +19,7 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
  *
  * @param faceRegionTransformer used to transform source face regions into output coordinates.
  */
-class MetadataWritingService(private val faceRegionTransformer: FaceRegionTransformer) {
+class MetadataWritingService(private val faceRegionTransformer: FaceRegionTransformerPort) {
 
     /**
      * Writes [image] to [outputFile] as JPEG, then layers EXIF, IPTC, and XMP metadata.
@@ -73,7 +74,7 @@ class MetadataWritingService(private val faceRegionTransformer: FaceRegionTransf
             try {
                 val transformedRegions =
                     faceRegionTransformer.transformFaceRegionsFromSource(
-                        sourceFile = sourceFile,
+                        sourceFile = FilePath(sourceFile.absolutePath),
                         detectedPhoto = detectedPhoto,
                         outputWidth = preRotationWidth,
                         outputHeight = preRotationHeight,

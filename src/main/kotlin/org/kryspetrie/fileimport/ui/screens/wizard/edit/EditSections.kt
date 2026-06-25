@@ -68,9 +68,9 @@ import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.model.RegionType
-import org.kryspetrie.fileimport.infrastructure.wizard.FaceSize
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.SourceExifSummary
+import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.screens.wizard.regionTypeIcon
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataField
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.OverrideCheckbox

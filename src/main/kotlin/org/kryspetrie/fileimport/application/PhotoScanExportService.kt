@@ -18,14 +18,17 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanSingleExportResult
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.model.determineCorrectionStrategy
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
+
 
 /**
  * Thin orchestrator for exporting extracted photos with EXIF metadata preservation and modification.
  *
  * Delegates to specialized services:
- * - [PerspectiveCorrectionService] — perspective warping
+ * - [PerspectiveCorrectionPort] — perspective warping
  * - [ImageTransformer] — axis-aligned crop and rotation
  * - [JpegImageWriter] — writing JPEG bytes
  * - [BackImageService] — loading, cropping, rotating, and compositing back-of-photo images
@@ -36,7 +39,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
  * @see PhotoScanConfiguration
  */
 class PhotoScanExportService(
-    private val perspectiveService: PerspectiveCorrectionService,
+    private val perspectiveService: PerspectiveCorrectionPort,
     private val metadataWritingService: MetadataWritingService,
     private val jpegImageWriter: JpegImageWriter,
     private val backImageService: BackImageService,
@@ -236,7 +239,7 @@ class PhotoScanExportService(
         val correctedImage =
             when (strategy) {
                 CorrectionStrategy.PERSPECTIVE ->
-                    perspectiveService.correctPerspective(sourceImage, marginedPhoto)
+                    perspectiveService.correctPerspective(sourceImage.toProcessedImage(), marginedPhoto).toBufferedImage()
                 CorrectionStrategy.CROP_AND_ROTATE ->
                     ImageTransformer.cropAxisAligned(sourceImage, marginedPhoto)
                 CorrectionStrategy.CROP ->

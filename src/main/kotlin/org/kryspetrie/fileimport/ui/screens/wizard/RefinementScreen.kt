@@ -26,7 +26,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.ZoomControls
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementCanvas
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementControls

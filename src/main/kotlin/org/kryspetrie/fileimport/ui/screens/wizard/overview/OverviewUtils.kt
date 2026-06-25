@@ -24,8 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.infrastructure.wizard.FourPointState
-import org.kryspetrie.fileimport.infrastructure.wizard.ZoomController
+import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
+import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
 
 /** Zoom controls overlay for the overview canvas. */
 @Composable

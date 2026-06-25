@@ -232,6 +232,7 @@ class HexagonalArchitectureKonsistTest {
         fun applicationInfrastructureImportsAreLimitedToBoundaryConverters() {
             val allowedInfrastructureImports =
                 setOf(
+                    // AWT bridge: ProcessedImage ↔ BufferedImage conversions
                     "org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage",
                     "org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage",
                 )
@@ -268,10 +269,12 @@ class HexagonalArchitectureKonsistTest {
         fun applicationAwtImportsLimitedToDocumentedExceptions() {
             val allowedAwtFiles =
                 setOf(
-                    "PerspectiveCorrectionService",
                     "PhotoScanExportService",
                     "ScanService",
                     "ImageTransformer",
+                    "BackImageService",
+                    "JpegImageWriter",
+                    "MetadataWritingService",
                 )
 
             val appFiles =
@@ -369,34 +372,15 @@ class HexagonalArchitectureKonsistTest {
          * These are documented in docs/ARCHITECTURE.md as acceptable boundary crossings.
          */
         private val allowedInfrastructureImportsInUI: Set<String> = buildSet {
-            // Adapter utilities
+            // Adapter utilities & AWT bridge extensions
             add("org.kryspetrie.fileimport.infrastructure.adapter.Platform")
             add("org.kryspetrie.fileimport.infrastructure.adapter.AppPaths")
             add("org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage")
             add("org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage")
             add("org.kryspetrie.fileimport.infrastructure.adapter.ThumbnailExtractorAdapter")
             add("org.kryspetrie.fileimport.infrastructure.adapter.FilePathExt")
-
-            // Wizard state (documented boundary exception — tightly coupled UI state)
-            add("org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.PhotoConfiguration")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.BoundingBox")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxList")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.BoundingBoxCorners")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.Corner")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.FaceSize")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.FourPointState")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanConstants")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.Point")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.SourceExifSummary")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.WizardMode")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.WizardStep")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.ZoomController")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.DEBUG_TIMING")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.UndoRedoManager")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.AspectRatioHandler")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.RotationTransformer")
-            add("org.kryspetrie.fileimport.infrastructure.wizard.PreProcessedImage")
+            add("org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective")
+            add("org.kryspetrie.fileimport.infrastructure.adapter.transformFaceRegionsFromSource")
 
             // Logging (documented boundary exception)
             add("org.kryspetrie.fileimport.infrastructure.logging.AppLogger")
@@ -407,8 +391,8 @@ class HexagonalArchitectureKonsistTest {
          * Application-layer services that the UI is allowed to import directly.
          *
          * These are use-case orchestration services accessed via Koin DI. Algorithm/detail services
-         * (PerspectiveCorrectionService, FaceRegionTransformer, PhotoScanExportService,
-         * ScanService) should be accessed through their domain port interfaces instead.
+         * (PerspectiveCorrectionService, FaceRegionTransformer, etc.) are now in infrastructure
+         * and accessed through their domain port interfaces.
          */
         private val allowedApplicationImportsInUI: Set<String> = buildSet {
             // Use-case services (orchestration, no direct AWT coupling)
@@ -416,12 +400,6 @@ class HexagonalArchitectureKonsistTest {
             add("org.kryspetrie.fileimport.application.ReorganizeService")
             add("org.kryspetrie.fileimport.application.DuplicateScannerService")
             add("org.kryspetrie.fileimport.application.WatchFolderService")
-
-            // AWT-coupled services (documented boundary exception — wizard tightly coupled to
-            // BufferedImage processing). These should ideally be accessed through domain ports,
-            // but wizard composables thread BufferedImage through multiple layers.
-            add("org.kryspetrie.fileimport.application.PerspectiveCorrectionService")
-            add("org.kryspetrie.fileimport.application.FaceRegionTransformer")
             add("org.kryspetrie.fileimport.application.PhotoScanExportService")
             add("org.kryspetrie.fileimport.application.ScanService")
         }

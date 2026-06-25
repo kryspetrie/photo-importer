@@ -47,8 +47,8 @@ import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import org.kryspetrie.fileimport.application.FaceRegionTransformer
-import org.kryspetrie.fileimport.application.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 
@@ -59,8 +59,8 @@ import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
 
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
-import org.kryspetrie.fileimport.infrastructure.wizard.PhotoScanWizardState
-import org.kryspetrie.fileimport.infrastructure.wizard.WizardStep
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
@@ -77,11 +77,11 @@ fun WizardContainer(
     modifier: Modifier = Modifier,
     detectorService: PhotoScanDetectorPort = koinInject(),
     exportService: PhotoScanExportService = koinInject(),
-    perspectiveService: PerspectiveCorrectionService = koinInject(),
+    perspectiveService: PerspectiveCorrectionPort = koinInject(),
     appLogger: AppLogger = koinInject(),
     settingsPort: SettingsPort = koinInject(),
     dispatcherProvider: DispatcherProvider = koinInject(),
-    faceRegionTransformer: FaceRegionTransformer = koinInject(),
+    faceRegionTransformer: FaceRegionTransformerPort = koinInject(),
 ) {
     val state = remember { PhotoScanWizardState() }
     state.setLogger(appLogger)
@@ -193,11 +193,11 @@ private fun WizardStepContent(
     settings: AppSettings,
     detectorService: PhotoScanDetectorPort,
     exportService: PhotoScanExportService,
-    perspectiveService: PerspectiveCorrectionService,
+    perspectiveService: PerspectiveCorrectionPort,
     previewCache: PreviewCache,
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
-    faceRegionTransformer: FaceRegionTransformer,
+    faceRegionTransformer: FaceRegionTransformerPort,
     scope: kotlinx.coroutines.CoroutineScope,
     isLoading: (Boolean) -> Unit,
     onMessage: (String) -> Unit,
