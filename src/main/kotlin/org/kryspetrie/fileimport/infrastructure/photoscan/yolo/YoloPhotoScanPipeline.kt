@@ -215,7 +215,7 @@ class YoloPhotoScanPipeline(
         confidence: Float,
         imageWidth: Int,
         imageHeight: Int,
-        detectionMode: DetectionMode = DetectionMode.HYBRID,
+        detectionMode: DetectionMode = DetectionMode.PERSPECTIVE_CORRECTION,
     ): DetectedPhoto {
         val kpMap = keypoints.associateBy { it.name }
 

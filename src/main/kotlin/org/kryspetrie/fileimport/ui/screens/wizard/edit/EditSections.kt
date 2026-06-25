@@ -60,7 +60,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -908,7 +909,10 @@ internal fun DatePickerDialog(onDismissRequest: () -> Unit, onDateSelected: (Str
 /** Wrapper for Dialog that works in Compose Desktop. */
 @Composable
 internal fun EditDialog(onDismissRequest: () -> Unit, content: @Composable () -> Unit) {
-    Popup(onDismissRequest = onDismissRequest, alignment = Alignment.Center) {
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
         Surface(
             modifier = Modifier.padding(16.dp),
             shape = RoundedCornerShape(12.dp),

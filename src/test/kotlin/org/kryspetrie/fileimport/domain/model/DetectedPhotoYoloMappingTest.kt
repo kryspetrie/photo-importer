@@ -126,8 +126,7 @@ class DetectedPhotoYoloMappingTest {
         assertEquals(true, DetectionMode.PERSPECTIVE_CORRECTION.usesYolo)
         assertEquals(true, DetectionMode.PERSPECTIVE_CORRECTION.providesCorners)
 
-        assertEquals(true, DetectionMode.HYBRID.usesYolo)
-        assertEquals(true, DetectionMode.HYBRID.providesCorners)
+        // HYBRID mode removed — PERSPECTIVE_CORRECTION is the recommended YOLO mode
     }
 
     @Test

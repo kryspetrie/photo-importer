@@ -58,6 +58,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -69,6 +71,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import java.awt.Cursor
 import java.awt.image.BufferedImage
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -172,13 +175,14 @@ fun FaceSelectorOverlay(
     onDismiss: () -> Unit,
     inheritedFaceRegions: List<FaceRegion>,
     onAutoDetectFaces: (() -> Unit)? = null,
+    initialInteractionMode: InteractionMode? = null,
 ) {
     // Cache the image bitmap to avoid recomputing on every recomposition (e.g. hover, drag)
     val imageBitmap = remember(fullPreview) { fullPreview.toComposeImageBitmap() }
     var imageDisplayBounds by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
     var hoverOffset by remember { mutableStateOf<Offset?>(null) }
     var draggingFaceIdx by remember { mutableStateOf(-1) }
-    var interactionMode by remember { mutableStateOf(InteractionMode.PLACE) }
+    var interactionMode by remember { mutableStateOf(initialInteractionMode ?: InteractionMode.PLACE) }
     // Local drag offset in pixels — accumulated during drag, committed to state on drag end
     var dragOffsetPx by remember { mutableStateOf(Offset.Zero) }
     val faceRegions = photoConfig.faceRegions
@@ -588,11 +592,21 @@ fun FaceSelectorOverlay(
                 }
             }
 
+            // ── Cursor: crosshair in PLACE mode, default pointer otherwise ──
+            val cursorIcon = remember(interactionMode) {
+                when (interactionMode) {
+                    InteractionMode.PLACE -> PointerIcon(Cursor(Cursor.CROSSHAIR_CURSOR))
+                    InteractionMode.MOVE -> PointerIcon(Cursor(Cursor.DEFAULT_CURSOR))
+                    InteractionMode.NAME -> PointerIcon(Cursor(Cursor.DEFAULT_CURSOR))
+                }
+            }
+
             // ── Image + overlays ────────────────────────────────────
             Box(
                 modifier =
                     Modifier.fillMaxSize()
                         .padding(start = 100.dp, top = 40.dp, end = 16.dp, bottom = 16.dp)
+                        .pointerHoverIcon(cursorIcon)
                         .onGloballyPositioned { layoutCoords ->
                             val imgW = fullPreview.width.toFloat()
                             val imgH = fullPreview.height.toFloat()

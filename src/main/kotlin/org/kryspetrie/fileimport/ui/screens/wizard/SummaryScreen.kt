@@ -95,6 +95,7 @@ fun SummaryScreen(
     previewCache: PreviewCache,
     onBack: () -> Unit,
     onExport: () -> Unit,
+    onEditMetadata: (() -> Unit)? = null,
     onSkipMetadata: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -144,6 +145,7 @@ fun SummaryScreen(
                 photoCount = boundingBoxList.size(),
                 onBack = onBack,
                 onExport = onExport,
+                onEditMetadata = onEditMetadata,
                 onSkipMetadata = onSkipMetadata,
             )
         },

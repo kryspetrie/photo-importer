@@ -86,6 +86,13 @@ fun WizardContainer(
     val state = remember { PhotoScanWizardState() }
     state.setLogger(appLogger)
     val currentStep by state.navigation.currentStep.collectAsState()
+    var forceMetadataMode by remember { mutableStateOf(false) }
+    // Reset forceMetadataMode when navigating away from EDIT step
+    LaunchedEffect(currentStep) {
+        if (currentStep != WizardStep.EDIT) {
+            forceMetadataMode = false
+        }
+    }
     var isLoading by remember { mutableStateOf(false) }
     var loadingMessage by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -163,6 +170,8 @@ fun WizardContainer(
             onFailedCountChange = { count -> failedExportCount = count },
             onExportResults = { results -> exportResults = results },
             exportResults = exportResults,
+            forceMetadataMode = forceMetadataMode,
+            onForceMetadataMode = { forceMetadataMode = it },
             onComplete = onComplete,
             onCancel = onCancel,
         )
@@ -211,6 +220,8 @@ private fun WizardStepContent(
     onFailedCountChange: (Int) -> Unit,
     onExportResults: (List<ExportResult>) -> Unit,
     exportResults: List<ExportResult>,
+    forceMetadataMode: Boolean,
+    onForceMetadataMode: (Boolean) -> Unit,
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -286,6 +297,10 @@ private fun WizardStepContent(
                     previewCache = previewCache,
                     onBack = { state.goToOverview() },
                     onExport = { state.navigation.goToEdit() },
+                    onEditMetadata = {
+                        onForceMetadataMode(true)
+                        state.navigation.goToEdit()
+                    },
                     onSkipMetadata = {
                         scope.launch {
                             onFailedCountChange(0)
@@ -383,7 +398,7 @@ private fun WizardStepContent(
                             )
                         }
                     },
-                    startWithMetadata = settings.alwaysEditMetadata,
+                    startWithMetadata = settings.alwaysEditMetadata || forceMetadataMode,
                     faceRegionTransformer = faceRegionTransformer,
                 )
             } else {

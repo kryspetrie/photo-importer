@@ -441,7 +441,6 @@ fun DrawScope.drawBoundingBox(
                 DetectionMode.COMPUTER_VISION -> Color(0xFF4CAF50) // Green
                 DetectionMode.BOUNDING_BOX -> Color(0xFF2196F3) // Blue
                 DetectionMode.PERSPECTIVE_CORRECTION -> Color(0xFFFF9800) // Orange
-                DetectionMode.HYBRID -> Color(0xFF9C27B0) // Purple
             }
         val badgeX = tl.x + 4f
         val badgeY = tl.y + 4f

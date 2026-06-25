@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +29,7 @@ fun ExportBottomBar(
     photoCount: Int,
     onBack: () -> Unit,
     onExport: () -> Unit,
+    onEditMetadata: (() -> Unit)? = null,
     onSkipMetadata: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -41,6 +43,7 @@ fun ExportBottomBar(
             ExportButtons(
                 onBack = onBack,
                 onExport = onExport,
+                onEditMetadata = onEditMetadata,
                 onSkipMetadata = onSkipMetadata,
                 enabled = photoCount > 0,
             )
@@ -52,6 +55,7 @@ fun ExportBottomBar(
 private fun ExportButtons(
     onBack: () -> Unit,
     onExport: () -> Unit,
+    onEditMetadata: (() -> Unit)?,
     onSkipMetadata: (() -> Unit)?,
     enabled: Boolean,
 ) {
@@ -60,6 +64,17 @@ private fun ExportButtons(
             Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text("Back")
+        }
+        if (onEditMetadata != null) {
+            Button(
+                onClick = onEditMetadata,
+                enabled = enabled,
+                modifier = Modifier.height(40.dp),
+            ) {
+                Icon(Icons.Default.Edit, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Edit Metadata")
+            }
         }
         if (onSkipMetadata != null) {
             OutlinedButton(

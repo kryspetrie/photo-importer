@@ -79,6 +79,7 @@ import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
+import org.kryspetrie.fileimport.ui.screens.wizard.InteractionMode
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditMode
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditModeTab
@@ -149,6 +150,7 @@ fun EditScreen(
     var selectedRegionType by remember { mutableStateOf(RegionType.FACE) }
     var selectedFaceSize by remember { mutableStateOf(FaceSize.DEFAULT) }
     var inheritedFaceRegions by remember { mutableStateOf<List<FaceRegion>>(emptyList()) }
+    var autoStartNaming by remember { mutableStateOf(false) }
 
     // Back-of-photo selection state
     var showBackImagePicker by remember { mutableStateOf(false) }
@@ -268,13 +270,18 @@ fun EditScreen(
                     showFaceNamePopup = true
                     faceNameInput = ""
                 },
-                onDismiss = { faceSelectIndex = null },
+                onDismiss = {
+                    faceSelectIndex = null
+                    autoStartNaming = false
+                },
                 inheritedFaceRegions = inheritedFaceRegions,
+                initialInteractionMode = if (autoStartNaming) InteractionMode.NAME else null,
                 onAutoDetectFaces = if (faceDetectionPort.isFaceDetectionAvailable()) {
                     {
                         try {
                             val detections = faceDetectionPort.detectFaces(fullPreview.toProcessedImage())
                             if (detections.isNotEmpty()) {
+                                // Remember face count before adding, so we can auto-select first new face
                                 val imgW = fullPreview.width.toDouble()
                                 val imgH = fullPreview.height.toDouble()
                                 val detectedRegions = detections.map { det ->
@@ -340,41 +347,34 @@ fun EditScreen(
     }
 
     // ── Location picker dialog ──
+    // LocationPickerDialog is a full-screen component — no EditDialog wrapper needed
     if (showLocationPicker && locationPickerTargetIndex != null) {
-        EditDialog(
-            onDismissRequest = {
+        LocationPickerDialog(
+            locationSearchService = locationSearchService,
+            geocodingPort = geocodingPort,
+            dispatcherProvider = dispatcherProvider,
+            onLocationSelected = { result ->
+                val idx = locationPickerTargetIndex
+                if (idx != null && idx < boundingBoxList.size()) {
+                    val boxId = boundingBoxList.boxes[idx].id
+                    state.configs.updatePhotoScanConfiguration(boxId) {
+                        it.copy(
+                            city = result.city ?: it.city,
+                            state = it.state,
+                            country = result.country ?: it.country,
+                            gpsLatitude = result.latitude.toString(),
+                            gpsLongitude = result.longitude.toString(),
+                        )
+                    }
+                }
                 showLocationPicker = false
                 locationPickerTargetIndex = null
             },
-        ) {
-            // Note: LocationPickerDialog uses its own Dialog wrapper for platform compatibility
-            LocationPickerDialog(
-                locationSearchService = locationSearchService,
-                geocodingPort = geocodingPort,
-                dispatcherProvider = dispatcherProvider,
-                onLocationSelected = { result ->
-                    val idx = locationPickerTargetIndex
-                    if (idx != null && idx < boundingBoxList.size()) {
-                        val boxId = boundingBoxList.boxes[idx].id
-                        state.configs.updatePhotoScanConfiguration(boxId) {
-                            it.copy(
-                                city = result.city ?: it.city,
-                                state = it.state,
-                                country = result.country ?: it.country,
-                                gpsLatitude = result.latitude.toString(),
-                                gpsLongitude = result.longitude.toString(),
-                            )
-                        }
-                    }
-                    showLocationPicker = false
-                    locationPickerTargetIndex = null
-                },
-                onDismiss = {
-                    showLocationPicker = false
-                    locationPickerTargetIndex = null
-                },
-            )
-        }
+            onDismiss = {
+                showLocationPicker = false
+                locationPickerTargetIndex = null
+            },
+        )
     }
 
     // ── Back-of-photo image picker dialog ──

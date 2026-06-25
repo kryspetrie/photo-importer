@@ -65,7 +65,10 @@ fun DetectionModeDropdown(
                     expanded = false
                 },
             )
-            DetectionMode.entries.forEach { mode ->
+            // Only show user-facing detection modes (BOUNDING_BOX is internal)
+            DetectionMode.entries
+                .filter { it != DetectionMode.BOUNDING_BOX }
+                .forEach { mode ->
                 DropdownMenuItem(
                     text = {
                         Column {

@@ -25,8 +25,8 @@ enum class DetectionMode(
 ) {
     @SerialName("computer_vision")
     COMPUTER_VISION(
-        displayName = "Computer Vision",
-        description = "Edge detection + contour tracing (classical method)",
+        displayName = "Simple Crop",
+        description = "Edge detection + contour tracing — best for flat scans",
         usesYolo = false,
         providesCorners = true,
     ),
@@ -39,15 +39,8 @@ enum class DetectionMode(
     ),
     @SerialName("perspective_correction")
     PERSPECTIVE_CORRECTION(
-        displayName = "Perspective Correction",
-        description = "YOLO pose model finds exact 4 corners for perspective warp",
-        usesYolo = true,
-        providesCorners = true,
-    ),
-    @SerialName("hybrid")
-    HYBRID(
-        displayName = "Hybrid",
-        description = "YOLO detection finds regions, then pose model refines corners",
+        displayName = "Perspective Crop",
+        description = "Finds exact 4 corners for perspective correction — best for angled photos",
         usesYolo = true,
         providesCorners = true,
     ),
