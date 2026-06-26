@@ -11,6 +11,7 @@ import org.kryspetrie.fileimport.domain.model.FolderIndex
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.IndexProgress
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 
@@ -29,6 +30,7 @@ class ImportScanner(
     private val imageRepository: ImageRepositoryPort,
     private val hashCache: HashCachePort?,
     private val dispatcherProvider: DispatcherProvider,
+    private val fileSystem: FileSystemPort,
 ) {
     /**
      * Scans a source directory for media files with metadata extraction.
@@ -44,7 +46,7 @@ class ImportScanner(
         onProgress: (scanned: Int, total: Int, file: String) -> Unit = { _, _, _ -> },
     ): List<ImageFile> {
         val sourceDir = FilePath(sourcePath)
-        require(sourceDir.toFile().exists() && sourceDir.toFile().isDirectory) {
+        require(fileSystem.exists(sourceDir) && fileSystem.isDirectory(sourceDir)) {
             "Source directory does not exist: $sourcePath"
         }
 
@@ -65,11 +67,12 @@ class ImportScanner(
                     async(dispatcherProvider.io) {
                         semaphore.withPermit {
                             val cached = cachedEntries[file.filePath]
+                            val lastModified = fileSystem.lastModified(file.path)
                             val hash =
                                 if (
                                     cached != null &&
                                         cached.fileSize == file.fileSize &&
-                                        cached.lastModified == file.file.lastModified()
+                                        cached.lastModified == lastModified
                                 ) {
                                     cached.hash
                                 } else {

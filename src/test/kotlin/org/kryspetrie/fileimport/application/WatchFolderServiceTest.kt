@@ -33,7 +33,7 @@ class WatchFolderServiceTest {
         val imageRepository = mock(ImageRepositoryPort::class.java)
         val deduplicationPort = mock(DeduplicationPort::class.java)
         val namingPort = mock(NamingPort::class.java)
-        val importScanner = ImportScanner(imageRepository, null, TestDispatcherProvider())
+        val importScanner = ImportScanner(imageRepository, null, TestDispatcherProvider(), TestFileSystemAdapter())
         val importExecutor = ImportExecutor(imageRepository, namingPort, TestTimeProvider(), TestFileSystemAdapter())
         importService = ImportService(importScanner, importExecutor, deduplicationPort, namingPort)
         service = WatchFolderService(importService, TestTimeProvider(), TestDispatcherProvider(), TestFileSystemAdapter())

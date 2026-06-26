@@ -91,4 +91,12 @@ class TestFileSystemAdapter : org.kryspetrie.fileimport.domain.port.FileSystemPo
         path.toFile().parentFile?.mkdirs()
         path.toFile().writeText(content)
     }
+
+    override fun readBytes(path: org.kryspetrie.fileimport.domain.model.FilePath): ByteArray =
+        path.toFile().readBytes()
+
+    override fun writeBytes(path: org.kryspetrie.fileimport.domain.model.FilePath, bytes: ByteArray) {
+        path.toFile().parentFile?.mkdirs()
+        path.toFile().writeBytes(bytes)
+    }
 }

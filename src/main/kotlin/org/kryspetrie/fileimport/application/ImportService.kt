@@ -154,8 +154,8 @@ class ImportService(
             val match =
                 jpegs.find { jpeg ->
                     jpeg.id !in pairedIds &&
-                        jpeg.file.nameWithoutExtension.equals(
-                            raw.file.nameWithoutExtension,
+                        jpeg.path.nameWithoutExtension.equals(
+                            raw.path.nameWithoutExtension,
                             ignoreCase = true,
                         )
                 }

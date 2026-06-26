@@ -186,9 +186,9 @@ class CheckDuplicatesCommand(private val importService: ImportService) :
 fun main(args: Array<String>) {
     val dispatcherProvider = DefaultDispatcherProvider()
     val imageRepo = ImageRepositoryAdapter(dispatcherProvider)
-    val scanner = ImportScanner(imageRepo, null, dispatcherProvider)
     val timeProvider = DefaultTimeProvider()
     val fileSystem = FileSystemAdapter()
+    val scanner = ImportScanner(imageRepo, null, dispatcherProvider, fileSystem)
     val executor = ImportExecutor(imageRepo, NamingAdapter(), timeProvider, fileSystem)
     val surfService = SurfDeduplicationService(dispatcherProvider)
     val importService =
