@@ -100,8 +100,8 @@ val appModule = module {
         )
     }
     single { ReorganizeJournalRepository() }
-    single { FileOperationExecutor(get()) }
-    single { ReorganizeService(get(), get(), get(), get(), get(), get()) }
+    single { FileOperationExecutor(get(), get()) }
+    single { ReorganizeService(get(), get(), get(), get(), get(), get(), get()) }
     single {
         DuplicateScannerService(
             imageRepository = get(),

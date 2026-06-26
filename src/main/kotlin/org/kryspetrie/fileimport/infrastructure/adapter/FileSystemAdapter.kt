@@ -42,4 +42,12 @@ class FileSystemAdapter : FileSystemPort {
     }
 
     override fun canWrite(path: FilePath): Boolean = path.toFile().canWrite()
+
+    override fun absolutePath(path: FilePath): String = path.toFile().absolutePath
+
+    override fun walkBottomUp(path: FilePath): Sequence<FilePath> {
+        val dir = path.toFile()
+        if (!dir.isDirectory) return emptySequence()
+        return dir.walkBottomUp().asSequence().map { FilePath(it.absolutePath) }
+    }
 }

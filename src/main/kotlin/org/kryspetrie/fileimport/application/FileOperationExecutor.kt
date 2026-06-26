@@ -1,12 +1,13 @@
 package org.kryspetrie.fileimport.application
 
-import java.io.File
 import kotlinx.coroutines.withContext
 import org.kryspetrie.fileimport.domain.model.FileChangeType
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.JournalEntry
 import org.kryspetrie.fileimport.domain.model.ReorganizeMapping
 import org.kryspetrie.fileimport.domain.model.ReorganizeMode
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 
 /**
  * Executes the actual file moves/copies during reorganization and creates
@@ -14,6 +15,7 @@ import org.kryspetrie.fileimport.domain.port.DispatcherProvider
  */
 class FileOperationExecutor(
     private val dispatcherProvider: DispatcherProvider,
+    private val fileSystem: FileSystemPort,
 ) {
 
     /**
@@ -37,41 +39,50 @@ class FileOperationExecutor(
     suspend fun executeOperation(mapping: ReorganizeMapping): OperationResult =
         withContext(dispatcherProvider.io) {
             try {
-                val source = File(mapping.currentPath)
-                val dest = File(mapping.newPath)
+                val source = FilePath(mapping.currentPath)
+                val dest = FilePath(mapping.newPath)
 
-                if (!source.exists()) {
+                if (!fileSystem.exists(source)) {
                     return@withContext OperationResult(error = "Source not found: ${mapping.currentPath}")
                 }
 
-                if (dest.exists() && dest.absolutePath != source.absolutePath) {
+                val sourceAbsPath = fileSystem.absolutePath(source)
+                val destAbsPath = fileSystem.absolutePath(dest)
+                if (fileSystem.exists(dest) && destAbsPath != sourceAbsPath) {
                     return@withContext OperationResult(skippedCount = 1)
                 }
 
-                dest.parentFile?.mkdirs()
+                val destParent = FilePath(dest.parent ?: "")
+                if (dest.parent != null) {
+                    fileSystem.mkdirs(destParent)
+                }
 
-                val sameDir = source.parent == dest.parent
+                val sourceParent = source.parent
+                val destParentStr = dest.parent
+                val sameDir = sourceParent == destParentStr
+                val sourceName = fileSystem.name(source)
+                val destName = fileSystem.name(dest)
                 val changeType =
                     when {
-                        sameDir && source.name != dest.name -> FileChangeType.RENAME_ONLY
-                        !sameDir && source.name == dest.name -> FileChangeType.MOVE_ONLY
+                        sameDir && sourceName != destName -> FileChangeType.RENAME_ONLY
+                        !sameDir && sourceName == destName -> FileChangeType.MOVE_ONLY
                         else -> FileChangeType.BOTH
                     }
 
                 when (mapping.mode) {
                     ReorganizeMode.MOVE -> {
-                        if (source.renameTo(dest)) {
+                        if (fileSystem.renameTo(source, dest)) {
                             OperationResult(
                                 journalEntry = JournalEntry(
                                     originalPath = mapping.currentPath,
                                     newPath = mapping.newPath,
-                                    originalFilename = source.name,
-                                    newFilename = dest.name,
-                                    originalParent = source.parent.orEmpty(),
-                                    newParent = dest.parent.orEmpty(),
+                                    originalFilename = sourceName,
+                                    newFilename = destName,
+                                    originalParent = sourceParent.orEmpty(),
+                                    newParent = destParentStr.orEmpty(),
                                     operationType = ReorganizeMode.MOVE,
                                     wasSuccessful = true,
-                                    fileSize = source.length(),
+                                    fileSize = fileSystem.length(source),
                                     patternUsed = "",
                                     changeType = changeType,
                                 ),
@@ -80,19 +91,19 @@ class FileOperationExecutor(
                             )
                         } else {
                             // renameTo can fail across filesystems — fall back to copy + delete
-                            source.copyTo(dest, overwrite = false)
-                            source.delete()
+                            fileSystem.copy(source, dest)
+                            fileSystem.delete(source)
                             OperationResult(
                                 journalEntry = JournalEntry(
                                     originalPath = mapping.currentPath,
                                     newPath = mapping.newPath,
-                                    originalFilename = source.name,
-                                    newFilename = dest.name,
-                                    originalParent = source.parent.orEmpty(),
-                                    newParent = dest.parent.orEmpty(),
+                                    originalFilename = sourceName,
+                                    newFilename = destName,
+                                    originalParent = sourceParent.orEmpty(),
+                                    newParent = destParentStr.orEmpty(),
                                     operationType = ReorganizeMode.MOVE,
                                     wasSuccessful = true,
-                                    fileSize = dest.length(),
+                                    fileSize = fileSystem.length(dest),
                                     patternUsed = "",
                                     changeType = changeType,
                                 ),
@@ -101,18 +112,18 @@ class FileOperationExecutor(
                         }
                     }
                     ReorganizeMode.COPY -> {
-                        source.copyTo(dest, overwrite = false)
+                        fileSystem.copy(source, dest)
                         OperationResult(
                             journalEntry = JournalEntry(
                                 originalPath = mapping.currentPath,
                                 newPath = mapping.newPath,
-                                originalFilename = source.name,
-                                newFilename = dest.name,
-                                originalParent = source.parent.orEmpty(),
-                                newParent = dest.parent.orEmpty(),
+                                originalFilename = sourceName,
+                                newFilename = destName,
+                                originalParent = sourceParent.orEmpty(),
+                                newParent = destParentStr.orEmpty(),
                                 operationType = ReorganizeMode.COPY,
                                 wasSuccessful = true,
-                                fileSize = dest.length(),
+                                fileSize = fileSystem.length(dest),
                                 patternUsed = "",
                                 changeType = changeType,
                             ),
@@ -141,26 +152,29 @@ class FileOperationExecutor(
             try {
                 when (entry.operationType) {
                     ReorganizeMode.MOVE -> {
-                        val current = File(entry.newPath)
-                        val original = File(entry.originalPath)
+                        val current = FilePath(entry.newPath)
+                        val original = FilePath(entry.originalPath)
 
-                        if (!current.exists()) {
+                        if (!fileSystem.exists(current)) {
                             return@withContext UndoResult(error = "File not found for undo: ${entry.newPath}")
                         }
 
-                        original.parentFile?.mkdirs()
-                        if (current.renameTo(original)) {
+                        val originalParent = original.parent
+                        if (originalParent != null) {
+                            fileSystem.mkdirs(FilePath(originalParent))
+                        }
+                        if (fileSystem.renameTo(current, original)) {
                             UndoResult(restoredCount = 1)
                         } else {
-                            current.copyTo(original, overwrite = false)
-                            current.delete()
+                            fileSystem.copy(current, original)
+                            fileSystem.delete(current)
                             UndoResult(restoredCount = 1)
                         }
                     }
                     ReorganizeMode.COPY -> {
-                        val copied = File(entry.newPath)
-                        if (copied.exists()) {
-                            copied.delete()
+                        val copied = FilePath(entry.newPath)
+                        if (fileSystem.exists(copied)) {
+                            fileSystem.delete(copied)
                             UndoResult(deletedCount = 1)
                         } else {
                             UndoResult()
@@ -177,11 +191,14 @@ class FileOperationExecutor(
      *
      * Walks the directory tree bottom-up and removes empty directories.
      */
-    fun cleanEmptyDirs(root: File) {
-        if (!root.isDirectory) return
-        root.walkBottomUp().forEach { dir ->
-            if (dir.isDirectory && dir != root && (dir.listFiles()?.isEmpty() == true)) {
-                dir.delete()
+    suspend fun cleanEmptyDirs(root: FilePath) {
+        if (!fileSystem.isDirectory(root)) return
+        fileSystem.walkBottomUp(root).forEach { dirPath ->
+            val isDir = fileSystem.isDirectory(dirPath)
+            val isNotRoot = dirPath != root
+            val isEmpty = fileSystem.listFiles(dirPath).isEmpty()
+            if (isDir && isNotRoot && isEmpty) {
+                fileSystem.delete(dirPath)
             }
         }
     }

@@ -74,4 +74,13 @@ class TestFileSystemAdapter : org.kryspetrie.fileimport.domain.port.FileSystemPo
 
     override fun canWrite(path: org.kryspetrie.fileimport.domain.model.FilePath): Boolean =
         path.toFile().canWrite()
+
+    override fun absolutePath(path: org.kryspetrie.fileimport.domain.model.FilePath): String =
+        path.toFile().absolutePath
+
+    override fun walkBottomUp(path: org.kryspetrie.fileimport.domain.model.FilePath): Sequence<org.kryspetrie.fileimport.domain.model.FilePath> {
+        val dir = path.toFile()
+        if (!dir.isDirectory) return emptySequence()
+        return dir.walkBottomUp().asSequence().map { org.kryspetrie.fileimport.domain.model.FilePath(it.absolutePath) }
+    }
 }

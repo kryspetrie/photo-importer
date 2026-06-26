@@ -77,4 +77,17 @@ interface FileSystemPort {
 
     /** Checks if a file can be written to. */
     fun canWrite(path: FilePath): Boolean
+
+    /** Returns the absolute path string for [path]. */
+    fun absolutePath(path: FilePath): String = path.toFile().absolutePath
+
+    /**
+     * Walks the directory tree at [path] bottom-up, yielding each file/directory found.
+     * Returns an empty sequence if [path] is not a directory.
+     */
+    fun walkBottomUp(path: FilePath): Sequence<FilePath> {
+        val dir = path.toFile()
+        if (!dir.isDirectory) return emptySequence()
+        return dir.walkBottomUp().asSequence().map { FilePath(it.absolutePath) }
+    }
 }

@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.application
 
-import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -9,6 +8,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.kryspetrie.fileimport.domain.model.ConflictResolution
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.JournalEntry
 import org.kryspetrie.fileimport.domain.model.ReorganizeJournal
@@ -18,8 +18,7 @@ import org.kryspetrie.fileimport.domain.model.ReorganizePreview
 import org.kryspetrie.fileimport.domain.model.ReorganizeProgress
 import org.kryspetrie.fileimport.domain.model.ReorganizeResult
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
-import org.kryspetrie.fileimport.application.FileOperationExecutor
-import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
@@ -33,6 +32,7 @@ class ReorganizeService(
     private val dispatcherProvider: DispatcherProvider,
     private val journalRepository: ReorganizeJournalRepository,
     private val fileOperationExecutor: FileOperationExecutor,
+    private val fileSystem: FileSystemPort,
 ) {
 
     /**
@@ -44,6 +44,7 @@ class ReorganizeService(
      * @param mode Operation mode: MOVE (default) or COPY
      * @param onProgress Progress callback
      */
+    @Suppress("NestedBlockDepth")
     suspend fun scanAndPreview(
         folderPath: String,
         configuration: ImportConfiguration,
@@ -52,8 +53,8 @@ class ReorganizeService(
         onProgress: (ReorganizeProgress) -> Unit = {},
     ): ReorganizePreview =
         withContext(dispatcherProvider.io) {
-            val rootDir = org.kryspetrie.fileimport.domain.model.FilePath(folderPath)
-            require(rootDir.toFile().exists() && rootDir.toFile().isDirectory) {
+            val rootDir = FilePath(folderPath)
+            require(fileSystem.exists(rootDir) && fileSystem.isDirectory(rootDir)) {
                 "Folder does not exist: $folderPath"
             }
 
@@ -116,23 +117,24 @@ class ReorganizeService(
                 val newFolder = namingPort.generateFolderPath(file, destRoot, configuration)
                 val newFileName = namingPort.generateFileName(file, configuration, index + 1)
                 var newPath = "$newFolder/$newFileName"
+                val newPathFilePath = FilePath(newPath)
 
                 val wouldConflict =
                     newPath in usedPaths ||
-                        (File(newPath).exists() &&
-                            File(newPath).absolutePath != file.file.absolutePath)
+                        (fileSystem.exists(newPathFilePath) &&
+                            fileSystem.absolutePath(newPathFilePath) != file.path.path)
 
                 if (
                     wouldConflict && configuration.conflictResolution == ConflictResolution.RENAME
                 ) {
                     var c = 1
-                    val base = File(newPath).nameWithoutExtension
-                    val ext = File(newPath).extension
-                    val dir = File(newPath).parent
+                    val base = fileSystem.nameWithoutExtension(newPathFilePath)
+                    val ext = fileSystem.extension(newPathFilePath)
+                    val dir = newPathFilePath.parent
                     while (
                         "$dir/${base}_$c.$ext" in usedPaths ||
-                            (File("$dir/${base}_$c.$ext").exists() &&
-                                File("$dir/${base}_$c.$ext").absolutePath != file.file.absolutePath)
+                            (fileSystem.exists(FilePath("$dir/${base}_$c.$ext")) &&
+                                fileSystem.absolutePath(FilePath("$dir/${base}_$c.$ext")) != file.path.path)
                     ) {
                         c++
                     }
@@ -140,11 +142,11 @@ class ReorganizeService(
                 }
 
                 usedPaths.add(newPath)
-                val isChanged = File(newPath).absolutePath != file.file.absolutePath
+                val isChanged = fileSystem.absolutePath(newPathFilePath) != file.path.path
 
                 if (isChanged) {
-                    val folder = File(newPath).parent
-                    if (folder != null && !File(folder).exists()) {
+                    val folder = FilePath(newPath).parent
+                    if (folder != null && !fileSystem.exists(FilePath(folder))) {
                         newFolders.add(folder)
                     }
                 }
@@ -224,27 +226,27 @@ class ReorganizeService(
 
             // Clean up empty directories left behind (only for MOVE operations)
             if (preview.operationMode == ReorganizeMode.MOVE) {
-                cleanEmptyDirs(
-                    File(
-                        preview.mappings.first().file.file.parentFile?.parent
-                            ?: return@withContext ReorganizeResult(
-                                movedCount = movedCount,
-                                renamedCount = renamedCount,
-                                copiedCount = copiedCount,
-                                skippedCount = skippedCount,
-                                errorCount = errors.size,
-                                errors = errors,
-                                operationMode = preview.operationMode,
-                            )
-                    )
-                )
+                val rootFolderPath =
+                    preview.mappings.firstOrNull()?.file?.path?.parent?.let { parentPath ->
+                        FilePath(parentPath).parent?.let { FilePath(it) }
+                    }
+                        ?: return@withContext ReorganizeResult(
+                            movedCount = movedCount,
+                            renamedCount = renamedCount,
+                            copiedCount = copiedCount,
+                            skippedCount = skippedCount,
+                            errorCount = errors.size,
+                            errors = errors,
+                            operationMode = preview.operationMode,
+                        )
+                cleanEmptyDirs(rootFolderPath)
             }
 
             // Save undo journal
             var journalPath: String? = null
             if (journalEntries.isNotEmpty()) {
                 val rootFolder =
-                    preview.mappings.firstOrNull()?.file?.file?.parentFile?.absolutePath.orEmpty()
+                    preview.mappings.firstOrNull()?.file?.path?.parent.orEmpty()
                 val journal =
                     ReorganizeJournal(
                         rootFolder = rootFolder,
@@ -294,8 +296,8 @@ class ReorganizeService(
         onProgress: (ReorganizeProgress) -> Unit = {},
     ): ReorganizeResult =
         withContext(dispatcherProvider.io) {
-            val journalFile = File(journalPath)
-            require(journalFile.exists()) { "Journal file not found: $journalPath" }
+            val journalFilePath = FilePath(journalPath)
+            require(fileSystem.exists(journalFilePath)) { "Journal file not found: $journalPath" }
 
             val journal = journalRepository.getJournal(journalPath)
                 ?: throw IllegalArgumentException("Invalid journal file: $journalPath")
@@ -312,7 +314,7 @@ class ReorganizeService(
                     ReorganizeProgress(
                         current = index + 1,
                         total = entries.size,
-                        currentFile = File(entry.newPath).name,
+                        currentFile = FilePath(entry.newPath).name,
                         phase = ReorganizePhase.UNDOING,
                     )
                 )
@@ -325,7 +327,7 @@ class ReorganizeService(
 
             // Clean up empty directories (only for MOVE undos)
             if (journal.operationMode == ReorganizeMode.MOVE) {
-                fileOperationExecutor.cleanEmptyDirs(File(journal.rootFolder))
+                fileOperationExecutor.cleanEmptyDirs(FilePath(journal.rootFolder))
             }
 
             // Mark journal as undone
@@ -361,7 +363,7 @@ class ReorganizeService(
     fun getJournal(journalPath: String): org.kryspetrie.fileimport.domain.model.ReorganizeJournal? =
         journalRepository.getJournal(journalPath)
 
-    private fun cleanEmptyDirs(root: File) {
+    private suspend fun cleanEmptyDirs(root: FilePath) {
         fileOperationExecutor.cleanEmptyDirs(root)
     }
 }
