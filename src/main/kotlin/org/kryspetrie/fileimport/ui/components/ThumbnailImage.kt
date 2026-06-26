@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.io.File
 import java.util.Locale
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 
 fun formatFileSize(bytes: Long): String =
@@ -75,7 +76,7 @@ private fun ImageThumbnail(
     var loaded by remember(file.absolutePath, maxPx) { mutableStateOf(false) }
 
     LaunchedEffect(file.absolutePath, maxPx) {
-        bitmap = ThumbnailCache.load(file, maxPx)
+        bitmap = ThumbnailCache.load(FilePath(file.absolutePath), maxPx)
         loaded = true
     }
 
@@ -118,7 +119,7 @@ private fun VideoThumbnail(
     var loaded by remember(file.absolutePath, maxPx) { mutableStateOf(false) }
 
     LaunchedEffect(file.absolutePath, maxPx) {
-        bitmap = ThumbnailCache.loadVideo(file, maxPx)
+        bitmap = ThumbnailCache.loadVideo(FilePath(file.absolutePath), maxPx)
         loaded = true
     }
 

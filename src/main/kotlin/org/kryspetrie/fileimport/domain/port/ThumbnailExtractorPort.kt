@@ -1,6 +1,6 @@
 package org.kryspetrie.fileimport.domain.port
 
-import java.io.File
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
 
 /**
@@ -24,8 +24,8 @@ import org.kryspetrie.fileimport.domain.model.ProcessedImage
  *
  * ```kotlin
  * val extractor: ThumbnailExtractorPort = koinInject()
- * val thumbnail = extractor.extractFromRaw(rawFile)
- * val videoFrame = extractor.extractFromVideo(videoFile, maxPx)
+ * val thumbnail = extractor.extractFromRaw(rawPath)
+ * val videoFrame = extractor.extractFromVideo(videoPath, maxPx)
  * ```
  */
 interface ThumbnailExtractorPort {
@@ -36,10 +36,10 @@ interface ThumbnailExtractorPort {
      * Uses EXIF metadata or JPEG segment scanning to find embedded preview images.
      * Returns `null` if the file is not a RAW format or if no thumbnail can be extracted.
      *
-     * @param file The RAW image file to extract a thumbnail from
+     * @param path The RAW image file path to extract a thumbnail from
      * @return The embedded thumbnail as a [ProcessedImage], or null if extraction fails
      */
-    fun extractFromRaw(file: File): ProcessedImage?
+    fun extractFromRaw(path: FilePath): ProcessedImage?
 
     /**
      * Extracts a thumbnail frame from a video file.
@@ -47,9 +47,9 @@ interface ThumbnailExtractorPort {
      * Uses FFmpeg if available, falling back to pure-Java extraction.
      * Returns `null` if the file is not a video or if extraction fails.
      *
-     * @param file The video file to extract a frame from
+     * @param path The video file path to extract a frame from
      * @param maxPx Maximum dimension in pixels for the extracted frame
      * @return The video frame as a [ProcessedImage], or null if extraction fails
      */
-    suspend fun extractFromVideo(file: File, maxPx: Int): ProcessedImage?
+    suspend fun extractFromVideo(path: FilePath, maxPx: Int): ProcessedImage?
 }

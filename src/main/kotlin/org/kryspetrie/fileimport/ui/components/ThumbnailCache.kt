@@ -4,7 +4,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
 import kotlinx.coroutines.CoroutineDispatcher
@@ -12,6 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.imgscalr.Scalr
 import org.jetbrains.skia.Image as SkiaImage
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.port.ThumbnailExtractorPort
 import org.kryspetrie.fileimport.infrastructure.adapter.ThumbnailExtractorAdapter
@@ -38,19 +38,19 @@ object ThumbnailCache {
 
     private val cache = ConcurrentHashMap<String, ImageBitmap>()
 
-    suspend fun load(file: File, maxPx: Int): ImageBitmap? {
-        val key = "${file.absolutePath}:$maxPx"
+    suspend fun load(path: FilePath, maxPx: Int): ImageBitmap? {
+        val key = "${path.path}:$maxPx"
         cache[key]?.let {
             return it
         }
         return withContext(ioDispatcher) {
             try {
-                val fileType = ImageFileType.fromExtension(file.extension)
+                val fileType = ImageFileType.fromExtension(path.extension)
                 val original: BufferedImage? =
                     if (fileType.isRaw) {
-                        thumbnailExtractor.extractFromRaw(file)?.toBufferedImage()
+                        thumbnailExtractor.extractFromRaw(path)?.toBufferedImage()
                     } else {
-                        ImageIO.read(file)
+                        ImageIO.read(path.toFile())
                     }
                 original ?: return@withContext null
                 val scaled = Scalr.resize(original, Scalr.Method.BALANCED, maxPx)
@@ -67,15 +67,15 @@ object ThumbnailCache {
         }
     }
 
-    suspend fun loadVideo(file: File, maxPx: Int): ImageBitmap? {
-        val key = "video:${file.absolutePath}:$maxPx"
+    suspend fun loadVideo(path: FilePath, maxPx: Int): ImageBitmap? {
+        val key = "video:${path.path}:$maxPx"
         cache[key]?.let {
             return it
         }
         return withContext(ioDispatcher) {
             try {
                 val processedImage =
-                    thumbnailExtractor.extractFromVideo(file, maxPx) ?: return@withContext null
+                    thumbnailExtractor.extractFromVideo(path, maxPx) ?: return@withContext null
                 val frame = processedImage.toBufferedImage()
                 val baos = ByteArrayOutputStream()
                 ImageIO.write(frame, "jpg", baos)
