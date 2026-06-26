@@ -3,6 +3,7 @@ package org.kryspetrie.fileimport.ui.wizard.state
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -132,6 +133,22 @@ class PhotoScanConfigurationState(
     /** Deselects all photos on the metadata screen. */
     fun deselectAllMetadata() {
         _selectedMetadataIndices.value = emptySet()
+    }
+
+    /**
+     * Applies metadata from a [MetadataEditState] to all selected photos.
+     * Only non-blank fields in the edit state are applied — blank fields are left unchanged.
+     * This is the preferred way to apply multi-edit metadata changes.
+     */
+    fun applyMetadataToSelected(editState: MetadataEditState) {
+        val indices = _selectedMetadataIndices.value
+        val list = _boundingBoxList.value
+        for (index in indices) {
+            if (index >= 0 && index < list.size()) {
+                val boxId = list.boxes[index].id
+                updatePhotoScanConfiguration(boxId) { editState.applyNonBlankTo(it) }
+            }
+        }
     }
 
     /**

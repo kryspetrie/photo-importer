@@ -136,6 +136,32 @@ class MetadataEditState {
         )
 
     /**
+     * Creates a [RecentMetadataSet] from the current buffered values.
+     * Useful for recording recently-used metadata for reuse.
+     */
+    fun toRecentMetadataSet(): RecentMetadataSet =
+        RecentMetadataSet(
+            description = description,
+            keywords = keywords,
+            originalDate = originalDate,
+            year = year,
+            cameraMake = cameraMake,
+            cameraModel = cameraModel,
+            lensModel = lensModel,
+            focalLength = focalLength,
+            aperture = aperture,
+            shutterSpeed = shutterSpeed,
+            iso = iso,
+            locationName = locationName,
+            city = city,
+            state = state,
+            country = country,
+            gpsLatitude = gpsLatitude,
+            gpsLongitude = gpsLongitude,
+            subjects = subjects,
+        )
+
+    /**
      * Returns a [PhotoScanConfiguration] copy of [base] with only non-blank fields from this state
      * applied. Blank fields in this state are left unchanged on [base]. Use this for multi-edit
      * mode where only explicitly filled fields should be applied.

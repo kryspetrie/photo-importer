@@ -21,9 +21,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,6 +33,7 @@ import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
@@ -42,6 +41,9 @@ import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
 
 /**
  * Metadata editor panel — shown in Metadata mode. Contains all the metadata editing functionality.
+ *
+ * In multi-edit mode, uses [MetadataEditState] to buffer values until the user clicks "Apply".
+ * In single-edit mode, changes are applied immediately via direct config updates.
  */
 @Composable
 internal fun MetadataEditorPanel(
@@ -71,57 +73,8 @@ internal fun MetadataEditorPanel(
 ) {
     val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
 
-    // Buffered values for multi-edit
-    var bufferedDescription by remember { mutableStateOf("") }
-    var bufferedKeywords by remember { mutableStateOf("") }
-    var bufferedOriginalDate by remember { mutableStateOf("") }
-    var bufferedYear by remember { mutableStateOf("") }
-    var bufferedCameraModel by remember { mutableStateOf("") }
-    var bufferedCameraMake by remember { mutableStateOf("") }
-    var bufferedLensModel by remember { mutableStateOf("") }
-    var bufferedFocalLength by remember { mutableStateOf("") }
-    var bufferedAperture by remember { mutableStateOf("") }
-    var bufferedShutterSpeed by remember { mutableStateOf("") }
-    var bufferedIso by remember { mutableStateOf("") }
-    var bufferedLocationName by remember { mutableStateOf("") }
-    var bufferedCity by remember { mutableStateOf("") }
-    var bufferedState by remember { mutableStateOf("") }
-    var bufferedCountry by remember { mutableStateOf("") }
-    var bufferedGpsLatitude by remember { mutableStateOf("") }
-    var bufferedGpsLongitude by remember { mutableStateOf("") }
-    var bufferedSubjects by remember { mutableStateOf("") }
-
-    /** Apply a recent metadata set to multi-edit buffered fields (only fills non-blank values). */
-    val applyRecentSetToBuffered: (RecentMetadataSet) -> Unit = remember { { set ->
-        if (set.description.isNotBlank()) bufferedDescription = set.description
-        if (set.keywords.isNotBlank()) bufferedKeywords = set.keywords
-        if (set.originalDate.isNotBlank()) bufferedOriginalDate = set.originalDate
-        if (set.year.isNotBlank()) bufferedYear = set.year
-        if (set.cameraMake.isNotBlank()) bufferedCameraMake = set.cameraMake
-        if (set.cameraModel.isNotBlank()) bufferedCameraModel = set.cameraModel
-        if (set.lensModel.isNotBlank()) bufferedLensModel = set.lensModel
-        if (set.focalLength.isNotBlank()) bufferedFocalLength = set.focalLength
-        if (set.aperture.isNotBlank()) bufferedAperture = set.aperture
-        if (set.shutterSpeed.isNotBlank()) bufferedShutterSpeed = set.shutterSpeed
-        if (set.iso.isNotBlank()) bufferedIso = set.iso
-        if (set.locationName.isNotBlank()) bufferedLocationName = set.locationName
-        if (set.city.isNotBlank()) bufferedCity = set.city
-        if (set.state.isNotBlank()) bufferedState = set.state
-        if (set.country.isNotBlank()) bufferedCountry = set.country
-        if (set.gpsLatitude.isNotBlank()) bufferedGpsLatitude = set.gpsLatitude
-        if (set.gpsLongitude.isNotBlank()) bufferedGpsLongitude = set.gpsLongitude
-        if (set.subjects.isNotBlank()) bufferedSubjects = set.subjects
-    } }
-
-    /** Apply a recent location set to multi-edit buffered fields. */
-    val applyRecentLocationToBuffered: (RecentMetadataSet) -> Unit = remember { { set ->
-        if (set.locationName.isNotBlank()) bufferedLocationName = set.locationName
-        if (set.city.isNotBlank()) bufferedCity = set.city
-        if (set.state.isNotBlank()) bufferedState = set.state
-        if (set.country.isNotBlank()) bufferedCountry = set.country
-        if (set.gpsLatitude.isNotBlank()) bufferedGpsLatitude = set.gpsLatitude
-        if (set.gpsLongitude.isNotBlank()) bufferedGpsLongitude = set.gpsLongitude
-    } }
+    // Single MetadataEditState for multi-edit buffering (replaces 18 separate var buffered*)
+    val editState = remember { MetadataEditState() }
 
     ChunkyScrollbar(modifier = modifier) {
         Column(
@@ -145,48 +98,8 @@ internal fun MetadataEditorPanel(
                     )
                     Button(
                         onClick = {
-                            state.configs.applyMetadataToSelected(
-                                description = bufferedDescription,
-                                keywords = bufferedKeywords,
-                                originalDate = bufferedOriginalDate,
-                                year = bufferedYear,
-                                cameraModel = bufferedCameraModel,
-                                cameraMake = bufferedCameraMake,
-                                lensModel = bufferedLensModel,
-                                focalLength = bufferedFocalLength,
-                                aperture = bufferedAperture,
-                                shutterSpeed = bufferedShutterSpeed,
-                                iso = bufferedIso,
-                                locationName = bufferedLocationName,
-                                city = bufferedCity,
-                                state = bufferedState,
-                                country = bufferedCountry,
-                                gpsLatitude = bufferedGpsLatitude,
-                                gpsLongitude = bufferedGpsLongitude,
-                                subjects = bufferedSubjects,
-                            )
-                            onRecordMetadataSet(
-                                RecentMetadataSet(
-                                    description = bufferedDescription,
-                                    keywords = bufferedKeywords,
-                                    originalDate = bufferedOriginalDate,
-                                    year = bufferedYear,
-                                    cameraMake = bufferedCameraMake,
-                                    cameraModel = bufferedCameraModel,
-                                    lensModel = bufferedLensModel,
-                                    focalLength = bufferedFocalLength,
-                                    aperture = bufferedAperture,
-                                    shutterSpeed = bufferedShutterSpeed,
-                                    iso = bufferedIso,
-                                    locationName = bufferedLocationName,
-                                    city = bufferedCity,
-                                    state = bufferedState,
-                                    country = bufferedCountry,
-                                    gpsLatitude = bufferedGpsLatitude,
-                                    gpsLongitude = bufferedGpsLongitude,
-                                    subjects = bufferedSubjects,
-                                )
-                            )
+                            state.configs.applyMetadataToSelected(editState)
+                            onRecordMetadataSet(editState.toRecentMetadataSet())
                         },
                         modifier = Modifier.height(32.dp),
                     ) {
@@ -204,21 +117,21 @@ internal fun MetadataEditorPanel(
                     RecentValuesDropdown(
                         recentSets = metadataHistory.recentSets,
                         onApplySet = { set ->
-                            applyRecentSetToBuffered(set)
+                            editState.loadFromSet(set)
                             onRecordMetadataSet(set)
                         },
                     )
                 }
 
                 QuickEditMetadataFields(
-                    description = bufferedDescription,
-                    onDescriptionChange = { bufferedDescription = it },
-                    keywords = bufferedKeywords,
-                    onKeywordsChange = { bufferedKeywords = it },
-                    originalDate = bufferedOriginalDate,
-                    onOriginalDateChange = { bufferedOriginalDate = it },
-                    year = bufferedYear,
-                    onYearChange = { bufferedYear = it },
+                    description = editState.description,
+                    onDescriptionChange = { editState.description = it },
+                    keywords = editState.keywords,
+                    onKeywordsChange = { editState.keywords = it },
+                    originalDate = editState.originalDate,
+                    onOriginalDateChange = { editState.originalDate = it },
+                    year = editState.year,
+                    onYearChange = { editState.year = it },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
                     onMetadataHistoryRemove = onMetadataHistoryRemove,
@@ -227,41 +140,41 @@ internal fun MetadataEditorPanel(
                 CameraSection(
                     showExpanded = showCameraSection,
                     onToggle = onToggleCameraSection,
-                    cameraMake = bufferedCameraMake,
-                    onCameraMakeChange = { bufferedCameraMake = it },
-                    cameraModel = bufferedCameraModel,
-                    onCameraModelChange = { bufferedCameraModel = it },
-                    lensModel = bufferedLensModel,
-                    onLensModelChange = { bufferedLensModel = it },
-                    focalLength = bufferedFocalLength,
-                    onFocalLengthChange = { bufferedFocalLength = it },
-                    aperture = bufferedAperture,
-                    onApertureChange = { bufferedAperture = it },
-                    shutterSpeed = bufferedShutterSpeed,
-                    onShutterSpeedChange = { bufferedShutterSpeed = it },
-                    iso = bufferedIso,
-                    onIsoChange = { bufferedIso = it },
+                    cameraMake = editState.cameraMake,
+                    onCameraMakeChange = { editState.cameraMake = it },
+                    cameraModel = editState.cameraModel,
+                    onCameraModelChange = { editState.cameraModel = it },
+                    lensModel = editState.lensModel,
+                    onLensModelChange = { editState.lensModel = it },
+                    focalLength = editState.focalLength,
+                    onFocalLengthChange = { editState.focalLength = it },
+                    aperture = editState.aperture,
+                    onApertureChange = { editState.aperture = it },
+                    shutterSpeed = editState.shutterSpeed,
+                    onShutterSpeedChange = { editState.shutterSpeed = it },
+                    iso = editState.iso,
+                    onIsoChange = { editState.iso = it },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
                 )
                 LocationSection(
                     showExpanded = showLocationSection,
                     onToggle = onToggleLocationSection,
-                    locationName = bufferedLocationName,
-                    onLocationNameChange = { bufferedLocationName = it },
-                    city = bufferedCity,
-                    onCityChange = { bufferedCity = it },
-                    stateVal = bufferedState,
-                    onStateChange = { bufferedState = it },
-                    country = bufferedCountry,
-                    onCountryChange = { bufferedCountry = it },
-                    gpsLatitude = bufferedGpsLatitude,
-                    onGpsLatitudeChange = { bufferedGpsLatitude = it },
-                    gpsLongitude = bufferedGpsLongitude,
-                    onGpsLongitudeChange = { bufferedGpsLongitude = it },
+                    locationName = editState.locationName,
+                    onLocationNameChange = { editState.locationName = it },
+                    city = editState.city,
+                    onCityChange = { editState.city = it },
+                    stateVal = editState.state,
+                    onStateChange = { editState.state = it },
+                    country = editState.country,
+                    onCountryChange = { editState.country = it },
+                    gpsLatitude = editState.gpsLatitude,
+                    onGpsLatitudeChange = { editState.gpsLatitude = it },
+                    gpsLongitude = editState.gpsLongitude,
+                    onGpsLongitudeChange = { editState.gpsLongitude = it },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    onApplyRecentLocation = applyRecentLocationToBuffered,
+                    onApplyRecentLocation = { set -> editState.loadFromSet(set) },
                     sourceGpsHint =
                         sourceExif?.let {
                             val parts = mutableListOf<String>()
@@ -273,8 +186,8 @@ internal fun MetadataEditorPanel(
                 SubjectsSection(
                     showExpanded = showSubjectsSection,
                     onToggle = onToggleSubjectsSection,
-                    subjects = bufferedSubjects,
-                    onSubjectsChange = { bufferedSubjects = it },
+                    subjects = editState.subjects,
+                    onSubjectsChange = { editState.subjects = it },
                     metadataHistory = metadataHistory,
                     onMetadataHistoryUpdate = onMetadataHistoryUpdate,
                     onMetadataHistoryRemove = onMetadataHistoryRemove,

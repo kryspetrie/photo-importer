@@ -9,7 +9,7 @@ import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import org.koin.core.context.startKoin
 import org.kryspetrie.fileimport.di.appModule
-import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
+import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -24,11 +24,11 @@ import kotlinx.coroutines.Dispatchers
  * Run via: `./gradlew runMapTileTest`
  */
 fun mainMapTileTest() = application {
-    startKoin {
+    val koin = startKoin {
         modules(appModule)
     }
 
-    val dispatcherProvider = DefaultDispatcherProvider()
+    val dispatcherProvider: DispatcherProvider = koin.koin.get()
 
     Window(
         onCloseRequest = ::exitApplication,
