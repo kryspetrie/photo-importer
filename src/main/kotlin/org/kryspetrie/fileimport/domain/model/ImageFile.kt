@@ -45,8 +45,11 @@ data class ImageFile(
      *
      * Prefer using [path] and
      * [FileSystemPort][org.kryspetrie.fileimport.domain.port.FileSystemPort] for I/O operations.
-     * This property is provided for gradual migration from `java.io.File`.
+     * Infrastructure adapters should use [path].[toFile][FilePath.toFile] at the boundary.
+     *
+     * This property will be removed once all callers are migrated.
      */
+    @Deprecated("Use path + FilePath operations instead", ReplaceWith("path.toFile()"))
     val file: File
         get() = path.toFile()
 
