@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import ai.onnxruntime.OrtEnvironment
-import ai.onnxruntime.OrtSession
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.port.DetectedFace
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
+import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
 import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloFaceDetectionService
 
@@ -22,17 +22,25 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloFaceDetection
  * face bounding boxes with confidence scores in NMS-filtered `[1, 300, 6]` format
  * (x1, y1, x2, y2, confidence, class).
  *
+ * ## GPU Acceleration
+ *
+ * ONNX sessions are created through [OrtSessionFactory] which enables GPU acceleration (CoreML on
+ * macOS, CUDA on Linux, DirectML on Windows) when available. The [OrtSessionFactory] is shared with
+ * other YOLO services to ensure consistent execution provider selection.
+ *
  * ## Threading
  *
  * ONNX Runtime sessions are thread-safe for concurrent inference calls. The [ai.onnx.runtime.OrtEnvironment]
  * is shared with other YOLO services (detection, pose, corner regression).
  *
  * @param modelResourcePort Model loading interface for obtaining the ONNX model bytes
+ * @param ortSessionFactory Factory for creating GPU-accelerated ONNX sessions
  * @see FaceDetectionPort
  * @see YoloFaceDetectionService
  */
 class FaceDetectionService(
     private val modelResourcePort: ModelResourcePort,
+    private val ortSessionFactory: OrtSessionFactory,
 ) : FaceDetectionPort {
 
     /** Lazily initialized face detection service (only when model is available). */
@@ -63,13 +71,12 @@ class FaceDetectionService(
         }
     }
 
-    /** Initialize the YOLO face detection service with the ONNX model. */
+    /** Initialize the YOLO face detection service with ONNX model + GPU acceleration. */
     private fun initFaceService(): YoloFaceDetectionService? {
         if (!modelResourcePort.isFaceDetectionModelAvailable()) return null
         return try {
             val env = OrtEnvironment.getEnvironment()
-            val opts = OrtSession.SessionOptions()
-            val session = env.createSession(modelResourcePort.loadFaceDetectionModel(), opts)
+            val session = ortSessionFactory.createSession(modelResourcePort.loadFaceDetectionModel())
             YoloFaceDetectionService(env, session)
         } catch (_: Exception) {
             null

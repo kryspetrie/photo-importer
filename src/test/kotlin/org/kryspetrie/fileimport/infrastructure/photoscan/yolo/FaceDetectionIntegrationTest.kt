@@ -13,6 +13,7 @@ import org.junit.jupiter.api.condition.EnabledIf
 import org.kryspetrie.fileimport.domain.port.DetectedFace
 import org.kryspetrie.fileimport.infrastructure.adapter.AwtProcessedImage
 import org.kryspetrie.fileimport.infrastructure.adapter.ClasspathModelResourceAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceDetectionService
 
 /**
@@ -44,7 +45,7 @@ class FaceDetectionIntegrationTest {
             val adapter = ClasspathModelResourceAdapter()
             available = adapter.isFaceDetectionModelAvailable()
             if (available) {
-                faceService = FaceDetectionService(adapter)
+                faceService = FaceDetectionService(adapter, OrtSessionFactory())
             }
         }
 

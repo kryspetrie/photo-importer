@@ -38,6 +38,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -68,7 +69,7 @@ fun LocationPickerDialog(
     dispatcherProvider: org.kryspetrie.fileimport.domain.port.DispatcherProvider,
     initialLat: Double = 39.0,
     initialLon: Double = -78.0,
-    initialZoom: Int = 5,
+    initialZoom: Double = 5.0,
     onLocationSelected: (LocationResult) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -77,7 +78,7 @@ fun LocationPickerDialog(
     var pinLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
     var mapCenterLat by remember { mutableStateOf(initialLat) }
     var mapCenterLon by remember { mutableStateOf(initialLon) }
-    var mapZoom by remember { mutableStateOf(initialZoom) }
+    var mapZoom by remember { mutableDoubleStateOf(initialZoom) }
     var isReverseGeocoding by remember { mutableStateOf(false) }
     var presetExpanded by remember { mutableStateOf(false) }
     var mapStyle by remember { mutableStateOf(MapStyle.STREET) }
@@ -144,7 +145,7 @@ fun LocationPickerDialog(
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                         Text(
-                                            "%.1f, %.1f  z%d"
+                                            "%.1f, %.1f  z%.0f"
                                                 .format(preset.lat, preset.lon, preset.zoom),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -332,7 +333,7 @@ fun LocationPickerDialog(
                                     pinLocation = Pair(result.latitude, result.longitude)
                                     mapCenterLat = result.latitude
                                     mapCenterLon = result.longitude
-                                    mapZoom = 12
+                                    mapZoom = 12.0
                                 },
                             )
                         }

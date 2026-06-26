@@ -1,13 +1,13 @@
 package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import ai.onnxruntime.OrtEnvironment
-import ai.onnxruntime.OrtSession
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.DetectionMode
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
+import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
@@ -26,15 +26,20 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloPoseService
  *
  * When YOLO models are available, YOLO mode is preferred. Falls back to CV mode otherwise.
  *
+ * ONNX sessions are created through [OrtSessionFactory] which enables GPU acceleration (CoreML on
+ * macOS, CUDA on Linux, DirectML on Windows) when available, falling back to CPU gracefully.
+ *
  * @param rectangleDetector Edge-based rectangle detector (for CV mode)
  * @param maxPhotos Maximum number of photos to detect (default 4)
  * @param modelResourcePort ONNX model loading interface (for YOLO mode)
+ * @param ortSessionFactory Factory for creating GPU-accelerated ONNX sessions
  * @param appLogger Optional logger for diagnostic output
  */
 class PhotoScanDetectorService(
     private val rectangleDetector: RectangleDetector = RectangleDetector(),
     private val maxPhotos: Int = 4,
     private val modelResourcePort: ModelResourcePort? = null,
+    private val ortSessionFactory: OrtSessionFactory? = null,
     private val appLogger: AppLogger? = null,
 ) : PhotoScanDetectorPort {
 
@@ -103,19 +108,21 @@ class PhotoScanDetectorService(
         if (!mlp.isModelAvailable()) return null
 
         return try {
+            val factory = ortSessionFactory ?: OrtSessionFactory()
             val env = OrtEnvironment.getEnvironment()
-            val detOpts = OrtSession.SessionOptions()
-            val poseOpts = OrtSession.SessionOptions()
-            val cornerOpts = OrtSession.SessionOptions()
-            val detSession = env.createSession(mlp.loadDetectionModel(), detOpts)
-            val poseSession = env.createSession(mlp.loadPoseModel(), poseOpts)
-            val cornerSession = env.createSession(mlp.loadCornerRegressionModel(), cornerOpts)
+
+            val detSession = factory.createSession(mlp.loadDetectionModel())
+            val poseSession = factory.createSession(mlp.loadPoseModel())
+            val cornerSession = factory.createSession(mlp.loadCornerRegressionModel())
 
             val detectionService = YoloDetectionService(env, detSession)
             val poseService = YoloPoseService(env, poseSession)
             val cornerService = YoloCornerRegressionService(env, cornerSession)
 
-            appLogger?.info("PhotoScanDetectorService: YOLO pipeline initialized successfully")
+            appLogger?.info(
+                "PhotoScanDetectorService: YOLO pipeline initialized successfully " +
+                    "(execution provider: ${factory.activeProvider.displayName})"
+            )
             YoloPhotoScanPipeline(detectionService, poseService, cornerService)
         } catch (e: Exception) {
             appLogger?.error(

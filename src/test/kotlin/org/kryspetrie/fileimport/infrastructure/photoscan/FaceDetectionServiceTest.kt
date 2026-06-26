@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.port.DetectedFace
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
 import org.kryspetrie.fileimport.infrastructure.adapter.AwtProcessedImage
+import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloFaceDetectionService
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -40,7 +41,7 @@ class FaceDetectionServiceTest {
         @DisplayName("returns true when model is available")
         fun returnsTrueWhenModelAvailable() {
             whenever(modelResourcePort.isFaceDetectionModelAvailable()).thenReturn(true)
-            val service = FaceDetectionService(modelResourcePort)
+            val service = FaceDetectionService(modelResourcePort, OrtSessionFactory())
 
             val result = service.isFaceDetectionAvailable()
 
@@ -51,7 +52,7 @@ class FaceDetectionServiceTest {
         @DisplayName("returns false when model is NOT available")
         fun returnsFalseWhenModelNotAvailable() {
             whenever(modelResourcePort.isFaceDetectionModelAvailable()).thenReturn(false)
-            val service = FaceDetectionService(modelResourcePort)
+            val service = FaceDetectionService(modelResourcePort, OrtSessionFactory())
 
             val result = service.isFaceDetectionAvailable()
 
@@ -67,7 +68,7 @@ class FaceDetectionServiceTest {
         @DisplayName("throws IllegalStateException when model is NOT available")
         fun throwsWhenModelNotAvailable() {
             whenever(modelResourcePort.isFaceDetectionModelAvailable()).thenReturn(false)
-            val service = FaceDetectionService(modelResourcePort)
+            val service = FaceDetectionService(modelResourcePort, OrtSessionFactory())
             val image = AwtProcessedImage(
                 BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB)
             )
@@ -89,7 +90,7 @@ class FaceDetectionServiceTest {
             whenever(yoloService.detectFaces(bufferedImage, 0.5f, 0.45f))
                 .thenReturn(emptyList())
 
-            val service = FaceDetectionService(modelResourcePort)
+            val service = FaceDetectionService(modelResourcePort, OrtSessionFactory())
             service.injectYoloService(yoloService)
 
             service.detectFaces(image, 0.5f, 0.45f)
@@ -125,7 +126,7 @@ class FaceDetectionServiceTest {
             whenever(yoloService.detectFaces(bufferedImage, 0.5f, 0.45f))
                 .thenReturn(listOf(face1, face2))
 
-            val service = FaceDetectionService(modelResourcePort)
+            val service = FaceDetectionService(modelResourcePort, OrtSessionFactory())
             service.injectYoloService(yoloService)
 
             val results = service.detectFaces(image, 0.5f, 0.45f)

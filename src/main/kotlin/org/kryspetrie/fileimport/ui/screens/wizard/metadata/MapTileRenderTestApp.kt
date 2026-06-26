@@ -44,7 +44,7 @@ fun mainMapTileTest() = application {
                     modifier = Modifier.fillMaxSize(),
                     initialLat = 39.0,
                     initialLon = -78.0,
-                    initialZoom = 5,
+                    initialZoom = 5.0,
                     onMapClick = { lat, lon ->
                         println("Map clicked: lat=$lat, lon=$lon")
                     },

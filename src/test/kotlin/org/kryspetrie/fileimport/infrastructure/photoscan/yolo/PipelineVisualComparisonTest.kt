@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.condition.EnabledIf
 import org.kryspetrie.fileimport.infrastructure.adapter.ClasspathModelResourceAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
 
@@ -58,6 +59,7 @@ class PipelineVisualComparisonTest {
                 rectangleDetector = RectangleDetector(),
                 maxPhotos = 4,
                 modelResourcePort = ClasspathModelResourceAdapter(),
+                ortSessionFactory = OrtSessionFactory(),
             )
 
         assert(service.isYoloAvailable()) { "YOLO models should be available" }

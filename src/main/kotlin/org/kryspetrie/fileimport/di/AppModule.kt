@@ -46,6 +46,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.HashCacheAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.NamingAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.adapter.NominatimGeocodingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
@@ -118,11 +119,12 @@ val appModule = module {
 
     // ── Photo Scan Pipeline ─────────────────────────────────────────
 
+    single { OrtSessionFactory(appLogger = getOrNull()) }
     single { RectangleDetector() }
     single { HybridCornerDetector(rectangleDetector = get()) }
     single<PhotoScanDetectorPort> { get<PhotoScanDetectorService>() }
-    single { PhotoScanDetectorService(modelResourcePort = get(), appLogger = getOrNull()) }
-    single<FaceDetectionPort> { FaceDetectionService(modelResourcePort = get()) }
+    single { PhotoScanDetectorService(modelResourcePort = get(), ortSessionFactory = get(), appLogger = getOrNull()) }
+    single<FaceDetectionPort> { FaceDetectionService(modelResourcePort = get(), ortSessionFactory = get()) }
     single<ImageProcessingPort> { AwtImageProcessingAdapter(get()) }
     single { ScanService(photoDetector = get(), fileSystem = get(), imageProcessing = get()) }
     single<PerspectiveCorrectionPort> { PerspectiveCorrectionService() }
