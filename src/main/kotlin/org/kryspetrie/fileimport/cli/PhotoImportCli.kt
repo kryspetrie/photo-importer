@@ -199,7 +199,7 @@ fun main(args: Array<String>) {
             NamingAdapter(),
             timeProvider,
             dispatcherProvider,
-            ReorganizeJournalRepository(),
+            ReorganizeJournalRepository(fileSystem),
             FileOperationExecutor(dispatcherProvider, fileSystem),
             fileSystem,
         )

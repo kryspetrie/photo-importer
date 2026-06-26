@@ -40,7 +40,7 @@ class ReorganizeServiceTest {
         namingPort = mock(NamingPort::class.java)
         val dispatcherProvider = TestDispatcherProvider()
         val fileSystem = TestFileSystemAdapter()
-        journalRepository = ReorganizeJournalRepository()
+        journalRepository = ReorganizeJournalRepository(fileSystem)
         fileOperationExecutor = FileOperationExecutor(dispatcherProvider, fileSystem)
         service =
             ReorganizeService(

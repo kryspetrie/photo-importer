@@ -90,4 +90,13 @@ interface FileSystemPort {
         if (!dir.isDirectory) return emptySequence()
         return dir.walkBottomUp().asSequence().map { FilePath(it.absolutePath) }
     }
+
+    /** Reads the entire content of a file as a UTF-8 string. */
+    fun readText(path: FilePath): String = path.toFile().readText()
+
+    /** Writes a UTF-8 string to a file, replacing its content. Creates parent directories if needed. */
+    fun writeText(path: FilePath, content: String) {
+        path.toFile().parentFile?.mkdirs()
+        path.toFile().writeText(content)
+    }
 }

@@ -50,4 +50,11 @@ class FileSystemAdapter : FileSystemPort {
         if (!dir.isDirectory) return emptySequence()
         return dir.walkBottomUp().asSequence().map { FilePath(it.absolutePath) }
     }
+
+    override fun readText(path: FilePath): String = path.toFile().readText()
+
+    override fun writeText(path: FilePath, content: String) {
+        path.toFile().parentFile?.mkdirs()
+        path.toFile().writeText(content)
+    }
 }

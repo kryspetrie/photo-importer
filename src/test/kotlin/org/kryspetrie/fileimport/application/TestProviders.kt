@@ -83,4 +83,12 @@ class TestFileSystemAdapter : org.kryspetrie.fileimport.domain.port.FileSystemPo
         if (!dir.isDirectory) return emptySequence()
         return dir.walkBottomUp().asSequence().map { org.kryspetrie.fileimport.domain.model.FilePath(it.absolutePath) }
     }
+
+    override fun readText(path: org.kryspetrie.fileimport.domain.model.FilePath): String =
+        path.toFile().readText()
+
+    override fun writeText(path: org.kryspetrie.fileimport.domain.model.FilePath, content: String) {
+        path.toFile().parentFile?.mkdirs()
+        path.toFile().writeText(content)
+    }
 }

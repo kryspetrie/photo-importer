@@ -99,7 +99,7 @@ val appModule = module {
             devicePort = get(),
         )
     }
-    single { ReorganizeJournalRepository() }
+    single { ReorganizeJournalRepository(get()) }
     single { FileOperationExecutor(get(), get()) }
     single { ReorganizeService(get(), get(), get(), get(), get(), get(), get()) }
     single {

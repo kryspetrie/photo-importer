@@ -1,10 +1,12 @@
 package org.kryspetrie.fileimport.application
 
-import java.io.File
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ReorganizeJournal
 import org.kryspetrie.fileimport.domain.model.ReorganizeJournalSummary
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 
 /** Shared JSON instance for journal serialization. */
 val json = Json { prettyPrint = true }
@@ -15,23 +17,30 @@ val json = Json { prettyPrint = true }
  * Responsible for listing, reading, and writing journal files that enable
  * undo functionality after reorganize operations.
  */
-class ReorganizeJournalRepository {
+class ReorganizeJournalRepository(private val fileSystem: FileSystemPort) {
 
     /**
      * Lists all reorganization journals with summaries.
      *
      * @return List of journal summaries sorted by date (newest first)
      */
-    fun listJournals(): List<ReorganizeJournalSummary> {
-        val dir = File(System.getProperty("user.home"), ".petrie-importer/journals")
-        val files =
-            dir.listFiles()
-                ?.filter { it.extension == "json" }
-                ?.sortedByDescending { it.lastModified() } ?: emptyList()
+    fun listJournals(): List<ReorganizeJournalSummary> = runBlocking {
+        val dir = FilePath(System.getProperty("user.home") + "/.petrie-importer/journals")
+        if (!fileSystem.exists(dir) || !fileSystem.isDirectory(dir)) {
+            return@runBlocking emptyList<ReorganizeJournalSummary>()
+        }
 
-        return files.mapNotNull { file ->
+        val files = fileSystem.listFiles(dir)
+        val jsonFiles = files.filter { fileSystem.extension(it) == "json" }
+        val sortedFiles = jsonFiles
+            .map { it to fileSystem.lastModified(it) }
+            .sortedByDescending { it.second }
+            .map { it.first }
+
+        return@runBlocking sortedFiles.mapNotNull { filePath ->
             try {
-                val journal = json.decodeFromString<ReorganizeJournal>(file.readText())
+                val content = fileSystem.readText(filePath)
+                val journal = json.decodeFromString<ReorganizeJournal>(content)
                 ReorganizeJournalSummary(
                     id = journal.id,
                     timestamp = journal.timestamp,
@@ -55,10 +64,12 @@ class ReorganizeJournalRepository {
      * @return Full journal object or null if not found/invalid
      */
     fun getJournal(journalPath: String): ReorganizeJournal? {
-        val file = File(journalPath)
-        if (!file.exists()) return null
+        val filePath = FilePath(journalPath)
+        val exists = runBlocking { fileSystem.exists(filePath) }
+        if (!exists) return null
         return try {
-            json.decodeFromString<ReorganizeJournal>(file.readText())
+            val content = fileSystem.readText(filePath)
+            json.decodeFromString<ReorganizeJournal>(content)
         } catch (_: Exception) {
             null
         }
@@ -72,11 +83,11 @@ class ReorganizeJournalRepository {
      * @return Absolute path to the saved journal file
      */
     fun saveJournal(journal: ReorganizeJournal, timestamp: Long): String {
-        val journalDir = File(System.getProperty("user.home"), ".petrie-importer/journals")
-        journalDir.mkdirs()
-        val journalFile = File(journalDir, "reorg_$timestamp.json")
-        journalFile.writeText(json.encodeToString(journal))
-        return journalFile.absolutePath
+        val journalDir = FilePath(System.getProperty("user.home") + "/.petrie-importer/journals")
+        runBlocking { fileSystem.mkdirs(journalDir) }
+        val journalFile = journalDir.resolve("reorg_$timestamp.json")
+        fileSystem.writeText(journalFile, json.encodeToString(journal))
+        return fileSystem.absolutePath(journalFile)
     }
 
     /**
@@ -86,7 +97,7 @@ class ReorganizeJournalRepository {
      * @param updatedJournal Journal with undone flag set
      */
     fun markUndone(journalPath: String, updatedJournal: ReorganizeJournal) {
-        val file = File(journalPath)
-        file.writeText(json.encodeToString(updatedJournal))
+        val filePath = FilePath(journalPath)
+        fileSystem.writeText(filePath, json.encodeToString(updatedJournal))
     }
 }
