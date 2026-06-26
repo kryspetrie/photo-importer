@@ -36,7 +36,7 @@ class WatchFolderServiceTest {
         val importScanner = ImportScanner(imageRepository, null, TestDispatcherProvider())
         val importExecutor = ImportExecutor(imageRepository, namingPort, TestTimeProvider(), TestFileSystemAdapter())
         importService = ImportService(importScanner, importExecutor, deduplicationPort, namingPort)
-        service = WatchFolderService(importService, TestTimeProvider(), TestDispatcherProvider())
+        service = WatchFolderService(importService, TestTimeProvider(), TestDispatcherProvider(), TestFileSystemAdapter())
     }
 
     @AfterEach

@@ -113,7 +113,7 @@ val appModule = module {
         )
     }
     single {
-        WatchFolderService(importService = get(), timeProvider = get(), dispatcherProvider = get())
+        WatchFolderService(importService = get(), timeProvider = get(), dispatcherProvider = get(), fileSystem = get())
     }
 
     // ── Photo Scan Pipeline ─────────────────────────────────────────

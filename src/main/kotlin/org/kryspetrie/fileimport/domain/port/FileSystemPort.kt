@@ -91,6 +91,26 @@ interface FileSystemPort {
         return dir.walkBottomUp().asSequence().map { FilePath(it.absolutePath) }
     }
 
+    /**
+     * Walks the directory tree at [path] top-down, yielding each file/directory found.
+     * Returns an empty sequence if [path] is not a directory.
+     */
+    fun walkTopDown(path: FilePath): Sequence<FilePath> {
+        val dir = path.toFile()
+        if (!dir.isDirectory) return emptySequence()
+        return dir.walkTopDown().asSequence().map { FilePath(it.absolutePath) }
+    }
+
+    /**
+     * Lists all subdirectories within [path], including [path] itself, walking recursively
+     * top-down. Returns empty list if [path] is not a directory.
+     */
+    fun listDirectoriesRecursive(path: FilePath): List<FilePath> {
+        val dir = path.toFile()
+        if (!dir.isDirectory) return emptyList()
+        return dir.walkTopDown().filter { it.isDirectory }.map { FilePath(it.absolutePath) }.toList()
+    }
+
     /** Reads the entire content of a file as a UTF-8 string. */
     fun readText(path: FilePath): String = path.toFile().readText()
 

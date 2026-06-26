@@ -13,16 +13,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 
 class WatchFolderService(
     private val importService: ImportService,
     private val timeProvider: TimeProvider,
     private val dispatcherProvider: DispatcherProvider,
+    private val fileSystem: FileSystemPort,
 ) {
     private val _status = MutableStateFlow(WatchFolderStatus())
     val status: StateFlow<WatchFolderStatus> = _status
@@ -42,7 +45,7 @@ class WatchFolderService(
                     val watchService = FileSystems.getDefault().newWatchService()
                     val watchPath = Paths.get(config.watchPath)
 
-                    if (!watchPath.toFile().exists()) {
+                    if (!fileSystem.exists(FilePath(config.watchPath))) {
                         _status.value =
                             _status.value.copy(
                                 isWatching = false,
@@ -58,20 +61,16 @@ class WatchFolderService(
                     )
 
                     if (config.recursive) {
-                        watchPath
-                            .toFile()
-                            .walkTopDown()
-                            .filter { it.isDirectory }
-                            .forEach { dir ->
-                                try {
-                                    dir.toPath()
-                                        .register(
-                                            watchService,
-                                            StandardWatchEventKinds.ENTRY_CREATE,
-                                            StandardWatchEventKinds.ENTRY_MODIFY,
-                                        )
-                                } catch (_: Exception) {}
-                            }
+                        val directories = fileSystem.listDirectoriesRecursive(FilePath(config.watchPath))
+                        for (dirPath in directories) {
+                            try {
+                                Paths.get(dirPath.path).register(
+                                    watchService,
+                                    StandardWatchEventKinds.ENTRY_CREATE,
+                                    StandardWatchEventKinds.ENTRY_MODIFY,
+                                )
+                            } catch (_: Exception) {}
+                        }
                     }
 
                     var pendingFiles = mutableSetOf<String>()
