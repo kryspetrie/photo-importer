@@ -1,8 +1,6 @@
 package org.kryspetrie.fileimport.application.export
 
 import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileOutputStream
 import org.apache.commons.imaging.Imaging
 import org.apache.commons.imaging.common.RationalNumber
 import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata
@@ -13,8 +11,10 @@ import org.apache.commons.imaging.formats.tiff.constants.MicrosoftTagConstants
 import org.apache.commons.imaging.formats.tiff.constants.TiffTagConstants
 import org.apache.commons.imaging.formats.tiff.write.TiffOutputSet
 import org.kryspetrie.fileimport.domain.model.ExifValueResolver
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 
 /**
  * Writes EXIF metadata into existing JPEG files.
@@ -25,8 +25,10 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
  * - GPS coordinate writing
  *
  * All operations are best-effort — failures log warnings but don't fail the export.
+ *
+ * @param fileSystem Port for file I/O operations (replaces direct `java.io.File` usage)
  */
-object ExifMetadataWriter {
+class ExifMetadataWriter(private val fileSystem: FileSystemPort) {
 
     /**
      * Writes EXIF metadata into an existing JPEG file.
@@ -37,17 +39,17 @@ object ExifMetadataWriter {
      * - **false**: Starts with a fresh (empty) [TiffOutputSet] — only user-specified overrides are
      *   written.
      *
-     * @param jpegFile The JPEG file to rewrite with EXIF data (modified in-place)
+     * @param jpegPath The JPEG file path to rewrite with EXIF data (modified in-place)
      * @param config Configuration with EXIF override values and the copyOriginalExif flag
-     * @param sourceFile The original source file to read baseline EXIF from (may be null)
+     * @param sourcePath The original source file path to read baseline EXIF from (may be null)
      */
-    fun writeExifMetadata(jpegFile: File, config: PhotoScanConfiguration, sourceFile: File?) {
+    fun writeExifMetadata(jpegPath: FilePath, config: PhotoScanConfiguration, sourcePath: FilePath?) {
         try {
             // Determine the baseline EXIF output set
             val outputSet =
                 if (config.copyOriginalExif) {
                     // Copy original EXIF from source file (or fall back to the just-written JPEG)
-                    readExifOutputSet(sourceFile ?: jpegFile)
+                    readExifOutputSet(sourcePath ?: jpegPath)
                 } else {
                     // Start fresh — no original EXIF is carried forward
                     TiffOutputSet()
@@ -57,13 +59,13 @@ object ExifMetadataWriter {
             applyExifOverrides(outputSet, config)
 
             // Read the JPEG bytes we just wrote, then rewrite with the EXIF output set
-            val jpegBytes = jpegFile.readBytes()
+            val jpegBytes = fileSystem.readBytes(jpegPath)
             val baos = ByteArrayOutputStream()
             ExifRewriter().updateExifMetadataLossless(jpegBytes, baos, outputSet)
             baos.close()
 
             // Write the updated JPEG back to the file
-            FileOutputStream(jpegFile).use { fos -> fos.write(baos.toByteArray()) }
+            fileSystem.writeBytes(jpegPath, baos.toByteArray())
         } catch (e: Exception) {
             // EXIF writing is best-effort — if it fails, the JPEG is still valid without EXIF
             System.err.println(
@@ -76,9 +78,10 @@ object ExifMetadataWriter {
      * Reads EXIF metadata from a file and returns a mutable [TiffOutputSet]. If the file has no
      * EXIF data, returns a fresh (empty) output set.
      */
-    fun readExifOutputSet(file: File): TiffOutputSet {
+    fun readExifOutputSet(path: FilePath): TiffOutputSet {
         return try {
-            val metadata = Imaging.getMetadata(file)
+            val bytes = fileSystem.readBytes(path)
+            val metadata = Imaging.getMetadata(bytes)
             if (metadata is JpegImageMetadata) {
                 val exif = metadata.exif
                 exif?.outputSet ?: TiffOutputSet()

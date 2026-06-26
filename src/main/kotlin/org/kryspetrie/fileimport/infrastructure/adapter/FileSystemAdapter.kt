@@ -57,4 +57,11 @@ class FileSystemAdapter : FileSystemPort {
         path.toFile().parentFile?.mkdirs()
         path.toFile().writeText(content)
     }
+
+    override fun readBytes(path: FilePath): ByteArray = path.toFile().readBytes()
+
+    override fun writeBytes(path: FilePath, bytes: ByteArray) {
+        path.toFile().parentFile?.mkdirs()
+        path.toFile().writeBytes(bytes)
+    }
 }

@@ -1,20 +1,21 @@
 package org.kryspetrie.fileimport.application.export
 
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileOutputStream
 import java.util.Locale
 import org.apache.commons.imaging.Imaging
 import org.apache.commons.imaging.formats.jpeg.xmp.JpegXmpRewriter
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 
 /**
  * Writes XMP face region data (MWG-RS Regions) into existing JPEG files.
  *
  * MWG-RS (Metadata Working Group - Region Schema) uses normalized center-based coordinates (x/y =
  * center, w/h = fractions) stored in XMP, readable by Lightroom, digiKam, etc.
+ *
+ * @param fileSystem Port for file I/O operations (replaces direct `java.io.File` usage)
  */
-object XmpMetadataWriter {
+class XmpMetadataWriter(private val fileSystem: FileSystemPort) {
 
     /**
      * Writes XMP face region data (MWG-RS Regions) into an existing JPEG file.
@@ -22,10 +23,10 @@ object XmpMetadataWriter {
      * Reads any existing XMP, merges in the face regions, and rewrites. If no existing XMP is
      * found, a fresh XMP packet is created.
      *
-     * @param jpegFile The JPEG file to rewrite with XMP data (modified in-place)
+     * @param jpegPath The JPEG file path to rewrite with XMP data (modified in-place)
      * @param config Configuration with face region data
      */
-    fun writeXmpFaceRegions(jpegFile: File, config: PhotoScanConfiguration) {
+    fun writeXmpFaceRegions(jpegPath: FilePath, config: PhotoScanConfiguration) {
         try {
             // Build the MWG-RS region XMP fragment
             val regions = config.faceRegions
@@ -57,8 +58,10 @@ object XmpMetadataWriter {
             """
                     .trimMargin()
 
+            // Read existing JPEG bytes
+            val jpegBytes = fileSystem.readBytes(jpegPath)
+
             // Read existing XMP from the JPEG if present
-            val jpegBytes = jpegFile.readBytes()
             val existingXmp: String? =
                 try {
                     Imaging.getXmpXml(jpegBytes)
@@ -89,11 +92,11 @@ $mwgRsXmp
                 }
 
             // Write the XMP back into the JPEG
-            val baos = ByteArrayOutputStream()
+            val baos = java.io.ByteArrayOutputStream()
             JpegXmpRewriter().updateXmpXml(jpegBytes, baos, newXmp)
             baos.close()
 
-            FileOutputStream(jpegFile).use { fos -> fos.write(baos.toByteArray()) }
+            fileSystem.writeBytes(jpegPath, baos.toByteArray())
         } catch (e: Exception) {
             // XMP writing is best-effort — don't fail the export
             System.err.println(

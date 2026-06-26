@@ -1,11 +1,11 @@
 package org.kryspetrie.fileimport.application
 
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import org.kryspetrie.fileimport.application.export.FilenameResolver
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
@@ -18,6 +18,9 @@ import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
  * classical CV (contour tracing + Douglas-Peucker simplification) with ML-based keypoint refinement
  * for precise corners. Domain constraints (max 4 photos, similar dimensions, near-rectangular
  * corners) are applied to filter false positives.
+ *
+ * All file operations use [FilePath] via [FileSystemPort], keeping this service free of
+ * `java.io.File` imports.
  *
  * @param photoDetector Port for detecting photo regions in scanned images
  * @param fileSystem Port for file system operations
@@ -61,9 +64,9 @@ class ScanService(
      * @return The perspective-corrected photo as a new image
      */
     fun extractPhoto(
-        scannedImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
+        scannedImage: ProcessedImage,
         detectedPhoto: DetectedPhoto,
-    ): org.kryspetrie.fileimport.domain.model.ProcessedImage {
+    ): ProcessedImage {
         return imageProcessing.cropAxisAligned(scannedImage, detectedPhoto)
     }
 
@@ -78,17 +81,17 @@ class ScanService(
      * @return Absolute path to the exported file
      */
     fun exportPhoto(
-        photoImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
+        photoImage: ProcessedImage,
         destinationPath: String,
-        originalFile: File,
+        originalFile: FilePath,
         photoIndex: Int,
         configuration: PhotoScanConfiguration,
     ): String {
         val destDir = FilePath(destinationPath)
         runBlocking { fileSystem.mkdirs(destDir) }
 
-        val baseName = originalFile.nameWithoutExtension
-        val extension = originalFile.extension
+        val baseName = fileSystem.nameWithoutExtension(originalFile)
+        val extension = fileSystem.extension(originalFile)
         val fileName = if (photoIndex <= 1) "$baseName.$extension" else "${baseName}_$photoIndex.$extension"
 
         val resolvedPath = runBlocking {

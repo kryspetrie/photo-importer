@@ -41,7 +41,7 @@ class PhotoScanExportServiceTest {
         val imageProcessing = AwtImageProcessingAdapter(fileSystem)
         service = PhotoScanExportService(
             perspectiveService,
-            MetadataWritingService(FaceRegionTransformer(), imageProcessing),
+            MetadataWritingService(FaceRegionTransformer(), imageProcessing, fileSystem),
             imageProcessing,
             fileSystem,
         )

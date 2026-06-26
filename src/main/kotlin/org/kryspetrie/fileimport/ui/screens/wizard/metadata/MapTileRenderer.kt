@@ -2,8 +2,6 @@
 
 package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -19,7 +17,9 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
@@ -27,6 +27,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -59,6 +60,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.tan
 import kotlinx.coroutines.CoroutineScope
+
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.withContext
@@ -328,14 +330,6 @@ class TileLoader(
      * Prefetch tiles at adjacent zoom levels (zoom-1 and zoom+1) covering the same geographic
      * viewport. These tiles are loaded at lower priority — after the visible tiles are already
      * cached — so zoom transitions feel instant.
-     *
-     * @param centerLat Center latitude of current view
-     * @param centerLon Center longitude of current view
-     * @param zoom Current zoom level
-     * @param viewWidth Viewport width in pixels
-     * @param viewHeight Viewport height in pixels
-     * @param tileSize Source tile size (default 256)
-     * @param scope Coroutine scope to launch background fetches
      */
     fun prefetchAdjacentZoomTiles(
         centerLat: Double,
@@ -373,11 +367,44 @@ class TileLoader(
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
+// Map camera state — holds all mutable map state outside the composable tree
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Holds the mutable state for the map viewport.
+ *
+ * Keeping this as a stable object (rather than individual `remember` state variables) means
+ * pointer handlers can read/write the latest values without creating stale closure captures.
+ * Changes to [centerLat], [centerLon], or [zoom] trigger [snapshotFlow] recomposition,
+ * which in turn re-fetches visible tiles and redraws the canvas.
+ */
+@Stable
+class MapCameraState(
+    initialLat: Double = 39.0,
+    initialLon: Double = -78.0,
+    initialZoom: Int = 5,
+) {
+    var centerLat by mutableDoubleStateOf(initialLat)
+    var centerLon by mutableDoubleStateOf(initialLon)
+    var zoom by mutableIntStateOf(initialZoom)
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
 // OsmMapView
 // ──────────────────────────────────────────────────────────────────────────────
 
+/** Data class used as snapshotFlow key to detect when tile loading should occur. */
+private data class TileLoadKey(
+    val lat: Double,
+    val lon: Double,
+    val zoom: Int,
+    val width: Int,
+    val height: Int,
+    val style: MapStyle,
+)
+
 /** Scroll delta threshold before triggering a zoom step. */
-private const val ZOOM_SCROLL_THRESHOLD = 60.0f
+private const val ZOOM_SCROLL_THRESHOLD = 80.0f
 
 /**
  * A lightweight OpenStreetMap tiled-map composable for Compose Desktop.
@@ -386,13 +413,24 @@ private const val ZOOM_SCROLL_THRESHOLD = 60.0f
  * improve load times. At zoom 5 with 4× scaling, the Eastern US needs only ~2 tiles instead of
  * ~20+, at the cost of slightly blurrier text.
  *
+ * ## Architecture
+ *
+ * This composable uses [MapCameraState] as a stable external object holding all mutable viewport
+ * state (centerLat, centerLon, zoom). This avoids stale closure captures in pointer handlers and
+ * ensures drag/zoom operate on the latest values every frame.
+ *
+ * Tile loading is triggered by a [snapshotFlow] on the camera state + viewport size, so the tile
+ * fetch coroutine only fires when the relevant parameters actually change — not on every draw frame.
+ *
+ * Drawing uses Compose [Canvas] which redraws every frame that any read state changes. To avoid
+ * per-frame recomposition of things like text measurement, we cache layout results in `remember`.
+ *
  * ## Zoom behavior
  *
- * - **Scroll wheel**: Accumulates scroll delta and zooms one step per threshold crossing, preventing
- *   rapid over-zooming. Zooms toward the mouse pointer position.
- * - **+/- buttons**: Instant zoom centered on the map center.
- * - **Smooth transition**: When changing zoom, the previous zoom level's tiles are rendered scaled
- *   up/down at decreasing opacity while the new zoom's tiles load, preventing blank flashes.
+ * - **Scroll wheel**: Accumulates scroll delta and zooms one step per threshold crossing. Zooms
+ *   toward the mouse pointer position.
+ * - **Double-click**: Zooms in one level toward the click position.
+ * - **+/- buttons**: Zoom centered on map center.
  *
  * @param modifier Layout modifier
  * @param initialLat Starting latitude
@@ -424,29 +462,16 @@ fun OsmMapView(
     dispatcherProvider: DispatcherProvider,
     coroutineScope: CoroutineScope,
 ) {
-    var centerLat by remember { mutableDoubleStateOf(initialLat) }
-    var centerLon by remember { mutableDoubleStateOf(initialLon) }
-    var zoom by remember { mutableIntStateOf(initialZoom) }
+    val camera = remember { MapCameraState(initialLat, initialLon, initialZoom) }
     var mapStyle by remember { mutableStateOf(initialMapStyle) }
 
     // Sync external center/zoom changes (e.g. selecting a search result or preset)
-    LaunchedEffect(initialLat) { centerLat = initialLat }
-    LaunchedEffect(initialLon) { centerLon = initialLon }
+    LaunchedEffect(initialLat) { camera.centerLat = initialLat }
+    LaunchedEffect(initialLon) { camera.centerLon = initialLon }
     LaunchedEffect(initialZoom) {
-        zoom = initialZoom
+        camera.zoom = initialZoom
         onZoomChanged(initialZoom)
     }
-
-    // When map style changes, clear memory cache and update tile loader
-    var renderVersion by remember { mutableIntStateOf(0) }
-
-    // ── Smooth zoom transition state ──────────────────────────────────────
-    // When zooming, we render the previous zoom's tiles scaled up/down while new tiles load.
-    // zoomTransitionProgress animates from 0→1. At 0, show previous zoom fully; at 1, transition
-    // is complete. The alpha of the old tiles = (1 - progress).
-    var previousZoom by remember { mutableIntStateOf(zoom) }
-    val zoomTransitionProgress = remember { Animatable(1f) }
-    var isInZoomTransition by remember { mutableStateOf(false) }
 
     // ── Scroll accumulation for smooth zooming ───────────────────────────────
     var accumulatedScroll by remember { mutableFloatStateOf(0f) }
@@ -456,100 +481,81 @@ fun OsmMapView(
     val displayTileSize = sourceTileSize * TileLoader.TILE_SCALE
     val textMeasurer = rememberTextMeasurer()
 
-    var viewWidth by remember { mutableIntStateOf(0) }
-    var viewHeight by remember { mutableIntStateOf(0) }
+    // Cache text measurements so they don't re-execute every draw frame
+    val zoomTextStyle = remember { TextStyle(color = Color.White, fontSize = 10.sp) }
+    val attrTextStyle = remember { TextStyle(color = Color(0xCCFFFFFF.toInt()), fontSize = 8.sp) }
+
+    // Viewport dimensions — written from draw scope via SizeTracker, read as state
+    val sizeTracker = remember { SizeTracker() }
+
+    val maxZoom = 18
 
     // Sync map style to tile loader
     LaunchedEffect(mapStyle) {
         tileLoader.mapStyle = mapStyle
         tileLoader.clearMemoryCache()
-        renderVersion++
         onMapStyleChanged(mapStyle)
     }
 
-    // Launch zoom transition animation when zoom changes
-    LaunchedEffect(zoom) {
-        if (isInZoomTransition && zoom != previousZoom) {
-            zoomTransitionProgress.snapTo(0f)
-            zoomTransitionProgress.animateTo(
-                targetValue = 1f,
-                animationSpec = tween(durationMillis = 250),
-            )
-            previousZoom = zoom
-            isInZoomTransition = false
+    // ── Tile loading ──────────────────────────────────────────────────────
+    // Only kick off tile loads when camera state or viewport size actually changes.
+    // snapshotFlow avoids re-running on unrelated state changes (like accumulatedScroll).
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            // Read all relevant state so the flow re-emits when any changes
+            TileLoadKey(camera.centerLat, camera.centerLon, camera.zoom, sizeTracker.width, sizeTracker.height, mapStyle)
+        }.collect { key ->
+            if (key.width <= 0 || key.height <= 0) return@collect
+            val tiles = tileLoader.visibleTiles(key.lat, key.lon, key.zoom, key.width, key.height, sourceTileSize)
+            for ((tz, tx, ty) in tiles) {
+                val tileKey = "${key.style.name.lowercase()}/$tz/$tx/$ty"
+                if (tileLoader.cache.get(tileKey) != null) continue
+                launch {
+                    if (tileLoader.loadTile(tz, tx, ty) != null) {
+                        // Force a recompose so new tiles appear
+                        sizeTracker.invalidate()
+                    }
+                }
+            }
+            tileLoader.prefetchAdjacentZoomTiles(key.lat, key.lon, key.zoom, key.width, key.height, sourceTileSize, this)
         }
     }
 
-    // Load only viewport-visible tiles when center/zoom/size changes
-    LaunchedEffect(centerLat, centerLon, zoom, viewWidth, viewHeight, mapStyle) {
-        if (viewWidth <= 0 || viewHeight <= 0) return@LaunchedEffect
-        val tiles =
-            tileLoader.visibleTiles(
-                centerLat,
-                centerLon,
-                zoom,
-                viewWidth,
-                viewHeight,
-                sourceTileSize,
-            )
-        for ((z, x, y) in tiles) {
-            val key = "${mapStyle.name.lowercase()}/$z/$x/$y"
-            if (tileLoader.cache.get(key) != null) continue
-            launch { if (tileLoader.loadTile(z, x, y) != null) renderVersion++ }
-        }
-        // Prefetch adjacent zoom levels so zoom transitions are instant
-        tileLoader.prefetchAdjacentZoomTiles(
-            centerLat,
-            centerLon,
-            zoom,
-            viewWidth,
-            viewHeight,
-            sourceTileSize,
-            this,
-        )
-    }
+    // ── Pointer-centric zoom helper ────────────────────────────────────────
+    // Defined inside composable so it can read camera state directly, but called from
+    // pointer handlers that reference it — which ensures they always use the latest value.
 
-    val maxZoom = 18
-
-    /**
-     * Performs a zoom operation centered on the given viewport-relative pointer position.
-     *
-     * The math: Before zoom, we find the world-coordinate under the pointer. After zoom, we
-     * adjust the center so that same world-coordinate stays under the pointer on screen.
-     */
-    fun performZoomAtPointer(
-        oldZoom: Int,
-        newZoom: Int,
-        pointerOffset: Offset,
-        viewW: Float,
-        viewH: Float,
-    ) {
-        // Find the world-coordinate under the pointer at the OLD zoom.
-        // latLonToPixelOffset returns values in source-tile pixel space (1 unit = 1/256 of a tile
-        // at the given zoom). UI offsets are in display pixels; convert by dividing by TILE_SCALE.
+    fun zoomAt(pointerX: Float, pointerY: Float, oldZoom: Int, newZoom: Int, viewW: Float, viewH: Float) {
+        // Find the world-coordinate under the pointer at the OLD zoom
         val (centerPx, centerPy) =
-            MapTileRenderer.latLonToPixelOffset(centerLat, centerLon, oldZoom, sourceTileSize)
-        val pointerOffX = (pointerOffset.x - viewW / 2f) / TileLoader.TILE_SCALE
-        val pointerOffY = (pointerOffset.y - viewH / 2f) / TileLoader.TILE_SCALE
+            MapTileRenderer.latLonToPixelOffset(camera.centerLat, camera.centerLon, oldZoom, sourceTileSize)
+        val pointerOffX = (pointerX - viewW / 2f) / TileLoader.TILE_SCALE
+        val pointerOffY = (pointerY - viewH / 2f) / TileLoader.TILE_SCALE
         val pointerWorldPx = centerPx + pointerOffX
         val pointerWorldPy = centerPy + pointerOffY
         val (pointerLat, pointerLon) =
             MapTileRenderer.pixelOffsetToLatLon(pointerWorldPx, pointerWorldPy, oldZoom, sourceTileSize)
 
-        // Now compute where that geographic point falls in the NEW zoom's pixel space
+        // Compute where that geographic point falls in the NEW zoom's pixel space
         val (newPointerPx, newPointerPy) =
             MapTileRenderer.latLonToPixelOffset(pointerLat, pointerLon, newZoom, sourceTileSize)
 
         // Adjust center so pointer stays at the same screen position
-        val newOffX = (pointerOffset.x - viewW / 2f) / TileLoader.TILE_SCALE
-        val newOffY = (pointerOffset.y - viewH / 2f) / TileLoader.TILE_SCALE
+        val newOffX = (pointerX - viewW / 2f) / TileLoader.TILE_SCALE
+        val newOffY = (pointerY - viewH / 2f) / TileLoader.TILE_SCALE
         val newCenterPx = newPointerPx - newOffX
         val newCenterPy = newPointerPy - newOffY
         val (newLat, newLon) =
             MapTileRenderer.pixelOffsetToLatLon(newCenterPx, newCenterPy, newZoom, sourceTileSize)
-        centerLat = MapTileRenderer.clampLat(newLat)
-        centerLon = MapTileRenderer.clampLon(newLon)
-        zoom = newZoom
+        camera.centerLat = MapTileRenderer.clampLat(newLat)
+        camera.centerLon = MapTileRenderer.clampLon(newLon)
+        camera.zoom = newZoom
+        onZoomChanged(newZoom)
+    }
+
+    /** Zoom centered on map center (for +/- buttons). */
+    fun zoomCenter(newZoom: Int) {
+        camera.zoom = newZoom
         onZoomChanged(newZoom)
     }
 
@@ -558,7 +564,8 @@ fun OsmMapView(
         Canvas(
             modifier =
                 Modifier.fillMaxSize()
-                    .pointerInput(Unit) {
+                    // ── Scroll zoom toward pointer ────────────────────────────
+                    .pointerInput(camera) {
                         awaitPointerEventScope {
                             while (true) {
                                 val event = awaitPointerEvent()
@@ -567,8 +574,7 @@ fun OsmMapView(
                                     val scrollDelta = change.scrollDelta.y
                                     if (scrollDelta != 0f) {
                                         accumulatedScroll += scrollDelta
-                                        // Check if accumulated scroll crosses a threshold
-                                        val oldZoom = zoom
+                                        val oldZoom = camera.zoom
                                         val newZoom =
                                             when {
                                                 accumulatedScroll < -ZOOM_SCROLL_THRESHOLD -> {
@@ -579,16 +585,14 @@ fun OsmMapView(
                                                     accumulatedScroll -= ZOOM_SCROLL_THRESHOLD
                                                     (oldZoom - 1).coerceIn(2, maxZoom)
                                                 }
-                                                else -> oldZoom // No threshold crossed yet
+                                                else -> oldZoom
                                             }
                                         if (newZoom != oldZoom) {
-                                            // Start zoom transition
-                                            previousZoom = oldZoom
-                                            isInZoomTransition = true
-                                            performZoomAtPointer(
+                                            zoomAt(
+                                                change.position.x,
+                                                change.position.y,
                                                 oldZoom,
                                                 newZoom,
-                                                change.position,
                                                 size.width.toFloat(),
                                                 size.height.toFloat(),
                                             )
@@ -598,132 +602,86 @@ fun OsmMapView(
                             }
                         }
                     }
-                    .pointerInput(Unit) {
+                    // ── Drag to pan ────────────────────────────────────────────
+                    .pointerInput(camera) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            val n = 2.0.pow(zoom)
-                            // Scale drag by 1/TILE_SCALE since displayed pixels map to more
-                            // world-space
+                            val n = 2.0.pow(camera.zoom)
                             val pixelSize = 360.0 / (n * sourceTileSize * TileLoader.TILE_SCALE)
                             val lonShift = -dragAmount.x * pixelSize
-                            val latShift = dragAmount.y * pixelSize * cos(Math.toRadians(centerLat))
-                            centerLat = MapTileRenderer.clampLat(centerLat + latShift)
-                            centerLon = MapTileRenderer.clampLon(centerLon + lonShift)
+                            val latShift = dragAmount.y * pixelSize * cos(Math.toRadians(camera.centerLat))
+                            camera.centerLat = MapTileRenderer.clampLat(camera.centerLat + latShift)
+                            camera.centerLon = MapTileRenderer.clampLon(camera.centerLon + lonShift)
                         }
                     }
-                    .pointerInput(Unit) {
-                        detectTapGestures { offset ->
-                            val vW = size.width.toDouble()
-                            val vH = size.height.toDouble()
-                            val (centerPx, centerPy) =
-                                MapTileRenderer.latLonToPixelOffset(
-                                    centerLat,
-                                    centerLon,
-                                    zoom,
-                                    sourceTileSize,
-                                )
-                            // Convert screen offset to world pixel offset
-                            val clickWorldPx = centerPx + (offset.x - vW / 2.0)
-                            val clickWorldPy = centerPy + (offset.y - vH / 2.0)
-                            val (lat, lon) =
-                                MapTileRenderer.pixelOffsetToLatLon(
-                                    clickWorldPx,
-                                    clickWorldPy,
-                                    zoom,
-                                    sourceTileSize,
-                                )
-                            onMapClick(lat, lon)
-                        }
+                    // ── Double-click to zoom in, single-click to place pin ─────
+                    .pointerInput(camera) {
+                        detectTapGestures(
+                            onDoubleTap = { offset ->
+                                val newZoom = (camera.zoom + 1).coerceIn(2, maxZoom)
+                                if (newZoom != camera.zoom) {
+                                    zoomAt(
+                                        offset.x,
+                                        offset.y,
+                                        camera.zoom,
+                                        newZoom,
+                                        size.width.toFloat(),
+                                        size.height.toFloat(),
+                                    )
+                                }
+                            },
+                            onTap = { offset ->
+                                val vW = size.width.toDouble()
+                                val vH = size.height.toDouble()
+                                val (centerPx, centerPy) =
+                                    MapTileRenderer.latLonToPixelOffset(
+                                        camera.centerLat,
+                                        camera.centerLon,
+                                        camera.zoom,
+                                        sourceTileSize,
+                                    )
+                                val clickWorldPx = centerPx + (offset.x - vW / 2.0) / TileLoader.TILE_SCALE
+                                val clickWorldPy = centerPy + (offset.y - vH / 2.0) / TileLoader.TILE_SCALE
+                                val (lat, lon) =
+                                    MapTileRenderer.pixelOffsetToLatLon(
+                                        clickWorldPx,
+                                        clickWorldPy,
+                                        camera.zoom,
+                                        sourceTileSize,
+                                    )
+                                onMapClick(lat, lon)
+                            },
+                        )
                     }
         ) {
-            val currentWidth = size.width.toInt()
-            val currentHeight = size.height.toInt()
-            if (currentWidth != viewWidth || currentHeight != viewHeight) {
-                viewWidth = currentWidth
-                viewHeight = currentHeight
-            }
-
-            @Suppress("UNUSED_EXPRESSION") renderVersion
+            // Update viewport tracking (only writes state when changed)
+            sizeTracker.update(size.width.toInt(), size.height.toInt())
 
             if (size.width <= 0f || size.height <= 0f) return@Canvas
 
             drawRect(Color(0xFFE0E0E0))
 
             // ── Draw tiles ───────────────────────────────────────────────────
-            val transitionAlpha = zoomTransitionProgress.value
-
-            // Draw previous-zoom tiles (fading out) during zoom transitions.
-            // Old tiles are stretched/shrunk by the zoom ratio and rendered at decreasing opacity.
-            // This prevents blank flashing while new tiles load.
-            if (previousZoom != zoom && transitionAlpha < 1f) {
-                val scaleBetweenZooms = 2.0.pow(zoom - previousZoom)
-                val (prevCenterPx, prevCenterPy) =
-                    MapTileRenderer.latLonToPixelOffset(centerLat, centerLon, previousZoom, sourceTileSize)
-                val prevVW = size.width.toDouble()
-                val prevVH = size.height.toDouble()
-                val prevTopLeftPx = prevCenterPx - prevVW / 2.0
-                val prevTopLeftPy = prevCenterPy - prevVH / 2.0
-
-                val prevN = 2.0.pow(previousZoom).toInt()
-                // Expand tile range to account for scaled-up tiles that may extend beyond viewport
-                val margin = 2
-                val prevMinTileX = max(0, floor(prevTopLeftPx / sourceTileSize).toInt() - margin)
-                val prevMinTileY = max(0, floor(prevTopLeftPy / sourceTileSize).toInt() - margin)
-                val prevMaxTileX =
-                    min(prevN - 1, floor((prevTopLeftPx + prevVW) / sourceTileSize).toInt() + margin)
-                val prevMaxTileY =
-                    min(prevN - 1, floor((prevTopLeftPy + prevVH) / sourceTileSize).toInt() + margin)
-
-                for (tx in prevMinTileX..prevMaxTileX) {
-                    for (ty in prevMinTileY..prevMaxTileY) {
-                        val key = "${mapStyle.name.lowercase()}/$previousZoom/$tx/$ty"
-                        val bitmap = tileLoader.cache.get(key)
-                        if (bitmap != null) {
-                            // Position tile relative to center in old-zoom source pixels,
-                            // then scale by (TILE_SCALE * zoomRatio) to get current display pixels.
-                            val offsetX = tx * sourceTileSize - prevTopLeftPx
-                            val offsetY = ty * sourceTileSize - prevTopLeftPy
-                            // Scale from old-zoom source pixels to current display pixels:
-                            // old source pixel → current source pixel (* scaleBetweenZooms)
-                            // → display pixel (* TILE_SCALE)
-                            val screenX = (offsetX * scaleBetweenZooms * TileLoader.TILE_SCALE).toFloat()
-                            val screenY = (offsetY * scaleBetweenZooms * TileLoader.TILE_SCALE).toFloat()
-                            val scaledSize = (displayTileSize * scaleBetweenZooms).toFloat()
-
-                            drawImage(
-                                image = bitmap,
-                                srcOffset = IntOffset.Zero,
-                                srcSize = IntSize(bitmap.width, bitmap.height),
-                                dstOffset = IntOffset(screenX.toInt(), screenY.toInt()),
-                                dstSize = IntSize(scaledSize.toInt(), scaledSize.toInt()),
-                                alpha = (1f - transitionAlpha) * 0.7f,
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Draw current-zoom tiles (fading in or fully opaque)
             val (centerPx, centerPy) =
-                MapTileRenderer.latLonToPixelOffset(centerLat, centerLon, zoom, sourceTileSize)
+                MapTileRenderer.latLonToPixelOffset(camera.centerLat, camera.centerLon, camera.zoom, sourceTileSize)
             val vW = size.width.toDouble()
             val vH = size.height.toDouble()
-            val topLeftPx = centerPx - vW / 2.0
-            val topLeftPy = centerPy - vH / 2.0
+            // centerPx/centerPy are in source-pixel space; vW/vH are display pixels.
+            val topLeftPx = centerPx - vW / 2.0 / TileLoader.TILE_SCALE
+            val topLeftPy = centerPy - vH / 2.0 / TileLoader.TILE_SCALE
 
-            val n = 2.0.pow(zoom).toInt()
+            val n = 2.0.pow(camera.zoom).toInt()
             val minTileX = max(0, floor(topLeftPx / sourceTileSize).toInt())
             val minTileY = max(0, floor(topLeftPy / sourceTileSize).toInt())
             val maxTileX =
-                min(n - 1, floor((topLeftPx + vW) / sourceTileSize).toInt())
+                min(n - 1, floor((topLeftPx + vW / TileLoader.TILE_SCALE) / sourceTileSize).toInt())
             val maxTileY =
-                min(n - 1, floor((topLeftPy + vH) / sourceTileSize).toInt())
+                min(n - 1, floor((topLeftPy + vH / TileLoader.TILE_SCALE) / sourceTileSize).toInt())
 
             for (tx in minTileX..maxTileX) {
                 for (ty in minTileY..maxTileY) {
-                    val key = "${mapStyle.name.lowercase()}/$zoom/$tx/$ty"
+                    val key = "${mapStyle.name.lowercase()}/${camera.zoom}/$tx/$ty"
                     val bitmap = tileLoader.cache.get(key)
-                    // Source tile offset in display pixels
                     val tileScreenX =
                         ((tx * sourceTileSize - topLeftPx) * TileLoader.TILE_SCALE).toFloat()
                     val tileScreenY =
@@ -753,7 +711,7 @@ fun OsmMapView(
                     MapTileRenderer.latLonToPixelOffset(
                         result.latitude,
                         result.longitude,
-                        zoom,
+                        camera.zoom,
                         sourceTileSize,
                     )
                 val screenX = ((px - topLeftPx) * TileLoader.TILE_SCALE).toFloat()
@@ -782,8 +740,7 @@ fun OsmMapView(
                 )
                 drawCircle(color = Color.White, radius = 4f, center = Offset(screenX, screenY))
                 val label = result.name.take(20)
-                val textLayout =
-                    textMeasurer.measure(label, TextStyle(color = Color.White, fontSize = 10.sp))
+                val textLayout = textMeasurer.measure(label, zoomTextStyle)
                 drawRoundRect(
                     color = Color(0xDD000000.toInt()),
                     topLeft =
@@ -804,7 +761,7 @@ fun OsmMapView(
             if (pinLocation != null) {
                 val (pinLat, pinLon) = pinLocation
                 val (pinPx, pinPy) =
-                    MapTileRenderer.latLonToPixelOffset(pinLat, pinLon, zoom, sourceTileSize)
+                    MapTileRenderer.latLonToPixelOffset(pinLat, pinLon, camera.zoom, sourceTileSize)
                 drawPinMarker(
                     ((pinPx - topLeftPx) * TileLoader.TILE_SCALE).toFloat(),
                     ((pinPy - topLeftPy) * TileLoader.TILE_SCALE).toFloat(),
@@ -812,9 +769,8 @@ fun OsmMapView(
             }
 
             // Zoom indicator
-            val zoomText = "z$zoom"
-            val zoomLayout =
-                textMeasurer.measure(zoomText, TextStyle(color = Color.White, fontSize = 10.sp))
+            val zoomText = "z${camera.zoom}"
+            val zoomLayout = textMeasurer.measure(zoomText, zoomTextStyle)
             drawRoundRect(
                 Color(0xB3000000.toInt()),
                 topLeft = Offset(size.width - zoomLayout.size.width.toFloat() - 46f, 6f),
@@ -829,17 +785,13 @@ fun OsmMapView(
                 topLeft = Offset(size.width - zoomLayout.size.width.toFloat() - 40f, 8f),
             )
 
-            // Attribution — adjust based on map style
+            // Attribution
             val attrText =
                 when (mapStyle) {
                     MapStyle.STREET -> "© OpenStreetMap"
                     MapStyle.SATELLITE -> "© Esri"
                 }
-            val attrLayout =
-                textMeasurer.measure(
-                    attrText,
-                    TextStyle(color = Color(0xCCFFFFFF.toInt()), fontSize = 8.sp),
-                )
+            val attrLayout = textMeasurer.measure(attrText, attrTextStyle)
             drawText(
                 textLayoutResult = attrLayout,
                 topLeft = Offset(4f, size.height - attrLayout.size.height.toFloat() - 4f),
@@ -879,12 +831,8 @@ fun OsmMapView(
             // Zoom in
             FloatingActionButton(
                 onClick = {
-                    if (zoom < maxZoom) {
-                        val oldZoom = zoom
-                        previousZoom = oldZoom
-                        isInZoomTransition = true
-                        zoom++
-                        onZoomChanged(zoom)
+                    if (camera.zoom < maxZoom) {
+                        zoomCenter(camera.zoom + 1)
                     }
                 },
                 modifier = Modifier.size(36.dp),
@@ -900,12 +848,8 @@ fun OsmMapView(
             // Zoom out
             FloatingActionButton(
                 onClick = {
-                    if (zoom > 2) {
-                        val oldZoom = zoom
-                        previousZoom = oldZoom
-                        isInZoomTransition = true
-                        zoom--
-                        onZoomChanged(zoom)
+                    if (camera.zoom > 2) {
+                        zoomCenter(camera.zoom - 1)
                     }
                 },
                 modifier = Modifier.size(36.dp),
@@ -916,6 +860,36 @@ fun OsmMapView(
                 Text("−", fontSize = 18.sp)
             }
         }
+    }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// SizeTracker — bridges Canvas draw-scope size to Compose state
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Tracks viewport width/height from inside [DrawScope] and exposes them as observable state so
+ * that [snapshotFlow] can react to size changes.
+ *
+ * Also provides [invalidate] which increments an internal counter read by Compose, forcing a
+ * recomposition when tiles finish loading.
+ */
+@Stable
+private class SizeTracker {
+    var width by mutableIntStateOf(0)
+    var height by mutableIntStateOf(0)
+    var revision by mutableIntStateOf(0)
+
+    fun update(w: Int, h: Int) {
+        if (w != width || h != height) {
+            width = w
+            height = h
+        }
+    }
+
+    /** Increment to force a recomposition (e.g. when a new tile finishes loading). */
+    fun invalidate() {
+        revision++
     }
 }
 

@@ -1,15 +1,15 @@
 package org.kryspetrie.fileimport.application.export
 
 import java.io.ByteArrayOutputStream
-import java.io.File
-import java.io.FileOutputStream
 import org.apache.commons.imaging.Imaging
 import org.apache.commons.imaging.formats.jpeg.JpegImageMetadata
 import org.apache.commons.imaging.formats.jpeg.iptc.IptcRecord
 import org.apache.commons.imaging.formats.jpeg.iptc.IptcTypes
 import org.apache.commons.imaging.formats.jpeg.iptc.JpegIptcRewriter
 import org.apache.commons.imaging.formats.jpeg.iptc.PhotoshopApp13Data
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 
 /**
  * Writes IPTC keywords, location, and subject data into existing JPEG files using the Photoshop
@@ -20,20 +20,25 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
  *
  * IPTC location fields (SubLocation, City, Province/State, Country) map to photoshop:* XMP fields
  * and are read by Lightroom, Bridge, digiKam, Apple Photos, etc.
+ *
+ * @param fileSystem Port for file I/O operations (replaces direct `java.io.File` usage)
  */
-object IptcMetadataWriter {
+class IptcMetadataWriter(private val fileSystem: FileSystemPort) {
 
     /**
      * Writes IPTC keywords, location, and subject data into an existing JPEG file.
      *
-     * @param jpegFile The JPEG file to rewrite with IPTC data (modified in-place)
+     * @param jpegPath The JPEG file path to rewrite with IPTC data (modified in-place)
      * @param keywordsValue Comma-separated keyword string (may be null if no keywords)
      * @param config Configuration with location and subject fields
      */
-    fun writeIptcData(jpegFile: File, keywordsValue: String?, config: PhotoScanConfiguration) {
+    fun writeIptcData(jpegPath: FilePath, keywordsValue: String?, config: PhotoScanConfiguration) {
         try {
+            // Read existing JPEG bytes
+            val jpegBytes = fileSystem.readBytes(jpegPath)
+
             // Read existing IPTC data from the JPEG if present
-            val metadata = Imaging.getMetadata(jpegFile)
+            val metadata = Imaging.getMetadata(jpegBytes)
             val existingRecords =
                 if (metadata is JpegImageMetadata) {
                     val photoshop = metadata.photoshop
@@ -104,12 +109,12 @@ object IptcMetadataWriter {
             val app13Data = PhotoshopApp13Data(existingRecords, existingBlocks)
 
             // Rewrite the JPEG with the new IPTC data
-            val jpegBytes = jpegFile.readBytes()
             val baos = ByteArrayOutputStream()
             JpegIptcRewriter().writeIPTC(jpegBytes, baos, app13Data)
             baos.close()
 
-            FileOutputStream(jpegFile).use { fos -> fos.write(baos.toByteArray()) }
+            // Write updated JPEG back to file
+            fileSystem.writeBytes(jpegPath, baos.toByteArray())
         } catch (e: Exception) {
             // IPTC writing is best-effort — don't fail the export
             System.err.println(

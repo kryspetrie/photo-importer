@@ -119,4 +119,16 @@ interface FileSystemPort {
         path.toFile().parentFile?.mkdirs()
         path.toFile().writeText(content)
     }
+
+    /** Reads the entire content of a file as a byte array. */
+    fun readBytes(path: FilePath): ByteArray = path.toFile().readBytes()
+
+    /**
+     * Writes a byte array to a file, replacing its content.
+     * Creates parent directories if needed.
+     */
+    fun writeBytes(path: FilePath, bytes: ByteArray) {
+        path.toFile().parentFile?.mkdirs()
+        path.toFile().writeBytes(bytes)
+    }
 }

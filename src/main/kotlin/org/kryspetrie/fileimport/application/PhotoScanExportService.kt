@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.application
 
-import java.io.File
 import org.kryspetrie.fileimport.application.export.FilenameResolver
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
@@ -29,7 +28,8 @@ import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
  * - [FilenameResolver] — filename conflict resolution
  *
  * All image operations use [ProcessedImage] via [ImageProcessingPort], keeping this service free
- * of `java.awt.image.BufferedImage` imports.
+ * of `java.awt.image.BufferedImage` imports. All file operations use [FilePath] via [FileSystemPort],
+ * keeping this service free of `java.io.File` imports.
  *
  * @see DetectedPhoto
  * @see PhotoScanConfiguration
@@ -56,7 +56,6 @@ class PhotoScanExportService(
         destinationPath: String,
         baseFileName: String,
     ): ExportResult {
-        val sourceJavaFile = sourceFile.toFile()
         val errors = mutableListOf<String>()
         val exportedFiles = mutableListOf<ExportedFile>()
 
@@ -75,7 +74,6 @@ class PhotoScanExportService(
                 val result = processPhoto(
                     sourceImage = image,
                     detectedPhoto = photo,
-                    sourceJavaFile = sourceJavaFile,
                     marginFraction = 0.02,
                 )
 
@@ -88,9 +86,9 @@ class PhotoScanExportService(
 
                 metadataWritingService.writeImageWithMetadata(
                     image = result.compositedImage,
-                    outputFile = File(resolvedPath),
+                    outputPath = FilePath(resolvedPath),
                     config = photo.configuration,
-                    sourceFile = sourceJavaFile,
+                    sourcePath = sourceFile,
                     detectedPhoto = result.marginedPhoto,
                     marginFraction = 0.02,
                     sourceImage = image,
@@ -155,13 +153,10 @@ class PhotoScanExportService(
         baseFileName: String,
         sourceFile: FilePath?,
     ): SingleExportResult {
-        val sourceJavaFile = sourceFile?.toFile()
-
         return try {
             val result = processPhoto(
                 sourceImage = sourceImage,
                 detectedPhoto = detectedPhoto,
-                sourceJavaFile = sourceJavaFile,
                 marginFraction = 0.02,
             )
 
@@ -173,9 +168,9 @@ class PhotoScanExportService(
 
             metadataWritingService.writeImageWithMetadata(
                 image = result.compositedImage,
-                outputFile = File(resolvedPath),
+                outputPath = FilePath(resolvedPath),
                 config = detectedPhoto.configuration,
-                sourceFile = sourceJavaFile,
+                sourcePath = sourceFile,
                 detectedPhoto = result.marginedPhoto,
                 marginFraction = 0.02,
                 sourceImage = sourceImage,
@@ -224,7 +219,6 @@ class PhotoScanExportService(
     private fun processPhoto(
         sourceImage: ProcessedImage,
         detectedPhoto: DetectedPhoto,
-        sourceJavaFile: File?,
         marginFraction: Double,
     ): ProcessedPhoto {
         val marginedPhoto = GeometryUtils.applyMargin(detectedPhoto, marginFraction)

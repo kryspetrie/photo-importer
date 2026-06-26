@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.application.export
 
-import java.io.File
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.ExifValueResolver
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 
 /**
@@ -18,21 +18,27 @@ import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
  * 3. Layer IPTC keywords/location (via [IptcMetadataWriter])
  * 4. Layer XMP face regions (via [XmpMetadataWriter])
  *
- * @param faceRegionTransformer used to transform source face regions into output coordinates.
+ * @param faceRegionTransformer used to transform source face regions into output coordinates
  * @param imageProcessing port for writing JPEG images
+ * @param fileSystem port for file I/O operations
  */
 class MetadataWritingService(
     private val faceRegionTransformer: FaceRegionTransformerPort,
     private val imageProcessing: ImageProcessingPort,
+    private val fileSystem: FileSystemPort,
 ) {
 
+    private val exifWriter = ExifMetadataWriter(fileSystem)
+    private val iptcWriter = IptcMetadataWriter(fileSystem)
+    private val xmpWriter = XmpMetadataWriter(fileSystem)
+
     /**
-     * Writes [image] to [outputFile] as JPEG, then layers EXIF, IPTC, and XMP metadata.
+     * Writes [image] to [outputPath] as JPEG, then layers EXIF, IPTC, and XMP metadata.
      *
      * @param image the final composited image to write
-     * @param outputFile destination JPEG file
+     * @param outputPath destination JPEG file path
      * @param config photo scan configuration with metadata overrides
-     * @param sourceFile optional source scan file for baseline EXIF and face region extraction
+     * @param sourcePath optional source scan file path for baseline EXIF and face region extraction
      * @param detectedPhoto the (possibly margin-expanded) detected photo for face region transforms
      * @param marginFraction the margin fraction applied to the detected photo
      * @param sourceImage the original source image (for face region transformation dimensions)
@@ -42,9 +48,9 @@ class MetadataWritingService(
      */
     fun writeImageWithMetadata(
         image: ProcessedImage,
-        outputFile: File,
+        outputPath: FilePath,
         config: PhotoScanConfiguration,
-        sourceFile: File? = null,
+        sourcePath: FilePath? = null,
         detectedPhoto: DetectedPhoto? = null,
         marginFraction: Double = 0.02,
         sourceImage: ProcessedImage? = null,
@@ -53,11 +59,11 @@ class MetadataWritingService(
         jpegQuality: Float = 0.95f,
     ) {
         // Step 1: Write plain JPEG
-        imageProcessing.writeJpegImage(image, FilePath(outputFile.absolutePath), quality = jpegQuality)
+        imageProcessing.writeJpegImage(image, outputPath, quality = jpegQuality)
 
         // Step 2: Layer EXIF
         if (config.hasExifOverrides()) {
-            ExifMetadataWriter.writeExifMetadata(outputFile, config, sourceFile)
+            exifWriter.writeExifMetadata(outputPath, config, sourcePath)
         }
 
         // Step 3: Layer IPTC
@@ -69,17 +75,17 @@ class MetadataWritingService(
                 config.country.isNotBlank() ||
                 config.subjects.isNotBlank()
         if (keywordsValue != null || hasLocationData) {
-            IptcMetadataWriter.writeIptcData(outputFile, keywordsValue, config)
+            iptcWriter.writeIptcData(outputPath, keywordsValue, config)
         }
 
         // Step 4: Layer XMP face regions
         val allFaceRegions = mutableListOf(config.faceRegions)
 
-        if (sourceFile != null && detectedPhoto != null && sourceImage != null) {
+        if (sourcePath != null && detectedPhoto != null && sourceImage != null) {
             try {
                 val transformedRegions =
                     faceRegionTransformer.transformFaceRegionsFromSource(
-                        sourceFile = FilePath(sourceFile.absolutePath),
+                        sourceFile = sourcePath,
                         detectedPhoto = detectedPhoto,
                         outputWidth = preRotationWidth,
                         outputHeight = preRotationHeight,
@@ -97,7 +103,7 @@ class MetadataWritingService(
 
         val mergedConfig = config.copy(faceRegions = allFaceRegions.flatten())
         if (mergedConfig.faceRegions.isNotEmpty()) {
-            XmpMetadataWriter.writeXmpFaceRegions(outputFile, mergedConfig)
+            xmpWriter.writeXmpFaceRegions(outputPath, mergedConfig)
         }
     }
 }

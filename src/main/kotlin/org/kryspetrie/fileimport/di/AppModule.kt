@@ -129,7 +129,7 @@ val appModule = module {
     single { PerspectiveCorrectionService() }
     single<FaceRegionTransformerPort> { FaceRegionTransformer() }
     single { FaceRegionTransformer() }
-    single { MetadataWritingService(faceRegionTransformer = get<FaceRegionTransformerPort>(), imageProcessing = get<ImageProcessingPort>()) }
+    single { MetadataWritingService(faceRegionTransformer = get<FaceRegionTransformerPort>(), imageProcessing = get<ImageProcessingPort>(), fileSystem = get<FileSystemPort>()) }
     single<PhotoScanExportPort> { get<PhotoScanExportService>() }
     single { PhotoScanExportService(get(), get(), get(), get()) }
 
