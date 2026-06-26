@@ -38,6 +38,7 @@ class DuplicateScannerServiceTest {
             DuplicateScannerService(
                 imageRepository,
                 deduplicationPort,
+                TestFileSystemAdapter(),
                 null,
                 TestTimeProvider(),
                 TestDispatcherProvider(),

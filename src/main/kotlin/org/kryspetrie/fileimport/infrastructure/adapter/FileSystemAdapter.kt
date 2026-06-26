@@ -31,5 +31,15 @@ class FileSystemAdapter : FileSystemPort {
         return dir.listFiles()?.map { FilePath(it.absolutePath) } ?: emptyList()
     }
 
+    override suspend fun copy(source: FilePath, destination: FilePath): Boolean {
+        return try {
+            destination.toFile().parentFile?.mkdirs()
+            source.toFile().copyTo(destination.toFile(), overwrite = true)
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     override fun canWrite(path: FilePath): Boolean = path.toFile().canWrite()
 }

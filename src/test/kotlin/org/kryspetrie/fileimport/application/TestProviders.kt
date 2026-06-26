@@ -28,3 +28,50 @@ class TestDispatcherProvider : DispatcherProvider {
     override val io: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.IO
     override val default: kotlinx.coroutines.CoroutineDispatcher = Dispatchers.Default
 }
+
+/** Test [FileSystemPort] that uses real file system operations via [java.io.File]. */
+class TestFileSystemAdapter : org.kryspetrie.fileimport.domain.port.FileSystemPort {
+    override suspend fun lastModified(path: org.kryspetrie.fileimport.domain.model.FilePath): Long =
+        path.toFile().lastModified()
+
+    override suspend fun length(path: org.kryspetrie.fileimport.domain.model.FilePath): Long =
+        path.toFile().length()
+
+    override suspend fun exists(path: org.kryspetrie.fileimport.domain.model.FilePath): Boolean =
+        path.toFile().exists()
+
+    override suspend fun delete(path: org.kryspetrie.fileimport.domain.model.FilePath): Boolean =
+        path.toFile().delete()
+
+    override suspend fun renameTo(
+        source: org.kryspetrie.fileimport.domain.model.FilePath,
+        destination: org.kryspetrie.fileimport.domain.model.FilePath,
+    ): Boolean = source.toFile().renameTo(destination.toFile())
+
+    override suspend fun mkdirs(path: org.kryspetrie.fileimport.domain.model.FilePath): Boolean =
+        path.toFile().mkdirs()
+
+    override suspend fun isDirectory(path: org.kryspetrie.fileimport.domain.model.FilePath): Boolean =
+        path.toFile().isDirectory
+
+    override suspend fun listFiles(
+        path: org.kryspetrie.fileimport.domain.model.FilePath,
+    ): List<org.kryspetrie.fileimport.domain.model.FilePath> =
+        path.toFile().listFiles()?.map { org.kryspetrie.fileimport.domain.model.FilePath(it.absolutePath) }
+            ?: emptyList()
+
+    override suspend fun copy(
+        source: org.kryspetrie.fileimport.domain.model.FilePath,
+        destination: org.kryspetrie.fileimport.domain.model.FilePath,
+    ): Boolean =
+        try {
+            destination.toFile().parentFile?.mkdirs()
+            source.toFile().copyTo(destination.toFile(), overwrite = true)
+            true
+        } catch (_: Exception) {
+            false
+        }
+
+    override fun canWrite(path: org.kryspetrie.fileimport.domain.model.FilePath): Boolean =
+        path.toFile().canWrite()
+}

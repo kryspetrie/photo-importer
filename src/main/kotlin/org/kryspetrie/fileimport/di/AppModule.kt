@@ -106,6 +106,7 @@ val appModule = module {
         DuplicateScannerService(
             imageRepository = get(),
             deduplicationPort = get(),
+            fileSystem = get(),
             hashCache = get(),
             timeProvider = get(),
             dispatcherProvider = get(),

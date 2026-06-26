@@ -56,6 +56,25 @@ interface FileSystemPort {
     /** Lists files in a directory. Returns empty list if not a directory or doesn't exist. */
     suspend fun listFiles(path: FilePath): List<FilePath>
 
+    /** Copies a file from source to destination. Returns `true` if successful. */
+    suspend fun copy(source: FilePath, destination: FilePath): Boolean
+
+    /**
+     * Returns the filename of the given path (e.g., "IMG_001.jpg" from
+     * "/photos/IMG_001.jpg").
+     */
+    fun name(path: FilePath): String = path.name
+
+    /**
+     * Returns the filename without extension (e.g., "IMG_001" from "IMG_001.jpg").
+     */
+    fun nameWithoutExtension(path: FilePath): String = path.nameWithoutExtension
+
+    /**
+     * Returns the file extension without dot (e.g., "jpg" from "IMG_001.jpg").
+     */
+    fun extension(path: FilePath): String = path.extension
+
     /** Checks if a file can be written to. */
     fun canWrite(path: FilePath): Boolean
 }

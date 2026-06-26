@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.application
 
-import java.io.File
 import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -18,6 +17,7 @@ import org.kryspetrie.fileimport.domain.model.ScanProgress
 import org.kryspetrie.fileimport.domain.model.pickKeeper
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
@@ -27,6 +27,7 @@ private val SCAN_CONCURRENCY = Runtime.getRuntime().availableProcessors().coerce
 class DuplicateScannerService(
     private val imageRepository: ImageRepositoryPort,
     private val deduplicationPort: DeduplicationPort,
+    private val fileSystem: FileSystemPort,
     private val hashCache: HashCachePort? = null,
     private val timeProvider: TimeProvider,
     private val dispatcherProvider: DispatcherProvider,
@@ -38,7 +39,7 @@ class DuplicateScannerService(
         onProgress: (ScanProgress) -> Unit = {},
     ): List<DuplicateInfo> {
         val rootDir = FilePath(folderPath)
-        require(rootDir.toFile().exists() && rootDir.toFile().isDirectory) {
+        require(fileSystem.exists(rootDir) && fileSystem.isDirectory(rootDir)) {
             "Folder does not exist: $folderPath"
         }
 
@@ -62,11 +63,14 @@ class DuplicateScannerService(
                     async(dispatcherProvider.io) {
                         semaphore.withPermit {
                             val cached = cachedEntries[file.filePath]
+                            val cachedLastModified =
+                                cached?.lastModified ?: 0L
+                            val currentLastModified = fileSystem.lastModified(file.path)
                             val hash =
                                 if (
                                     cached != null &&
                                         cached.fileSize == file.fileSize &&
-                                        cached.lastModified == file.file.lastModified()
+                                        cachedLastModified == currentLastModified
                                 ) {
                                     cached.hash
                                 } else {
@@ -113,20 +117,19 @@ class DuplicateScannerService(
             for (image in toRemove) {
                 try {
                     if (moveToTrashFolder != null) {
-                        val trashDir = File(moveToTrashFolder)
-                        trashDir.mkdirs()
-                        val dest = File(trashDir, image.file.name)
+                        val trashDir = FilePath(moveToTrashFolder)
+                        fileSystem.mkdirs(trashDir)
+                        val destPath = trashDir.resolve(image.path.name)
                         val target =
-                            if (dest.exists()) {
-                                File(
-                                    trashDir,
-                                    "${image.file.nameWithoutExtension}_" +
-                                        "${timeProvider.currentTimeMillis()}.${image.file.extension}",
+                            if (fileSystem.exists(destPath)) {
+                                trashDir.resolve(
+                                    "${image.path.nameWithoutExtension}_" +
+                                        "${timeProvider.currentTimeMillis()}.${image.path.extension}"
                                 )
-                            } else dest
-                        if (image.file.renameTo(target)) removed++
+                            } else destPath
+                        if (fileSystem.renameTo(image.path, target)) removed++
                     } else {
-                        if (image.file.delete()) removed++
+                        if (fileSystem.delete(image.path)) removed++
                     }
                 } catch (_: Exception) {}
             }
