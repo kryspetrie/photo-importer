@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.application
 
-import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.kryspetrie.fileimport.domain.model.ConflictResolution
 import org.kryspetrie.fileimport.domain.model.CopiedFile
@@ -14,6 +13,7 @@ import org.kryspetrie.fileimport.domain.model.ImportHistoryEntry
 import org.kryspetrie.fileimport.domain.model.ImportProgress
 import org.kryspetrie.fileimport.domain.model.ImportResult
 import org.kryspetrie.fileimport.domain.model.ImportStatus
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
@@ -30,6 +30,7 @@ class ImportExecutor(
     private val imageRepository: ImageRepositoryPort,
     private val namingPort: NamingPort,
     private val timeProvider: TimeProvider,
+    private val fileSystem: FileSystemPort,
 ) {
 
     /**
@@ -83,11 +84,12 @@ class ImportExecutor(
                     namingPort.generateFolderPath(image, destinationPath, configuration)
                 val destFileName = namingPort.generateFileName(image, configuration, counter)
                 var destPath = "$destFolder/$destFileName"
-                var destFile = File(destPath)
-                destFile.parentFile?.mkdirs()
+                var destFilePath = FilePath(destPath)
+                val destParent = FilePath(destFilePath.parent ?: destFolder)
+                fileSystem.mkdirs(destParent)
 
                 var conflictResolution = configuration.conflictResolution.toString()
-                if (destFile.exists()) {
+                if (fileSystem.exists(destFilePath)) {
                     when (configuration.conflictResolution) {
                         ConflictResolution.SKIP -> {
                             skippedCount++
@@ -115,8 +117,9 @@ class ImportExecutor(
                         ConflictResolution.RENAME -> {
                             destPath =
                                 namingPort.resolveConflict(image, destinationPath, configuration)
-                            destFile = File(destPath)
-                            destFile.parentFile?.mkdirs()
+                            destFilePath = FilePath(destPath)
+                            val renamedParent = FilePath(destFilePath.parent ?: destFolder)
+                            fileSystem.mkdirs(renamedParent)
                             conflictResolution = "RENAME"
                         }
                         ConflictResolution.REPLACE -> {}
@@ -146,8 +149,9 @@ class ImportExecutor(
                     }
                 }
 
+                val destAbsolutePath = fileSystem.absolutePath(destFilePath)
                 val copyResult =
-                    imageRepository.copyFile(image, FilePath(destFile.absolutePath)) { current, _ ->
+                    imageRepository.copyFile(image, FilePath(destAbsolutePath)) { current, _ ->
                         importProgress.value =
                             importProgress.value.copy(copiedBytes = copiedBytes + current)
                     }
@@ -178,12 +182,12 @@ class ImportExecutor(
                 var hashMatches = false
                 if (configuration.verifyAfterCopy) {
                     hashVerified = true
-                    hashMatches = imageRepository.verifyCopy(image, FilePath(destFile.absolutePath))
+                    hashMatches = imageRepository.verifyCopy(image, FilePath(destAbsolutePath))
                     if (!hashMatches) {
                         errors.add(
                             ImportError(image, ErrorType.HASH_MISMATCH, "Hash verification failed")
                         )
-                        destFile.delete()
+                        fileSystem.delete(destFilePath)
                         fileDetails.add(
                             ImportFileDetail(
                                 sourcePath = image.filePath,
@@ -219,14 +223,15 @@ class ImportExecutor(
                 if (configuration.importSidecars && image.sidecars.isNotEmpty()) {
                     for (sidecar in image.sidecars) {
                         try {
-                            val sidecarSrc = sidecar.toFile()
-                            val sidecarDest =
-                                File(
-                                    destFile.parentFile,
-                                    "${destFile.nameWithoutExtension}.${sidecar.extension}",
+                            val sidecarDestPath = destFilePath.parent?.let { parent ->
+                                FilePath(parent).resolve(
+                                    "${fileSystem.nameWithoutExtension(destFilePath)}.${sidecar.extension}"
                                 )
-                            sidecarSrc.copyTo(sidecarDest, overwrite = true)
-                            sidecarFiles.add(sidecarDest.absolutePath)
+                            } ?: FilePath(
+                                "${fileSystem.nameWithoutExtension(destFilePath)}.${sidecar.extension}"
+                            )
+                            fileSystem.copy(sidecar, sidecarDestPath)
+                            sidecarFiles.add(fileSystem.absolutePath(sidecarDestPath))
                         } catch (_: Exception) {}
                     }
                 }
@@ -238,7 +243,7 @@ class ImportExecutor(
                         deletedCount++
                     }
                     if (configuration.importSidecars) {
-                        image.sidecars.forEach { it.toFile().delete() }
+                        image.sidecars.forEach { sidecar -> fileSystem.delete(sidecar) }
                     }
                 }
 
@@ -250,7 +255,7 @@ class ImportExecutor(
                         sourcePath = image.filePath,
                         destinationPath = destPath,
                         destinationFolder = destFolder,
-                        finalFilename = destFile.name,
+                        finalFilename = fileSystem.name(destFilePath),
                         originalFilename = image.fileName,
                         folderPattern = configuration.folderPattern,
                         filenamePattern = configuration.fileNamePattern,

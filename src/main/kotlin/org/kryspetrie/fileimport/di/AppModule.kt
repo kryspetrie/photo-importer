@@ -89,7 +89,7 @@ val appModule = module {
     // ── Application Services ────────────────────────────────────────
 
     single { ImportScanner(imageRepository = get(), hashCache = get(), dispatcherProvider = get()) }
-    single { ImportExecutor(imageRepository = get(), namingPort = get(), timeProvider = get()) }
+    single { ImportExecutor(imageRepository = get(), namingPort = get(), timeProvider = get(), fileSystem = get()) }
     single {
         ImportService(
             importScanner = get(),

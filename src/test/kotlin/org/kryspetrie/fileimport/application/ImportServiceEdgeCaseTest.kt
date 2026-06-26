@@ -34,7 +34,7 @@ class ImportServiceEdgeCaseTest {
         deduplicationPort = mock(DeduplicationPort::class.java)
         namingPort = mock(NamingPort::class.java)
         val importScanner = ImportScanner(imageRepository, null, TestDispatcherProvider())
-        val importExecutor = ImportExecutor(imageRepository, namingPort, TestTimeProvider())
+        val importExecutor = ImportExecutor(imageRepository, namingPort, TestTimeProvider(), TestFileSystemAdapter())
         service = ImportService(importScanner, importExecutor, deduplicationPort, namingPort)
     }
 

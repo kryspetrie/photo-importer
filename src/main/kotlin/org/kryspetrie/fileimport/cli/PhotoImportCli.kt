@@ -188,11 +188,11 @@ fun main(args: Array<String>) {
     val imageRepo = ImageRepositoryAdapter(dispatcherProvider)
     val scanner = ImportScanner(imageRepo, null, dispatcherProvider)
     val timeProvider = DefaultTimeProvider()
-    val executor = ImportExecutor(imageRepo, NamingAdapter(), timeProvider)
+    val fileSystem = FileSystemAdapter()
+    val executor = ImportExecutor(imageRepo, NamingAdapter(), timeProvider, fileSystem)
     val surfService = SurfDeduplicationService(dispatcherProvider)
     val importService =
         ImportService(scanner, executor, DeduplicationAdapter(surfService, dispatcherProvider), NamingAdapter())
-    val fileSystem = FileSystemAdapter()
     val reorganizeService =
         ReorganizeService(
             imageRepo,

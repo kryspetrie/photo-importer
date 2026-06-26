@@ -40,7 +40,7 @@ class ImportWorkflowIntegrationTest {
         deduplicationPort = mock(DeduplicationPort::class.java)
         namingPort = mock(NamingPort::class.java)
         val scanner = ImportScanner(imageRepository, null, TestDispatcherProvider())
-        val executor = ImportExecutor(imageRepository, namingPort, TestTimeProvider())
+        val executor = ImportExecutor(imageRepository, namingPort, TestTimeProvider(), TestFileSystemAdapter())
         importService = ImportService(scanner, executor, deduplicationPort, namingPort)
     }
 
