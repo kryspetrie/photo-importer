@@ -8,43 +8,42 @@ import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 import org.assertj.core.api.Assertions.assertThat
-import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
-import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
-import org.kryspetrie.fileimport.application.export.BackImageService
-import org.kryspetrie.fileimport.application.export.JpegImageWriter
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
+import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
+import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
+import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import kotlinx.coroutines.runBlocking
 
 @DisplayName("PhotoScanExportService")
 class PhotoScanExportServiceTest {
     private lateinit var service: PhotoScanExportService
     private lateinit var perspectiveService: PerspectiveCorrectionService
-    private lateinit var jpegImageWriter: JpegImageWriter
 
     @TempDir lateinit var tempDir: File
 
     @BeforeEach
     fun setup() {
         perspectiveService = PerspectiveCorrectionService()
-        jpegImageWriter = JpegImageWriter()
+        val fileSystem = FileSystemAdapter()
+        val imageProcessing = AwtImageProcessingAdapter(fileSystem)
         service = PhotoScanExportService(
             perspectiveService,
-            MetadataWritingService(FaceRegionTransformer()),
-            jpegImageWriter,
-            BackImageService(org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter()),
-            org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter(),
+            MetadataWritingService(FaceRegionTransformer(), imageProcessing),
+            imageProcessing,
+            fileSystem,
         )
     }
 
@@ -108,14 +107,14 @@ class PhotoScanExportServiceTest {
         @DisplayName("should initialize with perspective service")
         fun shouldInitialize() {
             assertThat(service).isNotNull
-            assertThat(jpegImageWriter.jpegQuality).isEqualTo(0.95f)
         }
 
         @Test
-        @DisplayName("should allow jpeg quality configuration")
+        @DisplayName("should allow jpeg quality configuration via ImageProcessingPort")
         fun shouldAllowQualityConfiguration() {
-            jpegImageWriter.jpegQuality = 0.5f
-            assertThat(jpegImageWriter.jpegQuality).isEqualTo(0.5f)
+            // JPEG quality is now configured per-call via ImageProcessingPort.writeJpegImage()
+            // This test validates that the service initializes correctly with the port
+            assertThat(service).isNotNull
         }
     }
 

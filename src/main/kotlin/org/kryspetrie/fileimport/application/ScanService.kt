@@ -1,18 +1,14 @@
 package org.kryspetrie.fileimport.application
 
-import java.awt.geom.AffineTransform
-import java.awt.image.BufferedImage
 import java.io.File
-import javax.imageio.ImageIO
 import kotlinx.coroutines.runBlocking
 import org.kryspetrie.fileimport.application.export.FilenameResolver
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
-import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
+import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
-import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 
 /**
  * Orchestrates photo scan operations.
@@ -25,10 +21,12 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
  *
  * @param photoDetector Port for detecting photo regions in scanned images
  * @param fileSystem Port for file system operations
+ * @param imageProcessing Port for image I/O and transformation operations
  */
 class ScanService(
     private val photoDetector: PhotoScanDetectorPort,
     private val fileSystem: FileSystemPort,
+    private val imageProcessing: ImageProcessingPort,
 ) {
 
     /**
@@ -45,8 +43,8 @@ class ScanService(
             return emptyList()
         }
         return try {
-            val bufferedImage = ImageIO.read(path.toFile()) ?: return emptyList()
-            photoDetector.detectPhotos(bufferedImage.toProcessedImage())
+            val image = imageProcessing.readImage(path) ?: return emptyList()
+            photoDetector.detectPhotos(image)
         } catch (_: Exception) {
             emptyList()
         }
@@ -62,67 +60,11 @@ class ScanService(
      * @param detectedPhoto The detected photo region with corner coordinates
      * @return The perspective-corrected photo as a new image
      */
-    fun extractPhoto(scannedImage: BufferedImage, detectedPhoto: DetectedPhoto): BufferedImage {
-        val bounds = detectedPhoto.getBounds()
-        val width = bounds.getWidth()
-        val height = bounds.getHeight()
-
-        // Source quad (detected corners)
-        val srcQuad =
-            listOf(
-                detectedPhoto.topLeft,
-                detectedPhoto.topRight,
-                detectedPhoto.bottomLeft,
-                detectedPhoto.bottomRight,
-            )
-
-        // Destination rectangle
-        val dstRect =
-            listOf(
-                Corner(0f, 0f),
-                Corner(width.toFloat(), 0f),
-                Corner(0f, height.toFloat()),
-                Corner(width.toFloat(), height.toFloat()),
-            )
-
-        // Calculate transform
-        val transform = calculatePerspectiveTransform(srcQuad, dstRect)
-
-        // Apply transform
-        val outputImage = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
-        val op =
-            java.awt.image.AffineTransformOp(
-                transform,
-                java.awt.image.AffineTransformOp.TYPE_BILINEAR,
-            )
-        op.filter(scannedImage, outputImage)
-
-        return outputImage
-    }
-
-    private fun calculatePerspectiveTransform(
-        srcQuad: List<PhotoCorner>,
-        dstRect: List<Corner>,
-    ): AffineTransform {
-        val srcTopWidth = distance(srcQuad[0], srcQuad[1])
-        val srcLeftHeight = distance(srcQuad[0], srcQuad[2])
-        val dstWidth = dstRect[1].x - dstRect[0].x
-        val dstHeight = dstRect[2].y - dstRect[0].y
-
-        val scaleX = dstWidth / srcTopWidth
-        val scaleY = dstHeight / srcLeftHeight
-
-        val transform = AffineTransform()
-        transform.translate(dstRect[0].x.toDouble(), dstRect[0].y.toDouble())
-        transform.scale(scaleX.toDouble(), scaleY.toDouble())
-
-        return transform
-    }
-
-    private fun distance(c1: PhotoCorner, c2: PhotoCorner): Float {
-        val dx = c2.x - c1.x
-        val dy = c2.y - c1.y
-        return kotlin.math.sqrt((dx * dx + dy * dy).toDouble()).toFloat()
+    fun extractPhoto(
+        scannedImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
+        detectedPhoto: DetectedPhoto,
+    ): org.kryspetrie.fileimport.domain.model.ProcessedImage {
+        return imageProcessing.cropAxisAligned(scannedImage, detectedPhoto)
     }
 
     /**
@@ -136,7 +78,7 @@ class ScanService(
      * @return Absolute path to the exported file
      */
     fun exportPhoto(
-        photoImage: BufferedImage,
+        photoImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
         destinationPath: String,
         originalFile: File,
         photoIndex: Int,
@@ -152,12 +94,9 @@ class ScanService(
         val resolvedPath = runBlocking {
             FilenameResolver.resolveFilenameConflict(fileSystem, destDir, fileName)
         }
-        val outputFile = File(resolvedPath)
 
-        ImageIO.write(photoImage, extension, outputFile)
+        imageProcessing.writeJpegImage(photoImage, FilePath(resolvedPath))
 
         return resolvedPath
     }
-
-    data class Corner(val x: Float, val y: Float)
 }

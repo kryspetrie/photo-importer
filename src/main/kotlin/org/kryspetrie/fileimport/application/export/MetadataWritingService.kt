@@ -1,25 +1,30 @@
 package org.kryspetrie.fileimport.application.export
 
-import java.awt.image.BufferedImage
 import java.io.File
-import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
-import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.ExifValueResolver
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.ProcessedImage
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 
 /**
  * Writes an image to a JPEG file and then layers EXIF, IPTC, and XMP metadata on top.
  *
  * The pipeline is:
- * 1. Write plain JPEG (via [JpegImageWriter])
+ * 1. Write plain JPEG (via [ImageProcessingPort])
  * 2. Layer EXIF overrides (via [ExifMetadataWriter])
  * 3. Layer IPTC keywords/location (via [IptcMetadataWriter])
  * 4. Layer XMP face regions (via [XmpMetadataWriter])
  *
  * @param faceRegionTransformer used to transform source face regions into output coordinates.
+ * @param imageProcessing port for writing JPEG images
  */
-class MetadataWritingService(private val faceRegionTransformer: FaceRegionTransformerPort) {
+class MetadataWritingService(
+    private val faceRegionTransformer: FaceRegionTransformerPort,
+    private val imageProcessing: ImageProcessingPort,
+) {
 
     /**
      * Writes [image] to [outputFile] as JPEG, then layers EXIF, IPTC, and XMP metadata.
@@ -30,25 +35,25 @@ class MetadataWritingService(private val faceRegionTransformer: FaceRegionTransf
      * @param sourceFile optional source scan file for baseline EXIF and face region extraction
      * @param detectedPhoto the (possibly margin-expanded) detected photo for face region transforms
      * @param marginFraction the margin fraction applied to the detected photo
-     * @param sourceImage the original source image dimensions (for face region transformation)
+     * @param sourceImage the original source image (for face region transformation dimensions)
      * @param preRotationWidth width of the image before rotation (for face region transformation)
      * @param preRotationHeight height of the image before rotation (for face region transformation)
      * @param jpegQuality JPEG compression quality (0.0 – 1.0)
      */
     fun writeImageWithMetadata(
-        image: BufferedImage,
+        image: ProcessedImage,
         outputFile: File,
         config: PhotoScanConfiguration,
         sourceFile: File? = null,
         detectedPhoto: DetectedPhoto? = null,
         marginFraction: Double = 0.02,
-        sourceImage: BufferedImage? = null,
+        sourceImage: ProcessedImage? = null,
         preRotationWidth: Int = image.width,
         preRotationHeight: Int = image.height,
         jpegQuality: Float = 0.95f,
     ) {
         // Step 1: Write plain JPEG
-        jpegImageWriter.writeJpegImage(image, outputFile, quality = jpegQuality)
+        imageProcessing.writeJpegImage(image, FilePath(outputFile.absolutePath), quality = jpegQuality)
 
         // Step 2: Layer EXIF
         if (config.hasExifOverrides()) {
@@ -94,9 +99,5 @@ class MetadataWritingService(private val faceRegionTransformer: FaceRegionTransf
         if (mergedConfig.faceRegions.isNotEmpty()) {
             XmpMetadataWriter.writeXmpFaceRegions(outputFile, mergedConfig)
         }
-    }
-
-    companion object {
-        private val jpegImageWriter = JpegImageWriter()
     }
 }

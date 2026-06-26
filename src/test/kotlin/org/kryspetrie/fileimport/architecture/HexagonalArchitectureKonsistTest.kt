@@ -228,15 +228,8 @@ class HexagonalArchitectureKonsistTest {
         }
 
         @Test
-        @DisplayName("Application may only import documented infrastructure boundary converters")
-        fun applicationInfrastructureImportsAreLimitedToBoundaryConverters() {
-            val allowedInfrastructureImports =
-                setOf(
-                    // AWT bridge: ProcessedImage ↔ BufferedImage conversions
-                    "org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage",
-                    "org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage",
-                )
-
+        @DisplayName("Application must not import from infrastructure package")
+        fun applicationMustNotImportInfrastructure() {
             val appFiles =
                 scope.files.filter { file ->
                     file.packagee?.name?.startsWith("org.kryspetrie.fileimport.application") == true
@@ -246,59 +239,46 @@ class HexagonalArchitectureKonsistTest {
                 appFiles.flatMap { file ->
                     file.imports
                         .filter { it.name.startsWith("org.kryspetrie.fileimport.infrastructure") }
-                        .filter { it.name !in allowedInfrastructureImports }
                         .map { "${file.name} imports ${it.name}" }
                 }
 
             assertThat(violations)
                 .withFailMessage(
-                    "Application may only import infrastructure boundary converters " +
-                        "(toProcessedImage, toBufferedImage).\nViolations:\n" +
+                    "Application layer must not import from infrastructure.\nViolations:\n" +
                         violations.joinToString("\n")
                 )
                 .isEmpty()
         }
 
         /**
-         * The application layer contains AWT-dependent services (perspective correction, export,
-         * scan) that predate the ProcessedImage abstraction. These are documented exceptions; new
-         * services should use ProcessedImage and not import java.awt/javax.imageio.
+         * Application layer must not import java.awt or javax.imageio.
+         *
+         * All AWT-dependent pixel operations (crop, rotate, composite, JPEG write, image I/O)
+         * are handled by [ImageProcessingPort] in the infrastructure layer. Application services
+         * use [ProcessedImage] and domain ports exclusively.
          */
         @Test
-        @DisplayName("Application AWT imports limited to documented exceptions")
-        fun applicationAwtImportsLimitedToDocumentedExceptions() {
-            val allowedAwtFiles =
-                setOf(
-                    "PhotoScanExportService",
-                    "ScanService",
-                    "ImageTransformer",
-                    "BackImageService",
-                    "JpegImageWriter",
-                    "MetadataWritingService",
-                )
-
+        @DisplayName("Application must not import java.awt or javax.imageio")
+        fun applicationMustNotImportAWT() {
             val appFiles =
                 scope.files.filter { file ->
                     file.packagee?.name?.startsWith("org.kryspetrie.fileimport.application") == true
                 }
 
             val violations =
-                appFiles
-                    .filter { it.name !in allowedAwtFiles }
-                    .flatMap { file ->
-                        file.imports
-                            .filter { import ->
-                                import.name.startsWith("java.awt") ||
-                                    import.name.startsWith("javax.imageio")
-                            }
-                            .map { "${file.name} imports ${it.name}" }
-                    }
+                appFiles.flatMap { file ->
+                    file.imports
+                        .filter { import ->
+                            import.name.startsWith("java.awt") ||
+                                import.name.startsWith("javax.imageio")
+                        }
+                        .map { "${file.name} imports ${it.name}" }
+                }
 
             assertThat(violations)
                 .withFailMessage(
-                    "Application files not in the AWT exception list must not import " +
-                        "java.awt or javax.imageio.\n" +
-                        "Exception files: ${allowedAwtFiles.sorted().joinToString(", ")}\n" +
+                    "Application layer must not import java.awt or javax.imageio. " +
+                        "All AWT-dependent operations should go through ImageProcessingPort.\n" +
                         "Violations:\n${violations.joinToString("\n")}"
                 )
                 .isEmpty()

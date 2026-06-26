@@ -7,8 +7,6 @@ import org.kryspetrie.fileimport.application.ImportScanner
 import org.kryspetrie.fileimport.application.ImportService
 import org.kryspetrie.fileimport.application.LocationSearchService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
-import org.kryspetrie.fileimport.application.export.BackImageService
-import org.kryspetrie.fileimport.application.export.JpegImageWriter
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.application.FileOperationExecutor
 import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
@@ -30,6 +28,7 @@ import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
+import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
@@ -41,6 +40,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvide
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultIdGenerator
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DeviceAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.HashCacheAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
@@ -123,16 +123,15 @@ val appModule = module {
     single<PhotoScanDetectorPort> { get<PhotoScanDetectorService>() }
     single { PhotoScanDetectorService(modelResourcePort = get(), appLogger = getOrNull()) }
     single<FaceDetectionPort> { FaceDetectionService(modelResourcePort = get()) }
-    single { ScanService(photoDetector = get(), fileSystem = get()) }
+    single<ImageProcessingPort> { AwtImageProcessingAdapter(get()) }
+    single { ScanService(photoDetector = get(), fileSystem = get(), imageProcessing = get()) }
     single<PerspectiveCorrectionPort> { PerspectiveCorrectionService() }
     single { PerspectiveCorrectionService() }
     single<FaceRegionTransformerPort> { FaceRegionTransformer() }
     single { FaceRegionTransformer() }
-    single { JpegImageWriter() }
-    single { BackImageService(get()) }
-    single { MetadataWritingService(faceRegionTransformer = get<FaceRegionTransformerPort>()) }
+    single { MetadataWritingService(faceRegionTransformer = get<FaceRegionTransformerPort>(), imageProcessing = get<ImageProcessingPort>()) }
     single<PhotoScanExportPort> { get<PhotoScanExportService>() }
-    single { PhotoScanExportService(get(), get(), get(), get(), get()) }
+    single { PhotoScanExportService(get(), get(), get(), get()) }
 
     // ── Location Search ─────────────────────────────────────────────
 

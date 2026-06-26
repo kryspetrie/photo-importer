@@ -1,11 +1,7 @@
 package org.kryspetrie.fileimport.application
 
-import java.awt.image.BufferedImage
 import java.io.File
-import org.kryspetrie.fileimport.application.export.BackImageService
 import org.kryspetrie.fileimport.application.export.FilenameResolver
-import org.kryspetrie.fileimport.application.export.ImageTransformer
-import org.kryspetrie.fileimport.application.export.JpegImageWriter
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
@@ -19,22 +15,21 @@ import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.model.determineCorrectionStrategy
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
+import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
-import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
-import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
-
 
 /**
  * Thin orchestrator for exporting extracted photos with EXIF metadata preservation and modification.
  *
- * Delegates to specialized services:
+ * Delegates to specialized services and ports:
  * - [PerspectiveCorrectionPort] — perspective warping
- * - [ImageTransformer] — axis-aligned crop and rotation
- * - [JpegImageWriter] — writing JPEG bytes
- * - [BackImageService] — loading, cropping, rotating, and compositing back-of-photo images
+ * - [ImageProcessingPort] — crop, rotate, composite, and JPEG writing
  * - [MetadataWritingService] — layering EXIF, IPTC, and XMP metadata onto JPEG files
  * - [FilenameResolver] — filename conflict resolution
+ *
+ * All image operations use [ProcessedImage] via [ImageProcessingPort], keeping this service free
+ * of `java.awt.image.BufferedImage` imports.
  *
  * @see DetectedPhoto
  * @see PhotoScanConfiguration
@@ -42,8 +37,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 class PhotoScanExportService(
     private val perspectiveService: PerspectiveCorrectionPort,
     private val metadataWritingService: MetadataWritingService,
-    private val jpegImageWriter: JpegImageWriter,
-    private val backImageService: BackImageService,
+    private val imageProcessing: ImageProcessingPort,
     private val fileSystem: FileSystemPort,
 ) : PhotoScanExportPort {
 
@@ -63,7 +57,6 @@ class PhotoScanExportService(
         baseFileName: String,
     ): ExportResult {
         val sourceJavaFile = sourceFile.toFile()
-        val bufferedImage = image.toBufferedImage()
         val errors = mutableListOf<String>()
         val exportedFiles = mutableListOf<ExportedFile>()
 
@@ -80,7 +73,7 @@ class PhotoScanExportService(
         for ((index, photo) in detectedPhotos.withIndex()) {
             try {
                 val result = processPhoto(
-                    sourceImage = bufferedImage,
+                    sourceImage = image,
                     detectedPhoto = photo,
                     sourceJavaFile = sourceJavaFile,
                     marginFraction = 0.02,
@@ -92,19 +85,17 @@ class PhotoScanExportService(
 
                 val resolvedPath =
                     FilenameResolver.resolveFilenameConflict(fileSystem, destDir, fileName)
-                val outputFile = File(resolvedPath)
 
                 metadataWritingService.writeImageWithMetadata(
                     image = result.compositedImage,
-                    outputFile = outputFile,
+                    outputFile = File(resolvedPath),
                     config = photo.configuration,
                     sourceFile = sourceJavaFile,
                     detectedPhoto = result.marginedPhoto,
                     marginFraction = 0.02,
-                    sourceImage = bufferedImage,
+                    sourceImage = image,
                     preRotationWidth = result.preRotationWidth,
                     preRotationHeight = result.preRotationHeight,
-                    jpegQuality = jpegImageWriter.jpegQuality,
                 )
 
                 exportedFiles.add(
@@ -120,7 +111,7 @@ class PhotoScanExportService(
 
                 // Export back image as separate "_back" file if mode is append_back
                 if (result.backMode == "append_back" && photo.configuration.hasBackImage()) {
-                    val backImageResult = backImageService.prepareBackImage(photo.configuration)
+                    val backImageResult = imageProcessing.prepareBackImage(photo.configuration)
                     if (backImageResult != null) {
                         val backFileName =
                             if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}_back.jpg"
@@ -131,8 +122,7 @@ class PhotoScanExportService(
                                 destDir,
                                 backFileName,
                             )
-                        val backOutputFile = File(backResolvedPath)
-                        jpegImageWriter.writeJpegImage(backImageResult, backOutputFile)
+                        imageProcessing.writeJpegImage(backImageResult, FilePath(backResolvedPath))
                         exportedFiles.add(
                             ExportedFile(
                                 sourceFile = sourceFile,
@@ -165,12 +155,11 @@ class PhotoScanExportService(
         baseFileName: String,
         sourceFile: FilePath?,
     ): SingleExportResult {
-        val bufferedImage = sourceImage.toBufferedImage()
         val sourceJavaFile = sourceFile?.toFile()
 
         return try {
             val result = processPhoto(
-                sourceImage = bufferedImage,
+                sourceImage = sourceImage,
                 detectedPhoto = detectedPhoto,
                 sourceJavaFile = sourceJavaFile,
                 marginFraction = 0.02,
@@ -181,24 +170,22 @@ class PhotoScanExportService(
 
             val resolvedPath =
                 FilenameResolver.resolveFilenameConflict(fileSystem, destDir, "$baseFileName.jpg")
-            val outputFile = File(resolvedPath)
 
             metadataWritingService.writeImageWithMetadata(
                 image = result.compositedImage,
-                outputFile = outputFile,
+                outputFile = File(resolvedPath),
                 config = detectedPhoto.configuration,
                 sourceFile = sourceJavaFile,
                 detectedPhoto = result.marginedPhoto,
                 marginFraction = 0.02,
-                sourceImage = bufferedImage,
+                sourceImage = sourceImage,
                 preRotationWidth = result.preRotationWidth,
                 preRotationHeight = result.preRotationHeight,
-                jpegQuality = jpegImageWriter.jpegQuality,
             )
 
             // Export back image as separate "_back" file if mode is append_back
             if (result.backMode == "append_back" && detectedPhoto.configuration.hasBackImage()) {
-                val backImageResult = backImageService.prepareBackImage(detectedPhoto.configuration)
+                val backImageResult = imageProcessing.prepareBackImage(detectedPhoto.configuration)
                 if (backImageResult != null) {
                     val backResolvedPath =
                         FilenameResolver.resolveFilenameConflict(
@@ -206,8 +193,7 @@ class PhotoScanExportService(
                             destDir,
                             "${baseFileName}_back.jpg",
                         )
-                    val backOutputFile = File(backResolvedPath)
-                    jpegImageWriter.writeJpegImage(backImageResult, backOutputFile)
+                    imageProcessing.writeJpegImage(backImageResult, FilePath(backResolvedPath))
                 }
             }
 
@@ -236,7 +222,7 @@ class PhotoScanExportService(
      * writing and file export.
      */
     private fun processPhoto(
-        sourceImage: BufferedImage,
+        sourceImage: ProcessedImage,
         detectedPhoto: DetectedPhoto,
         sourceJavaFile: File?,
         marginFraction: Double,
@@ -250,16 +236,16 @@ class PhotoScanExportService(
         val correctedImage =
             when (strategy) {
                 CorrectionStrategy.PERSPECTIVE ->
-                    perspectiveService.correctPerspective(sourceImage.toProcessedImage(), marginedPhoto).toBufferedImage()
+                    perspectiveService.correctPerspective(sourceImage, marginedPhoto)
                 CorrectionStrategy.CROP_AND_ROTATE ->
-                    ImageTransformer.cropAxisAligned(sourceImage, marginedPhoto)
+                    imageProcessing.cropAxisAligned(sourceImage, marginedPhoto)
                 CorrectionStrategy.CROP ->
-                    ImageTransformer.cropAxisAligned(sourceImage, marginedPhoto)
+                    imageProcessing.cropAxisAligned(sourceImage, marginedPhoto)
             }
 
         val finalImage =
             if (detectedPhoto.rotation != RotationAngle.NONE) {
-                ImageTransformer.rotateImage(correctedImage, detectedPhoto.rotation)
+                imageProcessing.rotateImage(correctedImage, detectedPhoto.rotation)
             } else {
                 correctedImage
             }
@@ -268,7 +254,7 @@ class PhotoScanExportService(
         val backMode = detectedPhoto.configuration.backImageMode
         val compositedImage =
             if (backMode == "combine" && detectedPhoto.configuration.hasBackImage()) {
-                backImageService.compositeBackImage(finalImage, detectedPhoto.configuration)
+                imageProcessing.compositeBackImage(finalImage, detectedPhoto.configuration)
             } else {
                 finalImage
             }
@@ -287,7 +273,7 @@ class PhotoScanExportService(
         val marginedPhoto: DetectedPhoto,
         val preRotationWidth: Int,
         val preRotationHeight: Int,
-        val compositedImage: BufferedImage,
+        val compositedImage: ProcessedImage,
         val backMode: String?,
     )
 }

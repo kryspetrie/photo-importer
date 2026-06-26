@@ -1,7 +1,7 @@
 # Petrie File Importer — Session Progress Notes
 
 **Date**: 2026-06-26
-**Git HEAD**: `a928eb5 test: add FilenameResolver tests with FileSystemPort`
+**Git HEAD**: *(will be updated after commit)*
 **Working directory**: `/Users/krys.petrie/dev/petrie-file-importer`
 
 ---
@@ -20,35 +20,69 @@ Kotlin/Compose Desktop photo scanning application using hexagonal architecture (
 
 ## Completed This Session
 
-### 1. FilenameResolver → FileSystemPort migration (commit `fd7c759`)
-- Replaced `java.io.File` with `FileSystemPort` for `resolveFilenameConflict()` and `generateUniqueFileName()`
-- Both methods now `suspend` (use `fileSystem.exists()`)
-- `resolveFilenameConflict()` takes `FileSystemPort` + `FilePath` instead of `File`
-- Made `PhotoScanExportPort.exportPhotos()` and `exportSinglePhoto()` suspend
-- `PhotoScanExportService` injects `FileSystemPort`; uses it for exists, mkdirs, length, and FilenameResolver
-- Updated AppModule DI; added `runBlocking` wrappers in test files
+### Phase 6: Introduce ImageProcessingPort — Eliminate BufferedImage from Application Layer
 
-### 2. ScanService → FileSystemPort migration (commit `fd7c759`)
-- injects `FileSystemPort`; uses `runBlocking { fileSystem.exists() }` instead of `File.exists()`
-- Removed `java.io.File` import from `detectPhotos()` path
+**Goal**: Remove `java.awt.image.BufferedImage` and `javax.imageio` imports from all application services by introducing an `ImageProcessingPort` in domain and implementing it as `AwtImageProcessingAdapter` in infrastructure.
 
-### 3. BackImageService → FileSystemPort migration (commit `1c92407`)
-- Injects `FileSystemPort` via constructor; uses `runBlocking { fileSystem.exists() }` instead of `File.exists()`
-- Updated AppModule DI and test files
+**Key changes:**
 
-### 4. WatchFolderService → FileSystemPort migration (commit `141f68a`)
-- Injects `FileSystemPort`; uses `fileSystem.exists()` and `fileSystem.listDirectoriesRecursive()` instead of raw NIO File walking
-- Added `walkTopDown()` and `listDirectoriesRecursive()` to `FileSystemPort` interface
-- Updated AppModule DI and WatchFolderServiceTest
+1. **Created `ImageProcessingPort`** (`domain/port/ImageProcessingPort.kt`)
+   - `readImage(FilePath): ProcessedImage?` — reads image from disk
+   - `writeJpegImage(ProcessedImage, FilePath, Float)` — writes JPEG to disk
+   - `cropAxisAligned(ProcessedImage, DetectedPhoto): ProcessedImage` — axis-aligned crop
+   - `rotateImage(ProcessedImage, RotationAngle): ProcessedImage` — image rotation
+   - `compositeBackImage(ProcessedImage, PhotoScanConfiguration): ProcessedImage` — front+back composite
+   - `prepareBackImage(PhotoScanConfiguration): ProcessedImage?` — loads, crops, rotates back image
 
-### 5. ScanService.exportPhoto → FilenameResolver (commit `27d4140`)
-- Replaced duplicated `getUniqueOutputFile()` with `FilenameResolver.resolveFilenameConflict()`
-- Uses `FileSystemPort.mkdirs()` instead of `File.mkdirs()`
-- Removed `getUniqueOutputFile()` private method entirely
+2. **Created `AwtImageProcessingAdapter`** (`infrastructure/adapter/AwtImageProcessingAdapter.kt`)
+   - Implements all `ImageProcessingPort` methods using `BufferedImage` internally
+   - Injects `FileSystemPort` for file existence checks in `prepareBackImage`
+   - Absorbs logic from `ImageTransformer`, `BackImageService`, and `JpegImageWriter`
 
-### 6. FilenameResolver tests (commit `a928eb5`)
-- 10 tests covering `resolveFilenameConflict` and `generateUniqueFileName`
-- Uses `FileSystemAdapter` and `@TempDir`
+3. **Refactored `PhotoScanExportService`**
+   - Replaced `BufferedImage` parameters with `ProcessedImage`
+   - Replaced `ImageTransformer.cropAxisAligned()` / `rotateImage()` calls with `imageProcessing.cropAxisAligned()` / `rotateImage()`
+   - Replaced `BackImageService` calls with `imageProcessing.compositeBackImage()` / `prepareBackImage()`
+   - Removed `toProcessedImage()`/`toBufferedImage()` infrastructure imports
+   - Removed `java.awt.image.BufferedImage` import
+
+4. **Refactored `ScanService`**
+   - Replaced `ImageIO.read()` + `toProcessedImage()` with `imageProcessing.readImage()`
+   - Replaced `ImageIO.write()` with `imageProcessing.writeJpegImage()`
+   - Replaced `BufferedImage` params with `ProcessedImage`
+   - Removed all `java.awt` / `javax.imageio` imports
+   - Injected `ImageProcessingPort` alongside `FileSystemPort` and `PhotoScanDetectorPort`
+
+5. **Refactored `MetadataWritingService`**
+   - Changed `BufferedImage` params to `ProcessedImage`
+   - Replaced `JpegImageWriter` with `ImageProcessingPort.writeJpegImage()`
+   - Removed `java.awt.image.BufferedImage` import
+   - Injected `ImageProcessingPort` instead of using inline `JpegImageWriter`
+
+6. **Deleted dead code**
+   - `application/export/ImageTransformer.kt` — logic moved to `AwtImageProcessingAdapter`
+   - `application/export/BackImageService.kt` — logic moved to `AwtImageProcessingAdapter`
+   - `application/export/JpegImageWriter.kt` — logic moved to `AwtImageProcessingAdapter`
+
+7. **Updated architecture tests**
+   - Removed AWT exception list (no application files import `java.awt`/`javax.imageio` anymore)
+   - Removed infrastructure boundary converter exception list (no application files import from infrastructure anymore)
+   - Application AWT test now has **zero exceptions** — enforces complete AWT freedom
+   - Application infrastructure import test now has **zero exceptions** — enforces complete boundary
+
+8. **Updated DI module (`AppModule.kt`)**
+   - Registered `ImageProcessingPort` → `AwtImageProcessingAdapter`
+   - `ScanService` now injects `ImageProcessingPort`
+   - `MetadataWritingService` now injects `ImageProcessingPort`
+   - `PhotoScanExportService` now injects `ImageProcessingPort` (was `JpegImageWriter` + `BackImageService`)
+   - Removed `JpegImageWriter` and `BackImageService` bean registrations
+
+9. **Fixed `ScanScreen.kt`**
+   - `exportPhoto()` now takes `ProcessedImage` — UI uses `.toProcessedImage()` extension
+
+10. **Fixed test files**
+    - `PhotoScanExportServiceTest.kt` — constructs `AwtImageProcessingAdapter` instead of `JpegImageWriter` + `BackImageService`
+    - `XmpFaceRegionExportTest.kt` — same pattern
 
 ---
 
@@ -61,72 +95,32 @@ Kotlin/Compose Desktop photo scanning application using hexagonal architecture (
 | 3 | PhotoConfiguration ↔ PhotoScanConfiguration unification | ✅ Done |
 | 4 | Extract shared MetadataEditorPane | ✅ Done |
 | 5 | Decompose PhotoScanExportService (export/ subpackage) | ✅ Done |
-| 6 | Introduce DomainImage | Not started (high risk, deferred) |
+| 6 | Introduce ImageProcessingPort — eliminate BufferedImage from application | ✅ **Done** |
 | 7 | Decompose PhotoScanWizardState (God Object) | ✅ Done |
 | 8a | Move BoundingBox, BoundingBoxList typealiases to domain | ✅ Done |
 | 8b | Split ImportProfile.kt | ✅ Done |
-| 9 | Create FileSystemPort — abstract java.io.File operations | ✅ **Complete** |
+| 9 | Create FileSystemPort — abstract java.io.File operations | ✅ Done |
 | 10 | Coordinate unification | ✅ Done |
 
-### Phase 9 — Final Status
+### Phase 6 — Final Status
 
-**✅ Fully migrated to FileSystemPort:**
-- DuplicateScannerService, FileOperationExecutor, ImportExecutor
-- ReorganizeService, ReorganizeJournalRepository
-- FilenameResolver, PhotoScanExportService
-- ScanService (detectPhotos, exportPhoto)
-- BackImageService (prepareBackImage)
-- WatchFolderService (startWatching)
+**✅ All 10 phases complete!**
 
-**⚠️ AWT-exception files (keep java.io.File — inherent AWT/Swing dependency):**
-- ScanService (ImageIO.read/write in detectPhotos/exportPhoto)
-- PhotoScanExportService (BufferedImage conversions via toBufferedImage/toProcessedImage)
-- BackImageService (ImageIO.read)
-- JpegImageWriter (ImageIO.write)
-- MetadataWritingService (AWT pipeline orchestrator)
-- ExifMetadataWriter, IptcMetadataWriter, XmpMetadataWriter (FileOutputStream)
-- ImageTransformer (BufferedImage operations)
+**Application layer is now free of:**
+- `java.awt.*` imports
+- `javax.imageio.*` imports
+- Infrastructure adapter imports (`toProcessedImage`, `toBufferedImage`)
 
-**⚠️ Documented infrastructure boundary exceptions (allowed in architecture test):**
-- `PhotoScanExportService` imports `toBufferedImage`, `toProcessedImage` from infrastructure adapter
-- `ScanService` imports `toProcessedImage` from infrastructure adapter
+**Remaining `java.io.File` in application (acceptable — metadata writers need raw file I/O):**
+- `MetadataWritingService.kt` — delegates JPEG writing to `ImageProcessingPort` but still passes `File` to `ExifMetadataWriter`/`IptcMetadataWriter`/`XmpMetadataWriter`
+- `PhotoScanExportService.kt` — `sourceFile?.toFile()` for metadata extraction
+- These can be further abstracted with metadata ports (Phase 5 territory) but are low priority
 
-### FileSystemPort Interface (current state)
-```kotlin
-interface FileSystemPort {
-    suspend fun lastModified(path: FilePath): Long
-    suspend fun length(path: FilePath): Long
-    suspend fun exists(path: FilePath): Boolean
-    suspend fun delete(path: FilePath): Boolean
-    suspend fun renameTo(source: FilePath, destination: FilePath): Boolean
-    suspend fun mkdirs(path: FilePath): Boolean
-    suspend fun isDirectory(path: FilePath): Boolean
-    suspend fun listFiles(path: FilePath): List<FilePath>
-    suspend fun copy(source: FilePath, destination: FilePath): Boolean
-    fun name(path: FilePath): String = path.name
-    fun nameWithoutExtension(path: FilePath): String = path.nameWithoutExtension
-    fun extension(path: FilePath): String = path.extension
-    fun canWrite(path: FilePath): Boolean
-    fun absolutePath(path: FilePath): String = path.toFile().absolutePath
-    fun walkBottomUp(path: FilePath): Sequence<FilePath>
-    fun walkTopDown(path: FilePath): Sequence<FilePath>
-    fun listDirectoriesRecursive(path: FilePath): List<FilePath>
-    fun readText(path: FilePath): String = path.toFile().readText()
-    fun writeText(path: FilePath, content: String)
-}
-```
-
----
-
-## Remaining Work (Future Sessions)
-
-### Phase 2b/6: Infrastructure import boundary exceptions
-- `ScanService` and `PhotoScanExportService` import `toProcessedImage`/`toBufferedImage` from infrastructure adapter — these are documented exceptions for the `BufferedImage ↔ ProcessedImage` boundary. Resolving them requires Phase 6 (DomainImage wrapper).
-
-### Phase 6: DomainImage (deferred — high risk)
-- Wrap `BufferedImage` in a `DomainImage` value class so domain ports don't reference `java.awt`
-- Would eliminate the `toProcessedImage`/`toBufferedImage` infrastructure adapter imports
-- Currently deferred due to high risk and broad impact
+**`ProcessedImage` abstraction:**
+- Domain interface `ProcessedImage` with `width` and `height` properties
+- `AwtProcessedImage` wraps `BufferedImage` in infrastructure
+- `toProcessedImage()`/`toBufferedImage()` extension functions remain in infrastructure adapter (used by UI and adapter layer)
+- `ImageProcessingPort` is the clean boundary for all pixel operations
 
 ---
 
@@ -136,6 +130,8 @@ interface FileSystemPort {
 - **Application services**: `src/main/kotlin/org/kryspetrie/fileimport/application/`
 - **Infrastructure adapters**: `src/main/kotlin/org/kryspetrie/fileimport/infrastructure/adapter/`
 - **DI module**: `src/main/kotlin/org/kryspetrie/fileimport/di/AppModule.kt`
+- **ImageProcessingPort**: `src/main/kotlin/org/kryspetrie/fileimport/domain/port/ImageProcessingPort.kt`
+- **AwtImageProcessingAdapter**: `src/main/kotlin/org/kryspetrie/fileimport/infrastructure/adapter/AwtImageProcessingAdapter.kt`
 
 ## Testing
 - Run tests: `cd /Users/krys.petrie/dev/petrie-file-importer && ./gradlew test`
@@ -145,5 +141,5 @@ interface FileSystemPort {
 - Read files before editing them
 - Run tests after changes
 - Commit at each checkpoint
-- AWT-exception files should NOT be migrated away from java.io.File — they inherently need it
-- `toProcessedImage`/`toBufferedImage` are documented infrastructure boundary exceptions
+- Architecture test enforces zero AWT imports in application layer
+- Architecture test enforces zero infrastructure imports in application layer

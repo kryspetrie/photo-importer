@@ -26,6 +26,7 @@ import java.io.File
 import javax.imageio.ImageIO
 import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
@@ -179,7 +180,7 @@ fun ScanScreen(
                     exportProgress = 0
                     currentDetectedPhotos.forEachIndexed { index, photo ->
                         scanService.exportPhoto(
-                            BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB),
+                            BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB).toProcessedImage(),
                             destinationPath,
                             currentFile,
                             index + 1,

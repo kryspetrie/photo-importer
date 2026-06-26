@@ -17,11 +17,10 @@ import org.junit.jupiter.api.io.TempDir
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.application.export.BackImageService
-import org.kryspetrie.fileimport.application.export.JpegImageWriter
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
-import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
+import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -41,12 +40,13 @@ class XmpFaceRegionExportTest {
     @BeforeEach
     fun setup() {
         perspectiveService = PerspectiveCorrectionService()
+        val fileSystem = FileSystemAdapter()
+        val imageProcessing = AwtImageProcessingAdapter(fileSystem)
         service = PhotoScanExportService(
             perspectiveService,
-            MetadataWritingService(FaceRegionTransformer()),
-            JpegImageWriter(),
-            BackImageService(org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter()),
-            FileSystemAdapter(),
+            MetadataWritingService(FaceRegionTransformer(), imageProcessing),
+            imageProcessing,
+            fileSystem,
         )
     }
 
