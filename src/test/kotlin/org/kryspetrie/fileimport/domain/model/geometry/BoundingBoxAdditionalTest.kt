@@ -4,7 +4,6 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.kryspetrie.fileimport.domain.model.CornerType
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
@@ -391,22 +390,4 @@ class PhotoCornerTest {
     }
 }
 
-/** Unit tests for CornerType. */
-@DisplayName("CornerType Tests")
-class CornerTypeTest {
 
-    @Test
-    fun `should have all corner types`() {
-        assertThat(CornerType.entries.size).isGreaterThanOrEqualTo(4)
-        assertThat(CornerType.entries).contains(CornerType.TOP_LEFT)
-        assertThat(CornerType.entries).contains(CornerType.TOP_RIGHT)
-        assertThat(CornerType.entries).contains(CornerType.BOTTOM_LEFT)
-        assertThat(CornerType.entries).contains(CornerType.BOTTOM_RIGHT)
-    }
-
-    @Test
-    fun `corner types should be distinguishable`() {
-        val types = CornerType.entries.map { it.name }.toSet()
-        assertThat(types.size).isEqualTo(CornerType.entries.size)
-    }
-}

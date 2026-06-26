@@ -18,10 +18,6 @@ data class PhotoCorner(
     /** Y coordinate (vertical position from top) */
     val y: Float = 0f,
 ) {
-    /** Convert to percentage coordinates */
-    fun toPercent(imageWidth: Int, imageHeight: Int): PercentPoint =
-        PercentPoint.fromPixels(x, y, imageWidth, imageHeight)
-
     /** Calculate distance to another corner */
     fun distanceTo(other: PhotoCorner): Float {
         val dx = other.x - x
