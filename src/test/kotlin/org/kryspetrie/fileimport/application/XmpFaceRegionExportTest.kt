@@ -45,7 +45,7 @@ class XmpFaceRegionExportTest {
             perspectiveService,
             MetadataWritingService(FaceRegionTransformer()),
             JpegImageWriter(),
-            BackImageService(),
+            BackImageService(org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter()),
             FileSystemAdapter(),
         )
     }

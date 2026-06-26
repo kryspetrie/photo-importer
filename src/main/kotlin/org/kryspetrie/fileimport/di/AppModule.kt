@@ -129,7 +129,7 @@ val appModule = module {
     single<FaceRegionTransformerPort> { FaceRegionTransformer() }
     single { FaceRegionTransformer() }
     single { JpegImageWriter() }
-    single { BackImageService() }
+    single { BackImageService(get()) }
     single { MetadataWritingService(faceRegionTransformer = get<FaceRegionTransformerPort>()) }
     single<PhotoScanExportPort> { get<PhotoScanExportService>() }
     single { PhotoScanExportService(get(), get(), get(), get(), get()) }

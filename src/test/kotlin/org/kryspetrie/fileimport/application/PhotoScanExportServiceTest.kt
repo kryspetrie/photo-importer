@@ -43,7 +43,7 @@ class PhotoScanExportServiceTest {
             perspectiveService,
             MetadataWritingService(FaceRegionTransformer()),
             jpegImageWriter,
-            BackImageService(),
+            BackImageService(org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter()),
             org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter(),
         )
     }

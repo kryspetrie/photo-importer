@@ -4,8 +4,11 @@ import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import kotlinx.coroutines.runBlocking
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RotationAngle
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 
 /**
  * Handles loading, cropping, rotating, and compositing back-of-photo images.
@@ -17,7 +20,7 @@ import org.kryspetrie.fileimport.domain.model.RotationAngle
  *
  * @see ImageTransformer for the rotation operations used by this service.
  */
-class BackImageService {
+class BackImageService(private val fileSystem: FileSystemPort) {
 
     /**
      * Prepares the back-of-photo image: loads it from disk, applies an optional normalized crop, and
@@ -27,8 +30,8 @@ class BackImageService {
      */
     fun prepareBackImage(config: PhotoScanConfiguration): BufferedImage? {
         val sourcePath = config.backImageSourcePath ?: return null
+        if (!runBlocking { fileSystem.exists(FilePath(sourcePath)) }) return null
         val sourceFile = File(sourcePath)
-        if (!sourceFile.exists()) return null
 
         val backImage =
             try {
