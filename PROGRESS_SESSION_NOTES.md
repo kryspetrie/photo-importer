@@ -1,18 +1,14 @@
 # Petrie File Importer — Session Progress Notes
 
-**Session ID**: `20260625_3`
-**Date**: 2026-06-25
-**Git HEAD**: `15c47e6 test: add FileSystemPort contract tests for all methods`
+**Date**: 2026-06-26
+**Git HEAD**: `a928eb5 test: add FilenameResolver tests with FileSystemPort`
 **Working directory**: `/Users/krys.petrie/dev/petrie-file-importer`
 
 ---
 
 ## How to Resume
 
-Use the Goose CLI command:
-```
-goose session resume 20260625_3
-```
+Use the Goose CLI or continue the session.
 
 ---
 
@@ -24,35 +20,35 @@ Kotlin/Compose Desktop photo scanning application using hexagonal architecture (
 
 ## Completed This Session
 
-### 1. Phase 9 continued: Migrate FileOperationExecutor + ReorganizeService to FileSystemPort (commit `80e465d`)
+### 1. FilenameResolver → FileSystemPort migration (commit `fd7c759`)
+- Replaced `java.io.File` with `FileSystemPort` for `resolveFilenameConflict()` and `generateUniqueFileName()`
+- Both methods now `suspend` (use `fileSystem.exists()`)
+- `resolveFilenameConflict()` takes `FileSystemPort` + `FilePath` instead of `File`
+- Made `PhotoScanExportPort.exportPhotos()` and `exportSinglePhoto()` suspend
+- `PhotoScanExportService` injects `FileSystemPort`; uses it for exists, mkdirs, length, and FilenameResolver
+- Updated AppModule DI; added `runBlocking` wrappers in test files
 
-- Added `absolutePath()` and `walkBottomUp()` to `FileSystemPort` interface, `FileSystemAdapter`, and `TestFileSystemAdapter`
-- `FileOperationExecutor`: all I/O now via FileSystemPort (exists, renameTo, copy, delete, mkdirs, length, name, absolutePath, walkBottomUp); `cleanEmptyDirs` changed to `suspend fun` taking `FilePath`
-- `ReorganizeService`: all I/O now via FileSystemPort; uses `fileSystem.exists()`, `fileSystem.isDirectory()`, `fileSystem.absolutePath()`, `fileSystem.nameWithoutExtension()`, `fileSystem.extension()`, `fileSystem.mkdirs()` etc.
-- Updated AppModule DI to inject FileSystemPort into both services
-- Updated PhotoImportCli for new constructor signatures
+### 2. ScanService → FileSystemPort migration (commit `fd7c759`)
+- injects `FileSystemPort`; uses `runBlocking { fileSystem.exists() }` instead of `File.exists()`
+- Removed `java.io.File` import from `detectPhotos()` path
 
-### 2. Phase 9 continued: Migrate ImportExecutor to FileSystemPort (commit `9a7b99b`)
+### 3. BackImageService → FileSystemPort migration (commit `1c92407`)
+- Injects `FileSystemPort` via constructor; uses `runBlocking { fileSystem.exists() }` instead of `File.exists()`
+- Updated AppModule DI and test files
 
-- `ImportExecutor`: all I/O now via FileSystemPort (exists, mkdirs, delete, copy, absolutePath, name, nameWithoutExtension)
-- Sidecar file copy/delete uses `fileSystem.copy(sidecar, destPath)` and `fileSystem.delete(sidecar)` instead of `java.io.File.copyTo()` and `.toFile().delete()`
-- Updated AppModule DI to inject FileSystemPort into ImportExecutor
-- Updated all 4 test files to include TestFileSystemAdapter
+### 4. WatchFolderService → FileSystemPort migration (commit `141f68a`)
+- Injects `FileSystemPort`; uses `fileSystem.exists()` and `fileSystem.listDirectoriesRecursive()` instead of raw NIO File walking
+- Added `walkTopDown()` and `listDirectoriesRecursive()` to `FileSystemPort` interface
+- Updated AppModule DI and WatchFolderServiceTest
 
-### 3. Phase 9 continued: Migrate ReorganizeJournalRepository to FileSystemPort (commit `9b4bb7a`)
+### 5. ScanService.exportPhoto → FilenameResolver (commit `27d4140`)
+- Replaced duplicated `getUniqueOutputFile()` with `FilenameResolver.resolveFilenameConflict()`
+- Uses `FileSystemPort.mkdirs()` instead of `File.mkdirs()`
+- Removed `getUniqueOutputFile()` private method entirely
 
-- Added `readText()` and `writeText()` to FileSystemPort interface, FileSystemAdapter, and TestFileSystemAdapter
-- `ReorganizeJournalRepository`: all I/O now via FileSystemPort (exists, isDirectory, listFiles, lastModified, mkdirs, readText, writeText, absolutePath, extension)
-- Uses `runBlocking` for suspend FileSystemPort calls in non-suspend contexts (listJournals, getJournal, saveJournal, markUndone are called from UI/CLI synchronously)
-- Updated AppModule DI and PhotoImportCli to inject FileSystemAdapter into ReorganizeJournalRepository
-
-### 4. FileSystemPort contract tests (commit `15c47e6`)
-
-- Added 20 tests covering all FileSystemPort methods:
-  - exists, isDirectory, delete, renameTo, mkdirs, copy, lastModified, length, listFiles
-  - name, nameWithoutExtension, extension, absolutePath, canWrite
-  - walkBottomUp, readText, writeText
-  - Edge cases: copy creates parent dirs, writeText creates parent dirs, walkBottomUp non-directory
+### 6. FilenameResolver tests (commit `a928eb5`)
+- 10 tests covering `resolveFilenameConflict` and `generateUniqueFileName`
+- Uses `FileSystemAdapter` and `@TempDir`
 
 ---
 
@@ -69,28 +65,31 @@ Kotlin/Compose Desktop photo scanning application using hexagonal architecture (
 | 7 | Decompose PhotoScanWizardState (God Object) | ✅ Done |
 | 8a | Move BoundingBox, BoundingBoxList typealiases to domain | ✅ Done |
 | 8b | Split ImportProfile.kt | ✅ Done |
-| 9 | Create FileSystemPort — abstract java.io.File operations | ⚠️ Major services done; AWT-exception files remain |
+| 9 | Create FileSystemPort — abstract java.io.File operations | ✅ **Complete** |
 | 10 | Coordinate unification | ✅ Done |
 
-### Phase 9 Status — Migrated Services
+### Phase 9 — Final Status
 
-**✅ Fully migrated (no `java.io.File` import):**
-- DuplicateScannerService
-- FileOperationExecutor
-- ImportExecutor
-- ReorganizeService
-- ReorganizeJournalRepository
+**✅ Fully migrated to FileSystemPort:**
+- DuplicateScannerService, FileOperationExecutor, ImportExecutor
+- ReorganizeService, ReorganizeJournalRepository
+- FilenameResolver, PhotoScanExportService
+- ScanService (detectPhotos, exportPhoto)
+- BackImageService (prepareBackImage)
+- WatchFolderService (startWatching)
 
-**⏸️ AWT-exception files (keep `java.io.File` — inherent AWT/Swing dependency):**
-- ScanService (ImageIO.read/write)
-- PhotoScanExportService (ImageIO + File.length/exists)
+**⚠️ AWT-exception files (keep java.io.File — inherent AWT/Swing dependency):**
+- ScanService (ImageIO.read/write in detectPhotos/exportPhoto)
+- PhotoScanExportService (BufferedImage conversions via toBufferedImage/toProcessedImage)
 - BackImageService (ImageIO.read)
 - JpegImageWriter (ImageIO.write)
 - MetadataWritingService (AWT pipeline orchestrator)
 - ExifMetadataWriter, IptcMetadataWriter, XmpMetadataWriter (FileOutputStream)
-- FilenameResolver (pure path + exists, easy target but called only by AWT services)
+- ImageTransformer (BufferedImage operations)
 
-These are documented in `HexagonalArchitectureKonsistTest` as allowed AWT exceptions and inherently require `java.io.File` for AWT I/O.
+**⚠️ Documented infrastructure boundary exceptions (allowed in architecture test):**
+- `PhotoScanExportService` imports `toBufferedImage`, `toProcessedImage` from infrastructure adapter
+- `ScanService` imports `toProcessedImage` from infrastructure adapter
 
 ### FileSystemPort Interface (current state)
 ```kotlin
@@ -108,41 +107,43 @@ interface FileSystemPort {
     fun nameWithoutExtension(path: FilePath): String = path.nameWithoutExtension
     fun extension(path: FilePath): String = path.extension
     fun canWrite(path: FilePath): Boolean
-    fun absolutePath(path: FilePath): String
+    fun absolutePath(path: FilePath): String = path.toFile().absolutePath
     fun walkBottomUp(path: FilePath): Sequence<FilePath>
-    fun readText(path: FilePath): String
+    fun walkTopDown(path: FilePath): Sequence<FilePath>
+    fun listDirectoriesRecursive(path: FilePath): List<FilePath>
+    fun readText(path: FilePath): String = path.toFile().readText()
     fun writeText(path: FilePath, content: String)
 }
 ```
 
 ---
 
-## Architecture Notes
+## Remaining Work (Future Sessions)
 
-### Key Design Decisions
-- `FileSystemPort` suspend methods for I/O operations; regular `fun` for path computations
-- `ReorganizeJournalRepository` uses `runBlocking` internally for suspend FileSystemPort calls (called from non-suspend UI contexts)
-- `TestFileSystemAdapter` delegates to `java.io.File` for test environments (thin wrapper)
-- AWT-bound services remain documented exceptions in architecture test
+### Phase 2b/6: Infrastructure import boundary exceptions
+- `ScanService` and `PhotoScanExportService` import `toProcessedImage`/`toBufferedImage` from infrastructure adapter — these are documented exceptions for the `BufferedImage ↔ ProcessedImage` boundary. Resolving them requires Phase 6 (DomainImage wrapper).
 
-### Key File Locations
+### Phase 6: DomainImage (deferred — high risk)
+- Wrap `BufferedImage` in a `DomainImage` value class so domain ports don't reference `java.awt`
+- Would eliminate the `toProcessedImage`/`toBufferedImage` infrastructure adapter imports
+- Currently deferred due to high risk and broad impact
+
+---
+
+## Key File Locations
 - **Domain models**: `src/main/kotlin/org/kryspetrie/fileimport/domain/model/`
 - **Domain ports**: `src/main/kotlin/org/kryspetrie/fileimport/domain/port/`
 - **Application services**: `src/main/kotlin/org/kryspetrie/fileimport/application/`
 - **Infrastructure adapters**: `src/main/kotlin/org/kryspetrie/fileimport/infrastructure/adapter/`
 - **DI module**: `src/main/kotlin/org/kryspetrie/fileimport/di/AppModule.kt`
-- **FileSystemPort contract tests**: `src/test/kotlin/org/kryspetrie/fileimport/domain/port/FileSystemPortContractTest.kt`
 
-### Testing
+## Testing
 - Run tests: `cd /Users/krys.petrie/dev/petrie-file-importer && ./gradlew test`
 - Build check: `cd /Users/krys.petrie/dev/petrie-file-importer && ./gradlew compileKotlin compileTestKotlin`
-- Test providers: `src/test/kotlin/org/kryspetrie/fileimport/application/TestProviders.kt` (includes `TestFileSystemAdapter`)
-
----
 
 ## Guardrails
 - Read files before editing them
 - Run tests after changes
 - Commit at each checkpoint
-- FileSystemPort methods should be `suspend` for I/O operations, regular `fun` for path operations
-- AWT-exception files should NOT be migrated away from `java.io.File` — they inherently need it
+- AWT-exception files should NOT be migrated away from java.io.File — they inherently need it
+- `toProcessedImage`/`toBufferedImage` are documented infrastructure boundary exceptions
