@@ -4,6 +4,8 @@ import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import kotlinx.coroutines.runBlocking
+import org.kryspetrie.fileimport.application.export.FilenameResolver
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
@@ -11,7 +13,6 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
-import kotlinx.coroutines.runBlocking
 
 /**
  * Orchestrates photo scan operations.
@@ -141,43 +142,21 @@ class ScanService(
         photoIndex: Int,
         configuration: PhotoScanConfiguration,
     ): String {
-        val outputFile =
-            getUniqueOutputFile(
-                destinationPath,
-                originalFile.nameWithoutExtension,
-                originalFile.extension,
-                photoIndex,
-            )
+        val destDir = FilePath(destinationPath)
+        runBlocking { fileSystem.mkdirs(destDir) }
 
-        ImageIO.write(photoImage, originalFile.extension, outputFile)
+        val baseName = originalFile.nameWithoutExtension
+        val extension = originalFile.extension
+        val fileName = if (photoIndex <= 1) "$baseName.$extension" else "${baseName}_$photoIndex.$extension"
 
-        // NOTE: EXIF metadata writing would go here with Apache Commons Imaging
-        return outputFile.absolutePath
-    }
-
-    private fun getUniqueOutputFile(
-        destinationPath: String,
-        baseName: String,
-        extension: String,
-        photoIndex: Int,
-    ): File {
-        val destDir = File(destinationPath)
-        destDir.mkdirs()
-
-        var counter = if (photoIndex > 0) photoIndex else 1
-        while (true) {
-            val filename =
-                if (counter > 1) {
-                    "${baseName}_$counter.$extension"
-                } else {
-                    "$baseName.$extension"
-                }
-            val outputFile = File(destDir, filename)
-            if (!outputFile.exists()) {
-                return outputFile
-            }
-            counter++
+        val resolvedPath = runBlocking {
+            FilenameResolver.resolveFilenameConflict(fileSystem, destDir, fileName)
         }
+        val outputFile = File(resolvedPath)
+
+        ImageIO.write(photoImage, extension, outputFile)
+
+        return resolvedPath
     }
 
     data class Corner(val x: Float, val y: Float)
