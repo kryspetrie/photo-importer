@@ -25,6 +25,7 @@ import org.kryspetrie.fileimport.application.export.BackImageService
 import org.kryspetrie.fileimport.application.export.JpegImageWriter
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
+import kotlinx.coroutines.runBlocking
 
 @DisplayName("PhotoScanExportService")
 class PhotoScanExportServiceTest {
@@ -43,8 +44,29 @@ class PhotoScanExportServiceTest {
             MetadataWritingService(FaceRegionTransformer()),
             jpegImageWriter,
             BackImageService(),
+            org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter(),
         )
     }
+
+    /** Wrapper to call suspend [PhotoScanExportService.exportPhotos] from non-suspend tests. */
+    private fun exportPhotos(
+        sourceFile: FilePath,
+        image: org.kryspetrie.fileimport.domain.model.ProcessedImage,
+        detectedPhotos: List<org.kryspetrie.fileimport.domain.model.DetectedPhoto>,
+        destinationPath: String,
+        baseFileName: String,
+    ): org.kryspetrie.fileimport.domain.model.PhotoScanExportResult =
+        runBlocking { service.exportPhotos(sourceFile, image, detectedPhotos, destinationPath, baseFileName) }
+
+    /** Wrapper to call suspend [PhotoScanExportService.exportSinglePhoto] from non-suspend tests. */
+    private fun exportSinglePhoto(
+        sourceImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
+        detectedPhoto: org.kryspetrie.fileimport.domain.model.DetectedPhoto,
+        destinationPath: String,
+        baseFileName: String,
+        sourceFile: FilePath? = null,
+    ): org.kryspetrie.fileimport.domain.model.PhotoScanSingleExportResult =
+        runBlocking { service.exportSinglePhoto(sourceImage, detectedPhoto, destinationPath, baseFileName, sourceFile) }
 
     private fun createTestImage(width: Int, height: Int, color: Int): File {
         val img = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
@@ -110,7 +132,7 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportPhotos(
+                exportPhotos(
                     FilePath(sourceFile.absolutePath),
                     source.toProcessedImage(),
                     photos,
@@ -133,7 +155,7 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportPhotos(
+                exportPhotos(
                     FilePath(sourceFile.absolutePath),
                     source.toProcessedImage(),
                     emptyList(),
@@ -158,7 +180,7 @@ class PhotoScanExportServiceTest {
             val destDir = File(tempDir, "error")
 
             val result =
-                service.exportPhotos(
+                exportPhotos(
                     FilePath(sourceFile.absolutePath),
                     source.toProcessedImage(),
                     photos,
@@ -272,7 +294,7 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportPhotos(
+                exportPhotos(
                     FilePath(sourceFile.absolutePath),
                     source.toProcessedImage(),
                     photos,
@@ -311,7 +333,7 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportSinglePhoto(
+                exportSinglePhoto(
                     img.toProcessedImage(),
                     photo,
                     destDir.absolutePath,
@@ -568,7 +590,7 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportSinglePhoto(
+                exportSinglePhoto(
                     img.toProcessedImage(),
                     photo,
                     destDir.absolutePath,
@@ -612,7 +634,7 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportSinglePhoto(
+                exportSinglePhoto(
                     img.toProcessedImage(),
                     photo,
                     destDir.absolutePath,
@@ -949,7 +971,7 @@ class PhotoScanExportServiceTest {
             destDir.mkdirs()
 
             val result =
-                service.exportSinglePhoto(
+                exportSinglePhoto(
                     img.toProcessedImage(),
                     photo,
                     destDir.absolutePath,
@@ -1192,7 +1214,7 @@ class PhotoScanExportServiceTest {
                         PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
                 )
             val result =
-                service.exportSinglePhoto(
+                exportSinglePhoto(
                     source.toProcessedImage(),
                     photo,
                     destDir.absolutePath,
@@ -1219,7 +1241,7 @@ class PhotoScanExportServiceTest {
                         ),
                 )
             val result =
-                service.exportSinglePhoto(
+                exportSinglePhoto(
                     source.toProcessedImage(),
                     photo,
                     destDir.absolutePath,

@@ -21,6 +21,8 @@ import org.kryspetrie.fileimport.application.export.BackImageService
 import org.kryspetrie.fileimport.application.export.JpegImageWriter
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
+import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
+import kotlinx.coroutines.runBlocking
 
 /**
  * Integration tests for XMP face region (MWG-RS) writing in PhotoScanExportService.
@@ -44,8 +46,19 @@ class XmpFaceRegionExportTest {
             MetadataWritingService(FaceRegionTransformer()),
             JpegImageWriter(),
             BackImageService(),
+            FileSystemAdapter(),
         )
     }
+
+    /** Wrapper to call suspend [PhotoScanExportService.exportSinglePhoto] from non-suspend tests. */
+    private fun exportSinglePhoto(
+        sourceImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
+        detectedPhoto: org.kryspetrie.fileimport.domain.model.DetectedPhoto,
+        destinationPath: String,
+        baseFileName: String,
+        sourceFile: FilePath? = null,
+    ): org.kryspetrie.fileimport.domain.model.PhotoScanSingleExportResult =
+        runBlocking { service.exportSinglePhoto(sourceImage, detectedPhoto, destinationPath, baseFileName, sourceFile) }
 
     private fun createDetectedPhoto(
         tlX: Float = 0f,
@@ -83,7 +96,7 @@ class XmpFaceRegionExportTest {
         destDir.mkdirs()
 
         val result =
-            service.exportSinglePhoto(
+            exportSinglePhoto(
                 img.toProcessedImage(),
                 photo,
                 destDir.absolutePath,
@@ -113,7 +126,7 @@ class XmpFaceRegionExportTest {
         destDir.mkdirs()
 
         val result =
-            service.exportSinglePhoto(
+            exportSinglePhoto(
                 img.toProcessedImage(),
                 photo,
                 destDir.absolutePath,
@@ -395,7 +408,7 @@ class XmpFaceRegionExportTest {
             destDir.mkdirs()
 
             val result =
-                service.exportSinglePhoto(
+                exportSinglePhoto(
                     img.toProcessedImage(),
                     photo,
                     destDir.absolutePath,

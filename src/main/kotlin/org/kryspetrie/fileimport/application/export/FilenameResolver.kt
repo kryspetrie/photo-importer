@@ -1,6 +1,7 @@
 package org.kryspetrie.fileimport.application.export
 
-import java.io.File
+import org.kryspetrie.fileimport.domain.model.FilePath
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 
 /**
  * Resolves filename conflicts for photo exports by incrementing an index.
@@ -17,47 +18,53 @@ object FilenameResolver {
     /**
      * Resolves filename conflicts by incrementing an index.
      *
-     * @param directory Destination directory
+     * @param fileSystem File system port for existence checks
+     * @param directory Destination directory path
      * @param fileName Proposed filename
      * @return Resolved absolute path that doesn't conflict
      */
-    fun resolveFilenameConflict(directory: File, fileName: String): String {
-        var candidate = File(directory, fileName)
+    suspend fun resolveFilenameConflict(
+        fileSystem: FileSystemPort,
+        directory: FilePath,
+        fileName: String,
+    ): String {
+        var candidate = directory.resolve(fileName)
         var counter = 1
 
         val baseName = fileName.substringBeforeLast(".")
         val extension = fileName.substringAfterLast(".", "jpg")
 
-        while (candidate.exists()) {
-            candidate = File(directory, "${baseName}_$counter.$extension")
+        while (fileSystem.exists(candidate)) {
+            candidate = directory.resolve("${baseName}_$counter.$extension")
             counter++
         }
 
-        return candidate.absolutePath
+        return fileSystem.absolutePath(candidate)
     }
 
     /**
      * Generates a unique filename for an export, avoiding conflicts with existing files and files
      * being exported in the current batch.
      *
-     * @param destinationPath Destination folder
+     * @param fileSystem File system port for existence checks
+     * @param destinationPath Destination folder path
      * @param baseName Base filename without extension
      * @param extension File extension
      * @param existingExports Set of filenames already used in this export batch
      * @return Unique filename (without path)
      */
-    fun generateUniqueFileName(
-        destinationPath: String,
+    suspend fun generateUniqueFileName(
+        fileSystem: FileSystemPort,
+        destinationPath: FilePath,
         baseName: String,
         extension: String,
         existingExports: Set<String>,
     ): String {
         var counter = 1
         var candidate = "$baseName.$extension"
-        val destDir = File(destinationPath)
 
         while (true) {
-            val exists = File(destDir, candidate).exists() || candidate in existingExports
+            val exists = fileSystem.exists(destinationPath.resolve(candidate)) || candidate in existingExports
             if (!exists) break
             candidate = "${baseName}_$counter.$extension"
             counter++

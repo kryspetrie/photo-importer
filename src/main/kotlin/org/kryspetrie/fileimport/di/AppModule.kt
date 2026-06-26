@@ -123,7 +123,7 @@ val appModule = module {
     single<PhotoScanDetectorPort> { get<PhotoScanDetectorService>() }
     single { PhotoScanDetectorService(modelResourcePort = get(), appLogger = getOrNull()) }
     single<FaceDetectionPort> { FaceDetectionService(modelResourcePort = get()) }
-    single { ScanService(photoDetector = get()) }
+    single { ScanService(photoDetector = get(), fileSystem = get()) }
     single<PerspectiveCorrectionPort> { PerspectiveCorrectionService() }
     single { PerspectiveCorrectionService() }
     single<FaceRegionTransformerPort> { FaceRegionTransformer() }
@@ -132,7 +132,7 @@ val appModule = module {
     single { BackImageService() }
     single { MetadataWritingService(faceRegionTransformer = get<FaceRegionTransformerPort>()) }
     single<PhotoScanExportPort> { get<PhotoScanExportService>() }
-    single { PhotoScanExportService(get(), get(), get(), get()) }
+    single { PhotoScanExportService(get(), get(), get(), get(), get()) }
 
     // ── Location Search ─────────────────────────────────────────────
 

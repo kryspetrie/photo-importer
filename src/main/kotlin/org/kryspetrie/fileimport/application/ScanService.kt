@@ -5,10 +5,13 @@ import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
+import kotlinx.coroutines.runBlocking
 
 /**
  * Orchestrates photo scan operations.
@@ -20,8 +23,12 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
  * corners) are applied to filter false positives.
  *
  * @param photoDetector Port for detecting photo regions in scanned images
+ * @param fileSystem Port for file system operations
  */
-class ScanService(private val photoDetector: PhotoScanDetectorPort) {
+class ScanService(
+    private val photoDetector: PhotoScanDetectorPort,
+    private val fileSystem: FileSystemPort,
+) {
 
     /**
      * Detects photos within a scanned image.
@@ -32,12 +39,12 @@ class ScanService(private val photoDetector: PhotoScanDetectorPort) {
      * @return List of detected photos with corner coordinates, ordered TL→TR→BR→BL.
      */
     fun detectPhotos(filePath: String, expectedCount: Int? = null): List<DetectedPhoto> {
-        val imageFile = File(filePath)
-        if (!imageFile.exists()) {
+        val path = FilePath(filePath)
+        if (!runBlocking { fileSystem.exists(path) }) {
             return emptyList()
         }
         return try {
-            val bufferedImage = ImageIO.read(imageFile) ?: return emptyList()
+            val bufferedImage = ImageIO.read(path.toFile()) ?: return emptyList()
             photoDetector.detectPhotos(bufferedImage.toProcessedImage())
         } catch (_: Exception) {
             emptyList()

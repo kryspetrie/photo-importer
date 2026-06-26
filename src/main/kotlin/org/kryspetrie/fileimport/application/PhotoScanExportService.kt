@@ -18,6 +18,7 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanSingleExportResult
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.model.determineCorrectionStrategy
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
@@ -43,6 +44,7 @@ class PhotoScanExportService(
     private val metadataWritingService: MetadataWritingService,
     private val jpegImageWriter: JpegImageWriter,
     private val backImageService: BackImageService,
+    private val fileSystem: FileSystemPort,
 ) : PhotoScanExportPort {
 
     // Type aliases for backward compatibility — actual types now live in domain/model
@@ -53,7 +55,7 @@ class PhotoScanExportService(
     typealias ExportedFile = PhotoScanExportedFile
 
     /** Exports all detected photos from a scanned image. */
-    override fun exportPhotos(
+    override suspend fun exportPhotos(
         sourceFile: FilePath,
         image: ProcessedImage,
         detectedPhotos: List<DetectedPhoto>,
@@ -66,10 +68,14 @@ class PhotoScanExportService(
         val exportedFiles = mutableListOf<ExportedFile>()
 
         // Validate source file exists before proceeding
-        if (!sourceJavaFile.exists()) {
-            errors.add("Source file does not exist: ${sourceJavaFile.absolutePath}")
+        if (!fileSystem.exists(sourceFile)) {
+            errors.add("Source file does not exist: ${fileSystem.absolutePath(sourceFile)}")
             return ExportResult(success = false, errors = errors)
         }
+
+        val destDir = FilePath(destinationPath)
+        // Ensure destination directory exists
+        fileSystem.mkdirs(destDir)
 
         for ((index, photo) in detectedPhotos.withIndex()) {
             try {
@@ -85,7 +91,7 @@ class PhotoScanExportService(
                     else "${baseFileName}.jpg"
 
                 val resolvedPath =
-                    FilenameResolver.resolveFilenameConflict(File(destinationPath), fileName)
+                    FilenameResolver.resolveFilenameConflict(fileSystem, destDir, fileName)
                 val outputFile = File(resolvedPath)
 
                 metadataWritingService.writeImageWithMetadata(
@@ -108,7 +114,7 @@ class PhotoScanExportService(
                         photoId = photo.id,
                         width = result.compositedImage.width,
                         height = result.compositedImage.height,
-                        fileSize = outputFile.length(),
+                        fileSize = fileSystem.length(FilePath(resolvedPath)),
                     )
                 )
 
@@ -121,7 +127,8 @@ class PhotoScanExportService(
                             else "${baseFileName}_back.jpg"
                         val backResolvedPath =
                             FilenameResolver.resolveFilenameConflict(
-                                File(destinationPath),
+                                fileSystem,
+                                destDir,
                                 backFileName,
                             )
                         val backOutputFile = File(backResolvedPath)
@@ -133,7 +140,7 @@ class PhotoScanExportService(
                                 photoId = photo.id,
                                 width = backImageResult.width,
                                 height = backImageResult.height,
-                                fileSize = backOutputFile.length(),
+                                fileSize = fileSystem.length(FilePath(backResolvedPath)),
                             )
                         )
                     }
@@ -151,7 +158,7 @@ class PhotoScanExportService(
     }
 
     /** Exports a single photo with the given configuration. */
-    override fun exportSinglePhoto(
+    override suspend fun exportSinglePhoto(
         sourceImage: ProcessedImage,
         detectedPhoto: DetectedPhoto,
         destinationPath: String,
@@ -169,8 +176,11 @@ class PhotoScanExportService(
                 marginFraction = 0.02,
             )
 
+            val destDir = FilePath(destinationPath)
+            fileSystem.mkdirs(destDir)
+
             val resolvedPath =
-                FilenameResolver.resolveFilenameConflict(File(destinationPath), "$baseFileName.jpg")
+                FilenameResolver.resolveFilenameConflict(fileSystem, destDir, "$baseFileName.jpg")
             val outputFile = File(resolvedPath)
 
             metadataWritingService.writeImageWithMetadata(
@@ -192,7 +202,8 @@ class PhotoScanExportService(
                 if (backImageResult != null) {
                     val backResolvedPath =
                         FilenameResolver.resolveFilenameConflict(
-                            File(destinationPath),
+                            fileSystem,
+                            destDir,
                             "${baseFileName}_back.jpg",
                         )
                     val backOutputFile = File(backResolvedPath)

@@ -62,7 +62,7 @@ interface PhotoScanExportPort {
      * @param sourceFile The original source file path for EXIF baseline reading. May be null.
      * @return [PhotoScanSingleExportResult] with success status, path, and dimensions
      */
-    fun exportSinglePhoto(
+    suspend fun exportSinglePhoto(
         sourceImage: ProcessedImage,
         detectedPhoto: DetectedPhoto,
         destinationPath: String,
@@ -80,7 +80,7 @@ interface PhotoScanExportPort {
      * @param baseFileName Base filename for exported images (will have _1, _2 suffixes)
      * @return [PhotoScanExportResult] with success status, files, and errors
      */
-    fun exportPhotos(
+    suspend fun exportPhotos(
         sourceFile: FilePath,
         image: ProcessedImage,
         detectedPhotos: List<DetectedPhoto>,
