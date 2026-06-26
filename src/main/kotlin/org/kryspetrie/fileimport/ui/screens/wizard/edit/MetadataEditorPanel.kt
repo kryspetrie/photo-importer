@@ -20,6 +20,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,7 +44,8 @@ import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
  * Metadata editor panel — shown in Metadata mode. Contains all the metadata editing functionality.
  *
  * In multi-edit mode, uses [MetadataEditState] to buffer values until the user clicks "Apply".
- * In single-edit mode, changes are applied immediately via direct config updates.
+ * In single-edit mode, [MetadataEditState] is synced from the selected photo's config and changes
+ * are applied immediately via direct config updates.
  */
 @Composable
 internal fun MetadataEditorPanel(
@@ -73,16 +75,45 @@ internal fun MetadataEditorPanel(
 ) {
     val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
 
-    // Single MetadataEditState for multi-edit buffering (replaces 18 separate var buffered*)
+    // Single MetadataEditState for both multi-edit buffering and single-edit display
     val editState = remember { MetadataEditState() }
+
+    // ── Single-edit mode: resolve selected photo ──
+    val selectedIndex = if (!isMultiSelect && selectedIndices.isNotEmpty()) {
+        selectedIndices.first()
+    } else -1
+
+    val singleEditBoxId: String? =
+        if (!isMultiSelect && selectedIndex >= 0 && selectedIndex < boundingBoxList.size()) {
+            boundingBoxList.boxes[selectedIndex].id
+        } else null
+
+    val singleEditConfig: PhotoScanConfiguration? =
+        if (singleEditBoxId != null) {
+            photoConfigurations[singleEditBoxId] ?: PhotoScanConfiguration()
+        } else null
+
+    // ── Sync editState from config in single-edit mode when selection changes ──
+    LaunchedEffect(singleEditBoxId) {
+        if (!isMultiSelect && singleEditConfig != null) {
+            editState.loadFrom(singleEditConfig)
+        }
+    }
+
+    // ── Clear editState when switching to multi-edit mode ──
+    LaunchedEffect(isMultiSelect) {
+        if (isMultiSelect) {
+            editState.clear()
+        }
+    }
 
     ChunkyScrollbar(modifier = modifier) {
         Column(
             modifier = Modifier.padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // ── Header ──
             if (isMultiSelect) {
-                // ── Multi-edit mode ──
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -111,9 +142,17 @@ internal fun MetadataEditorPanel(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            } else {
+                Text(
+                    "Photo ${selectedIndex + 1}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
 
-                // ── Recent Values (multi-edit) ──
-                if (metadataHistory.recentSets.isNotEmpty()) {
+            // ── Recent Values ──
+            if (metadataHistory.recentSets.isNotEmpty()) {
+                if (isMultiSelect) {
                     RecentValuesDropdown(
                         recentSets = metadataHistory.recentSets,
                         onApplySet = { set ->
@@ -121,348 +160,342 @@ internal fun MetadataEditorPanel(
                             onRecordMetadataSet(set)
                         },
                     )
-                }
-
-                QuickEditMetadataFields(
-                    description = editState.description,
-                    onDescriptionChange = { editState.description = it },
-                    keywords = editState.keywords,
-                    onKeywordsChange = { editState.keywords = it },
-                    originalDate = editState.originalDate,
-                    onOriginalDateChange = { editState.originalDate = it },
-                    year = editState.year,
-                    onYearChange = { editState.year = it },
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    onMetadataHistoryRemove = onMetadataHistoryRemove,
-                    sourceExif = sourceExif,
-                )
-                CameraSection(
-                    showExpanded = showCameraSection,
-                    onToggle = onToggleCameraSection,
-                    cameraMake = editState.cameraMake,
-                    onCameraMakeChange = { editState.cameraMake = it },
-                    cameraModel = editState.cameraModel,
-                    onCameraModelChange = { editState.cameraModel = it },
-                    lensModel = editState.lensModel,
-                    onLensModelChange = { editState.lensModel = it },
-                    focalLength = editState.focalLength,
-                    onFocalLengthChange = { editState.focalLength = it },
-                    aperture = editState.aperture,
-                    onApertureChange = { editState.aperture = it },
-                    shutterSpeed = editState.shutterSpeed,
-                    onShutterSpeedChange = { editState.shutterSpeed = it },
-                    iso = editState.iso,
-                    onIsoChange = { editState.iso = it },
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                )
-                LocationSection(
-                    showExpanded = showLocationSection,
-                    onToggle = onToggleLocationSection,
-                    locationName = editState.locationName,
-                    onLocationNameChange = { editState.locationName = it },
-                    city = editState.city,
-                    onCityChange = { editState.city = it },
-                    stateVal = editState.state,
-                    onStateChange = { editState.state = it },
-                    country = editState.country,
-                    onCountryChange = { editState.country = it },
-                    gpsLatitude = editState.gpsLatitude,
-                    onGpsLatitudeChange = { editState.gpsLatitude = it },
-                    gpsLongitude = editState.gpsLongitude,
-                    onGpsLongitudeChange = { editState.gpsLongitude = it },
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    onApplyRecentLocation = { set -> editState.loadFromSet(set) },
-                    sourceGpsHint =
-                        sourceExif?.let {
-                            val parts = mutableListOf<String>()
-                            it.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
-                            it.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
-                            if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
-                        },
-                )
-                SubjectsSection(
-                    showExpanded = showSubjectsSection,
-                    onToggle = onToggleSubjectsSection,
-                    subjects = editState.subjects,
-                    onSubjectsChange = { editState.subjects = it },
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    onMetadataHistoryRemove = onMetadataHistoryRemove,
-                )
-            } else {
-                // ── Single-select: immediate-edit mode ──
-                val selectedIndex = selectedIndices.first()
-                val box = boundingBoxList.boxes[selectedIndex]
-                val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
-
-                Text(
-                    "Photo ${selectedIndex + 1}",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-
-                // ── Recent Values (single-edit) ──
-                if (metadataHistory.recentSets.isNotEmpty()) {
+                } else {
                     RecentValuesDropdown(
                         recentSets = metadataHistory.recentSets,
                         onApplySet = { set ->
-                            state.configs.updatePhotoScanConfiguration(box.id) { set.mergeInto(it) }
+                            singleEditBoxId?.let { id ->
+                                state.configs.updatePhotoScanConfiguration(id) { set.mergeInto(it) }
+                            }
+                            editState.loadFromSet(set)
                             onRecordMetadataSet(set)
                         },
                     )
                 }
+            }
 
-                // ── Metadata fields ──
-                QuickEditMetadataFields(
-                    description = config.description,
-                    onDescriptionChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(description = newValue) }
-                    },
-                    keywords = config.keywords,
-                    onKeywordsChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(keywords = newValue) }
-                    },
-                    originalDate = config.originalDate,
-                    onOriginalDateChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(originalDate = newValue) }
-                    },
-                    year = config.year,
-                    onYearChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(year = newValue.filter { c -> c.isDigit() }.take(4))
-                        }
-                    },
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    onMetadataHistoryRemove = onMetadataHistoryRemove,
-                    onCommitKeyword = { keyword -> onMetadataHistoryUpdate("keywords", keyword) },
-                    boxId = box.id,
-                    state = state,
-                    overrideDescription = config.overrideDescription != OverrideState.NULL_OUT,
-                    onOverrideDescriptionChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideDescription =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
-                        }
-                    },
-                    overrideKeywords = config.overrideKeywords != OverrideState.NULL_OUT,
-                    onOverrideKeywordsChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideKeywords =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
-                        }
-                    },
-                    overrideOriginalDate = config.overrideOriginalDate != OverrideState.NULL_OUT,
-                    onOverrideOriginalDateChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideOriginalDate =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
-                        }
-                    },
-                    overrideYear = config.overrideYear != OverrideState.NULL_OUT,
-                    onOverrideYearChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideYear =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
-                        }
-                    },
-                    sourceExif = sourceExif,
-                )
+            // ── Metadata sections (shared between modes) ──
+            // All field values come from editState; in single-edit mode, field changes are also
+            // immediately pushed to the photo config via state.configs.updatePhotoScanConfiguration().
 
-                // ── Camera Settings ──
-                CameraSection(
-                    showExpanded = showCameraSection,
-                    onToggle = onToggleCameraSection,
-                    cameraMake = config.cameraMake,
-                    onCameraMakeChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(cameraMake = newValue) }
-                    },
-                    cameraModel = config.cameraModel,
-                    onCameraModelChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(cameraModel = newValue) }
-                    },
-                    lensModel = config.lensModel,
-                    onLensModelChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(lensModel = newValue) }
-                    },
-                    focalLength = config.focalLength,
-                    onFocalLengthChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(focalLength = newValue) }
-                    },
-                    aperture = config.aperture,
-                    onApertureChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(aperture = newValue) }
-                    },
-                    shutterSpeed = config.shutterSpeed,
-                    onShutterSpeedChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(shutterSpeed = newValue) }
-                    },
-                    iso = config.iso,
-                    onIsoChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(iso = newValue) }
-                    },
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    overrideCameraMake = config.overrideCameraMake != OverrideState.NULL_OUT,
-                    onOverrideCameraMakeChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideCameraMake =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
+            QuickEditMetadataFields(
+                description = editState.description,
+                onDescriptionChange = { newValue ->
+                    editState.description = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(description = newValue) }
+                    }
+                },
+                keywords = editState.keywords,
+                onKeywordsChange = { newValue ->
+                    editState.keywords = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(keywords = newValue) }
+                    }
+                },
+                originalDate = editState.originalDate,
+                onOriginalDateChange = { newValue ->
+                    editState.originalDate = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(originalDate = newValue) }
+                    }
+                },
+                year = editState.year,
+                onYearChange = { newValue ->
+                    val filtered = newValue.filter { c -> c.isDigit() }.take(4)
+                    editState.year = filtered
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(year = filtered) }
+                    }
+                },
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                onMetadataHistoryRemove = onMetadataHistoryRemove,
+                onCommitKeyword = if (!isMultiSelect) {
+                    { keyword -> onMetadataHistoryUpdate("keywords", keyword) }
+                } else null,
+                boxId = singleEditBoxId,
+                state = if (!isMultiSelect) state else null,
+                // Override checkboxes (single-edit only)
+                overrideDescription = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideDescription != OverrideState.NULL_OUT
+                } else null,
+                onOverrideDescriptionChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideDescription = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
                         }
-                    },
-                    overrideCameraModel = config.overrideCameraModel != OverrideState.NULL_OUT,
-                    onOverrideCameraModelChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideCameraModel =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
+                    }
+                } } else null,
+                overrideKeywords = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideKeywords != OverrideState.NULL_OUT
+                } else null,
+                onOverrideKeywordsChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideKeywords = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
                         }
-                    },
-                    overrideLensModel = config.overrideLensModel != OverrideState.NULL_OUT,
-                    onOverrideLensModelChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideLensModel =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
+                    }
+                } } else null,
+                overrideOriginalDate = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideOriginalDate != OverrideState.NULL_OUT
+                } else null,
+                onOverrideOriginalDateChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideOriginalDate = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
                         }
-                    },
-                    overrideFocalLength = config.overrideFocalLength != OverrideState.NULL_OUT,
-                    onOverrideFocalLengthChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideFocalLength =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
+                    }
+                } } else null,
+                overrideYear = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideYear != OverrideState.NULL_OUT
+                } else null,
+                onOverrideYearChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideYear = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
                         }
-                    },
-                    overrideAperture = config.overrideAperture != OverrideState.NULL_OUT,
-                    onOverrideApertureChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideAperture =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
-                        }
-                    },
-                    overrideShutterSpeed = config.overrideShutterSpeed != OverrideState.NULL_OUT,
-                    onOverrideShutterSpeedChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideShutterSpeed =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
-                        }
-                    },
-                    overrideIso = config.overrideIso != OverrideState.NULL_OUT,
-                    onOverrideIsoChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideIso =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
-                        }
-                    },
-                    sourceExif = sourceExif,
-                )
+                    }
+                } } else null,
+                sourceExif = sourceExif,
+            )
 
-                // ── Location ──
-                LocationSection(
-                    showExpanded = showLocationSection,
-                    onToggle = onToggleLocationSection,
-                    locationName = config.locationName,
-                    onLocationNameChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(locationName = newValue) }
-                    },
-                    city = config.city,
-                    onCityChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(city = newValue) }
-                    },
-                    stateVal = config.state,
-                    onStateChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(state = newValue) }
-                    },
-                    country = config.country,
-                    onCountryChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(country = newValue) }
-                    },
-                    gpsLatitude = config.gpsLatitude,
-                    onGpsLatitudeChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(gpsLatitude = newValue) }
-                    },
-                    gpsLongitude = config.gpsLongitude,
-                    onGpsLongitudeChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(gpsLongitude = newValue) }
-                    },
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    onApplyRecentLocation = { set ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { set.mergeLocationInto(it) }
-                    },
-                    onPickLocation = { onPickLocation(selectedIndex) },
-                    overrideGps = config.overrideGps != OverrideState.NULL_OUT,
-                    onOverrideGpsChange = { included ->
-                        state.configs.updatePhotoScanConfiguration(box.id) {
-                            it.copy(
-                                overrideGps =
-                                    if (included) OverrideState.KEEP_SOURCE
-                                    else OverrideState.NULL_OUT
-                            )
+            CameraSection(
+                showExpanded = showCameraSection,
+                onToggle = onToggleCameraSection,
+                cameraMake = editState.cameraMake,
+                onCameraMakeChange = { newValue ->
+                    editState.cameraMake = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(cameraMake = newValue) }
+                    }
+                },
+                cameraModel = editState.cameraModel,
+                onCameraModelChange = { newValue ->
+                    editState.cameraModel = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(cameraModel = newValue) }
+                    }
+                },
+                lensModel = editState.lensModel,
+                onLensModelChange = { newValue ->
+                    editState.lensModel = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(lensModel = newValue) }
+                    }
+                },
+                focalLength = editState.focalLength,
+                onFocalLengthChange = { newValue ->
+                    editState.focalLength = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(focalLength = newValue) }
+                    }
+                },
+                aperture = editState.aperture,
+                onApertureChange = { newValue ->
+                    editState.aperture = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(aperture = newValue) }
+                    }
+                },
+                shutterSpeed = editState.shutterSpeed,
+                onShutterSpeedChange = { newValue ->
+                    editState.shutterSpeed = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(shutterSpeed = newValue) }
+                    }
+                },
+                iso = editState.iso,
+                onIsoChange = { newValue ->
+                    editState.iso = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(iso = newValue) }
+                    }
+                },
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                // Override checkboxes (single-edit only)
+                overrideCameraMake = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideCameraMake != OverrideState.NULL_OUT
+                } else null,
+                onOverrideCameraMakeChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideCameraMake = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
                         }
-                    },
-                    sourceGpsHint =
-                        sourceExif?.let {
-                            val parts = mutableListOf<String>()
-                            it.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
-                            it.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
-                            if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
-                        },
-                )
+                    }
+                } } else null,
+                overrideCameraModel = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideCameraModel != OverrideState.NULL_OUT
+                } else null,
+                onOverrideCameraModelChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideCameraModel = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
+                        }
+                    }
+                } } else null,
+                overrideLensModel = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideLensModel != OverrideState.NULL_OUT
+                } else null,
+                onOverrideLensModelChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideLensModel = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
+                        }
+                    }
+                } } else null,
+                overrideFocalLength = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideFocalLength != OverrideState.NULL_OUT
+                } else null,
+                onOverrideFocalLengthChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideFocalLength = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
+                        }
+                    }
+                } } else null,
+                overrideAperture = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideAperture != OverrideState.NULL_OUT
+                } else null,
+                onOverrideApertureChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideAperture = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
+                        }
+                    }
+                } } else null,
+                overrideShutterSpeed = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideShutterSpeed != OverrideState.NULL_OUT
+                } else null,
+                onOverrideShutterSpeedChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideShutterSpeed = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
+                        }
+                    }
+                } } else null,
+                overrideIso = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideIso != OverrideState.NULL_OUT
+                } else null,
+                onOverrideIsoChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideIso = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
+                        }
+                    }
+                } } else null,
+                sourceExif = sourceExif,
+            )
 
-                // ── Subjects & Faces ──
-                SubjectsSection(
-                    showExpanded = showSubjectsSection,
-                    onToggle = onToggleSubjectsSection,
-                    subjects = config.subjects,
-                    onSubjectsChange = { newValue ->
-                        state.configs.updatePhotoScanConfiguration(box.id) { it.copy(subjects = newValue) }
-                    },
-                    metadataHistory = metadataHistory,
-                    onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                    onMetadataHistoryRemove = onMetadataHistoryRemove,
-                    onSelectFaces = { onSelectFaces(selectedIndex) },
-                    faceRegions = config.faceRegions,
-                    onRemoveFace = { faceIdx -> state.faceRegions.removeFaceRegion(selectedIndex, faceIdx) },
-                    onClearAllFaces = { state.faceRegions.clearAllFaceRegions(selectedIndex) },
-                )
+            LocationSection(
+                showExpanded = showLocationSection,
+                onToggle = onToggleLocationSection,
+                locationName = editState.locationName,
+                onLocationNameChange = { newValue ->
+                    editState.locationName = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(locationName = newValue) }
+                    }
+                },
+                city = editState.city,
+                onCityChange = { newValue ->
+                    editState.city = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(city = newValue) }
+                    }
+                },
+                stateVal = editState.state,
+                onStateChange = { newValue ->
+                    editState.state = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(state = newValue) }
+                    }
+                },
+                country = editState.country,
+                onCountryChange = { newValue ->
+                    editState.country = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(country = newValue) }
+                    }
+                },
+                gpsLatitude = editState.gpsLatitude,
+                onGpsLatitudeChange = { newValue ->
+                    editState.gpsLatitude = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(gpsLatitude = newValue) }
+                    }
+                },
+                gpsLongitude = editState.gpsLongitude,
+                onGpsLongitudeChange = { newValue ->
+                    editState.gpsLongitude = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(gpsLongitude = newValue) }
+                    }
+                },
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                // Location recent values: multi-edit uses editState, single-edit pushes to config
+                onApplyRecentLocation = if (!isMultiSelect) { { set ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { set.mergeLocationInto(it) }
+                    }
+                    editState.loadFromSet(set)
+                } } else { { set -> editState.loadFromSet(set) } },
+                // Location picker (single-edit only)
+                onPickLocation = if (!isMultiSelect && selectedIndex >= 0) {
+                    { onPickLocation(selectedIndex) }
+                } else null,
+                // GPS override (single-edit only)
+                overrideGps = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideGps != OverrideState.NULL_OUT
+                } else null,
+                onOverrideGpsChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideGps = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
+                        }
+                    }
+                } } else null,
+                sourceGpsHint = sourceExif?.let {
+                    val parts = mutableListOf<String>()
+                    it.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
+                    it.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
+                    if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
+                },
+            )
 
-                // ── Back-of-photo Image ──
-                if (config.hasBackImage()) {
+            SubjectsSection(
+                showExpanded = showSubjectsSection,
+                onToggle = onToggleSubjectsSection,
+                subjects = editState.subjects,
+                onSubjectsChange = { newValue ->
+                    editState.subjects = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(subjects = newValue) }
+                    }
+                },
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                onMetadataHistoryRemove = onMetadataHistoryRemove,
+                // Face selection (single-edit only)
+                onSelectFaces = if (!isMultiSelect && selectedIndex >= 0) {
+                    { onSelectFaces(selectedIndex) }
+                } else null,
+                faceRegions = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.faceRegions
+                } else emptyList(),
+                onRemoveFace = if (!isMultiSelect && selectedIndex >= 0) {
+                    { faceIdx -> state.faceRegions.removeFaceRegion(selectedIndex, faceIdx) }
+                } else null,
+                onClearAllFaces = if (!isMultiSelect && selectedIndex >= 0) {
+                    { state.faceRegions.clearAllFaceRegions(selectedIndex) }
+                } else null,
+            )
+
+            // ── Back-of-photo Image (single-edit only) ──
+            if (!isMultiSelect && singleEditConfig != null) {
+                if (singleEditConfig.hasBackImage()) {
                     Surface(
                         tonalElevation = 1.dp,
                         shape = RoundedCornerShape(8.dp),
@@ -480,7 +513,7 @@ internal fun MetadataEditorPanel(
                                 tint = MaterialTheme.colorScheme.primary,
                             )
                             Text(
-                                "Back: ${if (config.backImageMode == "combine") "Combined" else "Appended"}",
+                                "Back: ${if (singleEditConfig.backImageMode == "combine") "Combined" else "Appended"}",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
