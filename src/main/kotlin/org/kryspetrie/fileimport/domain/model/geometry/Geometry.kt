@@ -14,6 +14,10 @@ import kotlin.math.sqrt
 data class Point(val x: Double, val y: Double) {
     constructor(x: Int, y: Int) : this(x.toDouble(), y.toDouble())
 
+    /** Convert to a Float-precision PhotoCorner. */
+    fun toPhotoCorner(): org.kryspetrie.fileimport.domain.model.PhotoCorner =
+        org.kryspetrie.fileimport.domain.model.PhotoCorner(x = x.toFloat(), y = y.toFloat())
+
     fun translate(dx: Double, dy: Double): Point = Point(x + dx, y + dy)
 
     fun distanceTo(other: Point): Double {

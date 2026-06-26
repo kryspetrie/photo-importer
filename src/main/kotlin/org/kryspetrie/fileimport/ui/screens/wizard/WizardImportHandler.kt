@@ -66,10 +66,10 @@ suspend fun loadImageAndDetect(
                             BoundingBox(
                                 corners =
                                     BoundingBoxCorners(
-                                        Point(photo.topLeft.x.toDouble(), photo.topLeft.y.toDouble()),
-                                        Point(photo.topRight.x.toDouble(), photo.topRight.y.toDouble()),
-                                        Point(photo.bottomRight.x.toDouble(), photo.bottomRight.y.toDouble()),
-                                        Point(photo.bottomLeft.x.toDouble(), photo.bottomLeft.y.toDouble()),
+                                        photo.topLeft.toPoint(),
+                                        photo.topRight.toPoint(),
+                                        photo.bottomRight.toPoint(),
+                                        photo.bottomLeft.toPoint(),
                                     )
                             )
                         }

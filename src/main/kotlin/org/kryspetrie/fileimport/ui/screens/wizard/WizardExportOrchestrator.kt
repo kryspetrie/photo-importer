@@ -94,13 +94,10 @@ suspend fun exportSinglePhoto(
 
     val detectedPhoto =
         DetectedPhoto(
-            topLeft = PhotoCorner(box.corners.topLeft.x.toFloat(), box.corners.topLeft.y.toFloat()),
-            topRight =
-                PhotoCorner(box.corners.topRight.x.toFloat(), box.corners.topRight.y.toFloat()),
-            bottomLeft =
-                PhotoCorner(box.corners.bottomLeft.x.toFloat(), box.corners.bottomLeft.y.toFloat()),
-            bottomRight =
-                PhotoCorner(box.corners.bottomRight.x.toFloat(), box.corners.bottomRight.y.toFloat()),
+            topLeft = box.corners.topLeft.toPhotoCorner(),
+            topRight = box.corners.topRight.toPhotoCorner(),
+            bottomLeft = box.corners.bottomLeft.toPhotoCorner(),
+            bottomRight = box.corners.bottomRight.toPhotoCorner(),
             applyPerspectiveCorrection = perspectiveEnabled,
             rotation = rotationFromDegrees(config.rotationDegrees),
             configuration = scanConfig,

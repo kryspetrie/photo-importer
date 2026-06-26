@@ -18,6 +18,10 @@ data class PhotoCorner(
     /** Y coordinate (vertical position from top) */
     val y: Float = 0f,
 ) {
+    /** Convert to a Double-precision geometry Point. */
+    fun toPoint(): org.kryspetrie.fileimport.domain.model.geometry.Point =
+        org.kryspetrie.fileimport.domain.model.geometry.Point(x.toDouble(), y.toDouble())
+
     /** Calculate distance to another corner */
     fun distanceTo(other: PhotoCorner): Float {
         val dx = other.x - x
@@ -27,6 +31,10 @@ data class PhotoCorner(
 
     companion object {
         fun create(x: Int, y: Int): PhotoCorner = PhotoCorner(x = x.toFloat(), y = y.toFloat())
+
+        /** Create from a Double-precision geometry Point. */
+        fun fromPoint(point: org.kryspetrie.fileimport.domain.model.geometry.Point): PhotoCorner =
+            PhotoCorner(x = point.x.toFloat(), y = point.y.toFloat())
     }
 }
 
