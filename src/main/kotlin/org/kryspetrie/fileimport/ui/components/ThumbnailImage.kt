@@ -11,7 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material3.CircularProgressIndicator
+import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -94,7 +94,7 @@ private fun ImageThumbnail(
             contentAlignment = Alignment.Center,
         ) {
             if (!loaded) {
-                CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                CircularSpinner(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
             } else {
                 Icon(
                     Icons.Default.Image,
@@ -136,7 +136,7 @@ private fun VideoThumbnail(
                 contentScale = contentScale,
             )
         } else if (!loaded) {
-            CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+            CircularSpinner(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
         } else {
             // Fallback icon when FFmpeg is unavailable
             Icon(

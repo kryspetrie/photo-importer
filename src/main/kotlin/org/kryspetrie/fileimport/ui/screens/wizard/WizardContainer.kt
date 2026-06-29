@@ -15,7 +15,7 @@ import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CircularProgressIndicator
+import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -275,7 +275,7 @@ private fun WizardStepContent(
             LaunchedEffect(Unit) { state.goToOverview() }
             // Don't render content while redirecting; the step will change on next frame
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator()
+                LoadingIndicator()
             }
         }
 
@@ -496,7 +496,7 @@ private fun LoadingContent(message: String) {
 @Composable
 private fun AnimatedLoadingIndicator() {
     Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(modifier = Modifier.fillMaxSize(), strokeWidth = 4.dp)
+        LoadingIndicator(modifier = Modifier.fillMaxSize())
     }
 }
 

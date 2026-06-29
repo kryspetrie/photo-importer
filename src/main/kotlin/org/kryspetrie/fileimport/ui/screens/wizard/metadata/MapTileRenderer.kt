@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.CircularProgressIndicator
+import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -1297,10 +1297,9 @@ fun OsmMapView(
 
         // ── Loading indicator ─────────────────────────────────────────────
         if (sizeTracker.showLoading) {
-            CircularProgressIndicator(
+            LoadingIndicator(
                 modifier = Modifier.align(Alignment.Center),
                 color = Color(0xFF2196F3),
-                strokeWidth = 3.dp,
             )
         }
 

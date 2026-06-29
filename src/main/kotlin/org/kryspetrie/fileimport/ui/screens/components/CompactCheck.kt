@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -63,7 +63,7 @@ fun ProgressCard(
                 if (icon != null) {
                     Icon(icon, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
                 }
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                CircularSpinner(size = 24.dp, strokeWidth = 2.5.dp)
                 Text(title, style = MaterialTheme.typography.titleSmall)
             }
             if (total > 0) {

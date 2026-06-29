@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.CircularProgressIndicator
+import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -55,7 +55,7 @@ private fun ScanningProgressCard(progress: ReorganizeProgress) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                CircularSpinner(size = 24.dp, strokeWidth = 2.5.dp)
                 Text(
                     if (progress.phase == ReorganizePhase.SCANNING) "Scanning files..."
                     else "Reading metadata...",
@@ -90,7 +90,7 @@ private fun ExecutingProgressCard(progress: ReorganizeProgress) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                CircularSpinner(size = 24.dp, strokeWidth = 2.5.dp)
                 Text(
                     when (progress.phase) {
                         ReorganizePhase.ROLLING_BACK -> "Undoing changes..."

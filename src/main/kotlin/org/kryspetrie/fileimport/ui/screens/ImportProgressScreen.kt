@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
+import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -31,7 +31,7 @@ fun ImportProgressScreen(progress: ImportProgress, onCancel: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        CircularProgressIndicator(Modifier.size(48.dp), strokeWidth = 3.dp)
+        CircularSpinner(size = 48.dp, strokeWidth = 3.dp)
         Spacer(Modifier.height(20.dp))
         Text("Importing...", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(8.dp))

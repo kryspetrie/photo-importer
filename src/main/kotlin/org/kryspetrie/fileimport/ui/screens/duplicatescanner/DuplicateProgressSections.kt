@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.CircularProgressIndicator
+import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -29,7 +29,7 @@ fun DuplicateScanningProgress(phase: String, current: Int, total: Int) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                CircularSpinner(size = 24.dp, strokeWidth = 2.5.dp)
                 Text(phase.ifBlank { "Scanning..." }, style = MaterialTheme.typography.titleSmall)
             }
             if (total > 0) {
@@ -60,7 +60,7 @@ fun DuplicateResolvingProgress(current: Int, total: Int) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.5.dp)
+                CircularSpinner(size = 24.dp, strokeWidth = 2.5.dp)
                 Text("Resolving duplicates...", style = MaterialTheme.typography.titleSmall)
             }
             if (total > 0) {

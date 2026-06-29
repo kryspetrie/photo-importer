@@ -1,6 +1,6 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 
-import androidx.compose.animation.AnimatedVisibility
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -184,15 +184,14 @@ fun LocationPickerDialog(
                 )
 
                 // Loading
-                AnimatedVisibility(visible = isSearching) {
+                if (isSearching) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
@@ -204,7 +203,7 @@ fun LocationPickerDialog(
                 }
 
                 // Error
-                AnimatedVisibility(visible = errorMessage != null) {
+                if (errorMessage != null) {
                     Text(
                         errorMessage.orEmpty(),
                         style = MaterialTheme.typography.bodySmall,
@@ -213,15 +212,14 @@ fun LocationPickerDialog(
                 }
 
                 // Reverse geocode loading
-                AnimatedVisibility(visible = isReverseGeocoding) {
+                if (isReverseGeocoding) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        CircularProgressIndicator(
+                        LoadingIndicator(
                             modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
