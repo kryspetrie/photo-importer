@@ -10,8 +10,6 @@ import androidx.compose.ui.window.rememberWindowState
 import org.koin.core.context.startKoin
 import org.kryspetrie.fileimport.di.appModule
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 
 /**
  * Standalone component test for [OsmMapView] tile rendering.
@@ -49,7 +47,6 @@ fun mainMapTileTest() = application {
                         println("Map clicked: lat=$lat, lon=$lon")
                     },
                     dispatcherProvider = dispatcherProvider,
-                    coroutineScope = CoroutineScope(Dispatchers.Main),
                 )
             }
         }

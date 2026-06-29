@@ -719,8 +719,8 @@ fun OsmMapView(
     onMapStyleChanged: (MapStyle) -> Unit = {},
     onZoomChanged: (Double) -> Unit = {},
     dispatcherProvider: DispatcherProvider,
-    coroutineScope: CoroutineScope,
 ) {
+    val coroutineScope = rememberCoroutineScope()
     val camera = remember { MapCameraState(initialLat, initialLon, initialZoom) }
     var mapStyle by remember { mutableStateOf(initialMapStyle) }
 

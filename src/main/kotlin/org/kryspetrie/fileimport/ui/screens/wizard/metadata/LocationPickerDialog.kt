@@ -399,7 +399,6 @@ fun LocationPickerDialog(
                     searchResults = searchResults,
                     selectedResult = selectedLocation,
                     dispatcherProvider = dispatcherProvider,
-                    coroutineScope = coroutineScope,
                 )
             }
         }
