@@ -6,9 +6,6 @@
  */
 package org.kryspetrie.fileimport.ui.screens.wizard
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -68,11 +65,7 @@ fun PhotoScanSettingsSection(
                 onSettingsExpandedChange = onSettingsExpandedChange,
                 config = config,
             )
-            AnimatedVisibility(
-                settingsExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically(),
-            ) {
+            if (settingsExpanded) {
                 Column {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Column(
@@ -341,7 +334,7 @@ private fun PhotoScanCollapsibleSubsection(
                 Modifier.size(16.dp),
             )
         }
-        AnimatedVisibility(expanded, enter = expandVertically(), exit = shrinkVertically()) {
+        if (expanded) {
             Column(content = content)
         }
     }

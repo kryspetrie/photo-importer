@@ -1,8 +1,5 @@
 package org.kryspetrie.fileimport.ui.screens.components
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -78,7 +75,7 @@ fun SettingsSection(
                     Modifier.size(18.dp),
                 )
             }
-            AnimatedVisibility(expanded, enter = expandVertically(), exit = shrinkVertically()) {
+            if (expanded) {
                 Column {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Column(

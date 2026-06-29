@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.edit
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -384,7 +383,7 @@ internal fun CameraSection(
             Spacer(Modifier.width(4.dp))
             Text("Camera Settings", style = MaterialTheme.typography.labelSmall)
         }
-        AnimatedVisibility(visible = showExpanded) {
+        if (showExpanded) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -528,7 +527,7 @@ internal fun LocationSection(
             Spacer(Modifier.width(4.dp))
             Text("Location", style = MaterialTheme.typography.labelSmall)
         }
-        AnimatedVisibility(visible = showExpanded) {
+        if (showExpanded) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 // ── Recent Locations ──
                 if (onApplyRecentLocation != null) {
@@ -679,7 +678,7 @@ internal fun SubjectsSection(
                 )
             }
         }
-        AnimatedVisibility(visible = showExpanded) {
+        if (showExpanded) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     "Subject names are written to EXIF/IPTC metadata and as MWG-RS face regions.",

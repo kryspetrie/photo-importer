@@ -1,8 +1,5 @@
 package org.kryspetrie.fileimport.ui.screens.reorganize
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -69,11 +66,7 @@ fun ReorganizeSettingsSection(
                     Modifier.size(18.dp),
                 )
             }
-            AnimatedVisibility(
-                settingsExpanded,
-                enter = expandVertically(),
-                exit = shrinkVertically(),
-            ) {
+            if (settingsExpanded) {
                 Column {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Column(
