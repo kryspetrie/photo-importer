@@ -352,26 +352,6 @@ private fun WizardStepContent(
                             )
                         }
                     },
-                    onSkipToExport = {
-                        scope.launch {
-                            onFailedCountChange(0)
-                            onExportResults(emptyList())
-                            state.navigation.goToProcessing()
-                            exportPhotos(
-                                state = state,
-                                image = image,
-                                exportService = exportService,
-                                destinationPath = exportDestination,
-                                appLogger = appLogger,
-                                dispatcherProvider = dispatcherProvider,
-                                isLoading = isLoading,
-                                onMessage = onMessage,
-                                onError = onError,
-                                onProgress = onProgress,
-                                onComplete = handleExportComplete,
-                            )
-                        }
-                    },
                     startWithMetadata = settings.alwaysEditMetadata || settings.skipCropAndRotate,
                     faceRegionTransformer = faceRegionTransformer,
                 )

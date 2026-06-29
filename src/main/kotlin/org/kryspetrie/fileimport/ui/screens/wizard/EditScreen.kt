@@ -113,7 +113,6 @@ fun EditScreen(
     onRecordMetadataSet: (RecentMetadataSet) -> Unit = {},
     onBack: () -> Unit,
     onExport: () -> Unit,
-    onSkipToExport: (() -> Unit)? = null,
     startWithMetadata: Boolean = false,
     modifier: Modifier = Modifier,
     faceRegionTransformer: FaceRegionTransformerPort? = null,
@@ -437,30 +436,27 @@ fun EditScreen(
             },
         topBar = {
             TopAppBar(
-                title = { Text("Edit Metadata") },
-                navigationIcon = { WizardStepIndicator(currentStep = WizardStep.EDIT) },
-                actions = {
-                    // ── Mode tabs ──
-                    EditModeTab(
-                        label = "Rotate",
-                        selected = editMode == EditMode.ROTATE,
-                        onClick = { editMode = EditMode.ROTATE },
-                    )
-                    EditModeTab(
-                        label = "Metadata",
-                        selected = editMode == EditMode.METADATA,
-                        onClick = { editMode = EditMode.METADATA },
-                    )
-                    Spacer(Modifier.weight(1f))
-                    if (editMode == EditMode.ROTATE && onSkipToExport != null) {
-                        OutlinedButton(
-                            onClick = onSkipToExport,
-                            modifier = Modifier.height(32.dp),
-                        ) {
-                            Text("Export Now", style = MaterialTheme.typography.labelSmall)
-                        }
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        WizardStepIndicator(currentStep = WizardStep.EDIT)
                         Spacer(Modifier.width(8.dp))
+                        EditModeTab(
+                            label = "Rotate",
+                            selected = editMode == EditMode.ROTATE,
+                            onClick = { editMode = EditMode.ROTATE },
+                        )
+                        EditModeTab(
+                            label = "Metadata",
+                            selected = editMode == EditMode.METADATA,
+                            onClick = { editMode = EditMode.METADATA },
+                        )
                     }
+                },
+                actions = {
+                    Spacer(Modifier.weight(1f))
                     Button(
                         onClick = onExport,
                         enabled = boundingBoxList.size() > 0,
