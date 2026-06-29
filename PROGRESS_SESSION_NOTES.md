@@ -1,7 +1,7 @@
 # Petrie File Importer — Session Progress Notes
 
 **Date**: 2026-06-29
-**Git HEAD**: `2f26295` — fix: replace Animatable with state-driven LaunchedEffect animation
+**Git HEAD**: `028daed` — fix: eliminate all Compose animation APIs
 **Working directory**: `/Users/krys.petrie/dev/petrie-file-importer`
 
 ---
