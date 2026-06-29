@@ -22,7 +22,6 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -50,6 +49,7 @@ import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.NamePlaceholders
 import org.kryspetrie.fileimport.ui.components.PlaceholderHelpTooltip
 import org.kryspetrie.fileimport.ui.components.SectionLabel
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 
 @Composable
 fun PhotoScanSettingsSection(
@@ -134,11 +134,11 @@ private fun OrganizationSection(
 ) {
     // Folder organization
     SectionLabel("Folder Organization")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(config.createSubfolders, { onConfigChange(config.copy(createSubfolders = it)) })
-        Spacer(Modifier.width(4.dp))
-        Text("Create date-based subfolders", style = MaterialTheme.typography.bodyMedium)
-    }
+    SettingsToggle(
+        checked = config.createSubfolders,
+        onCheckedChange = { onConfigChange(config.copy(createSubfolders = it)) },
+        label = "Create date-based subfolders",
+    )
     if (config.createSubfolders) {
         FolderOrganizationField(config = config, onConfigChange = onConfigChange)
     }
@@ -147,21 +147,18 @@ private fun OrganizationSection(
 
     // Filename
     SectionLabel("Filename")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            config.preserveOriginalName,
-            {
-                onConfigChange(
-                    config.copy(
-                        preserveOriginalName = it,
-                        fileNamePattern = if (it) "{original}" else config.fileNamePattern,
-                    )
+    SettingsToggle(
+        checked = config.preserveOriginalName,
+        onCheckedChange = {
+            onConfigChange(
+                config.copy(
+                    preserveOriginalName = it,
+                    fileNamePattern = if (it) "{original}" else config.fileNamePattern,
                 )
-            },
-        )
-        Spacer(Modifier.width(4.dp))
-        Text("Preserve original filename", style = MaterialTheme.typography.bodyMedium)
-    }
+            )
+        },
+        label = "Preserve original filename",
+    )
     OutlinedTextField(
         config.fileNamePattern,
         { onConfigChange(config.copy(fileNamePattern = it)) },

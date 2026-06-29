@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.ui.components.SectionLabel
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 
 @Composable
 fun DeduplicationSettingsSection(
@@ -57,17 +58,19 @@ private fun TransferredDetectionSection(
     )
     Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
-            CompactCheck(
-                configuration.detectTransferredByHash,
-                { onConfigChange(configuration.copy(detectTransferredByHash = it)) },
-                "Match by file hash (MD5)",
+            SettingsToggle(
+                checked = configuration.detectTransferredByHash,
+                onCheckedChange = { onConfigChange(configuration.copy(detectTransferredByHash = it)) },
+                label = "Match by hash",
+                description = "Compare file content hash (MD5)",
             )
         }
         Column(Modifier.weight(1f)) {
-            CompactCheck(
-                configuration.detectTransferredByExif,
-                { onConfigChange(configuration.copy(detectTransferredByExif = it)) },
-                "Match by EXIF data",
+            SettingsToggle(
+                checked = configuration.detectTransferredByExif,
+                onCheckedChange = { onConfigChange(configuration.copy(detectTransferredByExif = it)) },
+                label = "Match by EXIF",
+                description = "Compare EXIF metadata",
             )
         }
     }
@@ -79,16 +82,18 @@ private fun VisualDuplicateSection(
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
     SectionLabel("Visual Duplicate Detection")
-    CompactCheck(
-        configuration.detectVisualDuplicates,
-        { onConfigChange(configuration.copy(detectVisualDuplicates = it)) },
-        "Detect visual/resolution duplicates among source files",
+    SettingsToggle(
+        checked = configuration.detectVisualDuplicates,
+        onCheckedChange = { onConfigChange(configuration.copy(detectVisualDuplicates = it)) },
+        label = "Detect visual duplicates",
+        description = "Find near-duplicate images among source files",
     )
     if (configuration.detectVisualDuplicates) {
-        CompactCheck(
-            configuration.useSurfMatching,
-            { onConfigChange(configuration.copy(useSurfMatching = it)) },
-            "Use SURF feature matching (slow, high accuracy)",
+        SettingsToggle(
+            checked = configuration.useSurfMatching,
+            onCheckedChange = { onConfigChange(configuration.copy(useSurfMatching = it)) },
+            label = "SURF feature matching",
+            description = "Slow but high accuracy",
         )
         if (configuration.useSurfMatching) {
             OutlinedCard(Modifier.fillMaxWidth()) {

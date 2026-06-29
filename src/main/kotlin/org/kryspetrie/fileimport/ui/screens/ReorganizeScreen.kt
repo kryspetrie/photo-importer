@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -35,6 +34,7 @@ import org.kryspetrie.fileimport.domain.model.ReorganizeJournalSummary
 import org.kryspetrie.fileimport.domain.model.ReorganizeMode
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeActionBar
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizePreviewSection
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeProgressSection
@@ -230,14 +230,12 @@ fun ReorganizeScreen(
                 }
 
                 // Rename only toggle
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(viewModel.renameOnly, { viewModel.renameOnly = it })
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        "Rename files only (don't move to subfolders)",
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
+                SettingsToggle(
+                    checked = viewModel.renameOnly,
+                    onCheckedChange = { viewModel.renameOnly = it },
+                    label = "Rename files only",
+                    description = "Don't move files to subfolders",
+                )
 
                 // Error
                 viewModel.errorMessage?.let {

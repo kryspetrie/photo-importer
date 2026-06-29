@@ -3,15 +3,12 @@ package org.kryspetrie.fileimport.ui.screens.duplicatescanner
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.DuplicateAction
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import org.kryspetrie.fileimport.ui.components.formatFileSize
 
 @Composable
@@ -129,14 +127,12 @@ private fun ResolveStrategyCard(
                     )
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(moveToTrash, onMoveToTrashChange, Modifier.size(20.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    "Move to review folder instead of deleting",
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            SettingsToggle(
+                checked = moveToTrash,
+                onCheckedChange = onMoveToTrashChange,
+                label = "Move to review folder",
+                description = "Move duplicates to a folder instead of deleting",
+            )
         }
     }
 }

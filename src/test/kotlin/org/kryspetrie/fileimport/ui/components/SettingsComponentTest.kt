@@ -11,9 +11,57 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import org.kryspetrie.fileimport.ui.screens.components.CollapsibleSubsection
 import org.kryspetrie.fileimport.ui.screens.components.CompactCheck
 import org.kryspetrie.fileimport.ui.screens.components.ProgressCard
+
+@Tag("UiComponentTest")
+class SettingsToggleTest {
+
+    @get:Rule val composeTestRule = createComposeRule()
+
+    @Test
+    fun `displays label text`() {
+        composeTestRule.setContent {
+            SettingsToggle(checked = false, onCheckedChange = {}, label = "Test Toggle")
+        }
+
+        composeTestRule.onNodeWithText("Test Toggle").assertIsDisplayed()
+    }
+
+    @Test
+    fun `displays description text`() {
+        composeTestRule.setContent {
+            SettingsToggle(
+                checked = false,
+                onCheckedChange = {},
+                label = "Test Toggle",
+                description = "Helper text",
+            )
+        }
+
+        composeTestRule.onNodeWithText("Test Toggle").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Helper text").assertIsDisplayed()
+    }
+
+    @Test
+    fun `calls onCheckedChange when label clicked`() {
+        var clickedValue: Boolean? = null
+
+        composeTestRule.setContent {
+            SettingsToggle(
+                checked = false,
+                onCheckedChange = { clickedValue = it },
+                label = "Toggle Me",
+            )
+        }
+
+        composeTestRule.onNodeWithText("Toggle Me").performClick()
+
+        assertThat(clickedValue).isTrue()
+    }
+}
 
 @Tag("UiComponentTest")
 class CompactCheckTest {

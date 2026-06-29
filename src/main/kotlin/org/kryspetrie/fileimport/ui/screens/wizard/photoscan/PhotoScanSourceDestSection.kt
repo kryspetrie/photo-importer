@@ -2,20 +2,21 @@ package org.kryspetrie.fileimport.ui.screens.wizard.photoscan
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.io.File
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import org.kryspetrie.fileimport.ui.components.SourcePathField
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.components.pickFolder
@@ -34,20 +35,14 @@ fun AutoDetectCard(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Auto-detect photo boundaries", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    "Automatically finds and aligns corners for each photo",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = cvAutoDetectEnabled, onCheckedChange = onCvAutoDetectChange)
+        Column(modifier = Modifier.padding(16.dp)) {
+            SettingsToggle(
+                checked = cvAutoDetectEnabled,
+                onCheckedChange = onCvAutoDetectChange,
+                label = "Auto-detect photo boundaries",
+                description = "Automatically finds and aligns corners for each photo",
+                icon = Icons.Default.AutoAwesome,
+            )
         }
     }
 }
@@ -65,20 +60,14 @@ fun SinglePhotoModeCard(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp).fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Single Photo mode", style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    "Import one photo directly — skip multi-photo detection",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = singlePhotoMode, onCheckedChange = onSinglePhotoModeChange)
+        Column(modifier = Modifier.padding(16.dp)) {
+            SettingsToggle(
+                checked = singlePhotoMode,
+                onCheckedChange = onSinglePhotoModeChange,
+                label = "Single Photo mode",
+                description = "Import one photo directly — skip multi-photo detection",
+                icon = Icons.Default.PhotoCamera,
+            )
         }
     }
 }

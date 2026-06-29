@@ -1,6 +1,7 @@
 package org.kryspetrie.fileimport.ui.screens.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderCopy
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -30,6 +30,7 @@ import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.NamePlaceholders
 import org.kryspetrie.fileimport.ui.components.PlaceholderHelpTooltip
 import org.kryspetrie.fileimport.ui.components.SectionLabel
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 
 @Composable
 fun OrganizationSettingsSection(
@@ -68,14 +69,11 @@ private fun FolderPatternField(
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
     SectionLabel("Folder Organization")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            configuration.createSubfolders,
-            { onConfigChange(configuration.copy(createSubfolders = it)) },
-        )
-        Spacer(Modifier.width(4.dp))
-        Text("Create date-based subfolders", style = MaterialTheme.typography.bodyMedium)
-    }
+    SettingsToggle(
+        checked = configuration.createSubfolders,
+        onCheckedChange = { onConfigChange(configuration.copy(createSubfolders = it)) },
+        label = "Create date-based subfolders",
+    )
     if (configuration.createSubfolders) {
         OutlinedTextField(
             configuration.folderPattern,
@@ -111,21 +109,18 @@ private fun FilenamePatternField(
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
     SectionLabel("Filename")
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            configuration.preserveOriginalName,
-            {
-                onConfigChange(
-                    configuration.copy(
-                        preserveOriginalName = it,
-                        fileNamePattern = if (it) "{original}" else configuration.fileNamePattern,
-                    )
+    SettingsToggle(
+        checked = configuration.preserveOriginalName,
+        onCheckedChange = {
+            onConfigChange(
+                configuration.copy(
+                    preserveOriginalName = it,
+                    fileNamePattern = if (it) "{original}" else configuration.fileNamePattern,
                 )
-            },
-        )
-        Spacer(Modifier.width(4.dp))
-        Text("Preserve original filename", style = MaterialTheme.typography.bodyMedium)
-    }
+            )
+        },
+        label = "Preserve original filename",
+    )
     OutlinedTextField(
         configuration.fileNamePattern,
         { onConfigChange(configuration.copy(fileNamePattern = it)) },

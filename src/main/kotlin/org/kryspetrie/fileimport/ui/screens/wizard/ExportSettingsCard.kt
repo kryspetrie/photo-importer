@@ -16,7 +16,6 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /**
@@ -51,36 +51,16 @@ fun ExportSettingsCard(
             Text("Export Settings", style = MaterialTheme.typography.titleSmall)
 
             // Perspective correction toggle
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        Icons.Default.Transform,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                    )
-                    Column {
-                        Text("Perspective correction", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            if (perspectiveEnabled)
-                                "Warp-stretch removes skew and preserves all content"
-                            else "Simple crop: axis-aligned rectangle, no skew removal",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-                Switch(
-                    checked = perspectiveEnabled,
-                    onCheckedChange = { state.exportSettings.setPerspectiveCorrectionEnabled(it) },
-                )
-            }
+            SettingsToggle(
+                checked = perspectiveEnabled,
+                onCheckedChange = { state.exportSettings.setPerspectiveCorrectionEnabled(it) },
+                label = "Perspective correction",
+                description =
+                    if (perspectiveEnabled)
+                        "Warp-stretch removes skew and preserves all content"
+                    else "Simple crop: axis-aligned rectangle, no skew removal",
+                icon = Icons.Default.Transform,
+            )
 
             // Margin slider
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
@@ -117,36 +97,15 @@ fun ExportSettingsCard(
                 }
             }
 
-            // Skip Crop & Rotate toggle (Switch for consistent design language)
+            // Skip Crop & Rotate toggle
             if (onSkipCropAndRotateChange != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.SkipNext,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                        Column {
-                            Text("Skip Crop & Rotate", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                "Go directly to metadata editing after selecting photos",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                    Switch(
-                        checked = skipCropAndRotate,
-                        onCheckedChange = onSkipCropAndRotateChange,
-                    )
-                }
+                SettingsToggle(
+                    checked = skipCropAndRotate,
+                    onCheckedChange = onSkipCropAndRotateChange,
+                    label = "Skip Crop & Rotate",
+                    description = "Go directly to metadata editing after selecting photos",
+                    icon = Icons.Default.SkipNext,
+                )
             }
         }
     }

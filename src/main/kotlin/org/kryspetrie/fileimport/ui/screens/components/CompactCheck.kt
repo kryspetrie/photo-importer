@@ -3,13 +3,11 @@ package org.kryspetrie.fileimport.ui.screens.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.material3.Checkbox
 import org.kryspetrie.fileimport.ui.components.CircularSpinner
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -23,14 +21,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun CompactCheck(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label: String) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 2.dp),
-    ) {
-        Checkbox(checked, onCheckedChange, Modifier.size(20.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(label, style = MaterialTheme.typography.bodySmall)
-    }
+    SettingsToggle(checked = checked, onCheckedChange = onCheckedChange, label = label)
 }
 
 /**

@@ -3,14 +3,11 @@ package org.kryspetrie.fileimport.ui.screens.duplicatescanner
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -20,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 
 @Composable
 fun DuplicateScanSetup(
@@ -52,34 +50,28 @@ fun DuplicateScanSetup(
             Text("Detection Methods", style = MaterialTheme.typography.titleSmall)
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp),
-                    ) {
-                        Checkbox(enableHash, onEnableHashChange, Modifier.size(20.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Exact hash match", style = MaterialTheme.typography.bodySmall)
-                    }
+                    SettingsToggle(
+                        checked = enableHash,
+                        onCheckedChange = onEnableHashChange,
+                        label = "Exact hash match",
+                        description = "Compare file content (MD5)",
+                    )
                 }
                 Column(Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 2.dp),
-                    ) {
-                        Checkbox(enableExif, onEnableExifChange, Modifier.size(20.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("EXIF metadata match", style = MaterialTheme.typography.bodySmall)
-                    }
+                    SettingsToggle(
+                        checked = enableExif,
+                        onCheckedChange = onEnableExifChange,
+                        label = "EXIF metadata match",
+                        description = "Compare EXIF data",
+                    )
                 }
             }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(vertical = 2.dp),
-            ) {
-                Checkbox(enableSurf, onEnableSurfChange, Modifier.size(20.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("SURF visual matching (slow)", style = MaterialTheme.typography.bodySmall)
-            }
+            SettingsToggle(
+                checked = enableSurf,
+                onCheckedChange = onEnableSurfChange,
+                label = "SURF visual matching",
+                description = "Slow but detects near-duplicates",
+            )
         }
     }
 

@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -31,6 +30,7 @@ import org.kryspetrie.fileimport.domain.model.ConflictResolution
 import org.kryspetrie.fileimport.domain.model.FilenamePresets
 import org.kryspetrie.fileimport.domain.model.FolderPresets
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 
 @Composable
 fun ReorganizeSettingsSection(
@@ -127,21 +127,18 @@ private fun FilenamePatternField(
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
     )
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(
-            config.preserveOriginalName,
-            {
-                onConfigChange(
-                    config.copy(
-                        preserveOriginalName = it,
-                        fileNamePattern = if (it) "{original}" else config.fileNamePattern,
-                    )
+    SettingsToggle(
+        checked = config.preserveOriginalName,
+        onCheckedChange = {
+            onConfigChange(
+                config.copy(
+                    preserveOriginalName = it,
+                    fileNamePattern = if (it) "{original}" else config.fileNamePattern,
                 )
-            },
-        )
-        Spacer(Modifier.width(4.dp))
-        Text("Preserve original filename", style = MaterialTheme.typography.bodyMedium)
-    }
+            )
+        },
+        label = "Preserve original filename",
+    )
     OutlinedTextField(
         config.fileNamePattern,
         { onConfigChange(config.copy(fileNamePattern = it)) },

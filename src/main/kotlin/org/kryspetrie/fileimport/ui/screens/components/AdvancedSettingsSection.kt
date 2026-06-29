@@ -32,6 +32,7 @@ import org.kryspetrie.fileimport.domain.model.RawJpegPairMode
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 import org.kryspetrie.fileimport.ui.components.SectionLabel
+import org.kryspetrie.fileimport.ui.components.SettingsToggle
 
 @Composable
 fun AdvancedSettingsSection(
@@ -101,10 +102,10 @@ private fun RawJpegPairSection(
         }
     }
     if (configuration.rawJpegPairMode == RawJpegPairMode.IMPORT_BOTH) {
-        CompactCheck(
-            configuration.keepPairsTogether,
-            { onConfigChange(configuration.copy(keepPairsTogether = it)) },
-            "Keep RAW+JPEG pairs in the same folder",
+        SettingsToggle(
+            checked = configuration.keepPairsTogether,
+            onCheckedChange = { onConfigChange(configuration.copy(keepPairsTogether = it)) },
+            label = "Keep RAW+JPEG pairs in the same folder",
         )
     }
 }
@@ -115,10 +116,11 @@ private fun SidecarSection(
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
     SectionLabel("Sidecar Files")
-    CompactCheck(
-        configuration.importSidecars,
-        { onConfigChange(configuration.copy(importSidecars = it)) },
-        "Import sidecar files (.xmp, .thm, .lrv, .aae, etc.)",
+    SettingsToggle(
+        checked = configuration.importSidecars,
+        onCheckedChange = { onConfigChange(configuration.copy(importSidecars = it)) },
+        label = "Import sidecar files",
+        description = ".xmp, .thm, .lrv, .aae, etc.",
     )
     if (configuration.importSidecars) {
         Text(
@@ -138,17 +140,19 @@ private fun PostImportSection(
     SectionLabel("Post-Import")
     Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
-            CompactCheck(
-                configuration.verifyAfterCopy,
-                { onConfigChange(configuration.copy(verifyAfterCopy = it)) },
-                "Verify copies (hash check)",
+            SettingsToggle(
+                checked = configuration.verifyAfterCopy,
+                onCheckedChange = { onConfigChange(configuration.copy(verifyAfterCopy = it)) },
+                label = "Verify copies",
+                description = "Hash check after import",
             )
         }
         Column(Modifier.weight(1f)) {
-            CompactCheck(
-                configuration.deleteAfterImport,
-                { onConfigChange(configuration.copy(deleteAfterImport = it)) },
-                "Delete source after import",
+            SettingsToggle(
+                checked = configuration.deleteAfterImport,
+                onCheckedChange = { onConfigChange(configuration.copy(deleteAfterImport = it)) },
+                label = "Delete source",
+                description = "Remove files after successful copy",
             )
         }
     }
