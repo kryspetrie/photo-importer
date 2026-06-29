@@ -8,7 +8,11 @@ import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import org.koin.core.context.startKoin
 import org.kryspetrie.fileimport.di.appModule
 import org.kryspetrie.fileimport.domain.model.AppTheme
@@ -121,11 +125,15 @@ fun main(args: Array<String>) {
         // Get the application logger
         val appLogger: AppLogger = org.koin.core.context.GlobalContext.get().get()
 
+        // IO scope for async settings persistence — avoids runBlocking() on the AWT thread,
+        // which blocks MonotonicFrameClock frame delivery and crashes Compose animations.
+        val ioScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
         // Callback to persist settings changes
-        // Called when user changes theme or other persisted settings
-        // Runs coroutine to save settings asynchronously, then updates state
+        // Called when user changes theme or other persisted settings.
+        // Saves settings asynchronously (not on AWT thread) and updates state immediately.
         val onSettingsChange = { newSettings: org.kryspetrie.fileimport.domain.model.AppSettings ->
-            runBlocking { settingsAdapter.saveSettings(newSettings) }
+            ioScope.launch { settingsAdapter.saveSettings(newSettings) }
             currentSettings.value = newSettings
         }
 

@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /**
@@ -122,13 +123,16 @@ fun ChunkyScrollbar(
                                 val targetFraction =
                                     ((y - thumbHeight / 2) / (containerHeight - thumbHeight))
                                         .coerceIn(0f, 1f)
+                                // scrollTo() uses MutatorMutex internally. During rapid calls,
+                                // one scroll can cancel another via CancellationException.
                                 coroutineScope.launch {
-                                    // animateScrollTo() uses Animatable which requires MonotonicFrameClock.
-                                    // In Compose Desktop AWT contexts, MonotonicFrameClock is not reliably
-                                    // available, so we use scrollTo() for an instant jump instead.
-                                    scrollState.scrollTo(
-                                        (targetFraction * maxScroll).toInt()
-                                    )
+                                    try {
+                                        scrollState.scrollTo(
+                                            (targetFraction * maxScroll).toInt()
+                                        )
+                                    } catch (_: CancellationException) {
+                                        // Scroll cancelled by a new scroll — safe to ignore
+                                    }
                                 }
                             }
                         }
@@ -151,7 +155,15 @@ fun ChunkyScrollbar(
                                         (dragStartScroll + totalDragY * scrollPerPx)
                                             .toInt()
                                             .coerceIn(0, maxScroll.toInt())
-                                    coroutineScope.launch { scrollState.scrollTo(newScroll) }
+                                    // scrollTo() uses MutatorMutex internally. During rapid drag calls,
+                                    // one scroll can cancel another via CancellationException.
+                                    coroutineScope.launch {
+                                        try {
+                                            scrollState.scrollTo(newScroll)
+                                        } catch (_: CancellationException) {
+                                            // Scroll cancelled by a new scroll — safe to ignore
+                                        }
+                                    }
                                 },
                                 onDragEnd = { isDragging = false },
                                 onDragCancel = { isDragging = false },
