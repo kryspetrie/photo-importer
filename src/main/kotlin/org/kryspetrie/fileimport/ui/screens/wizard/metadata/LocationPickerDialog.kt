@@ -24,12 +24,10 @@ import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import org.kryspetrie.fileimport.ui.components.LoadingIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -61,7 +59,6 @@ import org.kryspetrie.fileimport.domain.port.LocationSearchPort
  * - Click on the map to drop a pin -> reverse geocode
  * - Confirm to populate city/state/country/GPS fields
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LocationPickerDialog(
     locationSearchService: LocationSearchPort,
@@ -112,16 +109,12 @@ fun LocationPickerDialog(
                 }
 
                 // Preset view selector
-                ExposedDropdownMenuBox(
-                    expanded = presetExpanded,
-                    onExpandedChange = { presetExpanded = it },
-                ) {
+                Box {
                     OutlinedTextField(
                         value = "Jump to view\u2026",
                         onValueChange = {},
                         readOnly = true,
-                        modifier =
-                            Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().clickable { presetExpanded = true },
                         label = { Text("Map view", style = MaterialTheme.typography.labelSmall) },
                         trailingIcon = {
                             Icon(
@@ -132,7 +125,7 @@ fun LocationPickerDialog(
                         },
                         textStyle = MaterialTheme.typography.bodySmall,
                     )
-                    ExposedDropdownMenu(
+                    DropdownMenu(
                         expanded = presetExpanded,
                         onDismissRequest = { presetExpanded = false },
                     ) {

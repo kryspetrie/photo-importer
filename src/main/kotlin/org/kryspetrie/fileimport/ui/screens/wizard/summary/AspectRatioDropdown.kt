@@ -1,11 +1,11 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.summary
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -20,8 +20,10 @@ import org.kryspetrie.fileimport.domain.model.AspectRatio
 
 /**
  * Dropdown for selecting a photo aspect ratio, auto-selecting the closest match when set to 0.0.
+ *
+ * Uses Box + DropdownMenu instead of ExposedDropdownMenuBox to avoid
+ * MutatorMutex/MonotonicFrameClock crashes on Compose Desktop.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AspectRatioDropdown(
     selectedRatio: Double,
@@ -44,18 +46,22 @@ fun AspectRatioDropdown(
             }
         }
 
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    Box(modifier = Modifier.clickable { expanded = true }) {
         OutlinedTextField(
             value = currentRatioName,
             onValueChange = {},
             readOnly = true,
             label = { Text("Aspect Ratio") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor().width(140.dp).height(40.dp),
+            modifier = Modifier.width(140.dp).height(40.dp),
             textStyle = MaterialTheme.typography.labelSmall,
+            trailingIcon = {
+                Text("▾", style = MaterialTheme.typography.bodySmall)
+            },
         )
-
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
             AspectRatio.entries.forEach { ratio ->
                 DropdownMenuItem(
                     text = { Text(ratio.displayName, style = MaterialTheme.typography.labelSmall) },

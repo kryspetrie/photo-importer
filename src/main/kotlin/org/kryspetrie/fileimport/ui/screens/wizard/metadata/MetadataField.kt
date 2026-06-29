@@ -1,16 +1,14 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +35,9 @@ import androidx.compose.ui.unit.dp
  * - Source EXIF hint displayed below the field
  * - Keyboard focus navigation (Tab/Enter) through sequential fields
  *
+ * Uses Box + DropdownMenu instead of ExposedDropdownMenuBox to avoid
+ * MutatorMutex/MonotonicFrameClock crashes on Compose Desktop.
+ *
  * @param label Field label shown above the text field
  * @param placeholder Placeholder text when field is empty
  * @param value Current field value
@@ -53,7 +54,6 @@ import androidx.compose.ui.unit.dp
  * @param alwaysNavigateFocus If true, always enable Tab/Enter focus navigation. If false (default),
  *   only navigate when [focusRequester] is provided.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MetadataField(
     label: String,
@@ -83,17 +83,17 @@ fun MetadataField(
     // Keyboard focus navigation: navigate on Tab/Enter when requested
     val keyboardActions =
         if (focusRequester != null || alwaysNavigateFocus) {
-            KeyboardActions(
+            androidx.compose.foundation.text.KeyboardActions(
                 onNext = { focusManager.moveFocus(FocusDirection.Down) },
                 onDone = { focusManager.moveFocus(FocusDirection.Down) },
             )
         } else {
-            KeyboardActions()
+            androidx.compose.foundation.text.KeyboardActions()
         }
 
     Column(modifier = modifier) {
         if (suggestions.isNotEmpty()) {
-            // Use ExposedDropdownMenuBox for autocomplete suggestions
+            // Use Box + DropdownMenu for autocomplete suggestions
             var expanded by remember { mutableStateOf(false) }
             val filteredSuggestions =
                 remember(suggestions, value) {
@@ -101,29 +101,25 @@ fun MetadataField(
                     else suggestions.filter { it.contains(value, ignoreCase = true) }
                 }
 
-            ExposedDropdownMenuBox(
-                expanded = expanded && filteredSuggestions.isNotEmpty(),
-                onExpandedChange = { expanded = it },
-            ) {
+            Box {
                 OutlinedTextField(
                     value = value,
                     onValueChange = {
                         onValueChange(it)
-                        expanded = true
+                        expanded = filteredSuggestions.isNotEmpty()
                     },
                     label = { Text(label) },
                     placeholder = {
                         Text(placeholder, style = MaterialTheme.typography.labelSmall)
                     },
                     modifier =
-                        Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
-                            .fillMaxWidth()
+                        Modifier.fillMaxWidth()
                             .then(
                                 if (focusRequester != null) Modifier.focusRequester(focusRequester)
                                 else Modifier
                             ),
                     singleLine = singleLine,
-                    keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
                     keyboardActions = keyboardActions,
                     textStyle =
                         if (fieldExcluded)
@@ -145,8 +141,8 @@ fun MetadataField(
                         } else null,
                 )
                 if (filteredSuggestions.isNotEmpty()) {
-                    ExposedDropdownMenu(
-                        expanded = expanded && filteredSuggestions.isNotEmpty(),
+                    DropdownMenu(
+                        expanded = expanded,
                         onDismissRequest = { expanded = false },
                     ) {
                         filteredSuggestions.take(10).forEach { suggestion ->
@@ -177,7 +173,7 @@ fun MetadataField(
                             else Modifier
                         ),
                 singleLine = singleLine,
-                keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
                 keyboardActions = keyboardActions,
                 textStyle =
                     if (fieldExcluded)

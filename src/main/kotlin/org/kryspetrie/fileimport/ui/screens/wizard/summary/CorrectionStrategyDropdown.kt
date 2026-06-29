@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.summary
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -28,12 +28,9 @@ import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
  * - CROP_AND_ROTATE: Crop + rotation for slightly rotated photos
  * - PERSPECTIVE: Full 4-point perspective transform for skewed/trapezoidal photos
  *
- * Use the nullable overload [CorrectionStrategyDropdown] with [selectedStrategy] as
- * [CorrectionStrategy?] when the caller needs to distinguish "use global default" from an
- * explicit per-photo override. Use the non-nullable overload when a default must always be
- * selected (e.g., the scan-level global setting).
+ * Uses Box + DropdownMenu instead of ExposedDropdownMenuBox to avoid
+ * MutatorMutex/MonotonicFrameClock crashes on Compose Desktop.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CorrectionStrategyDropdown(
     selectedStrategy: CorrectionStrategy?,
@@ -45,18 +42,22 @@ fun CorrectionStrategyDropdown(
 
     val currentLabel = selectedStrategy?.displayName ?: defaultLabel
 
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    Box(modifier = modifier.clickable { expanded = true }) {
         OutlinedTextField(
             value = currentLabel,
             onValueChange = {},
             readOnly = true,
             label = { Text("Correction") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = modifier.menuAnchor().width(180.dp).height(40.dp),
+            modifier = Modifier.width(180.dp).height(40.dp),
             textStyle = MaterialTheme.typography.labelSmall,
+            trailingIcon = {
+                Text("▾", style = MaterialTheme.typography.bodySmall)
+            },
         )
-
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
             // "Default" option — clears per-photo override and inherits from global setting
             DropdownMenuItem(
                 text = {
@@ -100,7 +101,6 @@ fun CorrectionStrategyDropdown(
  * Non-nullable overload for contexts that always require a concrete strategy (e.g., the global
  * scan-level setting in [ExportSettingsCard]).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CorrectionStrategyDropdown(
     selectedStrategy: CorrectionStrategy,
@@ -109,18 +109,22 @@ fun CorrectionStrategyDropdown(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    Box(modifier = modifier.clickable { expanded = true }) {
         OutlinedTextField(
             value = selectedStrategy.displayName,
             onValueChange = {},
             readOnly = true,
             label = { Text("Correction") },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = modifier.menuAnchor().width(180.dp).height(40.dp),
+            modifier = Modifier.width(180.dp).height(40.dp),
             textStyle = MaterialTheme.typography.labelSmall,
+            trailingIcon = {
+                Text("▾", style = MaterialTheme.typography.bodySmall)
+            },
         )
-
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
             CorrectionStrategy.entries.forEach { strategy ->
                 DropdownMenuItem(
                     text = {

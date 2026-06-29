@@ -33,11 +33,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
+
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -196,10 +197,7 @@ internal fun QuickEditMetadataFields(
                 else availableSuggestions.filter { it.contains(keywordInput, ignoreCase = true) }
             }
         if (availableSuggestions.isNotEmpty() || true) {
-            ExposedDropdownMenuBox(
-                expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
-                onExpandedChange = { suggestionsExpanded = it },
-            ) {
+            Box {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -214,8 +212,7 @@ internal fun QuickEditMetadataFields(
                         placeholder = {
                             Text("Add keyword...", style = MaterialTheme.typography.labelSmall)
                         },
-                        modifier =
-                            Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).weight(1f),
+                        modifier = Modifier.weight(1f),
                         singleLine = true,
                         keyboardActions =
                             KeyboardActions(
@@ -258,7 +255,7 @@ internal fun QuickEditMetadataFields(
                     )
                 }
                 if (filteredSuggestions.isNotEmpty()) {
-                    ExposedDropdownMenu(
+                    DropdownMenu(
                         expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
                         onDismissRequest = { suggestionsExpanded = false },
                     ) {
@@ -336,7 +333,6 @@ internal fun QuickEditMetadataFields(
 }
 
 /** Collapsible camera settings section. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun CameraSection(
     showExpanded: Boolean,
@@ -490,7 +486,6 @@ internal fun CameraSection(
 }
 
 /** Collapsible location section with IPTC structured fields and GPS coordinates. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LocationSection(
     showExpanded: Boolean,
@@ -797,10 +792,7 @@ internal fun SubjectsSection(
                                 it.contains(subjectInput, ignoreCase = true)
                             }
                     }
-                ExposedDropdownMenuBox(
-                    expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
-                    onExpandedChange = { suggestionsExpanded = it },
-                ) {
+                Box {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -815,8 +807,7 @@ internal fun SubjectsSection(
                             placeholder = {
                                 Text("Add person...", style = MaterialTheme.typography.labelSmall)
                             },
-                            modifier =
-                                Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).weight(1f),
+                            modifier = Modifier.weight(1f),
                             singleLine = true,
                             textStyle = MaterialTheme.typography.bodyMedium,
                             trailingIcon = {
@@ -843,7 +834,7 @@ internal fun SubjectsSection(
                         )
                     }
                     if (filteredSuggestions.isNotEmpty()) {
-                        ExposedDropdownMenu(
+                        DropdownMenu(
                             expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
                             onDismissRequest = { suggestionsExpanded = false },
                         ) {
