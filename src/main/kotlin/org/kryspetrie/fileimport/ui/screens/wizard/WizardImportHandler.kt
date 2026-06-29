@@ -3,9 +3,8 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
@@ -82,20 +81,21 @@ suspend fun loadImageAndDetect(
                             )
                         }
 
-                    withContext(Dispatchers.Main) {
-                        if (boxes.isNotEmpty()) {
-                            state.setDetectedBoxes(boxes, configs)
-                            appLogger.logOperationComplete(
-                                OperationType.IMAGE_DETECTION,
-                                "Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}",
-                            )
-                            onMessage("Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}")
-                        } else {
-                            appLogger.info("No photos detected in ${file.name} - user can add manually")
-                            onMessage("No photos detected. Add bounding boxes manually.")
-                        }
-                        onComplete()
+                    // Update state directly — Compose MutableState is thread-safe, and
+                    // using withContext(Dispatchers.Main) drops MonotonicFrameClock from the
+                    // coroutine context, which crashes Compose animation APIs.
+                    if (boxes.isNotEmpty()) {
+                        state.setDetectedBoxes(boxes, configs)
+                        appLogger.logOperationComplete(
+                            OperationType.IMAGE_DETECTION,
+                            "Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}",
+                        )
+                        onMessage("Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}")
+                    } else {
+                        appLogger.info("No photos detected in ${file.name} - user can add manually")
+                        onMessage("No photos detected. Add bounding boxes manually.")
                     }
+                    onComplete()
                 }
             } else {
                 appLogger.info("CV auto-detection disabled - manual box placement expected")
@@ -104,11 +104,13 @@ suspend fun loadImageAndDetect(
             }
         } else {
             appLogger.logOperationFailed(OperationType.IMAGE_LOAD, "Unsupported image format: ${file.name}")
-            withContext(Dispatchers.Main) { onError("Failed to load image: unsupported format") }
+            // Direct call — Compose MutableState is thread-safe; withContext(Dispatchers.Main)
+            // drops MonotonicFrameClock, crashing Compose animation components.
+            onError("Failed to load image: unsupported format")
         }
     } catch (e: Exception) {
         appLogger.logOperationFailed(OperationType.IMAGE_LOAD, e.message ?: "Unknown error", e)
-        withContext(Dispatchers.Main) { onError("Error loading image: ${e.message}") }
+        onError("Error loading image: ${e.message}")
     } finally {
         isLoading(false)
     }
