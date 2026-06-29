@@ -1,7 +1,7 @@
 # Petrie File Importer — Session Progress Notes
 
 **Date**: 2026-06-29
-**Git HEAD**: `5d40a96` — feat: improve map tile rendering
+**Git HEAD**: `fe6a021` — fix: MonotonicFrameClock error
 **Working directory**: `/Users/krys.petrie/dev/petrie-file-importer`
 
 ---
