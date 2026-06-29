@@ -54,16 +54,19 @@ data class AppSettings(
     val metadataHistory: MetadataHistory = MetadataHistory(),
 
     /**
-     * When true, the Edit step starts on the Metadata tab instead of Rotate. Useful when you only
-     * need to edit metadata and don't need to rotate photos.
-     */
-    val alwaysEditMetadata: Boolean = false,
-
-    /**
      * When true, skip the Crop & Rotate (Summary) screen entirely and go directly from Overview to
      * Edit (starting in metadata mode). Useful when you don't need to crop or rotate photos.
      */
     val skipCropAndRotate: Boolean = false,
+
+    /** Last-used map location (latitude) in the location picker. Persists across sessions. */
+    val lastMapLat: Double = 39.0,
+
+    /** Last-used map location (longitude) in the location picker. Persists across sessions. */
+    val lastMapLon: Double = -78.0,
+
+    /** Last-used map zoom level in the location picker. Persists across sessions. */
+    val lastMapZoom: Double = 5.0,
 
     /**
      * Default detection mode for photo scans. Used as the pipeline default when auto-detect is

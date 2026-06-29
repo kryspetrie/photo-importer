@@ -69,6 +69,7 @@ fun LocationPickerDialog(
     initialZoom: Double = 5.0,
     onLocationSelected: (LocationResult) -> Unit,
     onDismiss: () -> Unit,
+    onMapLocationChanged: ((lat: Double, lon: Double, zoom: Double) -> Unit)? = null,
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedLocation by remember { mutableStateOf<LocationResult?>(null) }
@@ -280,7 +281,10 @@ fun LocationPickerDialog(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                             ) {
                                 OutlinedButton(
-                                    onClick = { onLocationSelected(selectedLocation!!) },
+                                    onClick = {
+                                        onMapLocationChanged?.invoke(mapCenterLat, mapCenterLon, mapZoom)
+                                        onLocationSelected(selectedLocation!!)
+                                    },
                                     modifier = Modifier.weight(1f),
                                 ) {
                                     Icon(Icons.Default.Check, null, Modifier.size(16.dp))
@@ -347,7 +351,10 @@ fun LocationPickerDialog(
                 Spacer(Modifier.weight(1f))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    OutlinedButton(onClick = onDismiss) { Text("Cancel") }
+                    OutlinedButton(onClick = {
+                                        onMapLocationChanged?.invoke(mapCenterLat, mapCenterLon, mapZoom)
+                                        onDismiss()
+                                    }) { Text("Cancel") }
                 }
             }
 

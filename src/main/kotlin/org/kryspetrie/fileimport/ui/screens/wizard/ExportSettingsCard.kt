@@ -38,8 +38,6 @@ import org.kryspetrie.fileimport.ui.screens.wizard.summary.CorrectionStrategyDro
 @Composable
 fun ExportSettingsCard(
     state: PhotoScanWizardState,
-    alwaysEditMetadata: Boolean = false,
-    onAlwaysEditMetadataChange: ((Boolean) -> Unit)? = null,
     skipCropAndRotate: Boolean = false,
     onSkipCropAndRotateChange: ((Boolean) -> Unit)? = null,
     defaultDetectionMode: DetectionMode = DetectionMode.PERSPECTIVE_CORRECTION,
@@ -216,29 +214,7 @@ fun ExportSettingsCard(
                 }
             }
 
-            // Always start with metadata checkbox
-            if (onAlwaysEditMetadataChange != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(
-                        checked = alwaysEditMetadata,
-                        onCheckedChange = onAlwaysEditMetadataChange,
-                    )
-                    Column {
-                        Text(
-                            "Start with metadata editor",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            "Skip rotation and go directly to metadata tagging",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
+
         }
     }
 }

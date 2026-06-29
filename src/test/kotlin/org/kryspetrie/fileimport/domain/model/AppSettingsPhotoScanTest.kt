@@ -188,35 +188,6 @@ class AppSettingsPhotoScanTest {
         assertEquals(listOf("/recent/path"), deserialized.recentPhotoScanDestinations)
     }
 
-    // ==================== alwaysEditMetadata Tests ====================
-
-    @Test
-    fun `alwaysEditMetadata defaults to false`() {
-        val settings = AppSettings()
-        assertFalse(settings.alwaysEditMetadata)
-    }
-
-    @Test
-    fun `alwaysEditMetadata can be set to true`() {
-        val settings = AppSettings(alwaysEditMetadata = true)
-        assertTrue(settings.alwaysEditMetadata)
-    }
-
-    @Test
-    fun `alwaysEditMetadata persists through serialization`() {
-        val original = AppSettings(alwaysEditMetadata = true)
-        val json =
-            kotlinx.serialization.json
-                .Json { prettyPrint = true }
-                .encodeToString(AppSettings.serializer(), original)
-        val deserialized =
-            kotlinx.serialization.json
-                .Json { ignoreUnknownKeys = true }
-                .decodeFromString(AppSettings.serializer(), json)
-
-        assertTrue(deserialized.alwaysEditMetadata)
-    }
-
     // ==================== lastCorrectionStrategy Tests ====================
 
     @Test

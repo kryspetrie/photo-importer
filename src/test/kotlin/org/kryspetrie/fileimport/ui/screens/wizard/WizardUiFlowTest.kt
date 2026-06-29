@@ -325,30 +325,6 @@ class WizardUiFlowTest {
 
             composeTestRule.onNodeWithText("Additional margin").assertIsDisplayed()
         }
-
-        @Test
-        @DisplayName("should display start with metadata checkbox when callback provided")
-        fun shouldDisplayStartWithMetadataCheckbox() {
-            composeTestRule.setContent {
-                ExportSettingsCard(
-                    state = wizardState,
-                    alwaysEditMetadata = false,
-                    onAlwaysEditMetadataChange = {},
-                )
-            }
-
-            composeTestRule.onNodeWithText("Start with metadata editor").assertIsDisplayed()
-        }
-
-        @Test
-        @DisplayName("should not display metadata checkbox when callback is null")
-        fun shouldNotDisplayMetadataCheckboxWhenCallbackIsNull() {
-            composeTestRule.setContent {
-                ExportSettingsCard(state = wizardState)
-            }
-
-            composeTestRule.onNodeWithText("Start with metadata editor").assertDoesNotExist()
-        }
     }
 
     // ================================================================

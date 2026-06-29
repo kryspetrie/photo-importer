@@ -206,15 +206,6 @@ fun PhotoScanImportScreen(
                     // ── Export Settings ──
                     ExportSettingsCard(
                         state = state,
-                        alwaysEditMetadata = settings.alwaysEditMetadata,
-                        onAlwaysEditMetadataChange = { newValue ->
-                            scope.launch {
-                                val currentSettings = settingsPort.observeSettings().first()
-                                settingsPort.saveSettings(
-                                    currentSettings.copy(alwaysEditMetadata = newValue)
-                                )
-                            }
-                        },
                         skipCropAndRotate = settings.skipCropAndRotate,
                         onSkipCropAndRotateChange = { newValue ->
                             scope.launch {

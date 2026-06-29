@@ -352,7 +352,7 @@ private fun WizardStepContent(
                             )
                         }
                     },
-                    startWithMetadata = settings.alwaysEditMetadata || settings.skipCropAndRotate,
+                    startWithMetadata = settings.skipCropAndRotate,
                     faceRegionTransformer = faceRegionTransformer,
                 )
             } else {

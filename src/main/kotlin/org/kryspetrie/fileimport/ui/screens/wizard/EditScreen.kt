@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +57,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import java.awt.image.BufferedImage
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
@@ -122,6 +126,9 @@ fun EditScreen(
     val dispatcherProvider: DispatcherProvider = koinInject()
     val imageRepository: ImageRepositoryPort = koinInject()
     val faceDetectionPort: FaceDetectionPort = koinInject()
+    val settingsPort: SettingsPort = koinInject()
+    val settings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
+    val coroutineScope = rememberCoroutineScope()
 
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
@@ -352,6 +359,9 @@ fun EditScreen(
             locationSearchService = locationSearchService,
             geocodingPort = geocodingPort,
             dispatcherProvider = dispatcherProvider,
+            initialLat = settings.lastMapLat,
+            initialLon = settings.lastMapLon,
+            initialZoom = settings.lastMapZoom,
             onLocationSelected = { result ->
                 val idx = locationPickerTargetIndex
                 if (idx != null && idx < boundingBoxList.size()) {
@@ -372,6 +382,14 @@ fun EditScreen(
             onDismiss = {
                 showLocationPicker = false
                 locationPickerTargetIndex = null
+            },
+            onMapLocationChanged = { lat, lon, zoom ->
+                coroutineScope.launch {
+                    val current = settingsPort.observeSettings().first()
+                    settingsPort.saveSettings(
+                        current.copy(lastMapLat = lat, lastMapLon = lon, lastMapZoom = zoom)
+                    )
+                }
             },
         )
     }
