@@ -1,11 +1,5 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -501,19 +495,6 @@ private fun LoadingContent(message: String) {
 
 @Composable
 private fun AnimatedLoadingIndicator() {
-    val infiniteTransition = rememberInfiniteTransition(label = "loading")
-    val rotation by
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 360f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(durationMillis = 1500, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart,
-                ),
-            label = "rotation",
-        )
-
     Box(modifier = Modifier.size(48.dp), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(modifier = Modifier.fillMaxSize(), strokeWidth = 4.dp)
     }

@@ -1,14 +1,7 @@
 package org.kryspetrie.fileimport.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.Center
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -16,20 +9,47 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
+
+/**
+ * Animated progress state using time-based interpolation with delay().
+ *
+ * Avoids Compose animation APIs (rememberInfiniteTransition, animateFloat, Animatable)
+ * which require MonotonicFrameClock — not reliably available in Compose Desktop AWT contexts.
+ * Instead, uses System.nanoTime() + delay(16) for ~60fps animation.
+ */
+@Composable
+private fun rememberInfiniteProgress(animationDurationMs: Int = 1200): Float {
+    var progress by remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(animationDurationMs) {
+        val startTimeNs = System.nanoTime()
+        val durationNs = animationDurationMs.toLong() * 1_000_000L
+        while (true) {
+            val elapsedNs = System.nanoTime() - startTimeNs
+            progress = ((elapsedNs % durationNs).toDouble() / durationNs.toDouble()).toFloat()
+            delay(16) // ~60fps
+        }
+    }
+    return progress
+}
 
 /**
  * CubeGrid-style loading indicator using native Compose.
@@ -39,6 +59,9 @@ import androidx.compose.ui.unit.dp
  *
  * The animation consists of a 3x3 grid of squares that animate in a wave pattern, creating a
  * visually appealing loading indicator.
+ *
+ * Uses time-based animation (System.nanoTime + delay) instead of Compose animation APIs
+ * to avoid MonotonicFrameClock issues in Compose Desktop.
  */
 @Composable
 fun CubeGridLoadingIndicator(
@@ -46,22 +69,8 @@ fun CubeGridLoadingIndicator(
     color: Color = MaterialTheme.colorScheme.primary,
     animationDuration: Int = 1200,
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "CubeGridTransition")
-
-    // Single master progress value from 0f to 1f
-    val progress by
-        infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 1f,
-            animationSpec =
-                infiniteRepeatable(
-                    animation = tween(animationDuration, easing = LinearEasing),
-                    repeatMode = RepeatMode.Restart,
-                ),
-            label = "CubeGridProgress",
-        )
-
-    val density = androidx.compose.ui.platform.LocalDensity.current
+    val progress = rememberInfiniteProgress(animationDuration)
+    val density = LocalDensity.current
 
     Box(modifier = modifier.size(60.dp), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.size(48.dp)) {
