@@ -123,7 +123,10 @@ fun ChunkyScrollbar(
                                     ((y - thumbHeight / 2) / (containerHeight - thumbHeight))
                                         .coerceIn(0f, 1f)
                                 coroutineScope.launch {
-                                    scrollState.animateScrollTo(
+                                    // animateScrollTo() uses Animatable which requires MonotonicFrameClock.
+                                    // In Compose Desktop AWT contexts, MonotonicFrameClock is not reliably
+                                    // available, so we use scrollTo() for an instant jump instead.
+                                    scrollState.scrollTo(
                                         (targetFraction * maxScroll).toInt()
                                     )
                                 }
