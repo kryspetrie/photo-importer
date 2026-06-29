@@ -1,7 +1,7 @@
 # Petrie File Importer — Session Progress Notes
 
 **Date**: 2026-06-29
-**Git HEAD**: `fe6a021` — fix: MonotonicFrameClock error
+**Git HEAD**: `2f26295` — fix: replace Animatable with state-driven LaunchedEffect animation
 **Working directory**: `/Users/krys.petrie/dev/petrie-file-importer`
 
 ---
