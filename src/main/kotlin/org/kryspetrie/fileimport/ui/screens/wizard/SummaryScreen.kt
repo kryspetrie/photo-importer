@@ -69,9 +69,7 @@ import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
-import org.kryspetrie.fileimport.ui.screens.wizard.summary.AspectRatioDropdown
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.BulkActionButtons
-import org.kryspetrie.fileimport.ui.screens.wizard.summary.CorrectionStrategyDropdown
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 import androidx.compose.material.icons.automirrored.filled.ArrowLeft
 import androidx.compose.material.icons.automirrored.filled.ArrowRight
@@ -676,11 +674,7 @@ private fun DetailControlsRow(
                 onRotateCW = onRotateCW,
                 onRotateCCW = onRotateCCW,
             )
-            DetailDropdownRow(
-                config = config,
-                box = box,
-                onConfigChange = onConfigChange,
-            )
+
         }
     }
 }
@@ -728,25 +722,7 @@ private fun DetailLabelAndRotation(
     }
 }
 
-/** Row of dropdown controls: aspect ratio and correction strategy. */
-@Composable
-private fun DetailDropdownRow(
-    config: PhotoScanConfiguration,
-    box: BoundingBox,
-    onConfigChange: (PhotoScanConfiguration) -> Unit,
-) {
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        AspectRatioDropdown(
-            selectedRatio = config.aspectRatio,
-            onRatioChange = { ratio -> onConfigChange(config.copy(aspectRatio = ratio)) },
-            boxAspectRatio = box.aspectRatio(),
-        )
-        CorrectionStrategyDropdown(
-            selectedStrategy = config.correctionStrategy,
-            onStrategyChange = { strategy -> onConfigChange(config.copy(correctionStrategy = strategy)) },
-        )
-    }
-}
+
 
 /** Placeholder shown when no photo is selected in the detail panel. */
 @Composable

@@ -68,18 +68,7 @@ data class AppSettings(
     /** Last-used map zoom level in the location picker. Persists across sessions. */
     val lastMapZoom: Double = 5.0,
 
-    /**
-     * Default detection mode for photo scans. Used as the pipeline default when auto-detect is
-     * enabled. Shown as "Simple Crop" (COMPUTER_VISION) and "Perspective Crop"
-     * (PERSPECTIVE_CORRECTION) on the import screen.
-     */
-    val defaultDetectionMode: DetectionMode = DetectionMode.PERSPECTIVE_CORRECTION,
 
-    /**
-     * Last-used correction strategy for the photo scan. Persists across sessions so users don't
-     * have to re-select their preferred strategy each time.
-     */
-    val lastCorrectionStrategy: CorrectionStrategy = CorrectionStrategy.PERSPECTIVE,
 ) {
     /** Returns the currently active Photo Scan profile, or the default if none is selected. */
     val activePhotoScanProfile: PhotoScanProfile

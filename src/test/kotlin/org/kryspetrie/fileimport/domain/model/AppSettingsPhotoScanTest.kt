@@ -188,55 +188,6 @@ class AppSettingsPhotoScanTest {
         assertEquals(listOf("/recent/path"), deserialized.recentPhotoScanDestinations)
     }
 
-    // ==================== lastCorrectionStrategy Tests ====================
-
-    @Test
-    fun `lastCorrectionStrategy defaults to PERSPECTIVE`() {
-        val settings = AppSettings()
-        assertEquals(CorrectionStrategy.PERSPECTIVE, settings.lastCorrectionStrategy)
-    }
-
-    @Test
-    fun `lastCorrectionStrategy can be changed`() {
-        val settings = AppSettings(lastCorrectionStrategy = CorrectionStrategy.CROP)
-        assertEquals(CorrectionStrategy.CROP, settings.lastCorrectionStrategy)
-
-        val updated = settings.copy(lastCorrectionStrategy = CorrectionStrategy.CROP_AND_ROTATE)
-        assertEquals(CorrectionStrategy.CROP_AND_ROTATE, updated.lastCorrectionStrategy)
-    }
-
-    @Test
-    fun `lastCorrectionStrategy persists through serialization`() {
-        val original = AppSettings(lastCorrectionStrategy = CorrectionStrategy.CROP_AND_ROTATE)
-        val json =
-            kotlinx.serialization.json
-                .Json { prettyPrint = true }
-                .encodeToString(AppSettings.serializer(), original)
-        val deserialized =
-            kotlinx.serialization.json
-                .Json { ignoreUnknownKeys = true }
-                .decodeFromString(AppSettings.serializer(), json)
-
-        assertEquals(CorrectionStrategy.CROP_AND_ROTATE, deserialized.lastCorrectionStrategy)
-    }
-
-    @Test
-    fun `all three strategies can be stored and retrieved`() {
-        for (strategy in CorrectionStrategy.entries) {
-            val settings = AppSettings(lastCorrectionStrategy = strategy)
-            val json =
-                kotlinx.serialization.json
-                    .Json { prettyPrint = true }
-                    .encodeToString(AppSettings.serializer(), settings)
-            val deserialized =
-                kotlinx.serialization.json
-                    .Json { ignoreUnknownKeys = true }
-                    .decodeFromString(AppSettings.serializer(), json)
-
-            assertEquals(strategy, deserialized.lastCorrectionStrategy)
-        }
-    }
-
     // ==================== Metadata Set (Recent Values) Tests ====================
 
     @Test

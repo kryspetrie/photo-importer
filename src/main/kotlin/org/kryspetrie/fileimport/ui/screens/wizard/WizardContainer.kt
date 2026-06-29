@@ -114,8 +114,6 @@ fun WizardContainer(
         previewCache.clear()
     }
 
-    // Initialize correction strategy from persisted settings (once)
-    LaunchedEffect(Unit) { state.exportSettings.setDefaultCorrectionStrategy(settings.lastCorrectionStrategy) }
 
     Box(modifier = modifier.fillMaxSize()) {
         WizardStepContent(
