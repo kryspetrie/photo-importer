@@ -3,9 +3,6 @@
 
 package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.animate
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -26,7 +23,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -706,23 +702,6 @@ private data class TileLoadKey(
  * @param dispatcherProvider Provides IO dispatcher for tile loading
  */
 
-/** Zoom animation request — triggers LaunchedEffect-based animation. */
-private sealed class ZoomAnimation {
-    abstract val targetZoom: Double
-
-    /** Animated zoom centered on the map viewport (for +/- buttons). */
-    data class Center(override val targetZoom: Double) : ZoomAnimation()
-
-    /** Animated zoom toward a pointer position (for double-click). */
-    data class Pointer(
-        override val targetZoom: Double,
-        val pointerX: Float,
-        val pointerY: Float,
-        val oldZoom: Double,
-        val viewW: Float,
-        val viewH: Float,
-    ) : ZoomAnimation()
-}
 
 @Composable
 fun OsmMapView(
@@ -771,48 +750,38 @@ fun OsmMapView(
     var lastPointerY by remember { mutableStateOf(0f) }
 
     // ── Zoom animation ──────────────────────────────────────────────────────
-    // State-driven animation: set zoomAnimation to request an animated zoom,
-    // then LaunchedEffect handles the animation in the composition's clock context.
-    // This avoids MonotonicFrameClock issues with coroutineScope.launch { animateTo() }.
+    // Uses time-based interpolation with delay() instead of Compose animation APIs.
+    // Compose's MonotonicFrameClock is not reliably available in Compose Desktop AWT
+    // contexts, so we avoid Animatable/animate() and use a simple frame loop instead.
 
-    /** Request a zoom animation. Setting this triggers the LaunchedEffect below. */
-    var zoomAnimation by remember { mutableStateOf<ZoomAnimation?>(null) }
+    /** Active zoom animation job, so scroll can cancel it. */
+    var zoomAnimationJob by remember { mutableStateOf<Job?>(null) }
 
-    /** Current animated zoom value, updated by the animation LaunchedEffect. */
-    var animatedZoomValue by remember { mutableFloatStateOf(initialZoom.toFloat()) }
-
-    // Process zoom animation requests — LaunchedEffect always has MonotonicFrameClock
-    LaunchedEffect(zoomAnimation) {
-        val req = zoomAnimation ?: return@LaunchedEffect
-        // Reset request so we don't re-trigger on recomposition
-        zoomAnimation = null
-        // For Pointer zoom, center was already adjusted in requestPointerZoomAnimation
-        val startZoom = animatedZoomValue
-        val targetZoom = req.targetZoom.toFloat()
-        if (startZoom == targetZoom) {
-            animatedZoomValue = targetZoom
-            return@LaunchedEffect
-        }
-        animate(
-            initialValue = startZoom,
-            targetValue = targetZoom,
-            animationSpec = tween(
-                durationMillis = TileLoader.ZOOM_ANIMATION_MS,
-                easing = FastOutSlowInEasing,
-            ),
-        ) { value, _ ->
-            animatedZoomValue = value
-            val newZoom = value.toDouble()
-            if (newZoom != camera.zoom) {
+    /** Animate zoom from current to targetZoom over ZOOM_ANIMATION_MS, using ease-in-out. */
+    fun animateZoomTo(targetZoom: Double) {
+        val startZoom = camera.zoom
+        if (startZoom == targetZoom) return
+        zoomAnimationJob?.cancel()
+        zoomAnimationJob = coroutineScope.launch {
+            val durationNs = TileLoader.ZOOM_ANIMATION_MS.toLong() * 1_000_000L
+            val startTimeNs = System.nanoTime()
+            val diff = targetZoom - startZoom
+            while (true) {
+                val elapsed = System.nanoTime() - startTimeNs
+                val progress = (elapsed.toDouble() / durationNs).coerceIn(0.0, 1.0)
+                // Ease-in-out (quadratic): slow start, fast middle, slow end
+                val eased = if (progress < 0.5) {
+                    2.0 * progress * progress
+                } else {
+                    1.0 - (-2.0 * progress + 2.0) * (-2.0 * progress + 2.0) / 2.0
+                }
+                val newZoom = startZoom + diff * eased
                 camera.zoom = newZoom
                 onZoomChanged(newZoom)
+                if (progress >= 1.0) break
+                delay(16) // ~60fps
             }
         }
-    }
-
-    // Sync initial zoom (no animation)
-    LaunchedEffect(Unit) {
-        animatedZoomValue = initialZoom.toFloat()
     }
 
     // Sync map style to tile loader
@@ -978,8 +947,7 @@ fun OsmMapView(
 
     /** Animated zoom centered on the map center (for +/- buttons). */
     fun requestZoomAnimation(targetZoom: Double) {
-        animatedZoomValue = camera.zoom.toFloat()
-        zoomAnimation = ZoomAnimation.Center(targetZoom)
+        animateZoomTo(targetZoom)
     }
 
     /** Animated zoom toward a pointer position (for double-click). */
@@ -987,10 +955,9 @@ fun OsmMapView(
         val newZoom = (oldZoom + delta).coerceIn(TileLoader.MIN_ZOOM, TileLoader.MAX_ZOOM)
         // Apply the center adjustment immediately (so the map doesn't jerk)
         adjustCenterForPointerZoom(pointerX, pointerY, oldZoom, newZoom, viewW, viewH)
-        // Then animate zoom from old to new
-        animatedZoomValue = oldZoom.toFloat()
-        camera.zoom = oldZoom  // Start animation from old zoom
-        zoomAnimation = ZoomAnimation.Pointer(newZoom, pointerX, pointerY, oldZoom, viewW, viewH)
+        // Snap to old zoom, then animate to new zoom
+        camera.zoom = oldZoom
+        animateZoomTo(newZoom)
     }
 
     Box(modifier = modifier) {
@@ -1008,8 +975,8 @@ fun OsmMapView(
                                     val scrollDelta = change.scrollDelta.y
                                     if (scrollDelta != 0f) {
                                         // Cancel any in-progress zoom animation so scroll takes over
-                                        zoomAnimation = null
-                                        animatedZoomValue = camera.zoom.toFloat()
+                                        zoomAnimationJob?.cancel()
+                                        zoomAnimationJob = null
                                         val zoomDelta = -scrollDelta * TileLoader.ZOOM_SENSITIVITY
                                         val oldZoom = camera.zoom
                                         val newZoom =
