@@ -54,6 +54,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.awt.image.BufferedImage
 import kotlinx.coroutines.flow.first
@@ -353,8 +354,15 @@ fun EditScreen(
     }
 
     // ── Location picker dialog ──
-    // LocationPickerDialog is a full-screen component — no EditDialog wrapper needed
+    // LocationPickerDialog must be wrapped in a Dialog so it overlays fullscreen
     if (showLocationPicker && locationPickerTargetIndex != null) {
+        Dialog(
+            onDismissRequest = {
+                showLocationPicker = false
+                locationPickerTargetIndex = null
+            },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
         LocationPickerDialog(
             locationSearchService = locationSearchService,
             geocodingPort = geocodingPort,
@@ -392,6 +400,7 @@ fun EditScreen(
                 }
             },
         )
+        }
     }
 
     // ── Back-of-photo image picker dialog ──
@@ -473,18 +482,6 @@ fun EditScreen(
                         )
                     }
                 },
-                actions = {
-                    Spacer(Modifier.weight(1f))
-                    Button(
-                        onClick = onExport,
-                        enabled = boundingBoxList.size() > 0,
-                        modifier = Modifier.height(32.dp),
-                    ) {
-                        Text("Next", style = MaterialTheme.typography.labelSmall)
-                        Spacer(Modifier.width(4.dp))
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(16.dp))
-                    }
-                },
             )
         },
         bottomBar = {
@@ -499,76 +496,62 @@ fun EditScreen(
                         Spacer(Modifier.width(4.dp))
                         Text("Back")
                     }
-                    if (boundingBoxList.size() > 1) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
+                    // Center: photo count text
+                    Text(
+                        if (boundingBoxList.size() <= 1)
+                            "${boundingBoxList.size()} ${if (boundingBoxList.size() == 1) "photo" else "photos"}"
+                        else {
                             val currentIdx =
                                 if (selectedIndices.size == 1) selectedIndices.first() else -1
-                            OutlinedButton(
-                                onClick = {
-                                    if (currentIdx > 0) state.configs.selectSingleMetadata(currentIdx - 1)
-                                },
-                                enabled = currentIdx > 0,
-                                modifier = Modifier.height(32.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                            ) {
-                                Text("◄ Prev", style = MaterialTheme.typography.labelSmall)
-                            }
-                            Text(
-                                if (currentIdx >= 0)
-                                    "Photo ${currentIdx + 1} of ${boundingBoxList.size()}"
-                                else "${boundingBoxList.size()} photos",
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                            OutlinedButton(
-                                onClick = {
-                                    if (currentIdx < boundingBoxList.size() - 1 && currentIdx >= 0)
-                                        state.configs.selectSingleMetadata(currentIdx + 1)
-                                },
-                                enabled =
-                                    currentIdx >= 0 && currentIdx < boundingBoxList.size() - 1,
-                                modifier = Modifier.height(32.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                            ) {
-                                Text("Next ►", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    } else {
-                        Text(
-                            "${boundingBoxList.size()} ${if (boundingBoxList.size() == 1) "photo" else "photos"}",
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                    }
-                    if (boundingBoxList.size() > 1) {
-                        if (isMultiEditMode) {
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                Text(
-                                    "${selectedIndices.size} selected",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.align(Alignment.CenterVertically),
-                                )
+                            if (currentIdx >= 0)
+                                "Photo ${currentIdx + 1} of ${boundingBoxList.size()}"
+                            else "${boundingBoxList.size()} photos"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    // Right: multi-edit toggle and export/next button
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (boundingBoxList.size() > 1) {
+                            if (isMultiEditMode) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        "${selectedIndices.size} selected",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.align(Alignment.CenterVertically),
+                                    )
+                                    OutlinedButton(
+                                        onClick = {
+                                            isMultiEditMode = false
+                                            state.configs.deselectAllMetadata()
+                                        },
+                                        modifier = Modifier.height(28.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp),
+                                    ) {
+                                        Text("Done", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                            } else {
                                 OutlinedButton(
-                                    onClick = {
-                                        isMultiEditMode = false
-                                        state.configs.deselectAllMetadata()
-                                    },
+                                    onClick = { isMultiEditMode = true },
                                     modifier = Modifier.height(28.dp),
                                     contentPadding = PaddingValues(horizontal = 8.dp),
                                 ) {
-                                    Text("Done", style = MaterialTheme.typography.labelSmall)
+                                    Text("Multi-Edit", style = MaterialTheme.typography.labelSmall)
                                 }
                             }
-                        } else {
-                            OutlinedButton(
-                                onClick = { isMultiEditMode = true },
-                                modifier = Modifier.height(28.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp),
-                            ) {
-                                Text("Multi-Edit", style = MaterialTheme.typography.labelSmall)
-                            }
+                        }
+                        Button(
+                            onClick = onExport,
+                            enabled = boundingBoxList.size() > 0,
+                            modifier = Modifier.height(32.dp),
+                        ) {
+                            Text("Next", style = MaterialTheme.typography.labelSmall)
+                            Spacer(Modifier.width(4.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(16.dp))
                         }
                     }
                 }
