@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
+import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
@@ -80,30 +82,23 @@ import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.PreviewCache
-import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
 
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
-import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditMode
-import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditModeTab
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.FaceNameEntryPanel
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.MetadataEditorPanel
-import org.kryspetrie.fileimport.ui.screens.wizard.edit.RotateEditorPanel
-import org.kryspetrie.fileimport.ui.screens.wizard.edit.ThumbnailStrip
+import org.kryspetrie.fileimport.ui.screens.wizard.edit.PhotoSidebar
+import org.kryspetrie.fileimport.ui.screens.wizard.edit.RotationSection
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LoadSourceExifEffect
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerDialog
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 
 /**
- * Edit screen combining rotation and metadata editing into a single view with mode selection.
+ * Edit screen with vertical thumbnail sidebar on the left, large preview in the center,
+ * and metadata panel on the right. Rotation controls are inline in the metadata panel.
  *
- * The user chooses between "Rotate" and "Metadata" modes via tabs in the top bar.
- * - Rotate mode: large preview with rotation controls
- * - Metadata mode: large preview with full metadata editing panel
- *
- * Both modes share: thumbnail strip, photo navigation, back image management, and export actions.
+ * Layout: [Thumbnail sidebar | Preview | Metadata panel]
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -137,15 +132,8 @@ fun EditScreen(
     val sourceExif by state.sourceExif.collectAsState()
     val currentImageFile by state.imageFile.collectAsState()
 
-    var editMode by
-        remember(startWithMetadata) {
-            mutableStateOf(if (startWithMetadata) EditMode.METADATA else EditMode.ROTATE)
-        }
     var isMultiEditMode by remember { mutableStateOf(false) }
     var fullscreenPreviewIndex by remember { mutableStateOf<Int?>(null) }
-    var showLocationSection by remember { mutableStateOf(false) }
-    var showCameraSection by remember { mutableStateOf(false) }
-    var showSubjectsSection by remember { mutableStateOf(false) }
     var showLocationPicker by remember { mutableStateOf(false) }
     var locationPickerTargetIndex by remember { mutableStateOf<Int?>(null) }
 
@@ -288,7 +276,6 @@ fun EditScreen(
                         try {
                             val detections = faceDetectionPort.detectFaces(fullPreview.toProcessedImage())
                             if (detections.isNotEmpty()) {
-                                // Remember face count before adding, so we can auto-select first new face
                                 val imgW = fullPreview.width.toDouble()
                                 val imgH = fullPreview.height.toDouble()
                                 val detectedRegions = detections.map { det ->
@@ -354,7 +341,6 @@ fun EditScreen(
     }
 
     // ── Location picker dialog ──
-    // LocationPickerDialog must be wrapped in a Dialog so it overlays fullscreen
     if (showLocationPicker && locationPickerTargetIndex != null) {
         Dialog(
             onDismissRequest = {
@@ -464,23 +450,7 @@ fun EditScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        WizardStepIndicator(currentStep = WizardStep.EDIT)
-                        Spacer(Modifier.width(8.dp))
-                        EditModeTab(
-                            label = "Rotate",
-                            selected = editMode == EditMode.ROTATE,
-                            onClick = { editMode = EditMode.ROTATE },
-                        )
-                        EditModeTab(
-                            label = "Metadata",
-                            selected = editMode == EditMode.METADATA,
-                            onClick = { editMode = EditMode.METADATA },
-                        )
-                    }
+                    Text("Edit Photos", style = MaterialTheme.typography.titleSmall)
                 },
             )
         },
@@ -509,310 +479,269 @@ fun EditScreen(
                         },
                         style = MaterialTheme.typography.labelSmall,
                     )
-                    // Right: multi-edit toggle and export/next button
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    // Right: export/next button
+                    Button(
+                        onClick = onExport,
+                        enabled = boundingBoxList.size() > 0,
+                        modifier = Modifier.height(32.dp),
                     ) {
-                        if (boundingBoxList.size() > 1) {
-                            if (isMultiEditMode) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    Text(
-                                        "${selectedIndices.size} selected",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.align(Alignment.CenterVertically),
-                                    )
-                                    OutlinedButton(
-                                        onClick = {
-                                            isMultiEditMode = false
-                                            state.configs.deselectAllMetadata()
-                                        },
-                                        modifier = Modifier.height(28.dp),
-                                        contentPadding = PaddingValues(horizontal = 8.dp),
-                                    ) {
-                                        Text("Done", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                            } else {
-                                OutlinedButton(
-                                    onClick = { isMultiEditMode = true },
-                                    modifier = Modifier.height(28.dp),
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
-                                ) {
-                                    Text("Multi-Edit", style = MaterialTheme.typography.labelSmall)
-                                }
-                            }
-                        }
-                        Button(
-                            onClick = onExport,
-                            enabled = boundingBoxList.size() > 0,
-                            modifier = Modifier.height(32.dp),
-                        ) {
-                            Text("Next", style = MaterialTheme.typography.labelSmall)
-                            Spacer(Modifier.width(4.dp))
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(16.dp))
-                        }
+                        Text("Next", style = MaterialTheme.typography.labelSmall)
+                        Spacer(Modifier.width(4.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(16.dp))
                     }
                 }
             }
         },
     ) { paddingValues ->
-        if (selectedIndices.isEmpty() && !isMultiEditMode) {
-            // No selection — show thumbnail strip and prompt
-            Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                ThumbnailStrip(
-                    image = image,
-                    perspectiveService = perspectiveService,
-                    previewCache = previewCache,
-                    boundingBoxList = boundingBoxList,
-                    photoConfigurations = photoConfigurations,
-                    selectedIndices = selectedIndices,
-                    isMultiEditMode = isMultiEditMode,
-                    onSelect = { index ->
-                        if (isMultiEditMode) state.configs.toggleMetadataSelection(index)
-                        else state.configs.selectSingleMetadata(index)
-                    },
-                    onDeselectAll = { state.configs.deselectAllMetadata() },
-                )
-                Box(
-                    modifier = Modifier.weight(1f).fillMaxWidth(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        "Click a photo above to edit",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        } else {
-            Row(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                // ═══ Left pane: preview + thumbnails ═══
-                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    ThumbnailStrip(
-                        image = image,
-                        perspectiveService = perspectiveService,
-                        previewCache = previewCache,
-                        boundingBoxList = boundingBoxList,
-                        photoConfigurations = photoConfigurations,
-                        selectedIndices = selectedIndices,
-                        isMultiEditMode = isMultiEditMode,
-                        onSelect = { index ->
-                            if (isMultiEditMode) {
-                                state.configs.toggleMetadataSelection(index)
-                            } else {
-                                if (index in selectedIndices && selectedIndices.size == 1) {
-                                    state.configs.deselectAllMetadata()
-                                } else {
-                                    state.configs.selectSingleMetadata(index)
-                                }
-                            }
-                        },
-                        onDeselectAll = { state.configs.deselectAllMetadata() },
-                    )
-
-                    // Large preview — only in single-select mode
-                    if (selectedIndices.size == 1 && !isMultiEditMode) {
-                        val selectedIndex = selectedIndices.first()
-                        val box = boundingBoxList.boxes[selectedIndex]
-                        val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
-                        val visualConfig = PhotoScanConfiguration(rotationDegrees = config.rotationDegrees)
-                        val previewImage = previewCache.getFullPreview(image, box, visualConfig)
-                        val previewBitmap = remember(previewImage) {
-                            previewImage?.toComposeImageBitmap()
+        Row(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            // ═══ Left sidebar: vertical thumbnail strip + multi-edit toggle ═══
+            PhotoSidebar(
+                image = image,
+                perspectiveService = perspectiveService,
+                previewCache = previewCache,
+                boundingBoxList = boundingBoxList,
+                photoConfigurations = photoConfigurations,
+                selectedIndices = selectedIndices,
+                isMultiEditMode = isMultiEditMode,
+                onToggleMultiEdit = { isMultiEditMode = !isMultiEditMode },
+                onSelect = { index ->
+                    if (isMultiEditMode) {
+                        state.configs.toggleMetadataSelection(index)
+                    } else {
+                        if (index in selectedIndices && selectedIndices.size == 1) {
+                            // Don't deselect — clicking selected item in single mode does nothing
+                        } else {
+                            state.configs.selectSingleMetadata(index)
                         }
-                        Box(
-                            modifier =
-                                Modifier.weight(1f)
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .clickable { fullscreenPreviewIndex = selectedIndex },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (previewBitmap != null) {
-                                Image(
-                                    bitmap = previewBitmap,
-                                    contentDescription =
-                                        "Photo ${selectedIndex + 1} — click to enlarge",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit,
-                                )
-                                // Back-of-photo button
-                                if (config.hasBackImage()) {
-                                    Surface(
+                    }
+                },
+                onDeselectAll = { state.configs.deselectAllMetadata() },
+            )
+
+            // ═══ Center: preview area ═══
+            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                if (selectedIndices.size == 1 && !isMultiEditMode) {
+                    val selectedIndex = selectedIndices.first()
+                    val box = boundingBoxList.boxes[selectedIndex]
+                    val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
+                    val visualConfig = PhotoScanConfiguration(rotationDegrees = config.rotationDegrees)
+                    val previewImage = previewCache.getFullPreview(image, box, visualConfig)
+                    val previewBitmap = remember(previewImage) {
+                        previewImage?.toComposeImageBitmap()
+                    }
+                    Box(
+                        modifier =
+                            Modifier.weight(1f)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { fullscreenPreviewIndex = selectedIndex },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (previewBitmap != null) {
+                            Image(
+                                bitmap = previewBitmap,
+                                contentDescription =
+                                    "Photo ${selectedIndex + 1} — click to enlarge",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit,
+                            )
+                            // Back-of-photo button (only in the preview window)
+                            if (config.hasBackImage()) {
+                                Surface(
+                                    modifier =
+                                        Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                    shape = RoundedCornerShape(4.dp),
+                                ) {
+                                    Row(
                                         modifier =
-                                            Modifier.align(Alignment.BottomEnd).padding(8.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shape = RoundedCornerShape(4.dp),
-                                    ) {
-                                        Row(
-                                            modifier =
-                                                Modifier.padding(
-                                                    horizontal = 8.dp,
-                                                    vertical = 4.dp,
-                                                ),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Image,
-                                                "Back image assigned",
-                                                modifier = Modifier.size(14.dp),
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            Text(
-                                                if (config.backImageMode == "combine")
-                                                    "Back: Combined"
-                                                else "Back: Appended",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            OutlinedButton(
-                                                onClick = { showBackImagePicker = true },
-                                                contentPadding = PaddingValues(0.dp),
-                                            ) {
-                                                Text(
-                                                    "Change",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                )
-                                            }
-                                            OutlinedButton(
-                                                onClick = {
-                                                    state.configs.updatePhotoScanConfiguration(box.id) {
-                                                        it.copy(
-                                                            backImageMode = null,
-                                                            backImageSourcePath = null,
-                                                            backCropNormalized = null,
-                                                            backCropRotation = 0,
-                                                        )
-                                                    }
-                                                },
-                                                contentPadding = PaddingValues(0.dp),
-                                            ) {
-                                                Text(
-                                                    "Remove",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.error,
-                                                )
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    OutlinedButton(
-                                        onClick = { showBackImagePicker = true },
-                                        modifier =
-                                            Modifier.align(Alignment.BottomEnd)
-                                                .padding(8.dp)
-                                                .height(28.dp),
-                                        contentPadding = PaddingValues(horizontal = 8.dp),
+                                            Modifier.padding(
+                                                horizontal = 8.dp,
+                                                vertical = 4.dp,
+                                            ),
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Icon(
                                             Icons.Default.Image,
-                                            "Select back of photo",
+                                            "Back image assigned",
                                             modifier = Modifier.size(14.dp),
+                                            tint = MaterialTheme.colorScheme.primary,
                                         )
                                         Spacer(Modifier.width(4.dp))
                                         Text(
-                                            "Add Back",
+                                            if (config.backImageMode == "combine")
+                                                "Back: Combined"
+                                            else "Back: Appended",
                                             style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.primary,
                                         )
+                                        Spacer(Modifier.width(4.dp))
+                                        OutlinedButton(
+                                            onClick = { showBackImagePicker = true },
+                                            contentPadding = PaddingValues(0.dp),
+                                        ) {
+                                            Text(
+                                                "Change",
+                                                style = MaterialTheme.typography.labelSmall,
+                                            )
+                                        }
+                                        OutlinedButton(
+                                            onClick = {
+                                                state.configs.updatePhotoScanConfiguration(box.id) {
+                                                    it.copy(
+                                                        backImageMode = null,
+                                                        backImageSourcePath = null,
+                                                        backCropNormalized = null,
+                                                        backCropRotation = 0,
+                                                    )
+                                                }
+                                            },
+                                            contentPadding = PaddingValues(0.dp),
+                                        ) {
+                                            Text(
+                                                "Remove",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = MaterialTheme.colorScheme.error,
+                                            )
+                                        }
                                     }
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = { showBackImagePicker = true },
+                                    modifier =
+                                        Modifier.align(Alignment.BottomEnd)
+                                            .padding(8.dp)
+                                            .height(28.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Image,
+                                        "Select back of photo",
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        "Add Back",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
                                 }
                             }
                         }
-                    } else {
-                        Box(
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                "${selectedIndices.size} photos selected",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            "${selectedIndices.size} photos selected",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
 
-                // ═══ Right pane: content depends on edit mode ═══
-                when (editMode) {
-                    EditMode.ROTATE -> {
-                        RotateEditorPanel(
-                            state = state,
-                            boundingBoxList = boundingBoxList,
-                            photoConfigurations = photoConfigurations,
-                            selectedIndices = selectedIndices,
-                            isMultiEditMode = isMultiEditMode,
-                            onAddBackImage = { showBackImagePicker = true },
-                            onRemoveBackImage = {
-                                val idx = selectedIndices.firstOrNull() ?: return@RotateEditorPanel
-                                if (idx < boundingBoxList.size()) {
-                                    val box = boundingBoxList.boxes[idx]
-                                    state.configs.updatePhotoScanConfiguration(box.id) {
-                                        it.copy(
-                                            backImageMode = null,
-                                            backImageSourcePath = null,
-                                            backCropNormalized = null,
-                                            backCropRotation = 0,
-                                        )
+                // ── Inline rotation controls below preview ──
+                if (selectedIndices.size == 1 && !isMultiEditMode) {
+                    val selectedIndex = selectedIndices.first()
+                    val box = boundingBoxList.boxes[selectedIndex]
+                    val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
+                    RotationSection(
+                        rotationDegrees = config.rotationDegrees,
+                        onRotateCW = {
+                            state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCW() }
+                        },
+                        onRotateCCW = {
+                            state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCCW() }
+                        },
+                        onRotate180 = {
+                            state.configs.updatePhotoScanConfiguration(box.id) {
+                                it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
+                            }
+                        },
+                    )
+                } else if (isMultiEditMode && selectedIndices.size > 1) {
+                    // Batch rotation controls for multi-select
+                    Surface(
+                        tonalElevation = 1.dp,
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("Rotate all:", style = MaterialTheme.typography.labelMedium)
+                            Spacer(Modifier.weight(1f))
+                            IconButton(
+                                onClick = {
+                                    selectedIndices.forEach { idx ->
+                                        if (idx < boundingBoxList.size()) {
+                                            val box = boundingBoxList.boxes[idx]
+                                            state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCCW() }
+                                        }
                                     }
-                                }
-                            },
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                        )
-                    }
-                    EditMode.METADATA -> {
-                        MetadataEditorPanel(
-                            state = state,
-                            image = image,
-                            perspectiveService = perspectiveService,
-                            boundingBoxList = boundingBoxList,
-                            photoConfigurations = photoConfigurations,
-                            selectedIndices = selectedIndices,
-                            isMultiEditMode = isMultiEditMode,
-                            metadataHistory = metadataHistory,
-                            onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                            onMetadataHistoryRemove = onMetadataHistoryRemove,
-                            showCameraSection = showCameraSection,
-                            onToggleCameraSection = { showCameraSection = !showCameraSection },
-                            showLocationSection = showLocationSection,
-                            onToggleLocationSection = {
-                                showLocationSection = !showLocationSection
-                            },
-                            showSubjectsSection = showSubjectsSection,
-                            onToggleSubjectsSection = {
-                                showSubjectsSection = !showSubjectsSection
-                            },
-                            sourceExif = sourceExif,
-                            onSelectFaces = { idx -> faceSelectIndex = idx },
-                            onPickLocation = { idx ->
-                                locationPickerTargetIndex = idx
-                                showLocationPicker = true
-                            },
-                            onAddBackImage = { showBackImagePicker = true },
-                            onRemoveBackImage = {
-                                val idx =
-                                    selectedIndices.firstOrNull() ?: return@MetadataEditorPanel
-                                if (idx < boundingBoxList.size()) {
-                                    val box = boundingBoxList.boxes[idx]
-                                    state.configs.updatePhotoScanConfiguration(box.id) {
-                                        it.copy(
-                                            backImageMode = null,
-                                            backImageSourcePath = null,
-                                            backCropNormalized = null,
-                                            backCropRotation = 0,
-                                        )
+                                },
+                                modifier = Modifier.size(28.dp),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(18.dp))
+                            }
+                            IconButton(
+                                onClick = {
+                                    selectedIndices.forEach { idx ->
+                                        if (idx < boundingBoxList.size()) {
+                                            val box = boundingBoxList.boxes[idx]
+                                            state.configs.updatePhotoScanConfiguration(box.id) {
+                                                it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
+                                            }
+                                        }
                                     }
-                                }
-                            },
-                            onRecordMetadataSet = onRecordMetadataSet,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                        )
+                                },
+                                modifier = Modifier.size(28.dp),
+                            ) {
+                                Text("180°", style = MaterialTheme.typography.labelSmall)
+                            }
+                            IconButton(
+                                onClick = {
+                                    selectedIndices.forEach { idx ->
+                                        if (idx < boundingBoxList.size()) {
+                                            val box = boundingBoxList.boxes[idx]
+                                            state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCW() }
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.size(28.dp),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(18.dp))
+                            }
+                        }
                     }
                 }
             }
+
+            // ═══ Right pane: metadata editor ═══
+            MetadataEditorPanel(
+                state = state,
+                image = image,
+                perspectiveService = perspectiveService,
+                boundingBoxList = boundingBoxList,
+                photoConfigurations = photoConfigurations,
+                selectedIndices = selectedIndices,
+                isMultiEditMode = isMultiEditMode,
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                onMetadataHistoryRemove = onMetadataHistoryRemove,
+                sourceExif = sourceExif,
+                onSelectFaces = { idx -> faceSelectIndex = idx },
+                onPickLocation = { idx ->
+                    locationPickerTargetIndex = idx
+                    showLocationPicker = true
+                },
+                onRecordMetadataSet = onRecordMetadataSet,
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            )
         }
     }
 }

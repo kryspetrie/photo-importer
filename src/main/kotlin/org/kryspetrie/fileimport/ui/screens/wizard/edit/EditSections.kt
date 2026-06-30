@@ -8,9 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,8 +26,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -33,7 +34,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -332,11 +332,9 @@ internal fun QuickEditMetadataFields(
     )
 }
 
-/** Collapsible camera settings section. */
+/** Camera settings section — always visible with a section header. */
 @Composable
 internal fun CameraSection(
-    showExpanded: Boolean,
-    onToggle: () -> Unit,
     cameraMake: String,
     onCameraMakeChange: (String) -> Unit,
     cameraModel: String,
@@ -369,127 +367,114 @@ internal fun CameraSection(
     onOverrideIsoChange: ((Boolean) -> Unit)? = null,
     sourceExif: SourceExifSummary? = null,
 ) {
-    Column {
-        OutlinedButton(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
-            Icon(
-                if (showExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (showExpanded) "Hide" else "Show",
-                modifier = Modifier.size(18.dp),
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalDivider()
+        Text("Camera Settings", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            MetadataField(
+                label = "Camera Make",
+                placeholder = "Canon",
+                value = cameraMake,
+                onValueChange = onCameraMakeChange,
+                modifier = Modifier.weight(1f),
+                suggestions = metadataHistory.cameraMake,
+                onCommit = { onMetadataHistoryUpdate("cameraMake", cameraMake) },
+                fieldIncluded = overrideCameraMake,
+                onFieldIncludedChange = onOverrideCameraMakeChange,
+                sourceHint = sourceExif?.cameraMake,
             )
-            Spacer(Modifier.width(4.dp))
-            Text("Camera Settings", style = MaterialTheme.typography.labelSmall)
+            MetadataField(
+                label = "Camera Model",
+                placeholder = "EOS 5D",
+                value = cameraModel,
+                onValueChange = onCameraModelChange,
+                modifier = Modifier.weight(1f),
+                suggestions = metadataHistory.cameraModel,
+                onCommit = { onMetadataHistoryUpdate("cameraModel", cameraModel) },
+                fieldIncluded = overrideCameraModel,
+                onFieldIncludedChange = onOverrideCameraModelChange,
+                sourceHint = sourceExif?.cameraModel,
+            )
         }
-        if (showExpanded) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    MetadataField(
-                        label = "Camera Make",
-                        placeholder = "Canon",
-                        value = cameraMake,
-                        onValueChange = onCameraMakeChange,
-                        modifier = Modifier.weight(1f),
-                        suggestions = metadataHistory.cameraMake,
-                        onCommit = { onMetadataHistoryUpdate("cameraMake", cameraMake) },
-                        fieldIncluded = overrideCameraMake,
-                        onFieldIncludedChange = onOverrideCameraMakeChange,
-                        sourceHint = sourceExif?.cameraMake,
-                    )
-                    MetadataField(
-                        label = "Camera Model",
-                        placeholder = "EOS 5D",
-                        value = cameraModel,
-                        onValueChange = onCameraModelChange,
-                        modifier = Modifier.weight(1f),
-                        suggestions = metadataHistory.cameraModel,
-                        onCommit = { onMetadataHistoryUpdate("cameraModel", cameraModel) },
-                        fieldIncluded = overrideCameraModel,
-                        onFieldIncludedChange = onOverrideCameraModelChange,
-                        sourceHint = sourceExif?.cameraModel,
-                    )
-                }
-                MetadataField(
-                    label = "Lens Model",
-                    placeholder = "24-70mm f/2.8L",
-                    value = lensModel,
-                    onValueChange = onLensModelChange,
-                    suggestions = metadataHistory.lensModel,
-                    onCommit = { onMetadataHistoryUpdate("lensModel", lensModel) },
-                    fieldIncluded = overrideLensModel,
-                    onFieldIncludedChange = onOverrideLensModelChange,
-                    sourceHint = sourceExif?.lensModel,
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    MetadataField(
-                        label = "Focal Length",
-                        placeholder = "50mm",
-                        value = focalLength,
-                        onValueChange = onFocalLengthChange,
-                        modifier = Modifier.weight(1f),
-                        suggestions = metadataHistory.focalLength,
-                        onCommit = { onMetadataHistoryUpdate("focalLength", focalLength) },
-                        fieldIncluded = overrideFocalLength,
-                        onFieldIncludedChange = onOverrideFocalLengthChange,
-                        sourceHint = sourceExif?.focalLength,
-                    )
-                    MetadataField(
-                        label = "Aperture",
-                        placeholder = "f/2.8",
-                        value = aperture,
-                        onValueChange = onApertureChange,
-                        modifier = Modifier.weight(1f),
-                        suggestions = metadataHistory.aperture,
-                        onCommit = { onMetadataHistoryUpdate("aperture", aperture) },
-                        fieldIncluded = overrideAperture,
-                        onFieldIncludedChange = onOverrideApertureChange,
-                        sourceHint = sourceExif?.aperture,
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    MetadataField(
-                        label = "Shutter Speed",
-                        placeholder = "1/125",
-                        value = shutterSpeed,
-                        onValueChange = onShutterSpeedChange,
-                        modifier = Modifier.weight(1f),
-                        suggestions = metadataHistory.shutterSpeed,
-                        onCommit = { onMetadataHistoryUpdate("shutterSpeed", shutterSpeed) },
-                        fieldIncluded = overrideShutterSpeed,
-                        onFieldIncludedChange = onOverrideShutterSpeedChange,
-                        sourceHint = sourceExif?.shutterSpeed,
-                    )
-                    MetadataField(
-                        label = "ISO",
-                        placeholder = "400",
-                        value = iso,
-                        onValueChange = onIsoChange,
-                        modifier = Modifier.weight(1f),
-                        keyboardType = KeyboardType.Number,
-                        suggestions = metadataHistory.iso,
-                        onCommit = { onMetadataHistoryUpdate("iso", iso) },
-                        fieldIncluded = overrideIso,
-                        onFieldIncludedChange = onOverrideIsoChange,
-                        sourceHint = sourceExif?.iso,
-                    )
-                }
-            }
+        MetadataField(
+            label = "Lens Model",
+            placeholder = "24-70mm f/2.8L",
+            value = lensModel,
+            onValueChange = onLensModelChange,
+            suggestions = metadataHistory.lensModel,
+            onCommit = { onMetadataHistoryUpdate("lensModel", lensModel) },
+            fieldIncluded = overrideLensModel,
+            onFieldIncludedChange = onOverrideLensModelChange,
+            sourceHint = sourceExif?.lensModel,
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            MetadataField(
+                label = "Focal Length",
+                placeholder = "50mm",
+                value = focalLength,
+                onValueChange = onFocalLengthChange,
+                modifier = Modifier.weight(1f),
+                suggestions = metadataHistory.focalLength,
+                onCommit = { onMetadataHistoryUpdate("focalLength", focalLength) },
+                fieldIncluded = overrideFocalLength,
+                onFieldIncludedChange = onOverrideFocalLengthChange,
+                sourceHint = sourceExif?.focalLength,
+            )
+            MetadataField(
+                label = "Aperture",
+                placeholder = "f/2.8",
+                value = aperture,
+                onValueChange = onApertureChange,
+                modifier = Modifier.weight(1f),
+                suggestions = metadataHistory.aperture,
+                onCommit = { onMetadataHistoryUpdate("aperture", aperture) },
+                fieldIncluded = overrideAperture,
+                onFieldIncludedChange = onOverrideApertureChange,
+                sourceHint = sourceExif?.aperture,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            MetadataField(
+                label = "Shutter Speed",
+                placeholder = "1/125",
+                value = shutterSpeed,
+                onValueChange = onShutterSpeedChange,
+                modifier = Modifier.weight(1f),
+                suggestions = metadataHistory.shutterSpeed,
+                onCommit = { onMetadataHistoryUpdate("shutterSpeed", shutterSpeed) },
+                fieldIncluded = overrideShutterSpeed,
+                onFieldIncludedChange = onOverrideShutterSpeedChange,
+                sourceHint = sourceExif?.shutterSpeed,
+            )
+            MetadataField(
+                label = "ISO",
+                placeholder = "400",
+                value = iso,
+                onValueChange = onIsoChange,
+                modifier = Modifier.weight(1f),
+                keyboardType = KeyboardType.Number,
+                suggestions = metadataHistory.iso,
+                onCommit = { onMetadataHistoryUpdate("iso", iso) },
+                fieldIncluded = overrideIso,
+                onFieldIncludedChange = onOverrideIsoChange,
+                sourceHint = sourceExif?.iso,
+            )
         }
     }
 }
 
-/** Collapsible location section with IPTC structured fields and GPS coordinates. */
+/** Location section — always visible with a section header. Pick on Map is inline with lat/long. */
 @Composable
 internal fun LocationSection(
-    showExpanded: Boolean,
-    onToggle: () -> Unit,
     locationName: String,
     onLocationNameChange: (String) -> Unit,
     city: String,
@@ -510,135 +495,125 @@ internal fun LocationSection(
     onOverrideGpsChange: ((Boolean) -> Unit)? = null,
     sourceGpsHint: String? = null,
 ) {
-    Column {
-        OutlinedButton(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
-            Icon(
-                if (showExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (showExpanded) "Hide" else "Show",
-                modifier = Modifier.size(18.dp),
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalDivider()
+        Text("Location", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+        // ── Recent Locations ──
+        if (onApplyRecentLocation != null) {
+            RecentLocationDropdown(
+                metadataHistory = metadataHistory,
+                onApplyLocation = onApplyRecentLocation,
             )
-            Spacer(Modifier.width(4.dp))
-            Icon(Icons.Default.LocationOn, null, Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Location", style = MaterialTheme.typography.labelSmall)
         }
-        if (showExpanded) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // ── Recent Locations ──
-                if (onApplyRecentLocation != null) {
-                    RecentLocationDropdown(
-                        metadataHistory = metadataHistory,
-                        onApplyLocation = onApplyRecentLocation,
-                    )
-                }
-                MetadataField(
-                    label = "Location Name",
-                    placeholder = "Grandma's house",
-                    value = locationName,
-                    onValueChange = onLocationNameChange,
-                    suggestions = metadataHistory.locationName,
-                    onCommit = { onMetadataHistoryUpdate("locationName", locationName) },
+        MetadataField(
+            label = "Location Name",
+            placeholder = "Grandma's house",
+            value = locationName,
+            onValueChange = onLocationNameChange,
+            suggestions = metadataHistory.locationName,
+            onCommit = { onMetadataHistoryUpdate("locationName", locationName) },
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            MetadataField(
+                label = "City",
+                placeholder = "Worcester",
+                value = city,
+                onValueChange = onCityChange,
+                modifier = Modifier.weight(1f),
+                suggestions = metadataHistory.city,
+                onCommit = { onMetadataHistoryUpdate("city", city) },
+            )
+            MetadataField(
+                label = "State",
+                placeholder = "MA",
+                value = stateVal,
+                onValueChange = onStateChange,
+                modifier = Modifier.weight(1f),
+                suggestions = metadataHistory.state,
+                onCommit = { onMetadataHistoryUpdate("state", stateVal) },
+            )
+        }
+        MetadataField(
+            label = "Country",
+            placeholder = "United States",
+            value = country,
+            onValueChange = onCountryChange,
+            suggestions = metadataHistory.country,
+            onCommit = { onMetadataHistoryUpdate("country", country) },
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text("GPS Coordinates", style = MaterialTheme.typography.labelMedium)
+            Spacer(Modifier.weight(1f))
+            if (overrideGps != null && onOverrideGpsChange != null) {
+                OverrideCheckbox(
+                    included = overrideGps,
+                    onIncludedChange = onOverrideGpsChange,
                 )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+            }
+        }
+        Text(
+            "Enter decimal degrees (e.g. 42.2626, -71.8023). Negative = South/West.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (sourceGpsHint != null) {
+            Text(
+                sourceGpsHint,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            MetadataField(
+                label = "Latitude",
+                placeholder = "42.2626",
+                value = gpsLatitude,
+                onValueChange = onGpsLatitudeChange,
+                suggestions = metadataHistory.gpsLatitude,
+                onCommit = { onMetadataHistoryUpdate("gpsLatitude", gpsLatitude) },
+                keyboardType = KeyboardType.Decimal,
+                modifier = Modifier.weight(1f),
+            )
+            MetadataField(
+                label = "Longitude",
+                placeholder = "-71.8023",
+                value = gpsLongitude,
+                onValueChange = onGpsLongitudeChange,
+                suggestions = metadataHistory.gpsLongitude,
+                onCommit = { onMetadataHistoryUpdate("gpsLongitude", gpsLongitude) },
+                keyboardType = KeyboardType.Decimal,
+                modifier = Modifier.weight(1f),
+            )
+            if (onPickLocation != null) {
+                OutlinedButton(
+                    onClick = onPickLocation,
+                    modifier = Modifier.height(40.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
                 ) {
-                    MetadataField(
-                        label = "City",
-                        placeholder = "Worcester",
-                        value = city,
-                        onValueChange = onCityChange,
-                        modifier = Modifier.weight(1f),
-                        suggestions = metadataHistory.city,
-                        onCommit = { onMetadataHistoryUpdate("city", city) },
-                    )
-                    MetadataField(
-                        label = "State",
-                        placeholder = "MA",
-                        value = stateVal,
-                        onValueChange = onStateChange,
-                        modifier = Modifier.weight(1f),
-                        suggestions = metadataHistory.state,
-                        onCommit = { onMetadataHistoryUpdate("state", stateVal) },
-                    )
-                }
-                MetadataField(
-                    label = "Country",
-                    placeholder = "United States",
-                    value = country,
-                    onValueChange = onCountryChange,
-                    suggestions = metadataHistory.country,
-                    onCommit = { onMetadataHistoryUpdate("country", country) },
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text("GPS Coordinates", style = MaterialTheme.typography.labelMedium)
-                    Spacer(Modifier.weight(1f))
-                    if (overrideGps != null && onOverrideGpsChange != null) {
-                        OverrideCheckbox(
-                            included = overrideGps,
-                            onIncludedChange = onOverrideGpsChange,
-                        )
-                    }
-                }
-                Text(
-                    "Enter decimal degrees (e.g. 42.2626, -71.8023). Negative = South/West.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (sourceGpsHint != null) {
-                    Text(
-                        sourceGpsHint,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    MetadataField(
-                        label = "Latitude",
-                        placeholder = "42.2626",
-                        value = gpsLatitude,
-                        onValueChange = onGpsLatitudeChange,
-                        suggestions = metadataHistory.gpsLatitude,
-                        onCommit = { onMetadataHistoryUpdate("gpsLatitude", gpsLatitude) },
-                        keyboardType = KeyboardType.Decimal,
-                        modifier = Modifier.weight(1f),
-                    )
-                    MetadataField(
-                        label = "Longitude",
-                        placeholder = "-71.8023",
-                        value = gpsLongitude,
-                        onValueChange = onGpsLongitudeChange,
-                        suggestions = metadataHistory.gpsLongitude,
-                        onCommit = { onMetadataHistoryUpdate("gpsLongitude", gpsLongitude) },
-                        keyboardType = KeyboardType.Decimal,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                if (onPickLocation != null) {
-                    OutlinedButton(onClick = onPickLocation, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.LocationOn, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Pick on Map", style = MaterialTheme.typography.labelSmall)
-                    }
+                    Icon(Icons.Default.LocationOn, null, Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Map", style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
     }
 }
 
-/** Collapsible subjects/faces section. */
+/** Subjects/faces section — always visible with a section header. */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun SubjectsSection(
-    showExpanded: Boolean,
-    onToggle: () -> Unit,
     subjects: String,
     onSubjectsChange: (String) -> Unit,
     metadataHistory: MetadataHistory,
@@ -653,208 +628,180 @@ internal fun SubjectsSection(
         remember(subjects) { subjects.split(",").map { it.trim() }.filter { it.isNotBlank() } }
     var subjectInput by remember { mutableStateOf("") }
 
-    Column {
-        OutlinedButton(onClick = onToggle, modifier = Modifier.fillMaxWidth()) {
-            Icon(
-                if (showExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (showExpanded) "Hide" else "Show",
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(4.dp))
-            Icon(Icons.Default.Person, null, Modifier.size(16.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Subjects & Faces", style = MaterialTheme.typography.labelSmall)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalDivider()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Subjects & Faces", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
             if (faceRegions.isNotEmpty()) {
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    "(${faceRegions.size})",
+                    "(${{faceRegions.size}})",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
         }
-        if (showExpanded) {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Subject names are written to EXIF/IPTC metadata and as MWG-RS face regions.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (onSelectFaces != null) {
+            OutlinedButton(onClick = onSelectFaces, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Default.Face, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
                 Text(
-                    "Subject names are written to EXIF/IPTC metadata and as MWG-RS face regions.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    if (faceRegions.isEmpty()) "Select Faces on Photo"
+                    else "Edit Face Regions (${{faceRegions.size}})",
+                    style = MaterialTheme.typography.labelSmall,
                 )
-                if (onSelectFaces != null) {
-                    OutlinedButton(onClick = onSelectFaces, modifier = Modifier.fillMaxWidth()) {
-                        Icon(Icons.Default.Face, null, Modifier.size(16.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            if (faceRegions.isEmpty()) "Select Faces on Photo"
-                            else "Edit Face Regions (${faceRegions.size})",
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                }
-                if (faceRegions.isNotEmpty()) {
-                    Surface(
-                        tonalElevation = 1.dp,
-                        shape = RoundedCornerShape(8.dp),
+            }
+        }
+        if (faceRegions.isNotEmpty()) {
+            Surface(
+                tonalElevation = 1.dp,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(8.dp)) {
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Column(modifier = Modifier.padding(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text("Face Regions", style = MaterialTheme.typography.labelMedium)
-                                if (onClearAllFaces != null) {
-                                    Text(
-                                        "Clear All",
-                                        style =
-                                            MaterialTheme.typography.labelSmall.copy(
-                                                fontWeight = FontWeight.Bold
-                                            ),
-                                        color = Color(0xFFFF6666),
-                                        modifier = Modifier.clickable { onClearAllFaces() },
-                                    )
-                                }
-                            }
-                            faceRegions.forEachIndexed { idx, region ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    ) {
-                                        Icon(
-                                            regionTypeIcon(RegionType.fromMwgRs(region.type)),
-                                            contentDescription = region.type,
-                                            modifier = Modifier.size(14.dp),
-                                            tint = MaterialTheme.colorScheme.primary,
-                                        )
-                                        Text(
-                                            region.name,
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        val xPct = kotlin.math.round(region.x * 100).toInt()
-                                        val yPct = kotlin.math.round(region.y * 100).toInt()
-                                        Text(
-                                            "($xPct%, $yPct%)",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                    if (onRemoveFace != null) {
-                                        IconButton(
-                                            onClick = { onRemoveFace(idx) },
-                                            modifier = Modifier.size(20.dp),
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Close,
-                                                "Remove",
-                                                modifier = Modifier.size(14.dp),
-                                                tint = MaterialTheme.colorScheme.error,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                if (subjectList.isNotEmpty()) {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        subjectList.forEach { subject ->
-                            RemovableChip(
-                                text = subject,
-                                onRemove = {
-                                    val updated = subjectList.filter { it != subject }
-                                    onSubjectsChange(updated.joinToString(", "))
-                                    onMetadataHistoryRemove("subjects", subject)
-                                },
+                        Text("Face Regions", style = MaterialTheme.typography.labelMedium)
+                        if (onClearAllFaces != null) {
+                            Text(
+                                "Clear All",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color(0xFFFF6666),
+                                modifier = Modifier.clickable { onClearAllFaces() },
                             )
                         }
                     }
-                }
-                var suggestionsExpanded by remember { mutableStateOf(false) }
-                val availableSuggestions =
-                    remember(metadataHistory.subjects, subjectList) {
-                        metadataHistory.subjects.filter { it !in subjectList }
-                    }
-                val filteredSuggestions =
-                    remember(availableSuggestions, subjectInput) {
-                        if (subjectInput.isBlank()) availableSuggestions
-                        else
-                            availableSuggestions.filter {
-                                it.contains(subjectInput, ignoreCase = true)
-                            }
-                    }
-                Box {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        OutlinedTextField(
-                            value = subjectInput,
-                            onValueChange = {
-                                subjectInput = it
-                                suggestionsExpanded = true
-                            },
-                            placeholder = {
-                                Text("Add person...", style = MaterialTheme.typography.labelSmall)
-                            },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyMedium,
-                            trailingIcon = {
-                                if (subjectInput.isNotBlank()) {
-                                    IconButton(
-                                        onClick = {
-                                            val updated =
-                                                if (subjects.isBlank()) subjectInput.trim()
-                                                else "${subjects.trim()}, ${subjectInput.trim()}"
-                                            onSubjectsChange(updated)
-                                            onMetadataHistoryUpdate("subjects", subjectInput.trim())
-                                            subjectInput = ""
-                                        },
-                                        modifier = Modifier.size(20.dp),
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Add,
-                                            "Add subject",
-                                            modifier = Modifier.size(16.dp),
-                                        )
-                                    }
-                                }
-                            },
-                        )
-                    }
-                    if (filteredSuggestions.isNotEmpty()) {
-                        DropdownMenu(
-                            expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
-                            onDismissRequest = { suggestionsExpanded = false },
+                    faceRegions.forEachIndexed { idx, region ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            filteredSuggestions.take(10).forEach { suggestion ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(suggestion, style = MaterialTheme.typography.bodySmall)
-                                    },
-                                    onClick = {
-                                        val updated =
-                                            if (subjects.isBlank()) suggestion
-                                            else "${subjects.trim()}, $suggestion"
-                                        onSubjectsChange(updated)
-                                        onMetadataHistoryUpdate("subjects", suggestion)
-                                        subjectInput = ""
-                                        suggestionsExpanded = false
-                                    },
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    regionTypeIcon(RegionType.fromMwgRs(region.type)),
+                                    contentDescription = region.type,
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                                Text(region.name, style = MaterialTheme.typography.bodySmall)
+                                val xPct = kotlin.math.round(region.x * 100).toInt()
+                                val yPct = kotlin.math.round(region.y * 100).toInt()
+                                Text(
+                                    "($xPct%, $yPct%)",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
+                            if (onRemoveFace != null) {
+                                IconButton(
+                                    onClick = { onRemoveFace(idx) },
+                                    modifier = Modifier.size(20.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Close,
+                                        "Remove",
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.error,
+                                    )
+                                }
+                            }
                         }
+                    }
+                }
+            }
+        }
+        if (subjectList.isNotEmpty()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                subjectList.forEach { subject ->
+                    RemovableChip(
+                        text = subject,
+                        onRemove = {
+                            val updated = subjectList.filter { it != subject }
+                            onSubjectsChange(updated.joinToString(", "))
+                            onMetadataHistoryRemove("subjects", subject)
+                        },
+                    )
+                }
+            }
+        }
+        var suggestionsExpanded by remember { mutableStateOf(false) }
+        val availableSuggestions =
+            remember(metadataHistory.subjects, subjectList) {
+                metadataHistory.subjects.filter { it !in subjectList }
+            }
+        val filteredSuggestions =
+            remember(availableSuggestions, subjectInput) {
+                if (subjectInput.isBlank()) availableSuggestions
+                else availableSuggestions.filter { it.contains(subjectInput, ignoreCase = true) }
+            }
+        Box {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                OutlinedTextField(
+                    value = subjectInput,
+                    onValueChange = {
+                        subjectInput = it
+                        suggestionsExpanded = true
+                    },
+                    placeholder = { Text("Add person...", style = MaterialTheme.typography.labelSmall) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    trailingIcon = {
+                        if (subjectInput.isNotBlank()) {
+                            IconButton(
+                                onClick = {
+                                    val updated =
+                                        if (subjects.isBlank()) subjectInput.trim()
+                                        else "${{subjects.trim()}}, ${{subjectInput.trim()}}"
+                                    onSubjectsChange(updated)
+                                    onMetadataHistoryUpdate("subjects", subjectInput.trim())
+                                    subjectInput = ""
+                                },
+                                modifier = Modifier.size(20.dp),
+                            ) {
+                                Icon(Icons.Default.Add, "Add subject", modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    },
+                )
+            }
+            if (filteredSuggestions.isNotEmpty()) {
+                DropdownMenu(
+                    expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
+                    onDismissRequest = { suggestionsExpanded = false },
+                ) {
+                    filteredSuggestions.take(10).forEach { suggestion ->
+                        DropdownMenuItem(
+                            text = { Text(suggestion, style = MaterialTheme.typography.bodySmall) },
+                            onClick = {
+                                val updated =
+                                    if (subjects.isBlank()) suggestion
+                                    else "${{subjects.trim()}}, $suggestion"
+                                onSubjectsChange(updated)
+                                onMetadataHistoryUpdate("subjects", suggestion)
+                                subjectInput = ""
+                                suggestionsExpanded = false
+                            },
+                        )
                     }
                 }
             }
