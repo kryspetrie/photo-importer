@@ -40,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -47,6 +48,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -179,6 +182,16 @@ fun FaceSelectorOverlay(
     // Which face is currently selected for naming (-1 = none)
     var namingFaceIndex by remember { mutableStateOf(-1) }
     var namingInput by remember { mutableStateOf("") }
+
+    // Focus requester for auto-focusing the naming text field
+    val namingFocusRequester = remember { FocusRequester() }
+
+    // Auto-focus the naming field when a face is selected for naming
+    LaunchedEffect(namingFaceIndex) {
+        if (namingFaceIndex >= 0) {
+            namingFocusRequester.requestFocus()
+        }
+    }
 
     // Auto-start naming: if requested, select first unnamed (or first) face on initial composition
     if (autoStartNaming && namingFaceIndex < 0) {
@@ -621,12 +634,12 @@ fun FaceSelectorOverlay(
                                 value = namingInput,
                                 onValueChange = { namingInput = it },
                                 placeholder = { Text("Name...", style = MaterialTheme.typography.labelSmall) },
-                                modifier = Modifier.width(140.dp),
+                                modifier = Modifier.width(140.dp).focusRequester(namingFocusRequester),
                                 textStyle = MaterialTheme.typography.bodySmall.copy(color = Color.White),
                                 singleLine = true,
                             )
                             Text(
-                                "Tab=next • Enter=done",
+                                "Enter=save+close • Tab=next • Esc=done",
                                 color = Color.White.copy(alpha = 0.6f),
                                 style = MaterialTheme.typography.labelSmall,
                             )
@@ -642,8 +655,7 @@ fun FaceSelectorOverlay(
                             .pointerHoverIcon(
                                 PointerIcon(
                                     if (hoveredFaceIdx >= 0) Cursor(Cursor.HAND_CURSOR)
-                                    else if (namingFaceIndex >= 0) Cursor(Cursor.DEFAULT_CURSOR)
-                                    else Cursor(Cursor.CROSSHAIR_CURSOR)
+                                    else Cursor(Cursor.DEFAULT_CURSOR)
                                 )
                             )
                             .onGloballyPositioned { layoutCoords ->
@@ -774,7 +786,7 @@ fun FaceSelectorOverlay(
                                                     (offset.x - deleteX).pow(2) +
                                                         (offset.y - deleteY).pow(2)
                                                 )
-                                            if (distToDelete < 14f) {
+                                            if (distToDelete < 22f) {
                                                 // Clicked on the delete X
                                                 state.faceRegions.removeFaceRegion(idx, closestIdx)
                                                 // Adjust naming index if needed
@@ -964,43 +976,7 @@ fun FaceSelectorOverlay(
                         }
                     }
 
-                    // ── Lightweight hover preview Canvas (only when not hovering a face) ──
-                    if (hoveredFaceIdx < 0) {
-                        val currentHoverOffset = hoverOffset
-                        val previewColor = regionTypeColor(selectedRegionType)
-                        val previewRadius = selectedFaceSize.radius
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val bounds = imageDisplayBounds
-                            if (bounds.width <= 0f || bounds.height <= 0f) return@Canvas
-                            if (currentHoverOffset == null || draggingFaceIdx >= 0) return@Canvas
-
-                            val normX =
-                                ((currentHoverOffset.x - bounds.left) / bounds.width)
-                                    .toDouble()
-                                    .coerceIn(0.0, 1.0)
-                            val normY =
-                                ((currentHoverOffset.y - bounds.top) / bounds.height)
-                                    .toDouble()
-                                    .coerceIn(0.0, 1.0)
-                            if (normX !in 0.0..1.0 || normY !in 0.0..1.0) return@Canvas
-
-                            val previewCx = bounds.left + (normX * bounds.width).toFloat()
-                            val previewCy = bounds.top + (normY * bounds.height).toFloat()
-                            val radius = (previewRadius * bounds.height).toFloat()
-
-                            drawCircle(
-                                color = previewColor.copy(alpha = 0.35f),
-                                radius = radius,
-                                center = Offset(previewCx, previewCy),
-                            )
-                            drawCircle(
-                                color = previewColor.copy(alpha = 0.8f),
-                                radius = radius,
-                                center = Offset(previewCx, previewCy),
-                                style = Stroke(width = 2f),
-                            )
-                        }
-                    }
+                    // No hover preview circle — cursor change only (per user request)
                 }
             }
         }
@@ -1105,25 +1081,29 @@ private fun FaceRegionComposable(
             center = Offset(labelX - 8f, labelY + labelHeight / 2f),
         )
 
-        // Delete X button — ALWAYS visible as a small red circle with X
+        // Delete X button — always visible, larger and brighter on hover
         if (!isDragging) {
+            val btnRadius = if (isHovered || isNamingSelected) 14f else 10f
+            val xSize = if (isHovered || isNamingSelected) 7f else 5f
+            val xStroke = if (isHovered || isNamingSelected) 2.5f else 2f
+            val btnAlpha = if (isHovered || isNamingSelected) 1.0f else 0.7f
             drawCircle(
-                color = Color.Red.copy(alpha = 0.9f),
-                radius = 10f,
+                color = Color.Red.copy(alpha = btnAlpha),
+                radius = btnRadius,
                 center = Offset(deleteX, deleteY),
             )
             drawLine(
                 color = Color.White,
-                start = Offset(deleteX - 5f, deleteY - 5f),
-                end = Offset(deleteX + 5f, deleteY + 5f),
-                strokeWidth = 2f,
+                start = Offset(deleteX - xSize, deleteY - xSize),
+                end = Offset(deleteX + xSize, deleteY + xSize),
+                strokeWidth = xStroke,
                 cap = StrokeCap.Round,
             )
             drawLine(
                 color = Color.White,
-                start = Offset(deleteX + 5f, deleteY - 5f),
-                end = Offset(deleteX - 5f, deleteY + 5f),
-                strokeWidth = 2f,
+                start = Offset(deleteX + xSize, deleteY - xSize),
+                end = Offset(deleteX - xSize, deleteY + xSize),
+                strokeWidth = xStroke,
                 cap = StrokeCap.Round,
             )
         }
