@@ -13,19 +13,24 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Pets
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
@@ -121,7 +126,6 @@ private fun FaceRegion.toRenderData(): FaceRenderData =
  *
  * Modeless interaction model:
  * - Click on empty space → add a new face (calls [onPlaceFace])
- * - Hover over a face circle → show a small red X delete button; hide add-circle preview
  * - Click on a face (without dragging) → select it for inline naming
  * - Drag a face → move it
  * - Click the X on a face → delete it
@@ -239,72 +243,265 @@ fun FaceSelectorOverlay(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Box(
+        Row(
             modifier = Modifier.fillMaxSize().background(Color.Black),
-            contentAlignment = Alignment.Center,
         ) {
-            // ── Close button (top-right corner) ─────────────────────────────
+            // ── LEFT SIDEBAR ──────────────────────────────────────────────
             Surface(
-                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-                color = Color.Black.copy(alpha = 0.8f),
-                shape = RoundedCornerShape(8.dp),
+                color = Color(0xFF1E1E1E),
+                shape = RoundedCornerShape(0.dp),
+                modifier = Modifier.fillMaxHeight().width(220.dp),
             ) {
-                IconButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.size(32.dp),
-                    colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                        .fillMaxHeight()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(Icons.Default.Close, "Close", modifier = Modifier.size(24.dp))
-                }
-            }
-
-            // ── Inherited faces (bottom-left) ────────────────────────────────
-            if (inheritedFaceRegions.isNotEmpty()) {
-                Surface(
-                    modifier = Modifier.align(Alignment.BottomStart).padding(12.dp),
-                    color = Color.Black.copy(alpha = 0.8f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Column(
-                        modifier = Modifier.padding(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    // ── Close button ──
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            "Inherited (${inheritedFaceRegions.size}) — click to adopt",
-                            color = Color.Cyan,
-                            style = MaterialTheme.typography.labelSmall,
+                            "Face Editor",
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
                         )
-                        inheritedFaceRegions.forEach { region ->
+                        IconButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.size(28.dp),
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = Color.White.copy(alpha = 0.7f)
+                            ),
+                        ) {
+                            Icon(Icons.Default.Close, "Close", modifier = Modifier.size(20.dp))
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+
+                    // ── Help text ──
+                    Text(
+                        if (namingFaceIndex in faceRegions.indices) {
+                            val named = faceRegions.count { it.name.isNotBlank() }
+                            "Naming ${namingFaceIndex + 1}/${faceRegions.size} ($named named)"
+                        } else if (faceRegions.isEmpty()) {
+                            "Click to place a ${selectedRegionType.displayName}"
+                        } else {
+                            "Click to place • Drag to move • Tap face to name"
+                        },
+                        color = Color.White.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+
+                    // ── Region type selector ──
+                    Text(
+                        "Region Type",
+                        color = Color.White.copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        RegionType.entries.forEach { type ->
+                            val isSelected = selectedRegionType == type
                             Surface(
-                                modifier =
-                                    Modifier.clickable {
-                                        state.faceRegions.addFaceRegion(
-                                            idx,
-                                            region.name,
-                                            region.x,
-                                            region.y,
-                                            RegionType.fromMwgRs(region.type),
-                                        )
-                                    },
+                                modifier = Modifier.fillMaxWidth().clickable { onRegionTypeChange(type) },
                                 shape = RoundedCornerShape(4.dp),
-                                color = Color.Cyan.copy(alpha = 0.3f),
+                                color =
+                                    if (isSelected) regionTypeColor(type).copy(alpha = 0.3f)
+                                    else Color.White.copy(alpha = 0.08f),
+                                border =
+                                    if (isSelected)
+                                        androidx.compose.foundation.BorderStroke(
+                                            2.dp,
+                                            regionTypeColor(type),
+                                        )
+                                    else null,
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
                                     Icon(
-                                        regionTypeIcon(RegionType.fromMwgRs(region.type)),
-                                        contentDescription = null,
-                                        modifier = Modifier.size(10.dp),
-                                        tint = Color.Cyan,
+                                        regionTypeIcon(type),
+                                        contentDescription = type.displayName,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = if (isSelected) regionTypeColor(type) else Color.White.copy(alpha = 0.7f),
                                     )
                                     Text(
-                                        region.name,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White,
+                                        type.displayName,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (isSelected) Color.White else Color.White.copy(alpha = 0.7f),
                                     )
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+
+                    // ── Size selector ──
+                    Text(
+                        "Size",
+                        color = Color.White.copy(alpha = 0.6f),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        FaceSize.entries.forEach { size ->
+                            val isSelected = selectedFaceSize == size
+                            Surface(
+                                modifier = Modifier.clickable { onFaceSizeChange(size) },
+                                shape = CircleShape,
+                                color =
+                                    if (isSelected) Color.White.copy(alpha = 0.9f)
+                                    else Color.White.copy(alpha = 0.15f),
+                                border =
+                                    if (isSelected)
+                                        androidx.compose.foundation.BorderStroke(2.dp, Color.Yellow)
+                                    else null,
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Canvas(modifier = Modifier.size(12.dp)) {
+                                        val radius = size.radius.toFloat() * 60f
+                                        drawCircle(
+                                            color = if (isSelected) Color.Black else Color.White,
+                                            radius = radius.coerceIn(2f, 6f),
+                                        )
+                                    }
+                                    Text(
+                                        size.displayName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = if (isSelected) Color.Black else Color.White,
+                                        fontSize = 10.sp,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+
+                    // ── Auto-Detect button ──
+                    if (onAutoDetectFaces != null) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().clickable { onAutoDetectFaces() },
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFF4FC3F7).copy(alpha = 0.2f),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.Face,
+                                    contentDescription = "Auto-detect",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = Color(0xFF4FC3F7),
+                                )
+                                Text(
+                                    "Auto-Detect Faces",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFF4FC3F7),
+                                )
+                            }
+                        }
+                    }
+
+                    // ── Clear All button ──
+                    if (faceRegions.isNotEmpty()) {
+                        Surface(
+                            modifier =
+                                Modifier.fillMaxWidth().clickable {
+                                    state.faceRegions.clearAllFaceRegions(idx)
+                                    namingFaceIndex = -1
+                                    namingInput = ""
+                                },
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color.Red.copy(alpha = 0.15f),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Clear All",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = Color(0xFFFF6666),
+                                )
+                                Text(
+                                    "Clear All",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color(0xFFFF6666),
+                                )
+                            }
+                        }
+                    }
+
+                    // ── Spacer to push inherited faces down ──
+                    Spacer(modifier = Modifier.weight(1f, fill = true))
+
+                    // ── Inherited faces ──
+                    if (inheritedFaceRegions.isNotEmpty()) {
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                        Text(
+                            "Inherited (${inheritedFaceRegions.size})",
+                            color = Color.Cyan,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        )
+                        Text(
+                            "Click to adopt",
+                            color = Color.White.copy(alpha = 0.5f),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            inheritedFaceRegions.forEach { region ->
+                                Surface(
+                                    modifier =
+                                        Modifier.clickable {
+                                            state.faceRegions.addFaceRegion(
+                                                idx,
+                                                region.name,
+                                                region.x,
+                                                region.y,
+                                                RegionType.fromMwgRs(region.type),
+                                            )
+                                        },
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = Color.Cyan.copy(alpha = 0.15f),
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Icon(
+                                            regionTypeIcon(RegionType.fromMwgRs(region.type)),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(12.dp),
+                                            tint = Color.Cyan,
+                                        )
+                                        Text(
+                                            region.name,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -312,680 +509,497 @@ fun FaceSelectorOverlay(
                 }
             }
 
-            // ── Help text at top center ──────────────────────────────────
-            Surface(
-                modifier = Modifier.align(Alignment.TopCenter).padding(12.dp),
-                color = Color.Black.copy(alpha = 0.7f),
-                shape = RoundedCornerShape(8.dp),
+            // ── IMAGE AREA ─────────────────────────────────────────────────
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        if (namingFaceIndex in faceRegions.indices) {
-                            val named = faceRegions.count { it.name.isNotBlank() }
-                            "Name face ${namingFaceIndex + 1}/${faceRegions.size} ($named named) • Tab=next • Shift+Tab=prev"
-                        } else if (faceRegions.isEmpty()) {
-                            "Click to place a ${selectedRegionType.displayName} • Auto-Detect to find faces"
-                        } else {
-                            "Click to place • Drag to move • Tap a face to name it • Hover for ✕"
-                        },
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelSmall,
-                    )
-                }
-            }
-
-            // ── Naming input panel (bottom center) ───────────────────────────
-            if (namingFaceIndex in faceRegions.indices) {
-                val currentRegion = faceRegions[namingFaceIndex]
-                Surface(
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 60.dp),
-                    color = Color.Black.copy(alpha = 0.9f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Row(
-                        modifier =
-                            Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-                                .onPreviewKeyEvent { keyEvent ->
-                                    if (keyEvent.type == KeyEventType.KeyDown) {
-                                        when (keyEvent.key) {
-                                            Key.Tab -> {
-                                                if (keyEvent.isShiftPressed) {
-                                                    goToPreviousFace()
-                                                } else {
-                                                    advanceToNextFace()
+                // ── Naming input panel (bottom center, over the image) ────
+                if (namingFaceIndex in faceRegions.indices) {
+                    val currentRegion = faceRegions[namingFaceIndex]
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 16.dp),
+                        color = Color.Black.copy(alpha = 0.9f),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Row(
+                            modifier =
+                                Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        if (keyEvent.type == KeyEventType.KeyDown) {
+                                            when (keyEvent.key) {
+                                                Key.Tab -> {
+                                                    if (keyEvent.isShiftPressed) {
+                                                        goToPreviousFace()
+                                                    } else {
+                                                        advanceToNextFace()
+                                                    }
+                                                    true
                                                 }
-                                                true
+                                                Key.Enter -> {
+                                                    // Commit name and CLOSE naming field
+                                                    if (namingInput.isNotBlank()) {
+                                                        state.faceRegions.updateFaceRegionName(
+                                                            idx,
+                                                            namingFaceIndex,
+                                                            namingInput.trim(),
+                                                        )
+                                                    }
+                                                    namingFaceIndex = -1
+                                                    true
+                                                }
+                                                Key.Escape -> {
+                                                    namingFaceIndex = -1
+                                                    true
+                                                }
+                                                Key.Delete -> {
+                                                    // Delete currently named face
+                                                    if (namingFaceIndex in faceRegions.indices) {
+                                                        state.faceRegions.removeFaceRegion(
+                                                            idx,
+                                                            namingFaceIndex,
+                                                        )
+                                                        // Adjust naming index if needed
+                                                        val newIndex =
+                                                            namingFaceIndex.coerceAtMost(
+                                                                faceRegions.size - 1
+                                                            )
+                                                        namingFaceIndex =
+                                                            if (faceRegions.isEmpty()) -1 else newIndex
+                                                        namingInput =
+                                                            if (namingFaceIndex in faceRegions.indices)
+                                                                faceRegions[namingFaceIndex].name
+                                                            else ""
+                                                    }
+                                                    true
+                                                }
+                                                Key.Backspace -> {
+                                                    // Only delete face if naming input is empty
+                                                    if (namingInput.isEmpty() && namingFaceIndex in faceRegions.indices) {
+                                                        state.faceRegions.removeFaceRegion(
+                                                            idx,
+                                                            namingFaceIndex,
+                                                        )
+                                                        val newIndex =
+                                                            namingFaceIndex.coerceAtMost(
+                                                                faceRegions.size - 1
+                                                            )
+                                                        namingFaceIndex =
+                                                            if (faceRegions.isEmpty()) -1 else newIndex
+                                                        namingInput =
+                                                            if (namingFaceIndex in faceRegions.indices)
+                                                                faceRegions[namingFaceIndex].name
+                                                            else ""
+                                                        true
+                                                    } else {
+                                                        false
+                                                    }
+                                                }
+                                                else -> false
                                             }
-                                            Key.Enter -> {
-                                                // Commit name and advance
-                                                if (namingInput.isNotBlank()) {
+                                        } else {
+                                            false
+                                        }
+                                    },
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                regionTypeIcon(RegionType.fromMwgRs(currentRegion.type)),
+                                contentDescription = currentRegion.type,
+                                modifier = Modifier.size(20.dp),
+                                tint = regionTypeColor(RegionType.fromMwgRs(currentRegion.type)),
+                            )
+                            Text(
+                                "Face ${namingFaceIndex + 1}/${faceRegions.size}:",
+                                color = Color.White,
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                            )
+                            OutlinedTextField(
+                                value = namingInput,
+                                onValueChange = { namingInput = it },
+                                placeholder = { Text("Name...", style = MaterialTheme.typography.labelSmall) },
+                                modifier = Modifier.width(140.dp),
+                                textStyle = MaterialTheme.typography.bodySmall.copy(color = Color.White),
+                                singleLine = true,
+                            )
+                            Text(
+                                "Tab=next • Enter=done",
+                                color = Color.White.copy(alpha = 0.6f),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
+                }
+
+                // ── Image + overlays ────────────────────────────────────
+                Box(
+                    modifier =
+                        Modifier.fillMaxSize()
+                            // Cursor: pointer when hovering a face, crosshair over empty space
+                            .pointerHoverIcon(
+                                PointerIcon(
+                                    if (hoveredFaceIdx >= 0) Cursor(Cursor.HAND_CURSOR)
+                                    else if (namingFaceIndex >= 0) Cursor(Cursor.DEFAULT_CURSOR)
+                                    else Cursor(Cursor.CROSSHAIR_CURSOR)
+                                )
+                            )
+                            .onGloballyPositioned { layoutCoords ->
+                                val imgW = fullPreview.width.toFloat()
+                                val imgH = fullPreview.height.toFloat()
+                                val containerW = layoutCoords.size.width.toFloat()
+                                val containerH = layoutCoords.size.height.toFloat()
+                                if (imgW > 0f && imgH > 0f && containerW > 0f && containerH > 0f) {
+                                    val scale = minOf(containerW / imgW, containerH / imgH)
+                                    val drawW = imgW * scale
+                                    val drawH = imgH * scale
+                                    val offsetX = (containerW - drawW) / 2f
+                                    val offsetY = (containerH - drawH) / 2f
+                                    imageDisplayBounds =
+                                        Rect(offsetX, offsetY, offsetX + drawW, offsetY + drawH)
+                                }
+                            }
+                            // ── Hover tracking ──
+                            .pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent()
+                                        when (event.type) {
+                                            PointerEventType.Move -> {
+                                                val pos = event.changes.firstOrNull()?.position
+                                                hoverOffset = pos
+                                                if (pos != null && imageDisplayBounds.width > 0f) {
+                                                    hoveredFaceIdx =
+                                                        findClosestFace(
+                                                            pos,
+                                                            faceRegions,
+                                                            imageDisplayBounds,
+                                                        )
+                                                } else {
+                                                    hoveredFaceIdx = -1
+                                                }
+                                            }
+                                            PointerEventType.Exit -> {
+                                                hoverOffset = null
+                                                hoveredFaceIdx = -1
+                                            }
+                                            else -> { /* no-op */ }
+                                        }
+                                    }
+                                }
+                            }
+                            // ── Drag gestures → move face ──
+                            .pointerInput(faceRegions.toList()) {
+                                detectDragGestures(
+                                    onDragStart = { offset ->
+                                        val closestIdx =
+                                            findClosestFace(offset, faceRegions, imageDisplayBounds)
+                                        if (closestIdx >= 0) {
+                                            draggingFaceIdx = closestIdx
+                                            dragOffsetPx = Offset.Zero
+                                        }
+                                    },
+                                    onDrag = { change, dragAmount ->
+                                        change.consume()
+                                        if (
+                                            draggingFaceIdx >= 0 &&
+                                                draggingFaceIdx < faceRegions.size
+                                        ) {
+                                            // Accumulate pixel offset locally — no state update per frame
+                                            dragOffsetPx =
+                                                Offset(
+                                                    dragOffsetPx.x + dragAmount.x,
+                                                    dragOffsetPx.y + dragAmount.y,
+                                                )
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        if (
+                                            draggingFaceIdx >= 0 &&
+                                                draggingFaceIdx < faceRegions.size
+                                        ) {
+                                            val bounds = imageDisplayBounds
+                                            if (bounds.width > 0f && bounds.height > 0f) {
+                                                val region = faceRegions[draggingFaceIdx]
+                                                val newX =
+                                                    (region.x +
+                                                            dragOffsetPx.x.toDouble() /
+                                                                bounds.width.toDouble())
+                                                        .coerceIn(0.0, 1.0)
+                                                val newY =
+                                                    (region.y +
+                                                            dragOffsetPx.y.toDouble() /
+                                                                bounds.height.toDouble())
+                                                        .coerceIn(0.0, 1.0)
+                                                // Single state commit on drag end
+                                                state.faceRegions.updateFaceRegion(
+                                                    idx,
+                                                    draggingFaceIdx,
+                                                    x = newX,
+                                                    y = newY,
+                                                )
+                                            }
+                                        }
+                                        draggingFaceIdx = -1
+                                        dragOffsetPx = Offset.Zero
+                                    },
+                                    onDragCancel = {
+                                        draggingFaceIdx = -1
+                                        dragOffsetPx = Offset.Zero
+                                    },
+                                )
+                            }
+                            // ── Tap gestures → place face, name face, or delete face ──
+                            .pointerInput(Unit) {
+                                detectTapGestures { offset ->
+                                    val bounds = imageDisplayBounds
+                                    if (bounds.width > 0f && bounds.height > 0f) {
+                                        val closestIdx =
+                                            findClosestFace(offset, faceRegions, bounds)
+                                        if (closestIdx >= 0) {
+                                            // Clicked on a face — check if it's the delete X button
+                                            val region = faceRegions[closestIdx]
+                                            val cx =
+                                                bounds.left + (region.x * bounds.width).toFloat()
+                                            val cy =
+                                                bounds.top + (region.y * bounds.height).toFloat()
+                                            val radius =
+                                                (region.w / 2.0 * bounds.height).toFloat()
+                                            val deleteX = cx + radius * 0.7f
+                                            val deleteY = cy - radius * 0.7f
+                                            val distToDelete =
+                                                sqrt(
+                                                    (offset.x - deleteX).pow(2) +
+                                                        (offset.y - deleteY).pow(2)
+                                                )
+                                            if (distToDelete < 14f) {
+                                                // Clicked on the delete X
+                                                state.faceRegions.removeFaceRegion(idx, closestIdx)
+                                                // Adjust naming index if needed
+                                                if (namingFaceIndex == closestIdx) {
+                                                    namingFaceIndex = -1
+                                                    namingInput = ""
+                                                } else if (namingFaceIndex > closestIdx) {
+                                                    namingFaceIndex--
+                                                }
+                                            } else {
+                                                // Click on face → start naming it
+                                                namingFaceIndex = closestIdx
+                                                namingInput = faceRegions[closestIdx].name
+                                            }
+                                        } else {
+                                            // Click on empty space → place a new face
+                                            val normX =
+                                                ((offset.x - bounds.left) / bounds.width)
+                                                    .toDouble()
+                                                    .coerceIn(0.0, 1.0)
+                                            val normY =
+                                                ((offset.y - bounds.top) / bounds.height)
+                                                    .toDouble()
+                                                    .coerceIn(0.0, 1.0)
+                                            if (normX in 0.0..1.0 && normY in 0.0..1.0) {
+                                                onPlaceFace(normX, normY)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            // ── Global keyboard shortcuts (Escape) ──
+                            .onPreviewKeyEvent { keyEvent ->
+                                if (keyEvent.type == KeyEventType.KeyDown) {
+                                    when (keyEvent.key) {
+                                        Key.Escape -> {
+                                            if (namingFaceIndex >= 0) {
+                                                // Close naming field
+                                                if (namingFaceIndex in faceRegions.indices && namingInput.isNotBlank()) {
                                                     state.faceRegions.updateFaceRegionName(
                                                         idx,
                                                         namingFaceIndex,
                                                         namingInput.trim(),
                                                     )
                                                 }
-                                                advanceToNextFace()
-                                                true
-                                            }
-                                            Key.Escape -> {
-                                                namingFaceIndex = -1
-                                                true
-                                            }
-                                            Key.Delete -> {
-                                                // Delete currently named face
-                                                if (namingFaceIndex in faceRegions.indices) {
-                                                    state.faceRegions.removeFaceRegion(
-                                                        idx,
-                                                        namingFaceIndex,
-                                                    )
-                                                    // Adjust naming index if needed
-                                                    val newIndex =
-                                                        namingFaceIndex.coerceAtMost(
-                                                            faceRegions.size - 1
-                                                        )
-                                                    namingFaceIndex =
-                                                        if (faceRegions.isEmpty()) -1 else newIndex
-                                                    namingInput =
-                                                        if (namingFaceIndex in faceRegions.indices)
-                                                            faceRegions[namingFaceIndex].name
-                                                        else ""
-                                                }
-                                                true
-                                            }
-                                            Key.Backspace -> {
-                                                // Only delete face if naming input is empty
-                                                if (namingInput.isEmpty() && namingFaceIndex in faceRegions.indices) {
-                                                    state.faceRegions.removeFaceRegion(
-                                                        idx,
-                                                        namingFaceIndex,
-                                                    )
-                                                    val newIndex =
-                                                        namingFaceIndex.coerceAtMost(
-                                                            faceRegions.size - 1
-                                                        )
-                                                    namingFaceIndex =
-                                                        if (faceRegions.isEmpty()) -1 else newIndex
-                                                    namingInput =
-                                                        if (namingFaceIndex in faceRegions.indices)
-                                                            faceRegions[namingFaceIndex].name
-                                                        else ""
-                                                    true
-                                                } else {
-                                                    false
-                                                }
-                                            }
-                                            else -> false
-                                        }
-                                    } else {
-                                        false
-                                    }
-                                },
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(
-                            regionTypeIcon(RegionType.fromMwgRs(currentRegion.type)),
-                            contentDescription = currentRegion.type,
-                            modifier = Modifier.size(20.dp),
-                            tint = regionTypeColor(RegionType.fromMwgRs(currentRegion.type)),
-                        )
-                        Text(
-                            "Face ${namingFaceIndex + 1}/${faceRegions.size}:",
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelMedium.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
-                        )
-                        OutlinedTextField(
-                            value = namingInput,
-                            onValueChange = { namingInput = it },
-                            placeholder = { Text("Name...", style = MaterialTheme.typography.labelSmall) },
-                            modifier = Modifier.width(140.dp),
-                            textStyle = MaterialTheme.typography.bodySmall.copy(color = Color.White),
-                            singleLine = true,
-                        )
-                        Text(
-                            "Tab=next • Enter=save",
-                            color = Color.White.copy(alpha = 0.6f),
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
-                }
-            }
-
-            // ── Compact toolbar (bottom-left, above inherited section) ──────
-            Surface(
-                modifier =
-                    Modifier.align(Alignment.BottomStart)
-                        .padding(start = 12.dp, bottom = if (inheritedFaceRegions.isNotEmpty()) 180.dp else 12.dp),
-                color = Color.Black.copy(alpha = 0.8f),
-                shape = RoundedCornerShape(8.dp),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    // Region type selector
-                    RegionType.entries.forEach { type ->
-                        val isSelected = selectedRegionType == type
-                        Surface(
-                            modifier = Modifier.clickable { onRegionTypeChange(type) },
-                            shape = RoundedCornerShape(4.dp),
-                            color =
-                                if (isSelected) Color.White.copy(alpha = 0.9f)
-                                else Color.White.copy(alpha = 0.2f),
-                            border =
-                                if (isSelected)
-                                    androidx.compose.foundation.BorderStroke(
-                                        2.dp,
-                                        regionTypeColor(type),
-                                    )
-                                else null,
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
-                                horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    regionTypeIcon(type),
-                                    contentDescription = type.displayName,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = if (isSelected) Color.Black else Color.White,
-                                )
-                                Text(
-                                    type.displayName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (isSelected) Color.Black else Color.White,
-                                    fontSize = 10.sp,
-                                )
-                            }
-                        }
-                    }
-
-                    // Separator
-                    Box(
-                        modifier =
-                            Modifier.size(1.dp, 16.dp)
-                                .background(Color.White.copy(alpha = 0.3f))
-                    )
-
-                    // Size selector
-                    FaceSize.entries.forEach { size ->
-                        val isSelected = selectedFaceSize == size
-                        Surface(
-                            modifier = Modifier.clickable { onFaceSizeChange(size) },
-                            shape = CircleShape,
-                            color =
-                                if (isSelected) Color.White.copy(alpha = 0.9f)
-                                else Color.White.copy(alpha = 0.2f),
-                            border =
-                                if (isSelected)
-                                    androidx.compose.foundation.BorderStroke(2.dp, Color.Yellow)
-                                else null,
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Canvas(modifier = Modifier.size(12.dp)) {
-                                    val radius = size.radius.toFloat() * 60f
-                                    drawCircle(
-                                        color = if (isSelected) Color.Black else Color.White,
-                                        radius = radius.coerceIn(2f, 6f),
-                                    )
-                                }
-                                Text(
-                                    size.displayName,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = if (isSelected) Color.Black else Color.White,
-                                    fontSize = 10.sp,
-                                )
-                            }
-                        }
-                    }
-
-                    // Separator
-                    Box(
-                        modifier =
-                            Modifier.size(1.dp, 16.dp)
-                                .background(Color.White.copy(alpha = 0.3f))
-                    )
-
-                    // Auto-Detect button (if available)
-                    if (onAutoDetectFaces != null) {
-                        Surface(
-                            modifier = Modifier.clickable { onAutoDetectFaces() },
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFF4FC3F7).copy(alpha = 0.3f),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Default.Face,
-                                    contentDescription = "Auto-detect",
-                                    modifier = Modifier.size(12.dp),
-                                    tint = Color(0xFF4FC3F7),
-                                )
-                                Text(
-                                    "Auto-Detect",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFF4FC3F7),
-                                    fontSize = 10.sp,
-                                )
-                            }
-                        }
-                    }
-
-                    // Clear All (if faces exist)
-                    if (faceRegions.isNotEmpty()) {
-                        Surface(
-                            modifier =
-                                Modifier.clickable {
-                                    state.faceRegions.clearAllFaceRegions(idx)
-                                    namingFaceIndex = -1
-                                    namingInput = ""
-                                },
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color.Red.copy(alpha = 0.2f),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Clear All",
-                                    modifier = Modifier.size(12.dp),
-                                    tint = Color(0xFFFF6666),
-                                )
-                                Text(
-                                    "Clear All",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color(0xFFFF6666),
-                                    fontSize = 10.sp,
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── Image + overlays ────────────────────────────────────
-            Box(
-                modifier =
-                    Modifier.fillMaxSize()
-                        .padding(start = 100.dp, top = 40.dp, end = 16.dp, bottom = 16.dp)
-                        .pointerHoverIcon(
-                            PointerIcon(
-                                if (namingFaceIndex >= 0) Cursor(Cursor.DEFAULT_CURSOR)
-                                else Cursor(Cursor.CROSSHAIR_CURSOR)
-                            )
-                        )
-                        .onGloballyPositioned { layoutCoords ->
-                            val imgW = fullPreview.width.toFloat()
-                            val imgH = fullPreview.height.toFloat()
-                            val containerW = layoutCoords.size.width.toFloat()
-                            val containerH = layoutCoords.size.height.toFloat()
-                            if (imgW > 0f && imgH > 0f && containerW > 0f && containerH > 0f) {
-                                val scale = minOf(containerW / imgW, containerH / imgH)
-                                val drawW = imgW * scale
-                                val drawH = imgH * scale
-                                val offsetX = (containerW - drawW) / 2f
-                                val offsetY = (containerH - drawH) / 2f
-                                imageDisplayBounds =
-                                    Rect(offsetX, offsetY, offsetX + drawW, offsetY + drawH)
-                            }
-                        }
-                        // ── Hover tracking ──
-                        .pointerInput(Unit) {
-                            awaitPointerEventScope {
-                                while (true) {
-                                    val event = awaitPointerEvent()
-                                    when (event.type) {
-                                        PointerEventType.Move -> {
-                                            val pos = event.changes.firstOrNull()?.position
-                                            hoverOffset = pos
-                                            if (pos != null && imageDisplayBounds.width > 0f) {
-                                                hoveredFaceIdx =
-                                                    findClosestFace(
-                                                        pos,
-                                                        faceRegions,
-                                                        imageDisplayBounds,
-                                                    )
-                                            } else {
-                                                hoveredFaceIdx = -1
-                                            }
-                                        }
-                                        PointerEventType.Exit -> {
-                                            hoverOffset = null
-                                            hoveredFaceIdx = -1
-                                        }
-                                        else -> { /* no-op */ }
-                                    }
-                                }
-                            }
-                        }
-                        // ── Drag gestures → move face ──
-                        .pointerInput(faceRegions.toList()) {
-                            detectDragGestures(
-                                onDragStart = { offset ->
-                                    val closestIdx =
-                                        findClosestFace(offset, faceRegions, imageDisplayBounds)
-                                    if (closestIdx >= 0) {
-                                        draggingFaceIdx = closestIdx
-                                        dragOffsetPx = Offset.Zero
-                                    }
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    if (
-                                        draggingFaceIdx >= 0 &&
-                                            draggingFaceIdx < faceRegions.size
-                                    ) {
-                                        // Accumulate pixel offset locally — no state update per frame
-                                        dragOffsetPx =
-                                            Offset(
-                                                dragOffsetPx.x + dragAmount.x,
-                                                dragOffsetPx.y + dragAmount.y,
-                                            )
-                                    }
-                                },
-                                onDragEnd = {
-                                    if (
-                                        draggingFaceIdx >= 0 &&
-                                            draggingFaceIdx < faceRegions.size
-                                    ) {
-                                        val bounds = imageDisplayBounds
-                                        if (bounds.width > 0f && bounds.height > 0f) {
-                                            val region = faceRegions[draggingFaceIdx]
-                                            val newX =
-                                                (region.x +
-                                                        dragOffsetPx.x.toDouble() /
-                                                            bounds.width.toDouble())
-                                                    .coerceIn(0.0, 1.0)
-                                            val newY =
-                                                (region.y +
-                                                        dragOffsetPx.y.toDouble() /
-                                                            bounds.height.toDouble())
-                                                    .coerceIn(0.0, 1.0)
-                                            // Single state commit on drag end
-                                            state.faceRegions.updateFaceRegion(
-                                                idx,
-                                                draggingFaceIdx,
-                                                x = newX,
-                                                y = newY,
-                                            )
-                                        }
-                                    }
-                                    draggingFaceIdx = -1
-                                    dragOffsetPx = Offset.Zero
-                                },
-                                onDragCancel = {
-                                    draggingFaceIdx = -1
-                                    dragOffsetPx = Offset.Zero
-                                },
-                            )
-                        }
-                        // ── Tap gestures → place face, name face, or delete face ──
-                        .pointerInput(Unit) {
-                            detectTapGestures { offset ->
-                                val bounds = imageDisplayBounds
-                                if (bounds.width > 0f && bounds.height > 0f) {
-                                    val closestIdx =
-                                        findClosestFace(offset, faceRegions, bounds)
-                                    if (closestIdx >= 0) {
-                                        // Clicked on a face — check if it's the delete X button
-                                        val region = faceRegions[closestIdx]
-                                        val cx =
-                                            bounds.left + (region.x * bounds.width).toFloat()
-                                        val cy =
-                                            bounds.top + (region.y * bounds.height).toFloat()
-                                        val radius =
-                                            (region.w / 2.0 * bounds.height).toFloat()
-                                        val deleteX = cx + radius * 0.7f
-                                        val deleteY = cy - radius * 0.7f
-                                        val distToDelete =
-                                            sqrt(
-                                                (offset.x - deleteX).pow(2) +
-                                                    (offset.y - deleteY).pow(2)
-                                            )
-                                        if (distToDelete < 14f) {
-                                            // Clicked on the delete X
-                                            state.faceRegions.removeFaceRegion(idx, closestIdx)
-                                            // Adjust naming index if needed
-                                            if (namingFaceIndex == closestIdx) {
                                                 namingFaceIndex = -1
                                                 namingInput = ""
-                                            } else if (namingFaceIndex > closestIdx) {
-                                                namingFaceIndex--
+                                                true
+                                            } else {
+                                                // Close overlay
+                                                onDismiss()
+                                                true
                                             }
-                                        } else {
-                                            // Click on face → start naming it
-                                            namingFaceIndex = closestIdx
-                                            namingInput = faceRegions[closestIdx].name
                                         }
-                                    } else {
-                                        // Click on empty space → place a new face
-                                        val normX =
-                                            ((offset.x - bounds.left) / bounds.width)
-                                                .toDouble()
-                                                .coerceIn(0.0, 1.0)
-                                        val normY =
-                                            ((offset.y - bounds.top) / bounds.height)
-                                                .toDouble()
-                                                .coerceIn(0.0, 1.0)
-                                        if (normX in 0.0..1.0 && normY in 0.0..1.0) {
-                                            onPlaceFace(normX, normY)
+                                        Key.Tab -> {
+                                            if (namingFaceIndex >= 0 && faceRegions.isNotEmpty()) {
+                                                if (keyEvent.isShiftPressed) {
+                                                    goToPreviousFace()
+                                                } else {
+                                                    advanceToNextFace()
+                                                }
+                                                true
+                                            } else {
+                                                false
+                                            }
                                         }
-                                    }
-                                }
-                            }
-                        }
-                        // ── Global keyboard shortcuts (Escape) ──
-                        .onPreviewKeyEvent { keyEvent ->
-                            if (keyEvent.type == KeyEventType.KeyDown) {
-                                when (keyEvent.key) {
-                                    Key.Escape -> {
-                                        if (namingFaceIndex >= 0) {
-                                            // Close naming field
-                                            if (namingFaceIndex in faceRegions.indices && namingInput.isNotBlank()) {
-                                                state.faceRegions.updateFaceRegionName(
+                                        Key.Delete -> {
+                                            if (namingFaceIndex in faceRegions.indices) {
+                                                state.faceRegions.removeFaceRegion(
                                                     idx,
                                                     namingFaceIndex,
-                                                    namingInput.trim(),
                                                 )
-                                            }
-                                            namingFaceIndex = -1
-                                            namingInput = ""
-                                            true
-                                        } else {
-                                            // Close overlay
-                                            onDismiss()
-                                            true
-                                        }
-                                    }
-                                    Key.Tab -> {
-                                        if (namingFaceIndex >= 0 && faceRegions.isNotEmpty()) {
-                                            if (keyEvent.isShiftPressed) {
-                                                goToPreviousFace()
+                                                val newIndex =
+                                                    namingFaceIndex.coerceAtMost(faceRegions.size - 1)
+                                                namingFaceIndex =
+                                                    if (faceRegions.isEmpty()) -1 else newIndex
+                                                namingInput =
+                                                    if (namingFaceIndex in faceRegions.indices)
+                                                        faceRegions[namingFaceIndex].name
+                                                    else ""
+                                                true
                                             } else {
-                                                advanceToNextFace()
+                                                false
                                             }
-                                            true
-                                        } else {
-                                            false
                                         }
+                                        else -> false
                                     }
-                                    Key.Delete -> {
-                                        if (namingFaceIndex in faceRegions.indices) {
-                                            state.faceRegions.removeFaceRegion(
-                                                idx,
-                                                namingFaceIndex,
-                                            )
-                                            val newIndex =
-                                                namingFaceIndex.coerceAtMost(faceRegions.size - 1)
-                                            namingFaceIndex =
-                                                if (faceRegions.isEmpty()) -1 else newIndex
-                                            namingInput =
-                                                if (namingFaceIndex in faceRegions.indices)
-                                                    faceRegions[namingFaceIndex].name
-                                                else ""
-                                            true
-                                        } else {
-                                            false
-                                        }
-                                    }
-                                    else -> false
+                                } else {
+                                    false
                                 }
-                            } else {
-                                false
+                            }
+                ) {
+                    Image(
+                        bitmap = imageBitmap,
+                        contentDescription = "Select faces on photo ${idx + 1}",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                    )
+
+                    // ── Individual face region composables (one per region) ───
+                    for (faceIdx in faceRegions.indices) {
+                        val renderData = faceRegions[faceIdx].toRenderData()
+                        val isDragging = faceIdx == draggingFaceIdx
+                        val currentDragOffset = if (isDragging) dragOffsetPx else Offset.Zero
+                        val isSelectedForNaming = faceIdx == namingFaceIndex
+                        val isHovered = faceIdx == hoveredFaceIdx
+                        FaceRegionComposable(
+                            renderData = renderData,
+                            bounds = imageDisplayBounds,
+                            isDragging = isDragging,
+                            isNamingSelected = isSelectedForNaming,
+                            isHovered = isHovered,
+                            dragOffset = currentDragOffset,
+                        )
+                    }
+
+                    // ── Inherited face regions (canvas) ──
+                    if (inheritedFaceRegions.isNotEmpty()) {
+                        val textMeasurer = rememberTextMeasurer()
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val bounds = imageDisplayBounds
+                            if (bounds.width <= 0f || bounds.height <= 0f) return@Canvas
+
+                            for (region in inheritedFaceRegions) {
+                                val cx = bounds.left + (region.x * bounds.width).toFloat()
+                                val cy = bounds.top + (region.y * bounds.height).toFloat()
+                                val radius = (region.w / 2.0 * bounds.height).toFloat()
+
+                                drawCircle(
+                                    color = Color.Cyan,
+                                    radius = radius,
+                                    center = Offset(cx, cy),
+                                    style = Stroke(width = 1.5f),
+                                )
+
+                                val inheritedLabel = region.name
+                                val inheritedLayout =
+                                    textMeasurer.measure(
+                                        inheritedLabel,
+                                        TextStyle(color = Color.White, fontSize = 10.sp),
+                                    )
+                                drawRoundRect(
+                                    color = Color.Cyan.copy(alpha = 0.7f),
+                                    topLeft =
+                                        Offset(
+                                            cx - inheritedLayout.size.width.toFloat() / 2f - 4f,
+                                            cy - radius - 18f,
+                                        ),
+                                    size =
+                                        Size(
+                                            inheritedLayout.size.width.toFloat() + 8f,
+                                            inheritedLayout.size.height.toFloat() + 4f,
+                                        ),
+                                )
+                                drawText(
+                                    textLayoutResult = inheritedLayout,
+                                    topLeft =
+                                        Offset(
+                                            cx - inheritedLayout.size.width.toFloat() / 2f,
+                                            cy - radius - 16f,
+                                        ),
+                                )
+
+                                // Plus icon at bottom (adopt indicator)
+                                val plusX = cx
+                                val plusY = cy + radius + 8f
+                                drawCircle(
+                                    color = Color.Cyan.copy(alpha = 0.7f),
+                                    radius = 8f,
+                                    center = Offset(plusX, plusY),
+                                )
+                                drawLine(
+                                    color = Color.White,
+                                    start = Offset(plusX - 4f, plusY),
+                                    end = Offset(plusX + 4f, plusY),
+                                    strokeWidth = 2f,
+                                    cap = StrokeCap.Round,
+                                )
+                                drawLine(
+                                    color = Color.White,
+                                    start = Offset(plusX, plusY - 4f),
+                                    end = Offset(plusX, plusY + 4f),
+                                    strokeWidth = 2f,
+                                    cap = StrokeCap.Round,
+                                )
                             }
                         }
-            ) {
-                Image(
-                    bitmap = imageBitmap,
-                    contentDescription = "Select faces on photo ${idx + 1}",
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
+                    }
 
-                // ── Individual face region composables (one per region) ───
-                for (faceIdx in faceRegions.indices) {
-                    val renderData = faceRegions[faceIdx].toRenderData()
-                    val isDragging = faceIdx == draggingFaceIdx
-                    val currentDragOffset = if (isDragging) dragOffsetPx else Offset.Zero
-                    val isSelectedForNaming = faceIdx == namingFaceIndex
-                    val isHovered = faceIdx == hoveredFaceIdx
-                    FaceRegionComposable(
-                        renderData = renderData,
-                        bounds = imageDisplayBounds,
-                        isDragging = isDragging,
-                        isNamingSelected = isSelectedForNaming,
-                        isHovered = isHovered,
-                        dragOffset = currentDragOffset,
-                    )
-                }
+                    // ── Lightweight hover preview Canvas (only when not hovering a face) ──
+                    if (hoveredFaceIdx < 0) {
+                        val currentHoverOffset = hoverOffset
+                        val previewColor = regionTypeColor(selectedRegionType)
+                        val previewRadius = selectedFaceSize.radius
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val bounds = imageDisplayBounds
+                            if (bounds.width <= 0f || bounds.height <= 0f) return@Canvas
+                            if (currentHoverOffset == null || draggingFaceIdx >= 0) return@Canvas
 
-                // ── Inherited face regions (canvas) ──
-                if (inheritedFaceRegions.isNotEmpty()) {
-                    val textMeasurer = rememberTextMeasurer()
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val bounds = imageDisplayBounds
-                        if (bounds.width <= 0f || bounds.height <= 0f) return@Canvas
+                            val normX =
+                                ((currentHoverOffset.x - bounds.left) / bounds.width)
+                                    .toDouble()
+                                    .coerceIn(0.0, 1.0)
+                            val normY =
+                                ((currentHoverOffset.y - bounds.top) / bounds.height)
+                                    .toDouble()
+                                    .coerceIn(0.0, 1.0)
+                            if (normX !in 0.0..1.0 || normY !in 0.0..1.0) return@Canvas
 
-                        for (region in inheritedFaceRegions) {
-                            val cx = bounds.left + (region.x * bounds.width).toFloat()
-                            val cy = bounds.top + (region.y * bounds.height).toFloat()
-                            val radius = (region.w / 2.0 * bounds.height).toFloat()
+                            val previewCx = bounds.left + (normX * bounds.width).toFloat()
+                            val previewCy = bounds.top + (normY * bounds.height).toFloat()
+                            val radius = (previewRadius * bounds.height).toFloat()
 
                             drawCircle(
-                                color = Color.Cyan,
+                                color = previewColor.copy(alpha = 0.35f),
                                 radius = radius,
-                                center = Offset(cx, cy),
-                                style = Stroke(width = 1.5f),
+                                center = Offset(previewCx, previewCy),
                             )
-
-                            val inheritedLabel = region.name
-                            val inheritedLayout =
-                                textMeasurer.measure(
-                                    inheritedLabel,
-                                    TextStyle(color = Color.White, fontSize = 10.sp),
-                                )
-                            drawRoundRect(
-                                color = Color.Cyan.copy(alpha = 0.7f),
-                                topLeft =
-                                    Offset(
-                                        cx - inheritedLayout.size.width.toFloat() / 2f - 4f,
-                                        cy - radius - 18f,
-                                    ),
-                                size =
-                                    Size(
-                                        inheritedLayout.size.width.toFloat() + 8f,
-                                        inheritedLayout.size.height.toFloat() + 4f,
-                                    ),
-                            )
-                            drawText(
-                                textLayoutResult = inheritedLayout,
-                                topLeft =
-                                    Offset(
-                                        cx - inheritedLayout.size.width.toFloat() / 2f,
-                                        cy - radius - 16f,
-                                    ),
-                            )
-
-                            // Plus icon at bottom (adopt indicator)
-                            val plusX = cx
-                            val plusY = cy + radius + 8f
                             drawCircle(
-                                color = Color.Cyan.copy(alpha = 0.7f),
-                                radius = 8f,
-                                center = Offset(plusX, plusY),
-                            )
-                            drawLine(
-                                color = Color.White,
-                                start = Offset(plusX - 4f, plusY),
-                                end = Offset(plusX + 4f, plusY),
-                                strokeWidth = 2f,
-                                cap = StrokeCap.Round,
-                            )
-                            drawLine(
-                                color = Color.White,
-                                start = Offset(plusX, plusY - 4f),
-                                end = Offset(plusX, plusY + 4f),
-                                strokeWidth = 2f,
-                                cap = StrokeCap.Round,
+                                color = previewColor.copy(alpha = 0.8f),
+                                radius = radius,
+                                center = Offset(previewCx, previewCy),
+                                style = Stroke(width = 2f),
                             )
                         }
-                    }
-                }
-
-                // ── Lightweight hover preview Canvas (only when not hovering a face) ──
-                if (hoveredFaceIdx < 0) {
-                    val currentHoverOffset = hoverOffset
-                    val previewColor = regionTypeColor(selectedRegionType)
-                    val previewRadius = selectedFaceSize.radius
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val bounds = imageDisplayBounds
-                        if (bounds.width <= 0f || bounds.height <= 0f) return@Canvas
-                        if (currentHoverOffset == null || draggingFaceIdx >= 0) return@Canvas
-
-                        val normX =
-                            ((currentHoverOffset.x - bounds.left) / bounds.width)
-                                .toDouble()
-                                .coerceIn(0.0, 1.0)
-                        val normY =
-                            ((currentHoverOffset.y - bounds.top) / bounds.height)
-                                .toDouble()
-                                .coerceIn(0.0, 1.0)
-                        if (normX !in 0.0..1.0 || normY !in 0.0..1.0) return@Canvas
-
-                        val previewCx = bounds.left + (normX * bounds.width).toFloat()
-                        val previewCy = bounds.top + (normY * bounds.height).toFloat()
-                        val radius = (previewRadius * bounds.height).toFloat()
-
-                        drawCircle(
-                            color = previewColor.copy(alpha = 0.35f),
-                            radius = radius,
-                            center = Offset(previewCx, previewCy),
-                        )
-                        drawCircle(
-                            color = previewColor.copy(alpha = 0.8f),
-                            radius = radius,
-                            center = Offset(previewCx, previewCy),
-                            style = Stroke(width = 2f),
-                        )
                     }
                 }
             }
@@ -1000,7 +1014,7 @@ fun FaceSelectorOverlay(
  * @param bounds The image display bounds for coordinate mapping
  * @param isDragging Whether this region is currently being dragged
  * @param isNamingSelected Whether this region is selected for naming (highlighted)
- * @param isHovered Whether this region is being hovered (shows delete X)
+ * @param isHovered Whether this region is being hovered
  * @param dragOffset Pixel offset accumulated during drag (zero when not dragging)
  */
 @Composable
@@ -1062,7 +1076,7 @@ private fun FaceRegionComposable(
             style = Stroke(width = if (isNamingSelected) 3f else 2f),
         )
 
-        // Naming selection halo (pulsing bright outline)
+        // Naming selection halo (bright outline)
         if (isNamingSelected) {
             drawCircle(
                 color = namingColor,
@@ -1091,10 +1105,10 @@ private fun FaceRegionComposable(
             center = Offset(labelX - 8f, labelY + labelHeight / 2f),
         )
 
-        // Delete X button (visible when hovered)
-        if (isHovered && !isDragging) {
+        // Delete X button — ALWAYS visible as a small red circle with X
+        if (!isDragging) {
             drawCircle(
-                color = Color.Red.copy(alpha = 0.85f),
+                color = Color.Red.copy(alpha = 0.9f),
                 radius = 10f,
                 center = Offset(deleteX, deleteY),
             )
