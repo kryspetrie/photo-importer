@@ -84,7 +84,7 @@ import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
-import org.kryspetrie.fileimport.ui.screens.wizard.InteractionMode
+
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditMode
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditModeTab
@@ -282,7 +282,7 @@ fun EditScreen(
                     autoStartNaming = false
                 },
                 inheritedFaceRegions = inheritedFaceRegions,
-                initialInteractionMode = if (autoStartNaming) InteractionMode.NAME else null,
+                autoStartNaming = autoStartNaming,
                 onAutoDetectFaces = if (faceDetectionPort.isFaceDetectionAvailable()) {
                     {
                         try {
