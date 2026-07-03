@@ -30,6 +30,7 @@ data class RecentMetadataSet(
     val shutterSpeed: String = "",
     val iso: String = "",
     val locationName: String = "",
+    val address: String = "",
     val city: String = "",
     val state: String = "",
     val country: String = "",
@@ -74,6 +75,7 @@ data class RecentMetadataSet(
             shutterSpeed.isNotBlank() ||
             iso.isNotBlank() ||
             locationName.isNotBlank() ||
+            address.isNotBlank() ||
             city.isNotBlank() ||
             state.isNotBlank() ||
             country.isNotBlank() ||
@@ -125,6 +127,7 @@ data class RecentMetadataSet(
         shutterSpeed = if (shutterSpeed.isNotBlank()) shutterSpeed else config.shutterSpeed,
         iso = if (iso.isNotBlank()) iso else config.iso,
         locationName = if (locationName.isNotBlank()) locationName else config.locationName,
+        address = if (address.isNotBlank()) address else config.address,
         city = if (city.isNotBlank()) city else config.city,
         state = if (state.isNotBlank()) state else config.state,
         country = if (country.isNotBlank()) country else config.country,
@@ -139,6 +142,7 @@ data class RecentMetadataSet(
      */
     fun mergeLocationInto(config: PhotoScanConfiguration): PhotoScanConfiguration = config.copy(
         locationName = if (locationName.isNotBlank()) locationName else config.locationName,
+        address = if (address.isNotBlank()) address else config.address,
         city = if (city.isNotBlank()) city else config.city,
         state = if (state.isNotBlank()) state else config.state,
         country = if (country.isNotBlank()) country else config.country,
@@ -166,6 +170,7 @@ data class RecentMetadataSet(
                 shutterSpeed = config.shutterSpeed,
                 iso = config.iso,
                 locationName = config.locationName,
+                address = config.address,
                 city = config.city,
                 state = config.state,
                 country = config.country,

@@ -168,6 +168,7 @@ class PhotoScanConfigurationState(
         shutterSpeed: String = "",
         iso: String = "",
         locationName: String = "",
+        address: String = "",
         city: String = "",
         state: String = "",
         country: String = "",
@@ -201,6 +202,8 @@ class PhotoScanConfigurationState(
                         iso = if (iso.isNotBlank()) iso else existing.iso,
                         locationName =
                             if (locationName.isNotBlank()) locationName else existing.locationName,
+                        address =
+                            if (address.isNotBlank()) address else existing.address,
                         city = if (city.isNotBlank()) city else existing.city,
                         state = if (state.isNotBlank()) state else existing.state,
                         country = if (country.isNotBlank()) country else existing.country,

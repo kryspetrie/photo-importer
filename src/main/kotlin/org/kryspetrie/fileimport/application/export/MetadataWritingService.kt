@@ -69,7 +69,8 @@ class MetadataWritingService(
         // Step 3: Layer IPTC
         val keywordsValue = ExifValueResolver.resolveKeywords(config)
         val hasLocationData =
-            config.locationName.isNotBlank() ||
+            config.address.isNotBlank() ||
+                config.locationName.isNotBlank() ||
                 config.city.isNotBlank() ||
                 config.state.isNotBlank() ||
                 config.country.isNotBlank() ||

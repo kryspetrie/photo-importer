@@ -57,4 +57,16 @@ interface FaceDetectionPort {
      * the model.
      */
     fun isFaceDetectionAvailable(): Boolean
+
+    /**
+     * Preloads the face detection model eagerly.
+     *
+     * Without preloading, the first call to [detectFaces] pays the cost of loading ~10 MB
+     * of model bytes + ONNX session creation. Call this early in the application lifecycle
+     * to front-load that cost. Idempotent — calling it after the model is loaded is a no-op.
+     *
+     * @return true if the face detection service was successfully initialized, false if the
+     *   model is unavailable
+     */
+    fun preload(): Boolean = false
 }

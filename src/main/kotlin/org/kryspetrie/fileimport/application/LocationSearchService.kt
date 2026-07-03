@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.application
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -48,6 +49,8 @@ class LocationSearchService(
                     val results = geocodingPort.search(query)
                     _searchResults.value = results
                     _isSearching.value = false
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     _errorMessage.value = e.message ?: "An unknown error occurred"
                     _isSearching.value = false

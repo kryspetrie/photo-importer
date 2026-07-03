@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -472,11 +474,25 @@ internal fun CameraSection(
     }
 }
 
-/** Location section — always visible with a section header. Pick on Map is inline with lat/long. */
+private val ExpandMoreIcon = Icons.Default.ExpandMore
+private val ExpandLessIcon = Icons.Default.ExpandLess
+
+/**
+ * Location section — condensed layout.
+ *
+ * - **Location Name**: A colloquial/recognizable name (e.g. "Grandma's House", "Disney World")
+ * - **Address**: Full geocoded address from the map picker (e.g. "Worcester, Massachusetts, United States")
+ *
+ * If `address` is set, it is written to IPTC SubLocation in EXIF; otherwise locationName is used.
+ * City/State/Country are collapsed by default since Address typically covers them;
+ * they remain editable for fine-grained control.
+ */
 @Composable
 internal fun LocationSection(
     locationName: String,
     onLocationNameChange: (String) -> Unit,
+    address: String,
+    onAddressChange: (String) -> Unit,
     city: String,
     onCityChange: (String) -> Unit,
     stateVal: String,
@@ -495,9 +511,34 @@ internal fun LocationSection(
     onOverrideGpsChange: ((Boolean) -> Unit)? = null,
     sourceGpsHint: String? = null,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    // Auto-expand details when city/state/country have values but address is empty,
+    // or when the user is actively editing details. Collapse when address is populated.
+    val hasDetails = city.isNotBlank() || stateVal.isNotBlank() || country.isNotBlank()
+    val addressFilled = address.isNotBlank()
+    var detailsExpanded by remember { mutableStateOf(hasDetails && !addressFilled) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         HorizontalDivider()
-        Text("Location", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+        // ── Section header ──
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Location", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+            Spacer(Modifier.weight(1f))
+            if (onPickLocation != null) {
+                OutlinedButton(
+                    onClick = onPickLocation,
+                    modifier = Modifier.height(28.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                ) {
+                    Icon(Icons.Default.LocationOn, null, Modifier.size(14.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text("Pick on Map", style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+
         // ── Recent Locations ──
         if (onApplyRecentLocation != null) {
             RecentLocationDropdown(
@@ -505,70 +546,117 @@ internal fun LocationSection(
                 onApplyLocation = onApplyRecentLocation,
             )
         }
+
+        // ── Location Name — colloquial/recognizable name ──
         MetadataField(
             label = "Location Name",
-            placeholder = "Grandma's house",
+            placeholder = "e.g. Grandma's House, Disney World",
             value = locationName,
             onValueChange = onLocationNameChange,
             suggestions = metadataHistory.locationName,
             onCommit = { onMetadataHistoryUpdate("locationName", locationName) },
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MetadataField(
-                label = "City",
-                placeholder = "Worcester",
-                value = city,
-                onValueChange = onCityChange,
-                modifier = Modifier.weight(1f),
-                suggestions = metadataHistory.city,
-                onCommit = { onMetadataHistoryUpdate("city", city) },
-            )
-            MetadataField(
-                label = "State",
-                placeholder = "MA",
-                value = stateVal,
-                onValueChange = onStateChange,
-                modifier = Modifier.weight(1f),
-                suggestions = metadataHistory.state,
-                onCommit = { onMetadataHistoryUpdate("state", stateVal) },
-            )
-        }
+
+        // ── Address — full geocoded address from map picker ──
         MetadataField(
-            label = "Country",
-            placeholder = "United States",
-            value = country,
-            onValueChange = onCountryChange,
-            suggestions = metadataHistory.country,
-            onCommit = { onMetadataHistoryUpdate("country", country) },
+            label = "Address",
+            placeholder = "e.g. 123 Main St, Worcester, MA 01610",
+            value = address,
+            onValueChange = onAddressChange,
+            suggestions = metadataHistory.address,
+            onCommit = { onMetadataHistoryUpdate("address", address) },
         )
+
+        // ── Expand/collapse for City/State/Country details ──
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { detailsExpanded = !detailsExpanded },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                if (detailsExpanded) ExpandLessIcon else ExpandMoreIcon,
+                contentDescription = if (detailsExpanded) "Hide details" else "Show details",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                if (detailsExpanded) "Hide location details" else "Location details",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            if (!detailsExpanded && hasDetails) {
+                Spacer(Modifier.width(6.dp))
+                val detailSummary = listOfNotNull(
+                    city.takeIf { it.isNotBlank() },
+                    stateVal.takeIf { it.isNotBlank() },
+                    country.takeIf { it.isNotBlank() },
+                ).joinToString(", ")
+                Text(
+                    "— $detailSummary",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (detailsExpanded) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                MetadataField(
+                    label = "City",
+                    placeholder = "Worcester",
+                    value = city,
+                    onValueChange = onCityChange,
+                    modifier = Modifier.weight(1f),
+                    suggestions = metadataHistory.city,
+                    onCommit = { onMetadataHistoryUpdate("city", city) },
+                )
+                MetadataField(
+                    label = "State",
+                    placeholder = "MA",
+                    value = stateVal,
+                    onValueChange = onStateChange,
+                    modifier = Modifier.weight(1f),
+                    suggestions = metadataHistory.state,
+                    onCommit = { onMetadataHistoryUpdate("state", stateVal) },
+                )
+                MetadataField(
+                    label = "Country",
+                    placeholder = "United States",
+                    value = country,
+                    onValueChange = onCountryChange,
+                    modifier = Modifier.weight(1f),
+                    suggestions = metadataHistory.country,
+                    onCommit = { onMetadataHistoryUpdate("country", country) },
+                )
+            }
+        }
+
+        // ── GPS Coordinates — compact single row ──
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text("GPS Coordinates", style = MaterialTheme.typography.labelMedium)
-            Spacer(Modifier.weight(1f))
+            Text("GPS", style = MaterialTheme.typography.labelMedium)
             if (overrideGps != null && onOverrideGpsChange != null) {
+                Spacer(Modifier.width(4.dp))
                 OverrideCheckbox(
                     included = overrideGps,
                     onIncludedChange = onOverrideGpsChange,
                 )
             }
-        }
-        Text(
-            "Enter decimal degrees (e.g. 42.2626, -71.8023). Negative = South/West.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (sourceGpsHint != null) {
-            Text(
-                sourceGpsHint,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.tertiary,
-            )
+            Spacer(Modifier.weight(1f))
+            if (sourceGpsHint != null) {
+                Text(
+                    sourceGpsHint,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+            }
         }
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -576,7 +664,7 @@ internal fun LocationSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MetadataField(
-                label = "Latitude",
+                label = "Lat",
                 placeholder = "42.2626",
                 value = gpsLatitude,
                 onValueChange = onGpsLatitudeChange,
@@ -586,7 +674,7 @@ internal fun LocationSection(
                 modifier = Modifier.weight(1f),
             )
             MetadataField(
-                label = "Longitude",
+                label = "Lon",
                 placeholder = "-71.8023",
                 value = gpsLongitude,
                 onValueChange = onGpsLongitudeChange,
@@ -595,17 +683,6 @@ internal fun LocationSection(
                 keyboardType = KeyboardType.Decimal,
                 modifier = Modifier.weight(1f),
             )
-            if (onPickLocation != null) {
-                OutlinedButton(
-                    onClick = onPickLocation,
-                    modifier = Modifier.height(40.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
-                ) {
-                    Icon(Icons.Default.LocationOn, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Map", style = MaterialTheme.typography.labelSmall)
-                }
-            }
         }
     }
 }

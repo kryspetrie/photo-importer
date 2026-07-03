@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.infrastructure.adapter
 
 import java.net.HttpURLConnection
 import java.net.URLEncoder
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -56,6 +57,8 @@ class NominatimGeocodingAdapter(private val dispatcherProvider: DispatcherProvid
                 val results = parseSearchResponse(responseBody)
                 putInCache(query, results)
                 results
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 System.err.println("$TAG Error in search: ${e.message}")
                 emptyList()
@@ -79,6 +82,8 @@ class NominatimGeocodingAdapter(private val dispatcherProvider: DispatcherProvid
                     putInCache(cacheKey, listOf(result))
                 }
                 result
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 System.err.println("$TAG Error in reverse: ${e.message}")
                 null
@@ -113,6 +118,9 @@ class NominatimGeocodingAdapter(private val dispatcherProvider: DispatcherProvid
                 val body = connection.inputStream.bufferedReader().use { it.readText() }
                 connection.disconnect()
                 body
+            } catch (e: CancellationException) {
+                lastRequestTime = System.currentTimeMillis()
+                throw e
             } catch (e: Exception) {
                 lastRequestTime = System.currentTimeMillis()
                 System.err.println("$TAG Network error: ${e.message}")

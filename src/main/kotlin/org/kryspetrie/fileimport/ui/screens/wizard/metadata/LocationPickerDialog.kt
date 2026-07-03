@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -17,15 +16,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import org.kryspetrie.fileimport.ui.components.LoadingIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -43,24 +40,74 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindow
+import androidx.compose.ui.window.rememberDialogState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
+import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 
 /**
- * Full-screen location picker with an OpenStreetMap map and search sidebar.
+ * Full-screen location picker with an OpenStreetMap map and unified search overlay,
+ * shown in its own [DialogWindow] (real AWT window) so that the map gets proper layout
+ * constraints and tiles render correctly.
  *
- * Layout: Search + results + preset views on the left, map fills the rest.
- * - Choose a preset view (Eastern US, Western US, etc.) to quickly jump the map
+ * Layout: Map fills the entire window; a floating search panel overlays the left side.
  * - Type a query to search for locations via Nominatim
  * - Click a result to center the map and set a pin
- * - Click on the map to drop a pin -> reverse geocode
+ * - Click on the map to drop a pin → reverse geocode
  * - Confirm to populate city/state/country/GPS fields
+ * - Defaults to the last-viewed map position
  */
 @Composable
 fun LocationPickerDialog(
+    locationSearchService: LocationSearchPort,
+    geocodingPort: GeocodingPort,
+    dispatcherProvider: org.kryspetrie.fileimport.domain.port.DispatcherProvider,
+    initialLat: Double = 39.0,
+    initialLon: Double = -78.0,
+    initialZoom: Double = 5.0,
+    onLocationSelected: (LocationResult) -> Unit,
+    onDismiss: () -> Unit,
+    onMapLocationChanged: ((lat: Double, lon: Double, zoom: Double) -> Unit)? = null,
+) {
+    DialogWindow(
+        onCloseRequest = onDismiss,
+        title = "Pick Location",
+        state = rememberDialogState(
+            width = Dp(1200f),
+            height = Dp(800f),
+        ),
+    ) {
+        LocationPickerContent(
+            locationSearchService = locationSearchService,
+            geocodingPort = geocodingPort,
+            dispatcherProvider = dispatcherProvider,
+            initialLat = initialLat,
+            initialLon = initialLon,
+            initialZoom = initialZoom,
+            onLocationSelected = { result ->
+                onLocationSelected(result)
+            },
+            onDismiss = onDismiss,
+            onMapLocationChanged = onMapLocationChanged,
+        )
+    }
+}
+
+/**
+ * The actual content of the location picker, extracted so it can be tested
+ * independently (e.g. in a standalone Window for component testing).
+ *
+ * Layout: Map fills the entire area. The search panel floats over the map
+ * on the left side as a translucent overlay.
+ */
+@Composable
+fun LocationPickerContent(
     locationSearchService: LocationSearchPort,
     geocodingPort: GeocodingPort,
     dispatcherProvider: org.kryspetrie.fileimport.domain.port.DispatcherProvider,
@@ -78,7 +125,6 @@ fun LocationPickerDialog(
     var mapCenterLon by remember { mutableStateOf(initialLon) }
     var mapZoom by remember { mutableDoubleStateOf(initialZoom) }
     var isReverseGeocoding by remember { mutableStateOf(false) }
-    var presetExpanded by remember { mutableStateOf(false) }
     var mapStyle by remember { mutableStateOf(MapStyle.STREET) }
 
     val searchResults by locationSearchService.searchResults.collectAsState()
@@ -88,14 +134,65 @@ fun LocationPickerDialog(
 
     DisposableEffect(Unit) { onDispose { locationSearchService.clearResults() } }
 
-    Surface(modifier = Modifier.fillMaxSize(), tonalElevation = 8.dp) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            // ── Left sidebar ──────────────────────────────────────────────
+    // ── Map fills the entire area; search panel overlays on the left ──
+    Box(modifier = Modifier.fillMaxSize()) {
+        // ── Map (fills everything) ────────────────────────────────────
+        OsmMapView(
+            modifier = Modifier.fillMaxSize(),
+            initialLat = mapCenterLat,
+            initialLon = mapCenterLon,
+            initialZoom = mapZoom,
+            initialMapStyle = mapStyle,
+            onMapStyleChanged = { mapStyle = it },
+            onMapClick = { lat, lon ->
+                pinLocation = Pair(lat, lon)
+                isReverseGeocoding = true
+                coroutineScope.launch {
+                    try {
+                        val result = geocodingPort.reverseGeocode(lat, lon)
+                        selectedLocation =
+                            result
+                                ?: LocationResult(
+                                    displayName = "%.4f, %.4f".format(lat, lon),
+                                    name = "%.4f, %.4f".format(lat, lon),
+                                    latitude = lat,
+                                    longitude = lon,
+                                )
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (_: Exception) {
+                        selectedLocation =
+                            LocationResult(
+                                displayName = "%.4f, %.4f".format(lat, lon),
+                                name = "%.4f, %.4f".format(lat, lon),
+                                latitude = lat,
+                                longitude = lon,
+                            )
+                    }
+                    isReverseGeocoding = false
+                }
+            },
+            pinLocation = pinLocation,
+            searchResults = searchResults,
+            selectedResult = selectedLocation,
+            dispatcherProvider = dispatcherProvider,
+        )
+
+        // ── Floating search panel overlaid on the left side of the map ──
+        Surface(
+            modifier = Modifier.align(Alignment.CenterStart)
+                .widthIn(min = 300.dp, max = 360.dp)
+                .fillMaxSize()
+                .padding(8.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+            tonalElevation = 4.dp,
+            shape = RoundedCornerShape(12.dp),
+        ) {
             Column(
-                modifier = Modifier.widthIn(min = 280.dp).fillMaxHeight().padding(12.dp),
+                modifier = Modifier.padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Header
+                // Header with close button
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -106,65 +203,21 @@ fun LocationPickerDialog(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(24.dp),
                     )
-                    Text("Search Location", style = MaterialTheme.typography.titleMedium)
-                }
-
-                // Preset view selector
-                Box {
-                    OutlinedTextField(
-                        value = "Jump to view\u2026",
-                        onValueChange = {},
-                        readOnly = true,
-                        modifier = Modifier.fillMaxWidth().clickable { presetExpanded = true },
-                        label = { Text("Map view", style = MaterialTheme.typography.labelSmall) },
-                        trailingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                "Preset views",
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                        textStyle = MaterialTheme.typography.bodySmall,
-                    )
-                    DropdownMenu(
-                        expanded = presetExpanded,
-                        onDismissRequest = { presetExpanded = false },
-                    ) {
-                        mapViewPresets.forEach { preset ->
-                            DropdownMenuItem(
-                                text = {
-                                    Column {
-                                        Text(
-                                            preset.name,
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        Text(
-                                            "%.1f, %.1f  z%.0f"
-                                                .format(preset.lat, preset.lon, preset.zoom),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                },
-                                onClick = {
-                                    mapCenterLat = preset.lat
-                                    mapCenterLon = preset.lon
-                                    mapZoom = preset.zoom
-                                    presetExpanded = false
-                                },
-                            )
-                        }
+                    Text("Pick Location", style = MaterialTheme.typography.titleMedium)
+                    Spacer(Modifier.weight(1f))
+                    OutlinedButton(onClick = onDismiss) {
+                        Text("Cancel")
                     }
                 }
 
-                // Search field
+                // ── Unified search field ──
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { newQuery ->
                         searchQuery = newQuery
                         locationSearchService.search(newQuery)
                     },
-                    label = { Text("Type a place name\u2026") },
+                    label = { Text("Search location\u2026") },
                     placeholder = { Text("e.g. Worcester, MA") },
                     leadingIcon = {
                         Icon(
@@ -177,16 +230,14 @@ fun LocationPickerDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
 
-                // Loading
+                // Loading indicator
                 if (isSearching) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        LoadingIndicator(
-                            modifier = Modifier.size(20.dp),
-                        )
+                        LoadingIndicator(modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             "Searching\u2026",
@@ -196,7 +247,7 @@ fun LocationPickerDialog(
                     }
                 }
 
-                // Error
+                // Error message
                 if (errorMessage != null) {
                     Text(
                         errorMessage.orEmpty(),
@@ -212,9 +263,7 @@ fun LocationPickerDialog(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        LoadingIndicator(
-                            modifier = Modifier.size(16.dp),
-                        )
+                        LoadingIndicator(modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
                             "Looking up address\u2026",
@@ -224,7 +273,7 @@ fun LocationPickerDialog(
                     }
                 }
 
-                // Selected location details
+                // ── Selected location details + confirm ──
                 if (selectedLocation != null) {
                     Card(
                         colors =
@@ -258,11 +307,10 @@ fun LocationPickerDialog(
                             )
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                "%.4f, %.4f"
-                                    .format(
-                                        selectedLocation!!.latitude,
-                                        selectedLocation!!.longitude,
-                                    ),
+                                "%.4f, %.4f".format(
+                                    selectedLocation!!.latitude,
+                                    selectedLocation!!.longitude,
+                                ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -304,7 +352,7 @@ fun LocationPickerDialog(
                     }
                 }
 
-                // Search results
+                // ── Search results ──
                 if (searchResults.isNotEmpty()) {
                     Text(
                         "Results",
@@ -335,10 +383,9 @@ fun LocationPickerDialog(
                     }
                 } else if (!isSearching && searchQuery.length >= 2 && errorMessage == null) {
                     Text(
-                        "No locations found. Try a different search term, or click on the map to drop a pin.",
+                        "No locations found. Try a different search, or click the map to drop a pin.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 8.dp),
                     )
                 }
 
@@ -346,57 +393,6 @@ fun LocationPickerDialog(
                     "Tip: Click on the map to drop a pin and look up the address.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-
-                Spacer(Modifier.weight(1f))
-
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    OutlinedButton(onClick = {
-                                        onMapLocationChanged?.invoke(mapCenterLat, mapCenterLon, mapZoom)
-                                        onDismiss()
-                                    }) { Text("Cancel") }
-                }
-            }
-
-            // ── Right side: map ──────────────────────────────────────────
-            Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                OsmMapView(
-                    modifier = Modifier.fillMaxSize(),
-                    initialLat = mapCenterLat,
-                    initialLon = mapCenterLon,
-                    initialZoom = mapZoom,
-                    initialMapStyle = mapStyle,
-                    onMapStyleChanged = { mapStyle = it },
-                    onMapClick = { lat, lon ->
-                        pinLocation = Pair(lat, lon)
-                        isReverseGeocoding = true
-                        coroutineScope.launch {
-                            try {
-                                val result = geocodingPort.reverseGeocode(lat, lon)
-                                selectedLocation =
-                                    result
-                                        ?: LocationResult(
-                                            displayName = "%.4f, %.4f".format(lat, lon),
-                                            name = "%.4f, %.4f".format(lat, lon),
-                                            latitude = lat,
-                                            longitude = lon,
-                                        )
-                            } catch (_: Exception) {
-                                selectedLocation =
-                                    LocationResult(
-                                        displayName = "%.4f, %.4f".format(lat, lon),
-                                        name = "%.4f, %.4f".format(lat, lon),
-                                        latitude = lat,
-                                        longitude = lon,
-                                    )
-                            }
-                            isReverseGeocoding = false
-                        }
-                    },
-                    pinLocation = pinLocation,
-                    searchResults = searchResults,
-                    selectedResult = selectedLocation,
-                    dispatcherProvider = dispatcherProvider,
                 )
             }
         }

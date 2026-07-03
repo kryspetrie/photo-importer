@@ -83,7 +83,9 @@ class IptcMetadataWriter(private val fileSystem: FileSystemPort) {
             existingRecords.removeAll { it.iptcType == IptcTypes.COUNTRY_PRIMARY_LOCATION_NAME }
             existingRecords.removeAll { it.iptcType == IptcTypes.COUNTRY_PRIMARY_LOCATION_CODE }
 
-            if (config.locationName.isNotBlank()) {
+            if (config.address.isNotBlank()) {
+                existingRecords.add(IptcRecord(IptcTypes.SUBLOCATION, config.address.trim()))
+            } else if (config.locationName.isNotBlank()) {
                 existingRecords.add(IptcRecord(IptcTypes.SUBLOCATION, config.locationName.trim()))
             }
             if (config.city.isNotBlank()) {

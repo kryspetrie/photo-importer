@@ -3,6 +3,7 @@ package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import java.io.File
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.withContext
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
@@ -52,6 +53,8 @@ fun LoadSourceExifEffect(
                         )
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (_: Exception) {
                 // Source EXIF read failed — leave sourceExif as null, UI will show no hints
             }

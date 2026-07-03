@@ -30,6 +30,7 @@ class MetadataEditState {
     var iso by mutableStateOf("")
 
     var locationName by mutableStateOf("")
+    var address by mutableStateOf("")
     var city by mutableStateOf("")
     var state by mutableStateOf("")
     var country by mutableStateOf("")
@@ -52,6 +53,7 @@ class MetadataEditState {
         shutterSpeed = ""
         iso = ""
         locationName = ""
+        address = ""
         city = ""
         state = ""
         country = ""
@@ -74,6 +76,7 @@ class MetadataEditState {
         shutterSpeed = config.shutterSpeed
         iso = config.iso
         locationName = config.locationName
+        address = config.address
         city = config.city
         state = config.state
         country = config.country
@@ -100,6 +103,7 @@ class MetadataEditState {
         if (set.shutterSpeed.isNotBlank()) shutterSpeed = set.shutterSpeed
         if (set.iso.isNotBlank()) iso = set.iso
         if (set.locationName.isNotBlank()) locationName = set.locationName
+        if (set.address.isNotBlank()) address = set.address
         if (set.city.isNotBlank()) city = set.city
         if (set.state.isNotBlank()) state = set.state
         if (set.country.isNotBlank()) country = set.country
@@ -127,6 +131,7 @@ class MetadataEditState {
             shutterSpeed = shutterSpeed,
             iso = iso,
             locationName = locationName,
+            address = address,
             city = city,
             state = state,
             country = country,
@@ -153,6 +158,7 @@ class MetadataEditState {
             shutterSpeed = shutterSpeed,
             iso = iso,
             locationName = locationName,
+            address = address,
             city = city,
             state = state,
             country = country,
@@ -180,6 +186,7 @@ class MetadataEditState {
             shutterSpeed = if (shutterSpeed.isNotBlank()) shutterSpeed else base.shutterSpeed,
             iso = if (iso.isNotBlank()) iso else base.iso,
             locationName = if (locationName.isNotBlank()) locationName else base.locationName,
+            address = if (address.isNotBlank()) address else base.address,
             city = if (city.isNotBlank()) city else base.city,
             state = if (state.isNotBlank()) state else base.state,
             country = if (country.isNotBlank()) country else base.country,

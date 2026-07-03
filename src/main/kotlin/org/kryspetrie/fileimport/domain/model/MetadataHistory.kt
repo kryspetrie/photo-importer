@@ -26,6 +26,7 @@ data class MetadataHistory(
     val iso: List<String> = emptyList(),
     // Location metadata history
     val locationName: List<String> = emptyList(),
+    val address: List<String> = emptyList(),
     val city: List<String> = emptyList(),
     val state: List<String> = emptyList(),
     val country: List<String> = emptyList(),
@@ -59,6 +60,7 @@ data class MetadataHistory(
                 "shutterSpeed",
                 "iso",
                 "locationName",
+                "address",
                 "city",
                 "state",
                 "country",
@@ -87,6 +89,7 @@ data class MetadataHistory(
                     a.shutterSpeed to b.shutterSpeed,
                     a.iso to b.iso,
                     a.locationName to b.locationName,
+                    a.address to b.address,
                     a.city to b.city,
                     a.state to b.state,
                     a.country to b.country,
@@ -123,6 +126,7 @@ data class MetadataHistory(
             "shutterSpeed" -> copy(shutterSpeed = updated)
             "iso" -> copy(iso = updated)
             "locationName" -> copy(locationName = updated)
+            "address" -> copy(address = updated)
             "city" -> copy(city = updated)
             "state" -> copy(state = updated)
             "country" -> copy(country = updated)
@@ -148,6 +152,7 @@ data class MetadataHistory(
             "shutterSpeed" -> shutterSpeed
             "iso" -> iso
             "locationName" -> locationName
+            "address" -> address
             "city" -> city
             "state" -> state
             "country" -> country
@@ -174,6 +179,7 @@ data class MetadataHistory(
             "shutterSpeed" -> copy(shutterSpeed = updated)
             "iso" -> copy(iso = updated)
             "locationName" -> copy(locationName = updated)
+            "address" -> copy(address = updated)
             "city" -> copy(city = updated)
             "state" -> copy(state = updated)
             "country" -> copy(country = updated)
@@ -211,11 +217,12 @@ data class MetadataHistory(
     /**
      * Returns location-only suggestion sets — distinct combinations of location fields
      * from [recentSets]. Useful for the "Apply Location" quick-fill button which
-     * specifically fills location fields (locationName, city, state, country, lat, lon).
+     * specifically fills location fields (locationName, address, city, state, country, lat, lon).
      */
     fun getLocationSets(): List<RecentMetadataSet> =
         recentSets.filter {
             it.locationName.isNotBlank() ||
+                it.address.isNotBlank() ||
                 it.city.isNotBlank() ||
                 it.state.isNotBlank() ||
                 it.country.isNotBlank() ||

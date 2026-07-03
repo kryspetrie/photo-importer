@@ -41,6 +41,7 @@ import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.application.PhotoScanExportService
@@ -79,6 +80,7 @@ fun WizardContainer(
     settingsPort: SettingsPort = koinInject(),
     dispatcherProvider: DispatcherProvider = koinInject(),
     faceRegionTransformer: FaceRegionTransformerPort = koinInject(),
+    faceDetectionPort: FaceDetectionPort = koinInject(),
 ) {
     val state = remember { PhotoScanWizardState() }
     state.setLogger(appLogger)
@@ -112,6 +114,23 @@ fun WizardContainer(
     val sourceImage by state.image.collectAsState()
     LaunchedEffect(sourceImage) {
         previewCache.clear()
+    }
+
+    // Preload ML models eagerly on a background thread so the first detection call
+    // doesn't pay the cold-start cost (~57 MB classpath I/O + ONNX session creation).
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.withContext(dispatcherProvider.io) {
+            try {
+                detectorService.preload()
+            } catch (_: Exception) {
+                // Preloading is best-effort; detection will still work (just slower first call)
+            }
+            try {
+                faceDetectionPort.preload()
+            } catch (_: Exception) {
+                // Face detection model is optional; don't fail if unavailable
+            }
+        }
     }
 
 

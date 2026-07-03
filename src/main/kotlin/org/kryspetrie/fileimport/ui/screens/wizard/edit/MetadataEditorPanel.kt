@@ -76,8 +76,19 @@ internal fun MetadataEditorPanel(
             photoConfigurations[singleEditBoxId] ?: PhotoScanConfiguration()
         } else null
 
-    // ── Sync editState from config in single-edit mode when selection changes ──
-    LaunchedEffect(singleEditBoxId) {
+    // ── Sync editState from config in single-edit mode ──
+    // Re-sync when selection changes OR when config fields are updated externally
+    // (e.g. location picker updates city/state/country/GPS directly in the config).
+    LaunchedEffect(
+        singleEditBoxId,
+        singleEditConfig?.locationName,
+        singleEditConfig?.address,
+        singleEditConfig?.city,
+        singleEditConfig?.state,
+        singleEditConfig?.country,
+        singleEditConfig?.gpsLatitude,
+        singleEditConfig?.gpsLongitude,
+    ) {
         if (!isMultiSelect && singleEditConfig != null) {
             editState.loadFrom(singleEditConfig)
         }
@@ -375,6 +386,13 @@ internal fun MetadataEditorPanel(
                     editState.locationName = newValue
                     singleEditBoxId?.let { id ->
                         state.configs.updatePhotoScanConfiguration(id) { it.copy(locationName = newValue) }
+                    }
+                },
+                address = editState.address,
+                onAddressChange = { newValue ->
+                    editState.address = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(address = newValue) }
                     }
                 },
                 city = editState.city,

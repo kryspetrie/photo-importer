@@ -60,6 +60,7 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.sinh
 import kotlin.math.tan
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -430,7 +431,8 @@ class TileLoader(
                     if (diskBytes != null) {
                         try {
                             SkiaImage.makeFromEncoded(diskBytes).toComposeImageBitmap()
-                        } catch (_: Exception) {
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             null
                         }
                     } else {
@@ -530,7 +532,11 @@ class TileLoader(
                 diskCache.evictIfNeeded()
                 SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            // CancellationException must be re-thrown to preserve coroutine cancellation semantics.
+            // Swallowing it would prevent proper coroutine cancellation and cause tile loading
+            // to silently fail when the composable is inside a Dialog or other scoped context.
+            if (e is CancellationException) throw e
             null
         }
     }
@@ -556,7 +562,13 @@ class TileLoader(
             for ((z, x, y) in tiles) {
                 val key = "$z/$x/$y"
                 if (cache.get(key) != null) continue
-                scope.launch { loadTile(z, x, y) }
+                scope.launch {
+                    try {
+                        loadTile(z, x, y)
+                    } catch (_: CancellationException) {
+                        // Don't propagate — would cancel the snapshotFlow collector
+                    }
+                }
             }
         }
     }
@@ -586,7 +598,13 @@ class TileLoader(
                 if (tx in 0 until n && ty in 0 until n) {
                     val key = "$targetZoom/$tx/$ty"
                     if (cache.get(key) != null) continue
-                    scope.launch { loadTile(targetZoom, tx, ty) }
+                    scope.launch {
+                        try {
+                            loadTile(targetZoom, tx, ty)
+                        } catch (_: CancellationException) {
+                            // Don't propagate — would cancel the snapshotFlow collector
+                        }
+                    }
                 }
             }
         }
@@ -725,9 +743,7 @@ fun OsmMapView(
     // Sync external center/zoom changes (e.g. selecting a search result or preset)
     LaunchedEffect(initialLat) { camera.centerLat = initialLat }
     LaunchedEffect(initialLon) { camera.centerLon = initialLon }
-    LaunchedEffect(initialZoom) {
-        camera.zoom = initialZoom
-    }
+    LaunchedEffect(initialZoom) { camera.zoom = initialZoom }
 
     val tileLoader = remember { TileLoader(dispatcherProvider) }
     val sourceTileSize = 256
@@ -784,10 +800,12 @@ fun OsmMapView(
         }
     }
 
-    // Sync map style to tile loader
+    // Sync map style to tile loader — do NOT clear memory cache;
+    // each style has its own TileCache so switching is instant.
+    // Just invalidate to trigger a redraw with the new style's tiles.
     LaunchedEffect(mapStyle) {
         tileLoader.mapStyle = mapStyle
-        tileLoader.clearMemoryCache()
+        sizeTracker.invalidate()
         onMapStyleChanged(mapStyle)
     }
 
@@ -832,8 +850,14 @@ fun OsmMapView(
                 val tileKey = "$tz/$tx/$ty"
                 if (tileLoader.cache.get(tileKey) != null) continue
                 launch {
-                    if (tileLoader.loadTile(tz, tx, ty) != null) {
-                        sizeTracker.invalidate()
+                    try {
+                        if (tileLoader.loadTile(tz, tx, ty) != null) {
+                            sizeTracker.invalidate()
+                        }
+                    } catch (_: CancellationException) {
+                        // Tile load cancelled (e.g. composable leaving composition) —
+                        // don't propagate, as it would cancel the snapshotFlow collector
+                        // and permanently stop all tile loading.
                     }
                 }
             }
@@ -883,7 +907,13 @@ fun OsmMapView(
                     for ((z, x, y) in tiles) {
                         val tileKey = "$z/$x/$y"
                         if (tileLoader.cache.get(tileKey) != null) continue
-                        launch { tileLoader.loadTile(z, x, y) }
+                        launch {
+                            try {
+                                tileLoader.loadTile(z, x, y)
+                            } catch (_: CancellationException) {
+                                // Don't propagate — would cancel the debounced prefetch collector
+                            }
+                        }
                     }
                 }
             }

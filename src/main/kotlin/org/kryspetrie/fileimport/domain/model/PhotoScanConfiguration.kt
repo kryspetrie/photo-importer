@@ -113,9 +113,17 @@ data class PhotoScanConfiguration(
     // -- Location metadata (IPTC Core + EXIF GPS) --
 
     /**
-     * Sub-location / location name (IPTC 2:91). E.g. "Grandma's house". Empty = preserve original.
+     * Sub-location / location name (IPTC 2:91). E.g. "Grandma's house" or "Disney World".
+     * A colloquial or recognizable name for the place. Empty = preserve original.
      */
     val locationName: String = "",
+
+    /**
+     * Full street address from geocoding (e.g. "Worcester, Massachusetts, United States").
+     * Written to IPTC SubLocation when set, providing the detailed address. Falls back to
+     * [locationName] in IPTC export if this is blank. Empty = preserve original.
+     */
+    val address: String = "",
 
     /** City (IPTC 2:90 / photoshop:City). E.g. "Worcester". Empty = preserve original. */
     val city: String = "",
@@ -210,6 +218,7 @@ data class PhotoScanConfiguration(
             shutterSpeed.isNotBlank() ||
             iso.isNotBlank() ||
             locationName.isNotBlank() ||
+            address.isNotBlank() ||
             city.isNotBlank() ||
             state.isNotBlank() ||
             country.isNotBlank() ||
@@ -233,7 +242,7 @@ data class PhotoScanConfiguration(
 
     /** Returns a human-readable location string, e.g. "Grandma's house, Worcester, MA". */
     fun locationDisplay(): String =
-        listOf(locationName, city, state, country).filter { it.isNotBlank() }.joinToString(", ")
+        listOf(locationName, address, city, state, country).filter { it.isNotBlank() }.joinToString(", ")
 
     /** Returns true if there is GPS coordinate data. */
     fun hasGpsCoordinates(): Boolean = gpsLatitude.isNotBlank() && gpsLongitude.isNotBlank()
@@ -256,6 +265,7 @@ data class PhotoScanConfiguration(
             shutterSpeed.isNotBlank() ||
             iso.isNotBlank() ||
             locationName.isNotBlank() ||
+            address.isNotBlank() ||
             city.isNotBlank() ||
             state.isNotBlank() ||
             country.isNotBlank() ||

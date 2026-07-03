@@ -56,9 +56,9 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+
 import java.awt.image.BufferedImage
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.AppSettings
@@ -245,6 +245,8 @@ fun EditScreen(
                                     h = region.h,
                                 )
                             }
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (_: Exception) {
                         emptyList()
                     }
@@ -293,6 +295,9 @@ fun EditScreen(
                                 }
                                 state.faceRegions.addDetectedFaceRegions(idx, detectedRegions)
                             }
+                        } catch (e: CancellationException) {
+                            // Cancellation must propagate to preserve coroutine lifecycle
+                            throw e
                         } catch (_: Exception) {
                             // Detection failed silently — user can still place faces manually
                         }
@@ -340,54 +345,6 @@ fun EditScreen(
         }
     }
 
-    // ── Location picker dialog ──
-    if (showLocationPicker && locationPickerTargetIndex != null) {
-        Dialog(
-            onDismissRequest = {
-                showLocationPicker = false
-                locationPickerTargetIndex = null
-            },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
-        ) {
-        LocationPickerDialog(
-            locationSearchService = locationSearchService,
-            geocodingPort = geocodingPort,
-            dispatcherProvider = dispatcherProvider,
-            initialLat = settings.lastMapLat,
-            initialLon = settings.lastMapLon,
-            initialZoom = settings.lastMapZoom,
-            onLocationSelected = { result ->
-                val idx = locationPickerTargetIndex
-                if (idx != null && idx < boundingBoxList.size()) {
-                    val boxId = boundingBoxList.boxes[idx].id
-                    state.configs.updatePhotoScanConfiguration(boxId) {
-                        it.copy(
-                            city = result.city ?: it.city,
-                            state = it.state,
-                            country = result.country ?: it.country,
-                            gpsLatitude = result.latitude.toString(),
-                            gpsLongitude = result.longitude.toString(),
-                        )
-                    }
-                }
-                showLocationPicker = false
-                locationPickerTargetIndex = null
-            },
-            onDismiss = {
-                showLocationPicker = false
-                locationPickerTargetIndex = null
-            },
-            onMapLocationChanged = { lat, lon, zoom ->
-                coroutineScope.launch {
-                    val current = settingsPort.observeSettings().first()
-                    settingsPort.saveSettings(
-                        current.copy(lastMapLat = lat, lastMapLon = lon, lastMapZoom = zoom)
-                    )
-                }
-            },
-        )
-        }
-    }
 
     // ── Back-of-photo image picker dialog ──
     if (showBackImagePicker) {
@@ -743,5 +700,48 @@ fun EditScreen(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             )
         }
+    }
+
+    // ── Location picker (opens in its own window via DialogWindow) ──
+    if (showLocationPicker && locationPickerTargetIndex != null) {
+        LocationPickerDialog(
+            locationSearchService = locationSearchService,
+            geocodingPort = geocodingPort,
+            dispatcherProvider = dispatcherProvider,
+            initialLat = settings.lastMapLat,
+            initialLon = settings.lastMapLon,
+            initialZoom = settings.lastMapZoom,
+            onLocationSelected = { result ->
+                val idx = locationPickerTargetIndex
+                if (idx != null && idx < boundingBoxList.size()) {
+                    val boxId = boundingBoxList.boxes[idx].id
+                    state.configs.updatePhotoScanConfiguration(boxId) {
+                        it.copy(
+                            locationName = result.name,
+                            address = result.displayName,
+                            city = result.city ?: it.city,
+                            state = result.state ?: it.state,
+                            country = result.country ?: it.country,
+                            gpsLatitude = result.latitude.toString(),
+                            gpsLongitude = result.longitude.toString(),
+                        )
+                    }
+                }
+                showLocationPicker = false
+                locationPickerTargetIndex = null
+            },
+            onDismiss = {
+                showLocationPicker = false
+                locationPickerTargetIndex = null
+            },
+            onMapLocationChanged = { lat, lon, zoom ->
+                coroutineScope.launch {
+                    val current = settingsPort.observeSettings().first()
+                    settingsPort.saveSettings(
+                        current.copy(lastMapLat = lat, lastMapLon = lon, lastMapZoom = zoom)
+                    )
+                }
+            },
+        )
     }
 }

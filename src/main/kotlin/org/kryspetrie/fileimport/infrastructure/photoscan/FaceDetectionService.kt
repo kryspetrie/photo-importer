@@ -46,6 +46,22 @@ class FaceDetectionService(
     /** Lazily initialized face detection service (only when model is available). */
     private val faceService: YoloFaceDetectionService? by lazy { initFaceService() }
 
+    /**
+     * Preload the face detection model eagerly.
+     *
+     * Call this early in the application lifecycle to front-load the model loading cost.
+     * Without preloading, the first call to [detectFaces] pays the cost of classpath I/O
+     * (~10 MB) + ONNX session creation + GPU provider probing.
+     *
+     * This method is idempotent — calling it after the service is already loaded is a no-op.
+     *
+     * @return true if the face detection service was successfully initialized, false if the
+     *   model is unavailable or initialization failed
+     */
+    override fun preload(): Boolean {
+        return faceService != null
+    }
+
     override fun isFaceDetectionAvailable(): Boolean =
         modelResourcePort.isFaceDetectionModelAvailable()
 
