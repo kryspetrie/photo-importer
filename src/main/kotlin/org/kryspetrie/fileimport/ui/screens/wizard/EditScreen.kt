@@ -401,6 +401,11 @@ fun EditScreen(
                                 state.configs.selectSingleMetadata(currentIdx + 1)
                             true
                         }
+                        // Ctrl+Enter / Cmd+Enter: trigger export ("Next" action)
+                        isMeta && keyEvent.key == Key.Enter -> {
+                            if (boundingBoxList.size() > 0) onExport()
+                            true
+                        }
                         else -> false
                     }
                 } else false

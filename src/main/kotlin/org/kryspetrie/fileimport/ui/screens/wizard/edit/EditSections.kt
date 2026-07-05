@@ -727,6 +727,7 @@ internal fun SubjectsSection(
         remember(subjects) { subjects.split(",").map { it.trim() }.filter { it.isNotBlank() } }
     var subjectInput by remember { mutableStateOf("") }
     var subjectsExpanded by remember { mutableStateOf(false) }
+    val subjectFocusManager = LocalFocusManager.current
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider()
@@ -878,6 +879,20 @@ internal fun SubjectsSection(
                     placeholder = { Text("Add person...", style = MaterialTheme.typography.labelSmall) },
                     modifier = Modifier.weight(1f),
                     singleLine = true,
+                    keyboardActions =
+                        KeyboardActions(
+                            onDone = {
+                                if (subjectInput.isNotBlank()) {
+                                    val updated =
+                                        if (subjects.isBlank()) subjectInput.trim()
+                                        else "${subjects.trim()}, ${subjectInput.trim()}"
+                                    onSubjectsChange(updated)
+                                    onMetadataHistoryUpdate("subjects", subjectInput.trim())
+                                    subjectInput = ""
+                                }
+                                subjectFocusManager.moveFocus(FocusDirection.Down)
+                            }
+                        ),
                     textStyle = MaterialTheme.typography.bodyMedium,
                     trailingIcon = {
                         if (subjectInput.isNotBlank()) {

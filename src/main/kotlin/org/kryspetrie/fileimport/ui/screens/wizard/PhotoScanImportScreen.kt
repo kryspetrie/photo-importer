@@ -27,6 +27,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import java.io.File
 import kotlinx.coroutines.flow.first
@@ -161,6 +166,21 @@ fun PhotoScanImportScreen(
     val canStart = firstImageFile != null && (destValid || destCanCreate)
 
     Scaffold(
+        modifier = Modifier.onPreviewKeyEvent { keyEvent ->
+            if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Enter && canStart) {
+                firstImageFile?.let { file ->
+                    val batchFiles =
+                        if (sourceFile?.isDirectory == true) {
+                            sourceFile
+                                .listFiles { f -> f.isFile && isImageFile(f) }
+                                ?.sortedBy { it.name }
+                                ?.toList()
+                        } else null
+                    onImageSelected(file, batchFiles)
+                }
+                true
+            } else false
+        },
         topBar = {
             TopAppBar(
                 title = { Text("Import Photos") },
