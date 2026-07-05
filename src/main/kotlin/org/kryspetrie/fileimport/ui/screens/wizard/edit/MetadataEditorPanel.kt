@@ -105,7 +105,7 @@ internal fun MetadataEditorPanel(
     ChunkyScrollbar(modifier = modifier) {
         Column(
             modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             // ── Header ──
             if (isMultiSelect) {

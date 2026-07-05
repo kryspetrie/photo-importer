@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -144,6 +145,7 @@ fun MetadataField(
                     },
                     modifier =
                         Modifier.fillMaxWidth()
+                            .defaultMinSize(minHeight = 0.dp)
                             .then(
                                 if (focusRequester != null) Modifier.focusRequester(focusRequester)
                                 else Modifier
@@ -189,6 +191,7 @@ fun MetadataField(
                 placeholder = { Text(placeholder, style = MaterialTheme.typography.labelSmall) },
                 modifier =
                     Modifier.fillMaxWidth()
+                        .defaultMinSize(minHeight = 0.dp)
                         .then(
                             if (focusRequester != null) Modifier.focusRequester(focusRequester)
                             else Modifier

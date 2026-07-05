@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -218,7 +219,7 @@ internal fun QuickEditMetadataFields(
                         placeholder = {
                             Text("Add keyword...", style = MaterialTheme.typography.labelSmall)
                         },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).defaultMinSize(minHeight = 0.dp),
                         singleLine = true,
                         keyboardActions =
                             KeyboardActions(
@@ -381,7 +382,7 @@ internal fun CameraSection(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -545,7 +546,7 @@ internal fun LocationSection(
     var detailsExpanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
         // ── Section header ──
         Text("Location", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
 
@@ -738,7 +739,7 @@ internal fun SubjectsSection(
     val subjectFocusManager = LocalFocusManager.current
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -878,7 +879,7 @@ internal fun SubjectsSection(
                             suggestionsExpanded = true
                         },
                         placeholder = { Text("Add person...", style = MaterialTheme.typography.labelSmall) },
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).defaultMinSize(minHeight = 0.dp),
                         singleLine = true,
                         keyboardActions =
                             KeyboardActions(
