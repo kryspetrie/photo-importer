@@ -296,7 +296,7 @@ fun EditScreen(
                                     )
                                 }
                                 state.faceRegions.addDetectedFaceRegions(idx, detectedRegions)
-                            }
+                                autoStartNaming = true                            }
                         } catch (e: CancellationException) {
                             // Cancellation must propagate to preserve coroutine lifecycle
                             throw e

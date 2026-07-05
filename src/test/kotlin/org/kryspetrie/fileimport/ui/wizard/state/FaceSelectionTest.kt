@@ -556,4 +556,108 @@ class FaceSelectionTest {
             assertEquals("Bob", config?.faceRegions?.get(1)?.name)
         }
     }
+
+    @Nested
+    @DisplayName("skip face during naming cycle")
+    inner class SkipFaceDuringNaming {
+
+        @Test
+        @DisplayName("should remove face and advance when skipping")
+        fun shouldRemoveFaceAndAdvanceWhenSkipping() {
+            addTestBoxes(1)
+
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.2, y = 0.3, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.5, y = 0.4, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.8, y = 0.5, w = 0.14, h = 0.14),
+            )
+            state.faceRegions.addDetectedFaceRegions(0, detected)
+
+            assertEquals(3, state.photoConfigurations.value[state.configs.boxes[0].id]?.faceRegions?.size)
+
+            // Skip face 0 (remove it)
+            state.faceRegions.removeFaceRegion(0, 0)
+
+            // After skipping, remaining faces should be re-indexed
+            val config = state.photoConfigurations.value[state.configs.boxes[0].id]
+            assertEquals(2, config?.faceRegions?.size)
+            // Faces 1 and 2 should now be at indices 0 and 1
+            assertEquals("", config?.faceRegions?.get(0)?.name) // face at x=0.5
+            assertEquals("", config?.faceRegions?.get(1)?.name) // face at x=0.8
+        }
+
+        @Test
+        @DisplayName("should name face, skip next, then name last")
+        fun shouldNameFaceSkipNextThenNameLast() {
+            addTestBoxes(1)
+
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.2, y = 0.3, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.5, y = 0.4, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.8, y = 0.5, w = 0.14, h = 0.14),
+            )
+            state.faceRegions.addDetectedFaceRegions(0, detected)
+
+            // Name face 0
+            state.faceRegions.updateFaceRegionName(0, 0, "Alice")
+            assertEquals("Alice", state.photoConfigurations.value[state.configs.boxes[0].id]?.subjects)
+
+            // Skip face 1 (remove it)
+            state.faceRegions.removeFaceRegion(0, 1)
+
+            // Face 2 is now at index 1
+            val config = state.photoConfigurations.value[state.configs.boxes[0].id]
+            assertEquals(2, config?.faceRegions?.size)
+
+            // Name face 2 (now at index 1)
+            state.faceRegions.updateFaceRegionName(0, 1, "Carol")
+            assertEquals("Alice, Carol", state.photoConfigurations.value[state.configs.boxes[0].id]?.subjects)
+        }
+
+        @Test
+        @DisplayName("should skip all faces leaving none")
+        fun shouldSkipAllFacesLeavingNone() {
+            addTestBoxes(1)
+
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.2, y = 0.3, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.5, y = 0.4, w = 0.14, h = 0.14),
+            )
+            state.faceRegions.addDetectedFaceRegions(0, detected)
+
+            // Skip (remove) face 0
+            state.faceRegions.removeFaceRegion(0, 0)
+            // Skip (remove) face 0 (which was face 1)
+            state.faceRegions.removeFaceRegion(0, 0)
+
+            val config = state.photoConfigurations.value[state.configs.boxes[0].id]
+            assertEquals(0, config?.faceRegions?.size)
+            assertEquals("", config?.subjects)
+        }
+
+        @Test
+        @DisplayName("should update subjects correctly after skip and rename")
+        fun shouldUpdateSubjectsCorrectlyAfterSkipAndRename() {
+            addTestBoxes(1)
+
+            val detected = listOf(
+                FaceRegion(name = "", type = "Face", x = 0.2, y = 0.3, w = 0.14, h = 0.14),
+                FaceRegion(name = "", type = "Face", x = 0.5, y = 0.4, w = 0.14, h = 0.14),
+            )
+            state.faceRegions.addDetectedFaceRegions(0, detected)
+
+            // Name face 0 as "Alice"
+            state.faceRegions.updateFaceRegionName(0, 0, "Alice")
+            assertEquals("Alice", state.photoConfigurations.value[state.configs.boxes[0].id]?.subjects)
+
+            // Skip face 1 (remove it)
+            state.faceRegions.removeFaceRegion(0, 1)
+
+            // Only Alice remains
+            val config = state.photoConfigurations.value[state.configs.boxes[0].id]
+            assertEquals(1, config?.faceRegions?.size)
+            assertEquals("Alice", config?.faceRegions?.get(0)?.name)
+            assertEquals("Alice", config?.subjects)
+        }
+    }
 }
