@@ -709,7 +709,7 @@ internal fun LocationSection(
     }
 }
 
-/** Subjects/faces section — always visible with a section header. */
+/** Subjects/faces section — collapsed by default (secondary workflow). */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun SubjectsSection(
@@ -726,11 +726,26 @@ internal fun SubjectsSection(
     val subjectList =
         remember(subjects) { subjects.split(",").map { it.trim() }.filter { it.isNotBlank() } }
     var subjectInput by remember { mutableStateOf("") }
+    var subjectsExpanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider()
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { subjectsExpanded = !subjectsExpanded },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                if (subjectsExpanded) ExpandLessIcon else ExpandMoreIcon,
+                contentDescription = if (subjectsExpanded) "Hide" else "Show",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
+            )
+            Spacer(Modifier.width(4.dp))
             Text("Subjects & Faces", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+        }
+        if (subjectsExpanded) {
             if (faceRegions.isNotEmpty()) {
                 Spacer(Modifier.width(4.dp))
                 Text(
@@ -1021,8 +1036,8 @@ internal fun FaceNameEntryPanel(
                 }
             }
         }
+        }
     }
-}
 
 /** A removable chip/tag for keywords and subjects. Shows text with an X button to remove. */
 @Composable

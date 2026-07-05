@@ -145,28 +145,15 @@ internal fun MetadataEditorPanel(
                 )
             }
 
-            // ── Recent Values ──
-            if (metadataHistory.recentSets.isNotEmpty()) {
-                if (isMultiSelect) {
-                    RecentValuesDropdown(
-                        recentSets = metadataHistory.recentSets,
-                        onApplySet = { set ->
-                            editState.loadFromSet(set)
-                            onRecordMetadataSet(set)
-                        },
-                    )
-                } else {
-                    RecentValuesDropdown(
-                        recentSets = metadataHistory.recentSets,
-                        onApplySet = { set ->
-                            singleEditBoxId?.let { id ->
-                                state.configs.updatePhotoScanConfiguration(id) { set.mergeInto(it) }
-                            }
-                            editState.loadFromSet(set)
-                            onRecordMetadataSet(set)
-                        },
-                    )
-                }
+            // ── Recent Values (multi-edit only — each field has its own suggestions in single-edit) ──
+            if (isMultiSelect && metadataHistory.recentSets.isNotEmpty()) {
+                RecentValuesDropdown(
+                    recentSets = metadataHistory.recentSets,
+                    onApplySet = { set ->
+                        editState.loadFromSet(set)
+                        onRecordMetadataSet(set)
+                    },
+                )
             }
 
             // ── Metadata sections (shared between modes) ──
@@ -309,7 +296,7 @@ internal fun MetadataEditorPanel(
                 onMetadataHistoryUpdate = onMetadataHistoryUpdate,
                 // Override checkboxes (single-edit only)
                 overrideCameraMake = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.overrideCameraMake != OverrideState.NULL_OUT
+                    singleEditConfig.overrideCameraMake == OverrideState.KEEP_SOURCE
                 } else null,
                 onOverrideCameraMakeChange = if (!isMultiSelect) { { included: Boolean ->
                     singleEditBoxId?.let { id ->
@@ -319,7 +306,7 @@ internal fun MetadataEditorPanel(
                     }
                 } } else null,
                 overrideCameraModel = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.overrideCameraModel != OverrideState.NULL_OUT
+                    singleEditConfig.overrideCameraModel == OverrideState.KEEP_SOURCE
                 } else null,
                 onOverrideCameraModelChange = if (!isMultiSelect) { { included: Boolean ->
                     singleEditBoxId?.let { id ->
@@ -329,7 +316,7 @@ internal fun MetadataEditorPanel(
                     }
                 } } else null,
                 overrideLensModel = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.overrideLensModel != OverrideState.NULL_OUT
+                    singleEditConfig.overrideLensModel == OverrideState.KEEP_SOURCE
                 } else null,
                 onOverrideLensModelChange = if (!isMultiSelect) { { included: Boolean ->
                     singleEditBoxId?.let { id ->
@@ -339,7 +326,7 @@ internal fun MetadataEditorPanel(
                     }
                 } } else null,
                 overrideFocalLength = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.overrideFocalLength != OverrideState.NULL_OUT
+                    singleEditConfig.overrideFocalLength == OverrideState.KEEP_SOURCE
                 } else null,
                 onOverrideFocalLengthChange = if (!isMultiSelect) { { included: Boolean ->
                     singleEditBoxId?.let { id ->
@@ -349,7 +336,7 @@ internal fun MetadataEditorPanel(
                     }
                 } } else null,
                 overrideAperture = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.overrideAperture != OverrideState.NULL_OUT
+                    singleEditConfig.overrideAperture == OverrideState.KEEP_SOURCE
                 } else null,
                 onOverrideApertureChange = if (!isMultiSelect) { { included: Boolean ->
                     singleEditBoxId?.let { id ->
@@ -359,7 +346,7 @@ internal fun MetadataEditorPanel(
                     }
                 } } else null,
                 overrideShutterSpeed = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.overrideShutterSpeed != OverrideState.NULL_OUT
+                    singleEditConfig.overrideShutterSpeed == OverrideState.KEEP_SOURCE
                 } else null,
                 onOverrideShutterSpeedChange = if (!isMultiSelect) { { included: Boolean ->
                     singleEditBoxId?.let { id ->
@@ -369,7 +356,7 @@ internal fun MetadataEditorPanel(
                     }
                 } } else null,
                 overrideIso = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.overrideIso != OverrideState.NULL_OUT
+                    singleEditConfig.overrideIso == OverrideState.KEEP_SOURCE
                 } else null,
                 onOverrideIsoChange = if (!isMultiSelect) { { included: Boolean ->
                     singleEditBoxId?.let { id ->
@@ -378,7 +365,8 @@ internal fun MetadataEditorPanel(
                         }
                     }
                 } } else null,
-                sourceExif = sourceExif,
+                // Scanner camera data is irrelevant — suppress source EXIF hints for camera fields
+                sourceExif = null,
             )
 
             LocationSection(
