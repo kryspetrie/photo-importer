@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
@@ -90,10 +90,10 @@ internal fun RotationSection(
     Surface(
         tonalElevation = 1.dp,
         shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(6.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -103,7 +103,11 @@ internal fun RotationSection(
                 Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(16.dp))
             }
             IconButton(onClick = onRotate180, modifier = Modifier.size(24.dp)) {
-                Text("180°", style = MaterialTheme.typography.labelSmall)
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = "Rotate 180°",
+                    modifier = Modifier.size(16.dp),
+                )
             }
             IconButton(onClick = onRotateCW, modifier = Modifier.size(24.dp)) {
                 Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(16.dp))
@@ -283,31 +287,50 @@ internal fun QuickEditMetadataFields(
         }
     }
 
-    // Original Date with date picker
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            MetadataField(
-                label = "Original Date",
-                placeholder = "YYYY-MM-DD",
-                value = originalDate,
-                onValueChange = onOriginalDateChange,
-                suggestions = metadataHistory.originalDate,
-                onCommit = { onMetadataHistoryUpdate("originalDate", originalDate) },
-                modifier = Modifier.weight(1f),
-                fieldIncluded = overrideOriginalDate,
-                onFieldIncludedChange = onOverrideOriginalDateChange,
-                sourceHint = sourceExif?.dateOriginal,
-            )
-            IconButton(
-                onClick = { showDatePicker = true },
-                modifier = Modifier.size(32.dp).padding(top = 20.dp),
+    // Original Date + Year on the same line
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Default.DateRange, "Pick date", tint = MaterialTheme.colorScheme.primary)
+                MetadataField(
+                    label = "Original Date",
+                    placeholder = "YYYY-MM-DD",
+                    value = originalDate,
+                    onValueChange = onOriginalDateChange,
+                    suggestions = metadataHistory.originalDate,
+                    onCommit = { onMetadataHistoryUpdate("originalDate", originalDate) },
+                    modifier = Modifier.weight(1f),
+                    fieldIncluded = overrideOriginalDate,
+                    onFieldIncludedChange = onOverrideOriginalDateChange,
+                    sourceHint = sourceExif?.dateOriginal,
+                )
+                IconButton(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.size(32.dp).padding(top = 20.dp),
+                ) {
+                    Icon(Icons.Default.DateRange, "Pick date", tint = MaterialTheme.colorScheme.primary)
+                }
             }
         }
+        MetadataField(
+            label = "Year",
+            placeholder = "1995",
+            value = year,
+            onValueChange = { onYearChange(it.filter { c -> c.isDigit() }.take(4)) },
+            keyboardType = KeyboardType.Number,
+            suggestions = metadataHistory.year,
+            onCommit = { onMetadataHistoryUpdate("year", year) },
+            modifier = Modifier.width(120.dp),
+            fieldIncluded = overrideYear,
+            onFieldIncludedChange = onOverrideYearChange,
+            sourceHint = sourceExif?.dateOriginal?.take(4),
+        )
     }
     if (showDatePicker) {
         DatePickerDialog(
@@ -319,19 +342,6 @@ internal fun QuickEditMetadataFields(
             },
         )
     }
-
-    MetadataField(
-        label = "Year",
-        placeholder = "1995",
-        value = year,
-        onValueChange = { onYearChange(it.filter { c -> c.isDigit() }.take(4)) },
-        keyboardType = KeyboardType.Number,
-        suggestions = metadataHistory.year,
-        onCommit = { onMetadataHistoryUpdate("year", year) },
-        fieldIncluded = overrideYear,
-        onFieldIncludedChange = onOverrideYearChange,
-        sourceHint = sourceExif?.dateOriginal?.take(4),
-    )
 }
 
 /** Camera settings section — collapsed by default since it's rarely needed. */
@@ -371,7 +381,7 @@ internal fun CameraSection(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        HorizontalDivider()
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -535,26 +545,9 @@ internal fun LocationSection(
     var detailsExpanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        HorizontalDivider()
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
         // ── Section header ──
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("Location", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
-            Spacer(Modifier.weight(1f))
-            if (onPickLocation != null) {
-                OutlinedButton(
-                    onClick = onPickLocation,
-                    modifier = Modifier.height(24.dp),
-                    contentPadding = PaddingValues(horizontal = 6.dp),
-                ) {
-                    Icon(Icons.Default.LocationOn, null, Modifier.size(12.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text("Pick on Map", style = MaterialTheme.typography.labelSmall)
-                }
-            }
-        }
+        Text("Location", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
 
         // ── Recent Locations ──
         if (onApplyRecentLocation != null) {
@@ -582,6 +575,21 @@ internal fun LocationSection(
             onValueChange = onAddressChange,
             suggestions = metadataHistory.address,
             onCommit = { onMetadataHistoryUpdate("address", address) },
+            trailingIcon = if (onPickLocation != null) {
+                {
+                    IconButton(
+                        onClick = onPickLocation,
+                        modifier = Modifier.size(32.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.LocationOn,
+                            contentDescription = "Pick on Map",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
+            } else null,
         )
 
         // ── Expand/collapse for City/State/Country/GPS details ──
@@ -730,7 +738,7 @@ internal fun SubjectsSection(
     val subjectFocusManager = LocalFocusManager.current
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        HorizontalDivider()
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -748,192 +756,188 @@ internal fun SubjectsSection(
         }
         if (subjectsExpanded) {
             if (faceRegions.isNotEmpty()) {
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    "(${{faceRegions.size}})",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
-        }
-        Text(
-            "Subject names are written to EXIF/IPTC metadata and as MWG-RS face regions.",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        if (onSelectFaces != null) {
-            OutlinedButton(onClick = onSelectFaces, modifier = Modifier.fillMaxWidth()) {
-                Icon(Icons.Default.Face, null, Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    if (faceRegions.isEmpty()) "Select Faces on Photo"
-                    else "Edit Face Regions (${{faceRegions.size}})",
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-        if (faceRegions.isNotEmpty()) {
-            Surface(
-                tonalElevation = 1.dp,
-                shape = RoundedCornerShape(6.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(modifier = Modifier.padding(6.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("Face Regions", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
-                        if (onClearAllFaces != null) {
-                            Text(
-                                "Clear All",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = Color(0xFFFF6666),
-                                modifier = Modifier.clickable { onClearAllFaces() },
-                            )
-                        }
-                    }
-                    faceRegions.forEachIndexed { idx, region ->
+                Surface(
+                    tonalElevation = 1.dp,
+                    shape = RoundedCornerShape(6.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Column(modifier = Modifier.padding(6.dp)) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            ) {
-                                Icon(
-                                    regionTypeIcon(RegionType.fromMwgRs(region.type)),
-                                    contentDescription = region.type,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                                Text(region.name, style = MaterialTheme.typography.labelSmall)
-                                val xPct = kotlin.math.round(region.x * 100).toInt()
-                                val yPct = kotlin.math.round(region.y * 100).toInt()
+                            Text("Face Regions", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                            if (onClearAllFaces != null) {
                                 Text(
-                                    "($xPct%, $yPct%)",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    "Clear All",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = Color(0xFFFF6666),
+                                    modifier = Modifier.clickable { onClearAllFaces() },
                                 )
                             }
-                            if (onRemoveFace != null) {
-                                IconButton(
-                                    onClick = { onRemoveFace(idx) },
-                                    modifier = Modifier.size(18.dp),
+                        }
+                        faceRegions.forEachIndexed { idx, region ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
                                 ) {
                                     Icon(
-                                        Icons.Default.Close,
-                                        "Remove",
+                                        regionTypeIcon(RegionType.fromMwgRs(region.type)),
+                                        contentDescription = region.type,
                                         modifier = Modifier.size(12.dp),
-                                        tint = MaterialTheme.colorScheme.error,
+                                        tint = MaterialTheme.colorScheme.primary,
                                     )
+                                    Text(region.name, style = MaterialTheme.typography.labelSmall)
+                                    val xPct = kotlin.math.round(region.x * 100).toInt()
+                                    val yPct = kotlin.math.round(region.y * 100).toInt()
+                                    Text(
+                                        "($xPct%, $yPct%)",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                if (onRemoveFace != null) {
+                                    IconButton(
+                                        onClick = { onRemoveFace(idx) },
+                                        modifier = Modifier.size(18.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            "Remove",
+                                            modifier = Modifier.size(12.dp),
+                                            tint = MaterialTheme.colorScheme.error,
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
-        if (subjectList.isNotEmpty()) {
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                subjectList.forEach { subject ->
-                    RemovableChip(
-                        text = subject,
-                        onRemove = {
-                            val updated = subjectList.filter { it != subject }
-                            onSubjectsChange(updated.joinToString(", "))
-                            onMetadataHistoryRemove("subjects", subject)
-                        },
-                    )
-                }
-            }
-        }
-        var suggestionsExpanded by remember { mutableStateOf(false) }
-        val availableSuggestions =
-            remember(metadataHistory.subjects, subjectList) {
-                metadataHistory.subjects.filter { it !in subjectList }
-            }
-        val filteredSuggestions =
-            remember(availableSuggestions, subjectInput) {
-                if (subjectInput.isBlank()) availableSuggestions
-                else availableSuggestions.filter { it.contains(subjectInput, ignoreCase = true) }
-            }
-        Box {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                OutlinedTextField(
-                    value = subjectInput,
-                    onValueChange = {
-                        subjectInput = it
-                        suggestionsExpanded = true
-                    },
-                    placeholder = { Text("Add person...", style = MaterialTheme.typography.labelSmall) },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true,
-                    keyboardActions =
-                        KeyboardActions(
-                            onDone = {
-                                if (subjectInput.isNotBlank()) {
-                                    val updated =
-                                        if (subjects.isBlank()) subjectInput.trim()
-                                        else "${subjects.trim()}, ${subjectInput.trim()}"
-                                    onSubjectsChange(updated)
-                                    onMetadataHistoryUpdate("subjects", subjectInput.trim())
-                                    subjectInput = ""
-                                }
-                                subjectFocusManager.moveFocus(FocusDirection.Down)
-                            }
-                        ),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    trailingIcon = {
-                        if (subjectInput.isNotBlank()) {
-                            IconButton(
-                                onClick = {
-                                    val updated =
-                                        if (subjects.isBlank()) subjectInput.trim()
-                                        else "${{subjects.trim()}}, ${{subjectInput.trim()}}"
-                                    onSubjectsChange(updated)
-                                    onMetadataHistoryUpdate("subjects", subjectInput.trim())
-                                    subjectInput = ""
-                                },
-                                modifier = Modifier.size(20.dp),
-                            ) {
-                                Icon(Icons.Default.Add, "Add subject", modifier = Modifier.size(16.dp))
-                            }
-                        }
-                    },
-                )
-            }
-            if (filteredSuggestions.isNotEmpty()) {
-                DropdownMenu(
-                    expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
-                    onDismissRequest = { suggestionsExpanded = false },
+            if (subjectList.isNotEmpty()) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    filteredSuggestions.take(10).forEach { suggestion ->
-                        DropdownMenuItem(
-                            text = { Text(suggestion, style = MaterialTheme.typography.labelSmall) },
-                            onClick = {
-                                val updated =
-                                    if (subjects.isBlank()) suggestion
-                                    else "${{subjects.trim()}}, $suggestion"
-                                onSubjectsChange(updated)
-                                onMetadataHistoryUpdate("subjects", suggestion)
-                                subjectInput = ""
-                                suggestionsExpanded = false
+                    subjectList.forEach { subject ->
+                        RemovableChip(
+                            text = subject,
+                            onRemove = {
+                                val updated = subjectList.filter { it != subject }
+                                onSubjectsChange(updated.joinToString(", "))
+                                onMetadataHistoryRemove("subjects", subject)
                             },
                         )
                     }
                 }
             }
+            // ── Action buttons: Select Faces + Add person input ──
+            Surface(
+                tonalElevation = 1.dp,
+                shape = RoundedCornerShape(6.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(modifier = Modifier.padding(8.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (onSelectFaces != null) {
+                        OutlinedButton(onClick = onSelectFaces, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Default.Face, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                if (faceRegions.isEmpty()) "Select Faces"
+                                else "Edit Faces (${faceRegions.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                            )
+                        }
+                    }
+            var suggestionsExpanded by remember { mutableStateOf(false) }
+            val availableSuggestions =
+                remember(metadataHistory.subjects, subjectList) {
+                    metadataHistory.subjects.filter { it !in subjectList }
+                }
+            val filteredSuggestions =
+                remember(availableSuggestions, subjectInput) {
+                    if (subjectInput.isBlank()) availableSuggestions
+                    else availableSuggestions.filter { it.contains(subjectInput, ignoreCase = true) }
+                }
+            Box {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    OutlinedTextField(
+                        value = subjectInput,
+                        onValueChange = {
+                            subjectInput = it
+                            suggestionsExpanded = true
+                        },
+                        placeholder = { Text("Add person...", style = MaterialTheme.typography.labelSmall) },
+                        modifier = Modifier.weight(1f),
+                        singleLine = true,
+                        keyboardActions =
+                            KeyboardActions(
+                                onDone = {
+                                    if (subjectInput.isNotBlank()) {
+                                        val updated =
+                                            if (subjects.isBlank()) subjectInput.trim()
+                                            else "${subjects.trim()}, ${subjectInput.trim()}"
+                                        onSubjectsChange(updated)
+                                        onMetadataHistoryUpdate("subjects", subjectInput.trim())
+                                        subjectInput = ""
+                                    }
+                                    subjectFocusManager.moveFocus(FocusDirection.Down)
+                                }
+                            ),
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        trailingIcon = {
+                            if (subjectInput.isNotBlank()) {
+                                IconButton(
+                                    onClick = {
+                                        val updated =
+                                            if (subjects.isBlank()) subjectInput.trim()
+                                            else "${subjects.trim()}, ${subjectInput.trim()}"
+                                        onSubjectsChange(updated)
+                                        onMetadataHistoryUpdate("subjects", subjectInput.trim())
+                                        subjectInput = ""
+                                    },
+                                    modifier = Modifier.size(20.dp),
+                                ) {
+                                    Icon(Icons.Default.Add, "Add subject", modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        },
+                    )
+                }
+                if (filteredSuggestions.isNotEmpty()) {
+                    DropdownMenu(
+                        expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
+                        onDismissRequest = { suggestionsExpanded = false },
+                    ) {
+                        filteredSuggestions.take(10).forEach { suggestion ->
+                            DropdownMenuItem(
+                                text = { Text(suggestion, style = MaterialTheme.typography.labelSmall) },
+                                onClick = {
+                                    val updated =
+                                        if (subjects.isBlank()) suggestion
+                                        else "${subjects.trim()}, $suggestion"
+                                    onSubjectsChange(updated)
+                                    onMetadataHistoryUpdate("subjects", suggestion)
+                                    subjectInput = ""
+                                    suggestionsExpanded = false
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+                } // closes Column
+            } // closes Surface
         }
     }
 }

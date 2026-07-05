@@ -242,6 +242,114 @@ internal fun MetadataEditorPanel(
                 sourceExif = sourceExif,
             )
 
+            LocationSection(
+                locationName = editState.locationName,
+                onLocationNameChange = { newValue ->
+                    editState.locationName = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(locationName = newValue) }
+                    }
+                },
+                address = editState.address,
+                onAddressChange = { newValue ->
+                    editState.address = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(address = newValue) }
+                    }
+                },
+                city = editState.city,
+                onCityChange = { newValue ->
+                    editState.city = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(city = newValue) }
+                    }
+                },
+                stateVal = editState.state,
+                onStateChange = { newValue ->
+                    editState.state = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(state = newValue) }
+                    }
+                },
+                country = editState.country,
+                onCountryChange = { newValue ->
+                    editState.country = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(country = newValue) }
+                    }
+                },
+                gpsLatitude = editState.gpsLatitude,
+                onGpsLatitudeChange = { newValue ->
+                    editState.gpsLatitude = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(gpsLatitude = newValue) }
+                    }
+                },
+                gpsLongitude = editState.gpsLongitude,
+                onGpsLongitudeChange = { newValue ->
+                    editState.gpsLongitude = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(gpsLongitude = newValue) }
+                    }
+                },
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                // Location recent values: multi-edit uses editState, single-edit pushes to config
+                onApplyRecentLocation = if (!isMultiSelect) { { set ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { set.mergeLocationInto(it) }
+                    }
+                    editState.loadFromSet(set)
+                } } else { { set -> editState.loadFromSet(set) } },
+                // Location picker (single-edit only)
+                onPickLocation = if (!isMultiSelect && selectedIndex >= 0) {
+                    { onPickLocation(selectedIndex) }
+                } else null,
+                // GPS override (single-edit only)
+                overrideGps = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.overrideGps != OverrideState.NULL_OUT
+                } else null,
+                onOverrideGpsChange = if (!isMultiSelect) { { included: Boolean ->
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) {
+                            it.copy(overrideGps = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
+                        }
+                    }
+                } } else null,
+                sourceGpsHint = sourceExif?.let {
+                    val parts = mutableListOf<String>()
+                    it.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
+                    it.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
+                    if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
+                },
+            )
+
+            SubjectsSection(
+                subjects = editState.subjects,
+                onSubjectsChange = { newValue ->
+                    editState.subjects = newValue
+                    singleEditBoxId?.let { id ->
+                        state.configs.updatePhotoScanConfiguration(id) { it.copy(subjects = newValue) }
+                    }
+                },
+                metadataHistory = metadataHistory,
+                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
+                onMetadataHistoryRemove = onMetadataHistoryRemove,
+                // Face selection (single-edit only)
+                onSelectFaces = if (!isMultiSelect && selectedIndex >= 0) {
+                    { onSelectFaces(selectedIndex) }
+                } else null,
+                faceRegions = if (!isMultiSelect && singleEditConfig != null) {
+                    singleEditConfig.faceRegions
+                } else emptyList(),
+                onRemoveFace = if (!isMultiSelect && selectedIndex >= 0) {
+                    { faceIdx -> state.faceRegions.removeFaceRegion(selectedIndex, faceIdx) }
+                } else null,
+                onClearAllFaces = if (!isMultiSelect && selectedIndex >= 0) {
+                    { state.faceRegions.clearAllFaceRegions(selectedIndex) }
+                } else null,
+            )
+
             CameraSection(
                 cameraMake = editState.cameraMake,
                 onCameraMakeChange = { newValue ->
@@ -367,114 +475,6 @@ internal fun MetadataEditorPanel(
                 } } else null,
                 // Scanner camera data is irrelevant — suppress source EXIF hints for camera fields
                 sourceExif = null,
-            )
-
-            LocationSection(
-                locationName = editState.locationName,
-                onLocationNameChange = { newValue ->
-                    editState.locationName = newValue
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { it.copy(locationName = newValue) }
-                    }
-                },
-                address = editState.address,
-                onAddressChange = { newValue ->
-                    editState.address = newValue
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { it.copy(address = newValue) }
-                    }
-                },
-                city = editState.city,
-                onCityChange = { newValue ->
-                    editState.city = newValue
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { it.copy(city = newValue) }
-                    }
-                },
-                stateVal = editState.state,
-                onStateChange = { newValue ->
-                    editState.state = newValue
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { it.copy(state = newValue) }
-                    }
-                },
-                country = editState.country,
-                onCountryChange = { newValue ->
-                    editState.country = newValue
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { it.copy(country = newValue) }
-                    }
-                },
-                gpsLatitude = editState.gpsLatitude,
-                onGpsLatitudeChange = { newValue ->
-                    editState.gpsLatitude = newValue
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { it.copy(gpsLatitude = newValue) }
-                    }
-                },
-                gpsLongitude = editState.gpsLongitude,
-                onGpsLongitudeChange = { newValue ->
-                    editState.gpsLongitude = newValue
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { it.copy(gpsLongitude = newValue) }
-                    }
-                },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                // Location recent values: multi-edit uses editState, single-edit pushes to config
-                onApplyRecentLocation = if (!isMultiSelect) { { set ->
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { set.mergeLocationInto(it) }
-                    }
-                    editState.loadFromSet(set)
-                } } else { { set -> editState.loadFromSet(set) } },
-                // Location picker (single-edit only)
-                onPickLocation = if (!isMultiSelect && selectedIndex >= 0) {
-                    { onPickLocation(selectedIndex) }
-                } else null,
-                // GPS override (single-edit only)
-                overrideGps = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.overrideGps != OverrideState.NULL_OUT
-                } else null,
-                onOverrideGpsChange = if (!isMultiSelect) { { included: Boolean ->
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) {
-                            it.copy(overrideGps = if (included) OverrideState.KEEP_SOURCE else OverrideState.NULL_OUT)
-                        }
-                    }
-                } } else null,
-                sourceGpsHint = sourceExif?.let {
-                    val parts = mutableListOf<String>()
-                    it.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
-                    it.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
-                    if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
-                },
-            )
-
-            SubjectsSection(
-                subjects = editState.subjects,
-                onSubjectsChange = { newValue ->
-                    editState.subjects = newValue
-                    singleEditBoxId?.let { id ->
-                        state.configs.updatePhotoScanConfiguration(id) { it.copy(subjects = newValue) }
-                    }
-                },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = onMetadataHistoryUpdate,
-                onMetadataHistoryRemove = onMetadataHistoryRemove,
-                // Face selection (single-edit only)
-                onSelectFaces = if (!isMultiSelect && selectedIndex >= 0) {
-                    { onSelectFaces(selectedIndex) }
-                } else null,
-                faceRegions = if (!isMultiSelect && singleEditConfig != null) {
-                    singleEditConfig.faceRegions
-                } else emptyList(),
-                onRemoveFace = if (!isMultiSelect && selectedIndex >= 0) {
-                    { faceIdx -> state.faceRegions.removeFaceRegion(selectedIndex, faceIdx) }
-                } else null,
-                onClearAllFaces = if (!isMultiSelect && selectedIndex >= 0) {
-                    { state.faceRegions.clearAllFaceRegions(selectedIndex) }
-                } else null,
             )
 
 

@@ -22,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
@@ -629,10 +630,10 @@ fun EditScreen(
                     Surface(
                         tonalElevation = 1.dp,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(6.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -664,7 +665,7 @@ fun EditScreen(
                                 },
                                 modifier = Modifier.size(24.dp),
                             ) {
-                                Text("180°", style = MaterialTheme.typography.labelSmall)
+                                Icon(Icons.Default.Refresh, "Rotate 180°", Modifier.size(16.dp))
                             }
                             IconButton(
                                 onClick = {

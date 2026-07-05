@@ -3,6 +3,8 @@ package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -70,6 +72,7 @@ fun MetadataField(
     focusRequester: FocusRequester? = null,
     sourceHint: String? = null,
     alwaysNavigateFocus: Boolean = true,
+    trailingIcon: (@Composable () -> Unit)? = null,
 ) {
     val focusManager = LocalFocusManager.current
 
@@ -90,6 +93,33 @@ fun MetadataField(
         } else {
             androidx.compose.foundation.text.KeyboardActions()
         }
+
+    // Build the combined trailing icon: custom icon + override checkbox
+    val combinedTrailingIcon: (@Composable () -> Unit)? = when {
+        trailingIcon != null && hasOverride -> {
+            {
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                    trailingIcon.invoke()
+                    OverrideCheckbox(
+                        included = fieldIncluded,
+                        onIncludedChange = onFieldIncludedChange,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+        }
+        trailingIcon != null -> trailingIcon
+        hasOverride -> {
+            {
+                OverrideCheckbox(
+                    included = fieldIncluded,
+                    onIncludedChange = onFieldIncludedChange,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+        else -> null
+    }
 
     Column(modifier = modifier) {
         if (suggestions.isNotEmpty()) {
@@ -129,16 +159,7 @@ fun MetadataField(
                             )
                         else MaterialTheme.typography.bodyMedium,
                     enabled = !fieldExcluded,
-                    trailingIcon =
-                        if (hasOverride) {
-                            {
-                                OverrideCheckbox(
-                                    included = fieldIncluded,
-                                    onIncludedChange = onFieldIncludedChange,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                        } else null,
+                    trailingIcon = combinedTrailingIcon,
                 )
                 if (filteredSuggestions.isNotEmpty()) {
                     DropdownMenu(
@@ -183,16 +204,7 @@ fun MetadataField(
                         )
                     else MaterialTheme.typography.bodyMedium,
                 enabled = !fieldExcluded,
-                trailingIcon =
-                    if (hasOverride) {
-                        {
-                            OverrideCheckbox(
-                                included = fieldIncluded,
-                                onIncludedChange = onFieldIncludedChange,
-                                modifier = Modifier.size(20.dp),
-                            )
-                        }
-                    } else null,
+                trailingIcon = combinedTrailingIcon,
             )
         }
         if (showSourceHint) {
