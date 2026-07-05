@@ -66,9 +66,9 @@ import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
+
 import org.kryspetrie.fileimport.ui.components.PreviewCache
-import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
+
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.BulkActionButtons
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 import androidx.compose.material.icons.automirrored.filled.ArrowLeft
@@ -103,7 +103,6 @@ fun SummaryScreen(
                 onRotateAllCW = { state.configs.rotateAllBoxesCW() },
                 onRotateAllCCW = { state.configs.rotateAllBoxesCCW() },
                 onClearAll = { state.configs.clearAllConfigurations() },
-                currentStep = WizardStep.SUMMARY,
             )
         },
         content = { paddingValues ->
@@ -267,13 +266,12 @@ private fun SummaryTopAppBar(
     onRotateAllCW: () -> Unit,
     onRotateAllCCW: () -> Unit,
     onClearAll: () -> Unit,
-    currentStep: WizardStep,
 ) {
     var showResetConfirmDialog by remember { mutableStateOf(false) }
 
     TopAppBar(
         title = { Text("Crop & Rotate") },
-        navigationIcon = { WizardStepIndicator(currentStep = currentStep) },
+        navigationIcon = {},
         actions = {
             TopAppBarActions(
                 onRotateAllCCW = onRotateAllCCW,

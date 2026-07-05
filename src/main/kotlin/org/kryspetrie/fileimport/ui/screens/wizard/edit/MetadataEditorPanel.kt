@@ -16,6 +16,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
@@ -103,19 +104,19 @@ internal fun MetadataEditorPanel(
 
     ChunkyScrollbar(modifier = modifier) {
         Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             // ── Header ──
             if (isMultiSelect) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         "${selectedIndices.size} ${if (selectedIndices.size == 1) "photo" else "photos"} selected",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -126,20 +127,20 @@ internal fun MetadataEditorPanel(
                             state.configs.applyMetadataToSelected(editState)
                             onRecordMetadataSet(editState.toRecentMetadataSet())
                         },
-                        modifier = Modifier.height(32.dp),
+                        modifier = Modifier.height(28.dp),
                     ) {
                         Text("Apply", style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 Text(
                     "Only filled fields will be applied. Leave blank to keep existing values.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 Text(
                     "Photo ${selectedIndex + 1}",
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary,
                 )
             }

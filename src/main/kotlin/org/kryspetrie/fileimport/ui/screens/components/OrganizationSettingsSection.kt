@@ -44,9 +44,38 @@ fun OrganizationSettingsSection(
         expanded = orgExpanded,
         onToggle = { orgExpanded = !orgExpanded },
     ) {
-        FolderPatternField(configuration, onConfigChange)
-        Spacer(Modifier.height(6.dp))
-        FilenamePatternField(configuration, onConfigChange)
+        // Toggles side-by-side
+        Row(Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(1f)) {
+                SettingsToggle(
+                    checked = configuration.createSubfolders,
+                    onCheckedChange = { onConfigChange(configuration.copy(createSubfolders = it)) },
+                    label = "Date subfolders",
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                SettingsToggle(
+                    checked = configuration.preserveOriginalName,
+                    onCheckedChange = {
+                        onConfigChange(
+                            configuration.copy(
+                                preserveOriginalName = it,
+                                fileNamePattern = if (it) "{original}" else configuration.fileNamePattern,
+                            )
+                        )
+                    },
+                    label = "Original filename",
+                )
+            }
+        }
+        // Conditional: folder pattern when subfolders enabled
+        if (configuration.createSubfolders) {
+            FolderPatternField(configuration, onConfigChange)
+        }
+        // Filename pattern (always shown when not preserving original name)
+        if (!configuration.preserveOriginalName) {
+            FilenamePatternField(configuration, onConfigChange)
+        }
         Spacer(Modifier.height(6.dp))
         SectionLabel("Conflict Resolution")
         EnumRadioButtonGroup(
@@ -68,39 +97,31 @@ private fun FolderPatternField(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("Folder Organization")
-    SettingsToggle(
-        checked = configuration.createSubfolders,
-        onCheckedChange = { onConfigChange(configuration.copy(createSubfolders = it)) },
-        label = "Create date-based subfolders",
+    OutlinedTextField(
+        configuration.folderPattern,
+        { onConfigChange(configuration.copy(folderPattern = it)) },
+        label = { Text("Folder Pattern") },
+        textStyle = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.fillMaxWidth(),
     )
-    if (configuration.createSubfolders) {
-        OutlinedTextField(
-            configuration.folderPattern,
-            { onConfigChange(configuration.copy(folderPattern = it)) },
-            label = { Text("Folder Pattern") },
-            textStyle = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.fillMaxWidth(),
+    FolderPresets.examples[configuration.folderPattern]?.let {
+        Text(
+            "Example: $it",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        FolderPresets.examples[configuration.folderPattern]?.let {
-            Text(
-                "Example: $it",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        FolderPresets.builtIn.take(4).forEach { preset ->
+            FilterChip(
+                configuration.folderPattern == preset.pattern,
+                { onConfigChange(configuration.copy(folderPattern = preset.pattern)) },
+                label = { Text(preset.name, style = MaterialTheme.typography.labelSmall) },
+                modifier = Modifier.height(28.dp),
             )
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            FolderPresets.builtIn.take(4).forEach { preset ->
-                FilterChip(
-                    configuration.folderPattern == preset.pattern,
-                    { onConfigChange(configuration.copy(folderPattern = preset.pattern)) },
-                    label = { Text(preset.name, style = MaterialTheme.typography.labelSmall) },
-                    modifier = Modifier.height(28.dp),
-                )
-            }
-        }
-        PlaceholderHelpTooltip(NamePlaceholders.folderPlaceholders)
     }
+    PlaceholderHelpTooltip(NamePlaceholders.folderPlaceholders)
 }
 
 @Composable
@@ -108,19 +129,6 @@ private fun FilenamePatternField(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("Filename")
-    SettingsToggle(
-        checked = configuration.preserveOriginalName,
-        onCheckedChange = {
-            onConfigChange(
-                configuration.copy(
-                    preserveOriginalName = it,
-                    fileNamePattern = if (it) "{original}" else configuration.fileNamePattern,
-                )
-            )
-        },
-        label = "Preserve original filename",
-    )
     OutlinedTextField(
         configuration.fileNamePattern,
         { onConfigChange(configuration.copy(fileNamePattern = it)) },
@@ -129,16 +137,14 @@ private fun FilenamePatternField(
         textStyle = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.fillMaxWidth(),
     )
-    if (!configuration.preserveOriginalName) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            FilenamePresets.builtIn.take(4).forEach { preset ->
-                FilterChip(
-                    configuration.fileNamePattern == preset.pattern,
-                    { onConfigChange(configuration.copy(fileNamePattern = preset.pattern)) },
-                    label = { Text(preset.name, style = MaterialTheme.typography.labelSmall) },
-                    modifier = Modifier.height(28.dp),
-                )
-            }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        FilenamePresets.builtIn.take(4).forEach { preset ->
+            FilterChip(
+                configuration.fileNamePattern == preset.pattern,
+                { onConfigChange(configuration.copy(fileNamePattern = preset.pattern)) },
+                label = { Text(preset.name, style = MaterialTheme.typography.labelSmall) },
+                modifier = Modifier.height(28.dp),
+            )
         }
     }
 }

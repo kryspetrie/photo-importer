@@ -81,7 +81,7 @@ fun RecentValuesDropdown(
                         Column {
                             Text(
                                 set.label,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                             if (set.summary.isNotBlank() && set.summary != set.label) {
@@ -167,7 +167,7 @@ fun RecentLocationDropdown(
                                     ).joinToString(", ")
                                 Text(
                                     locLabel.ifBlank { set.label },
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.primary,
                                 )
                                 if (set.gpsLatitude.isNotBlank() && set.gpsLongitude.isNotBlank()) {

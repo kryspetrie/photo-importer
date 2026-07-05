@@ -22,6 +22,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
@@ -47,20 +48,35 @@ fun ExportSettingsCard(
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
             ),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Export Settings", style = MaterialTheme.typography.titleSmall)
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Export Settings", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
 
-            // Perspective correction toggle
-            SettingsToggle(
-                checked = perspectiveEnabled,
-                onCheckedChange = { state.exportSettings.setPerspectiveCorrectionEnabled(it) },
-                label = "Perspective correction",
-                description =
-                    if (perspectiveEnabled)
-                        "Warp-stretch removes skew and preserves all content"
-                    else "Simple crop: axis-aligned rectangle, no skew removal",
-                icon = Icons.Default.Transform,
-            )
+            // Perspective correction + Skip Crop & Rotate toggles side-by-side
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    SettingsToggle(
+                        checked = perspectiveEnabled,
+                        onCheckedChange = { state.exportSettings.setPerspectiveCorrectionEnabled(it) },
+                        label = "Perspective correction",
+                        description =
+                            if (perspectiveEnabled)
+                                "Warp-stretch removes skew"
+                            else "Simple crop, no skew removal",
+                        icon = Icons.Default.Transform,
+                    )
+                }
+                if (onSkipCropAndRotateChange != null) {
+                    Column(Modifier.weight(1f)) {
+                        SettingsToggle(
+                            checked = skipCropAndRotate,
+                            onCheckedChange = onSkipCropAndRotateChange,
+                            label = "Skip Crop & Rotate",
+                            description = "Go straight to metadata",
+                            icon = Icons.Default.SkipNext,
+                        )
+                    }
+                }
+            }
 
             // Margin slider
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
@@ -69,24 +85,19 @@ fun ExportSettingsCard(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(4.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Additional margin", style = MaterialTheme.typography.bodyMedium)
+                        Text("Additional margin", style = MaterialTheme.typography.labelMedium)
                         Text(
                             "${(marginPercent * 100).toInt()}%",
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
-                    Text(
-                        "Expands the crop outward to include edges that may be clipped",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
                     Slider(
                         value = marginPercent.toFloat(),
                         onValueChange = { state.exportSettings.setExportMarginPercent(it.toDouble()) },
@@ -95,17 +106,6 @@ fun ExportSettingsCard(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-            }
-
-            // Skip Crop & Rotate toggle
-            if (onSkipCropAndRotateChange != null) {
-                SettingsToggle(
-                    checked = skipCropAndRotate,
-                    onCheckedChange = onSkipCropAndRotateChange,
-                    label = "Skip Crop & Rotate",
-                    description = "Go directly to metadata editing after selecting photos",
-                    icon = Icons.Default.SkipNext,
-                )
             }
         }
     }

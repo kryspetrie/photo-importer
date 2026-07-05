@@ -18,12 +18,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,10 +42,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.LocationResult
@@ -52,19 +56,21 @@ import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 
 /**
- * Full-screen location picker with an OpenStreetMap map and unified search overlay,
- * shown in its own [DialogWindow] (real AWT window) so that the map gets proper layout
- * constraints and tiles render correctly.
+ * Full-screen location picker overlay with an OpenStreetMap map and unified search panel.
  *
- * Layout: Map fills the entire window; a floating search panel overlays the left side.
+ * Uses a [Dialog] with `usePlatformDefaultWidth = false` so it renders as a full-screen overlay
+ * within the existing window (matching the face selector overlay pattern), rather than opening
+ * a separate window.
+ *
+ * Layout: Map fills the entire overlay; a floating search panel overlays the left side.
  * - Type a query to search for locations via Nominatim
  * - Click a result to center the map and set a pin
  * - Click on the map to drop a pin → reverse geocode
- * - Confirm to populate city/state/country/GPS fields
+ * - Confirm to populate location fields
  * - Defaults to the last-viewed map position
  */
 @Composable
-fun LocationPickerDialog(
+fun LocationPickerOverlay(
     locationSearchService: LocationSearchPort,
     geocodingPort: GeocodingPort,
     dispatcherProvider: org.kryspetrie.fileimport.domain.port.DispatcherProvider,
@@ -75,13 +81,9 @@ fun LocationPickerDialog(
     onDismiss: () -> Unit,
     onMapLocationChanged: ((lat: Double, lon: Double, zoom: Double) -> Unit)? = null,
 ) {
-    DialogWindow(
-        onCloseRequest = onDismiss,
-        title = "Pick Location",
-        state = rememberDialogState(
-            width = Dp(1200f),
-            height = Dp(800f),
-        ),
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         LocationPickerContent(
             locationSearchService = locationSearchService,
@@ -181,32 +183,36 @@ fun LocationPickerContent(
         // ── Floating search panel overlaid on the left side of the map ──
         Surface(
             modifier = Modifier.align(Alignment.CenterStart)
-                .widthIn(min = 300.dp, max = 360.dp)
+                .widthIn(min = 260.dp, max = 320.dp)
                 .fillMaxSize()
                 .padding(8.dp),
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
             tonalElevation = 4.dp,
             shape = RoundedCornerShape(12.dp),
         ) {
             Column(
-                modifier = Modifier.padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 // Header with close button
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Icon(
                         Icons.Default.LocationOn,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(24.dp),
+                        modifier = Modifier.size(16.dp),
                     )
-                    Text("Pick Location", style = MaterialTheme.typography.titleMedium)
+                    Text("Pick Location", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                     Spacer(Modifier.weight(1f))
-                    OutlinedButton(onClick = onDismiss) {
-                        Text("Cancel")
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            androidx.compose.material.icons.Icons.Default.Close,
+                            contentDescription = "Close",
+                            modifier = Modifier.size(14.dp),
+                        )
                     }
                 }
 
@@ -237,11 +243,11 @@ fun LocationPickerContent(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        LoadingIndicator(modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
+                        LoadingIndicator(modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             "Searching\u2026",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -251,7 +257,7 @@ fun LocationPickerContent(
                 if (errorMessage != null) {
                     Text(
                         errorMessage.orEmpty(),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -263,11 +269,11 @@ fun LocationPickerContent(
                         horizontalArrangement = Arrangement.Center,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        LoadingIndicator(modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
+                        LoadingIndicator(modifier = Modifier.size(12.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             "Looking up address\u2026",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -282,30 +288,29 @@ fun LocationPickerContent(
                             ),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Column(modifier = Modifier.padding(10.dp)) {
+                        Column(modifier = Modifier.padding(6.dp)) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
                             ) {
                                 Icon(
                                     Icons.Default.LocationOn,
                                     null,
-                                    Modifier.size(16.dp),
+                                    Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                                 Text(
                                     selectedLocation!!.name,
-                                    style = MaterialTheme.typography.titleSmall,
+                                    style = MaterialTheme.typography.labelLarge,
                                 )
                             }
-                            Spacer(Modifier.height(4.dp))
+                            Spacer(Modifier.height(2.dp))
                             Text(
                                 selectedLocation!!.displayName,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 3,
                             )
-                            Spacer(Modifier.height(2.dp))
                             Text(
                                 "%.4f, %.4f".format(
                                     selectedLocation!!.latitude,
@@ -323,10 +328,10 @@ fun LocationPickerContent(
                             selectedLocation!!.country?.let {
                                 Text("Country: $it", style = MaterialTheme.typography.labelSmall)
                             }
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(6.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 OutlinedButton(
                                     onClick = {
@@ -384,14 +389,14 @@ fun LocationPickerContent(
                 } else if (!isSearching && searchQuery.length >= 2 && errorMessage == null) {
                     Text(
                         "No locations found. Try a different search, or click the map to drop a pin.",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
                 Text(
                     "Tip: Click on the map to drop a pin and look up the address.",
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -412,9 +417,9 @@ private fun LocationResultItem(result: LocationResult, isSelected: Boolean, onCl
         shape = MaterialTheme.shapes.small,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(
                 Icons.Default.LocationOn,
@@ -422,13 +427,13 @@ private fun LocationResultItem(result: LocationResult, isSelected: Boolean, onCl
                 tint =
                     if (isSelected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(14.dp),
             )
             Column(modifier = Modifier.weight(1f)) {
-                Text(result.name, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+                Text(result.name, style = MaterialTheme.typography.labelLarge, maxLines = 1)
                 Text(
                     result.displayName,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )
@@ -437,6 +442,7 @@ private fun LocationResultItem(result: LocationResult, isSelected: Boolean, onCl
                 "%.4f, %.4f".format(result.latitude, result.longitude),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 10.sp,
             )
         }
     }

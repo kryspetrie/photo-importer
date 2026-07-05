@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -47,18 +48,18 @@ fun SettingsSection(
             Row(
                 Modifier.fillMaxWidth()
                     .clickable(onClick = onToggle)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Icon(
                     Icons.Default.Tune,
                     null,
-                    Modifier.size(18.dp),
+                    Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Column(Modifier.weight(1f)) {
-                    Text("Custom Settings", style = MaterialTheme.typography.titleSmall)
+                    Text("Custom Settings", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                     if (!expanded) {
                         Text(
                             configSummary(configuration),
@@ -72,15 +73,15 @@ fun SettingsSection(
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     "Toggle",
-                    Modifier.size(18.dp),
+                    Modifier.size(16.dp),
                 )
             }
             if (expanded) {
                 Column {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Column(
-                        Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         OrganizationSettingsSection(configuration, onConfigChange)
                         DeduplicationSettingsSection(configuration, onConfigChange)

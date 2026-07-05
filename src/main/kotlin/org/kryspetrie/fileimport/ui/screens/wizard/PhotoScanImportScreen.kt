@@ -35,14 +35,12 @@ import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
+
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
-import org.kryspetrie.fileimport.ui.components.WizardStepIndicator
+
 import org.kryspetrie.fileimport.ui.components.isImageFile
-import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.AutoDetectCard
-import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.DestinationSelectionSection
-import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SinglePhotoModeCard
-import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SourceSelectionSection
+import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.ScanModeCard
+import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SourceDestRow
 
 /** Import screen for the wizard - source selection and configuration. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -166,41 +164,33 @@ fun PhotoScanImportScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Import Photos") },
-                navigationIcon = { WizardStepIndicator(currentStep = WizardStep.IMPORT) },
+                navigationIcon = {},
             )
         },
         content = { paddingValues ->
             ChunkyScrollbar(modifier = modifier.fillMaxSize().padding(paddingValues)) {
                 Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    // ── Auto-detect Option ──
-                    AutoDetectCard(
-                        cvAutoDetectEnabled = cvAutoDetectEnabled,
-                        onCvAutoDetectChange = { state.importSettings.setCvAutoDetectEnabled(it) },
-                    )
-
-                    // ── Single Photo Mode ──
-                    SinglePhotoModeCard(
-                        singlePhotoMode = singlePhotoMode,
-                        onSinglePhotoModeChange = { state.importSettings.setSinglePhotoMode(it) },
-                    )
-
-                    // ── Source Selection ──
-                    SourceSelectionSection(
+                    // ── Source & Destination ──
+                    SourceDestRow(
                         sourcePath = sourcePath,
                         onSourcePathChange = { sourcePath = it },
                         sourceFile = sourceFile,
-                    )
-
-                    // ── Destination ──
-                    DestinationSelectionSection(
                         destinationPath = destinationPath,
                         onDestinationPathChange = { destinationPath = it },
                         destValid = destValid,
                         destCanCreate = destCanCreate,
                         destDirName = destDir?.name,
+                    )
+
+                    // ── Scan Mode ──
+                    ScanModeCard(
+                        cvAutoDetectEnabled = cvAutoDetectEnabled,
+                        onCvAutoDetectChange = { state.importSettings.setCvAutoDetectEnabled(it) },
+                        singlePhotoMode = singlePhotoMode,
+                        onSinglePhotoModeChange = { state.importSettings.setSinglePhotoMode(it) },
                     )
 
                     // ── Export Settings ──
@@ -231,14 +221,14 @@ fun PhotoScanImportScreen(
                                 onImageSelected(file, batchFiles)
                             }
                         },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
                         enabled = canStart,
                     ) {
-                        Icon(Icons.Default.Scanner, null, Modifier.size(20.dp))
-                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.Default.Scanner, null, Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
                         Text(
                             if (singlePhotoMode) "Import Single Photo" else "Import Photo Scan(s)",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.labelLarge,
                         )
                     }
 

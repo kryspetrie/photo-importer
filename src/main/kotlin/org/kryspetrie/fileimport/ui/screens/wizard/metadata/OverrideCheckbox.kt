@@ -67,7 +67,7 @@ fun OverrideCheckbox(
             checked = included,
             onCheckedChange = onIncludedChange,
             modifier =
-                modifier.size(24.dp).semantics {
+                modifier.size(20.dp).semantics {
                     contentDescription =
                         if (included) "Include field in EXIF output"
                         else "Exclude field from EXIF output"

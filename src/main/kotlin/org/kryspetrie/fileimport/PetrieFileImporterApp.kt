@@ -8,6 +8,7 @@ import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
+import java.awt.Dimension
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Dispatchers
@@ -149,6 +150,8 @@ fun main(args: Array<String>) {
             // Application icon for window decorations
             icon = appIcon,
         ) {
+            // Enforce minimum window size for proper desktop layout
+            window.minimumSize = Dimension(1024, 768)
             // Create application menu bar (File, View, Help)
             // Standard desktop application menu pattern
             MenuBar {

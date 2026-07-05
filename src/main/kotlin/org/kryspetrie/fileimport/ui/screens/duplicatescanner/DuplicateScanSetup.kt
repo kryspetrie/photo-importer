@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
@@ -46,32 +47,36 @@ fun DuplicateScanSetup(
 
     // Detection methods
     OutlinedCard(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("Detection Methods", style = MaterialTheme.typography.titleSmall)
+        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("Detection Methods", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     SettingsToggle(
                         checked = enableHash,
                         onCheckedChange = onEnableHashChange,
-                        label = "Exact hash match",
-                        description = "Compare file content (MD5)",
+                        label = "Exact hash",
+                        description = "MD5 content match",
                     )
                 }
                 Column(Modifier.weight(1f)) {
                     SettingsToggle(
                         checked = enableExif,
                         onCheckedChange = onEnableExifChange,
-                        label = "EXIF metadata match",
+                        label = "EXIF metadata",
                         description = "Compare EXIF data",
                     )
                 }
             }
-            SettingsToggle(
-                checked = enableSurf,
-                onCheckedChange = onEnableSurfChange,
-                label = "SURF visual matching",
-                description = "Slow but detects near-duplicates",
-            )
+            Row(Modifier.fillMaxWidth()) {
+                Column(Modifier.weight(1f)) {
+                    SettingsToggle(
+                        checked = enableSurf,
+                        onCheckedChange = onEnableSurfChange,
+                        label = "SURF visual",
+                        description = "Detect near-duplicates",
+                    )
+                }
+            }
         }
     }
 

@@ -73,11 +73,11 @@ internal fun PhotoSidebar(
 
     Surface(
         tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxHeight().width(thumbWidth + 24.dp),
+        modifier = Modifier.fillMaxHeight().width(thumbWidth + 16.dp),
         shape = RoundedCornerShape(0.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxHeight().padding(vertical = 4.dp),
+            modifier = Modifier.fillMaxHeight().padding(vertical = 2.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
@@ -119,7 +119,7 @@ internal fun PhotoSidebar(
             // Vertical scrollable thumbnail list
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 itemsIndexed(boundingBoxList.boxes) { index, box ->

@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -30,27 +31,27 @@ fun CollapsibleSubsection(
 ) {
     Column {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 6.dp),
+            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Icon(icon, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(icon, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
             Text(
                 title,
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.weight(1f),
             )
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 "Toggle",
-                Modifier.size(16.dp),
+                Modifier.size(14.dp),
             )
         }
         if (expanded) {
             Column(
-                Modifier.padding(start = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                Modifier.padding(start = 18.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 content = content,
             )
         }

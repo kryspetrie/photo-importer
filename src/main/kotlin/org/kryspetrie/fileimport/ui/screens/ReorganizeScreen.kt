@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.io.File
 import kotlinx.coroutines.launch
@@ -126,19 +127,19 @@ fun ReorganizeScreen(
                     Text("Journal details:", style = MaterialTheme.typography.labelMedium)
                     Text(
                         "• Folder: ${journal.rootFolder}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                     Text(
                         "• Mode: ${journal.operationMode}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                     Text(
                         "• Files changed: ${journal.changedFiles}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                     Text(
                         "• Date: ${journal.timestampString}",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.labelSmall,
                     )
                     Spacer(Modifier.height(8.dp))
                     when (journal.operationMode) {
@@ -163,13 +164,13 @@ fun ReorganizeScreen(
     Column(modifier = Modifier.fillMaxSize()) {
         ChunkyScrollbar(modifier = Modifier.weight(1f)) {
             Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Text("Reorganize Library", style = MaterialTheme.typography.headlineSmall)
+                Text("Reorganize Library", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                 Text(
                     "Apply folder and filename patterns to an existing media library.",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
@@ -189,13 +190,13 @@ fun ReorganizeScreen(
                 // Operation mode selection
                 OutlinedCard(Modifier.fillMaxWidth()) {
                     Column(
-                        Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Text("Operation Mode", style = MaterialTheme.typography.labelMedium)
+                        Text("Operation Mode", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                         Row(
                             Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             ReorganizeMode.entries.forEach { mode ->
                                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -203,26 +204,14 @@ fun ReorganizeScreen(
                                         viewModel.reorgMode == mode,
                                         { viewModel.reorgMode = mode },
                                     )
-                                    Spacer(Modifier.width(4.dp))
-                                    Column {
-                                        Text(
-                                            when (mode) {
-                                                ReorganizeMode.MOVE -> "Move files"
-                                                ReorganizeMode.COPY -> "Copy files"
-                                            },
-                                            style = MaterialTheme.typography.bodySmall,
-                                        )
-                                        Text(
-                                            when (mode) {
-                                                ReorganizeMode.MOVE ->
-                                                    "Originals removed, moved to new locations"
-                                                ReorganizeMode.COPY ->
-                                                    "Originals preserved, copies in new locations"
-                                            },
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
+                                    Spacer(Modifier.width(2.dp))
+                                    Text(
+                                        when (mode) {
+                                            ReorganizeMode.MOVE -> "Move files"
+                                            ReorganizeMode.COPY -> "Copy files"
+                                        },
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
                                 }
                             }
                         }
@@ -253,7 +242,7 @@ fun ReorganizeScreen(
                             )
                             Text(
                                 it,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.error,
                             )
                         }

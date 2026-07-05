@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.ConflictResolution
@@ -69,8 +70,8 @@ fun PhotoScanSettingsSection(
                 Column {
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     Column(
-                        Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                        Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         var orgExpanded by remember { mutableStateOf(true) }
                         PhotoScanCollapsibleSubsection(
@@ -97,18 +98,18 @@ private fun SettingsCardHeader(
     Row(
         Modifier.fillMaxWidth()
             .clickable { onSettingsExpandedChange(!settingsExpanded) }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
+            .padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Icon(
             Icons.Default.Tune,
             null,
-            Modifier.size(18.dp),
+            Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.primary,
         )
         Column(Modifier.weight(1f)) {
-            Text("Custom Settings", style = MaterialTheme.typography.titleSmall)
+            Text("Custom Settings", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
             if (!settingsExpanded) {
                 Text(
                     configSummary(config),
@@ -122,7 +123,7 @@ private fun SettingsCardHeader(
         Icon(
             if (settingsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
             "Toggle",
-            Modifier.size(18.dp),
+            Modifier.size(16.dp),
         )
     }
 }
@@ -143,7 +144,7 @@ private fun OrganizationSection(
         FolderOrganizationField(config = config, onConfigChange = onConfigChange)
     }
 
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(4.dp))
 
     // Filename
     SectionLabel("Filename")
@@ -171,7 +172,7 @@ private fun OrganizationSection(
         FilenamePatternField(config = config, onConfigChange = onConfigChange)
     }
 
-    Spacer(Modifier.height(6.dp))
+    Spacer(Modifier.height(4.dp))
 
     // Conflict resolution
     SectionLabel("Conflict Resolution")
@@ -201,7 +202,7 @@ private fun FolderOrganizationField(
                 config.folderPattern == preset.pattern,
                 { onConfigChange(config.copy(folderPattern = preset.pattern)) },
                 label = { Text(preset.name, style = MaterialTheme.typography.labelSmall) },
-                modifier = Modifier.height(28.dp),
+                modifier = Modifier.height(24.dp),
             )
         }
     }
@@ -220,7 +221,7 @@ private fun FilenamePatternField(
                 config.fileNamePattern == preset.pattern,
                 { onConfigChange(config.copy(fileNamePattern = preset.pattern)) },
                 label = { Text(preset.name, style = MaterialTheme.typography.labelSmall) },
-                modifier = Modifier.height(28.dp),
+                modifier = Modifier.height(24.dp),
             )
         }
     }
@@ -231,21 +232,22 @@ private fun ConflictResolutionField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Short options: flow horizontally in a row of radio buttons
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         ConflictResolution.entries.forEach { r ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { onConfigChange(config.copy(conflictResolution = r)) },
+            ) {
                 RadioButton(
                     config.conflictResolution == r,
                     { onConfigChange(config.copy(conflictResolution = r)) },
                 )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(r.displayName, style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        r.description,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(r.displayName, style = MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -274,12 +276,16 @@ private fun DateSourceField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Date sources have descriptions — use compact vertical layout
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         DateSource.entries.forEach { s ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { onConfigChange(config.copy(dateSource = s)) },
+            ) {
                 RadioButton(config.dateSource == s, { onConfigChange(config.copy(dateSource = s)) })
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(s.displayName, style = MaterialTheme.typography.bodySmall)
+                    Text(s.displayName, style = MaterialTheme.typography.labelSmall)
                     Text(
                         s.description,
                         style = MaterialTheme.typography.labelSmall,
@@ -319,16 +325,16 @@ private fun PhotoScanCollapsibleSubsection(
 ) {
     Column {
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 6.dp),
+            Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Icon(icon, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(title, style = MaterialTheme.typography.labelLarge)
+            Icon(icon, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
+            Text(title, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 null,
-                Modifier.size(16.dp),
+                Modifier.size(14.dp),
             )
         }
         if (expanded) {

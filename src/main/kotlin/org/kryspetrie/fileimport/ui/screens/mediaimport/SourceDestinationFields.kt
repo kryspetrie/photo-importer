@@ -1,8 +1,7 @@
 package org.kryspetrie.fileimport.ui.screens.mediaimport
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -14,8 +13,7 @@ import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 /**
  * Source and destination folder path selection fields with validation for the media import screen.
  *
- * Uses the consistent [FolderSelectionField] component for both source and destination, with
- * labeled browse buttons and validation indicators.
+ * Laid out side-by-side in a single row for compact desktop display.
  *
  * Validation rules:
  * - **Source**: Must be an existing directory (the source must exist to read from it).
@@ -34,12 +32,12 @@ fun SourceDestinationFields(
     sourceDirName: String?,
     destDirName: String?,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         // Source field
         FolderSelectionField(
             value = sourcePath,
             onValueChange = onSourcePathChange,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.weight(1f),
             label = "Source Folder",
             placeholder = "Select source...",
             title = "Select Source Folder",
@@ -68,8 +66,8 @@ fun SourceDestinationFields(
         FolderSelectionField(
             value = destinationPath,
             onValueChange = onDestinationPathChange,
-            modifier = Modifier.fillMaxWidth(),
-            label = "Destination Folder",
+            modifier = Modifier.weight(1f),
+            label = "Destination",
             placeholder = "Select destination...",
             title = "Select Destination Folder",
             isError = destinationPath.isNotBlank() && !destValid && !destCanCreate,
@@ -79,13 +77,13 @@ fun SourceDestinationFields(
                         Text("Paste a path or browse", style = MaterialTheme.typography.labelSmall)
                     !destValid && !destCanCreate ->
                         Text(
-                            "Drive or parent path not accessible",
+                            "Path not accessible",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.error,
                         )
                     !destValid && destCanCreate ->
                         Text(
-                            "Folder will be created",
+                            "Will be created",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF1565C0),
                         )

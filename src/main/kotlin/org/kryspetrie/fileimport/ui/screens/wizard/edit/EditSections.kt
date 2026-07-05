@@ -93,20 +93,20 @@ internal fun RotationSection(
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
+            modifier = Modifier.fillMaxWidth().padding(6.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Rotation", style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = onRotateCCW, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(18.dp))
+            IconButton(onClick = onRotateCCW, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(16.dp))
             }
-            IconButton(onClick = onRotate180, modifier = Modifier.size(28.dp)) {
+            IconButton(onClick = onRotate180, modifier = Modifier.size(24.dp)) {
                 Text("180°", style = MaterialTheme.typography.labelSmall)
             }
-            IconButton(onClick = onRotateCW, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(18.dp))
+            IconButton(onClick = onRotateCW, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(16.dp))
             }
             if (rotationDegrees != 0) {
                 Text(
@@ -264,7 +264,7 @@ internal fun QuickEditMetadataFields(
                         filteredSuggestions.take(10).forEach { suggestion ->
                             DropdownMenuItem(
                                 text = {
-                                    Text(suggestion, style = MaterialTheme.typography.bodySmall)
+                                    Text(suggestion, style = MaterialTheme.typography.labelSmall)
                                 },
                                 onClick = {
                                     val updated =
@@ -287,7 +287,7 @@ internal fun QuickEditMetadataFields(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             MetadataField(
                 label = "Original Date",
@@ -303,7 +303,7 @@ internal fun QuickEditMetadataFields(
             )
             IconButton(
                 onClick = { showDatePicker = true },
-                modifier = Modifier.size(40.dp).padding(top = 24.dp),
+                modifier = Modifier.size(32.dp).padding(top = 20.dp),
             ) {
                 Icon(Icons.Default.DateRange, "Pick date", tint = MaterialTheme.colorScheme.primary)
             }
@@ -334,7 +334,7 @@ internal fun QuickEditMetadataFields(
     )
 }
 
-/** Camera settings section — always visible with a section header. */
+/** Camera settings section — collapsed by default since it's rarely needed. */
 @Composable
 internal fun CameraSection(
     cameraMake: String,
@@ -369,107 +369,124 @@ internal fun CameraSection(
     onOverrideIsoChange: ((Boolean) -> Unit)? = null,
     sourceExif: SourceExifSummary? = null,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    var expanded by remember { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider()
-        Text("Camera Settings", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { expanded = !expanded },
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            MetadataField(
-                label = "Camera Make",
-                placeholder = "Canon",
-                value = cameraMake,
-                onValueChange = onCameraMakeChange,
-                modifier = Modifier.weight(1f),
-                suggestions = metadataHistory.cameraMake,
-                onCommit = { onMetadataHistoryUpdate("cameraMake", cameraMake) },
-                fieldIncluded = overrideCameraMake,
-                onFieldIncludedChange = onOverrideCameraMakeChange,
-                sourceHint = sourceExif?.cameraMake,
+            Icon(
+                if (expanded) ExpandLessIcon else ExpandMoreIcon,
+                contentDescription = if (expanded) "Hide" else "Show",
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.primary,
             )
-            MetadataField(
-                label = "Camera Model",
-                placeholder = "EOS 5D",
-                value = cameraModel,
-                onValueChange = onCameraModelChange,
-                modifier = Modifier.weight(1f),
-                suggestions = metadataHistory.cameraModel,
-                onCommit = { onMetadataHistoryUpdate("cameraModel", cameraModel) },
-                fieldIncluded = overrideCameraModel,
-                onFieldIncludedChange = onOverrideCameraModelChange,
-                sourceHint = sourceExif?.cameraModel,
-            )
+            Spacer(Modifier.width(4.dp))
+            Text("Camera Settings", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
         }
-        MetadataField(
-            label = "Lens Model",
-            placeholder = "24-70mm f/2.8L",
-            value = lensModel,
-            onValueChange = onLensModelChange,
-            suggestions = metadataHistory.lensModel,
-            onCommit = { onMetadataHistoryUpdate("lensModel", lensModel) },
-            fieldIncluded = overrideLensModel,
-            onFieldIncludedChange = onOverrideLensModelChange,
-            sourceHint = sourceExif?.lensModel,
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
+        if (expanded) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                MetadataField(
+                    label = "Camera Make",
+                    placeholder = "Canon",
+                    value = cameraMake,
+                    onValueChange = onCameraMakeChange,
+                    modifier = Modifier.weight(1f),
+                    suggestions = metadataHistory.cameraMake,
+                    onCommit = { onMetadataHistoryUpdate("cameraMake", cameraMake) },
+                    fieldIncluded = overrideCameraMake,
+                    onFieldIncludedChange = onOverrideCameraMakeChange,
+                    sourceHint = sourceExif?.cameraMake,
+                )
+                MetadataField(
+                    label = "Camera Model",
+                    placeholder = "EOS 5D",
+                    value = cameraModel,
+                    onValueChange = onCameraModelChange,
+                    modifier = Modifier.weight(1f),
+                    suggestions = metadataHistory.cameraModel,
+                    onCommit = { onMetadataHistoryUpdate("cameraModel", cameraModel) },
+                    fieldIncluded = overrideCameraModel,
+                    onFieldIncludedChange = onOverrideCameraModelChange,
+                    sourceHint = sourceExif?.cameraModel,
+                )
+            }
             MetadataField(
-                label = "Focal Length",
-                placeholder = "50mm",
-                value = focalLength,
-                onValueChange = onFocalLengthChange,
-                modifier = Modifier.weight(1f),
-                suggestions = metadataHistory.focalLength,
-                onCommit = { onMetadataHistoryUpdate("focalLength", focalLength) },
-                fieldIncluded = overrideFocalLength,
-                onFieldIncludedChange = onOverrideFocalLengthChange,
-                sourceHint = sourceExif?.focalLength,
+                label = "Lens Model",
+                placeholder = "24-70mm f/2.8L",
+                value = lensModel,
+                onValueChange = onLensModelChange,
+                suggestions = metadataHistory.lensModel,
+                onCommit = { onMetadataHistoryUpdate("lensModel", lensModel) },
+                fieldIncluded = overrideLensModel,
+                onFieldIncludedChange = onOverrideLensModelChange,
+                sourceHint = sourceExif?.lensModel,
             )
-            MetadataField(
-                label = "Aperture",
-                placeholder = "f/2.8",
-                value = aperture,
-                onValueChange = onApertureChange,
-                modifier = Modifier.weight(1f),
-                suggestions = metadataHistory.aperture,
-                onCommit = { onMetadataHistoryUpdate("aperture", aperture) },
-                fieldIncluded = overrideAperture,
-                onFieldIncludedChange = onOverrideApertureChange,
-                sourceHint = sourceExif?.aperture,
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MetadataField(
-                label = "Shutter Speed",
-                placeholder = "1/125",
-                value = shutterSpeed,
-                onValueChange = onShutterSpeedChange,
-                modifier = Modifier.weight(1f),
-                suggestions = metadataHistory.shutterSpeed,
-                onCommit = { onMetadataHistoryUpdate("shutterSpeed", shutterSpeed) },
-                fieldIncluded = overrideShutterSpeed,
-                onFieldIncludedChange = onOverrideShutterSpeedChange,
-                sourceHint = sourceExif?.shutterSpeed,
-            )
-            MetadataField(
-                label = "ISO",
-                placeholder = "400",
-                value = iso,
-                onValueChange = onIsoChange,
-                modifier = Modifier.weight(1f),
-                keyboardType = KeyboardType.Number,
-                suggestions = metadataHistory.iso,
-                onCommit = { onMetadataHistoryUpdate("iso", iso) },
-                fieldIncluded = overrideIso,
-                onFieldIncludedChange = onOverrideIsoChange,
-                sourceHint = sourceExif?.iso,
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                MetadataField(
+                    label = "Focal Length",
+                    placeholder = "50mm",
+                    value = focalLength,
+                    onValueChange = onFocalLengthChange,
+                    modifier = Modifier.weight(1f),
+                    suggestions = metadataHistory.focalLength,
+                    onCommit = { onMetadataHistoryUpdate("focalLength", focalLength) },
+                    fieldIncluded = overrideFocalLength,
+                    onFieldIncludedChange = onOverrideFocalLengthChange,
+                    sourceHint = sourceExif?.focalLength,
+                )
+                MetadataField(
+                    label = "Aperture",
+                    placeholder = "f/2.8",
+                    value = aperture,
+                    onValueChange = onApertureChange,
+                    modifier = Modifier.weight(1f),
+                    suggestions = metadataHistory.aperture,
+                    onCommit = { onMetadataHistoryUpdate("aperture", aperture) },
+                    fieldIncluded = overrideAperture,
+                    onFieldIncludedChange = onOverrideApertureChange,
+                    sourceHint = sourceExif?.aperture,
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                MetadataField(
+                    label = "Shutter Speed",
+                    placeholder = "1/125",
+                    value = shutterSpeed,
+                    onValueChange = onShutterSpeedChange,
+                    modifier = Modifier.weight(1f),
+                    suggestions = metadataHistory.shutterSpeed,
+                    onCommit = { onMetadataHistoryUpdate("shutterSpeed", shutterSpeed) },
+                    fieldIncluded = overrideShutterSpeed,
+                    onFieldIncludedChange = onOverrideShutterSpeedChange,
+                    sourceHint = sourceExif?.shutterSpeed,
+                )
+                MetadataField(
+                    label = "ISO",
+                    placeholder = "400",
+                    value = iso,
+                    onValueChange = onIsoChange,
+                    modifier = Modifier.weight(1f),
+                    keyboardType = KeyboardType.Number,
+                    suggestions = metadataHistory.iso,
+                    onCommit = { onMetadataHistoryUpdate("iso", iso) },
+                    fieldIncluded = overrideIso,
+                    onFieldIncludedChange = onOverrideIsoChange,
+                    sourceHint = sourceExif?.iso,
+                )
+            }
         }
     }
 }
@@ -484,8 +501,8 @@ private val ExpandLessIcon = Icons.Default.ExpandLess
  * - **Address**: Full geocoded address from the map picker (e.g. "Worcester, Massachusetts, United States")
  *
  * If `address` is set, it is written to IPTC SubLocation in EXIF; otherwise locationName is used.
- * City/State/Country are collapsed by default since Address typically covers them;
- * they remain editable for fine-grained control.
+ * City/State/Country/GPS are collapsed by default since the map picker typically fills them;
+ * they remain editable for fine-grained control when expanded.
  */
 @Composable
 internal fun LocationSection(
@@ -511,13 +528,13 @@ internal fun LocationSection(
     onOverrideGpsChange: ((Boolean) -> Unit)? = null,
     sourceGpsHint: String? = null,
 ) {
-    // Auto-expand details when city/state/country have values but address is empty,
-    // or when the user is actively editing details. Collapse when address is populated.
-    val hasDetails = city.isNotBlank() || stateVal.isNotBlank() || country.isNotBlank()
-    val addressFilled = address.isNotBlank()
-    var detailsExpanded by remember { mutableStateOf(hasDetails && !addressFilled) }
+    // Collapse details by default — the map picker fills City/State/Country/GPS automatically.
+    // Users can expand for fine-grained manual control.
+    val hasDetails = city.isNotBlank() || stateVal.isNotBlank() || country.isNotBlank() ||
+        gpsLatitude.isNotBlank() || gpsLongitude.isNotBlank()
+    var detailsExpanded by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider()
         // ── Section header ──
         Row(
@@ -529,10 +546,10 @@ internal fun LocationSection(
             if (onPickLocation != null) {
                 OutlinedButton(
                     onClick = onPickLocation,
-                    modifier = Modifier.height(28.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.height(24.dp),
+                    contentPadding = PaddingValues(horizontal = 6.dp),
                 ) {
-                    Icon(Icons.Default.LocationOn, null, Modifier.size(14.dp))
+                    Icon(Icons.Default.LocationOn, null, Modifier.size(12.dp))
                     Spacer(Modifier.width(3.dp))
                     Text("Pick on Map", style = MaterialTheme.typography.labelSmall)
                 }
@@ -567,7 +584,7 @@ internal fun LocationSection(
             onCommit = { onMetadataHistoryUpdate("address", address) },
         )
 
-        // ── Expand/collapse for City/State/Country details ──
+        // ── Expand/collapse for City/State/Country/GPS details ──
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -586,24 +603,29 @@ internal fun LocationSection(
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
-            if (!detailsExpanded && hasDetails) {
-                Spacer(Modifier.width(6.dp))
-                val detailSummary = listOfNotNull(
+            if (!detailsExpanded) {
+                val summaryParts = listOfNotNull(
                     city.takeIf { it.isNotBlank() },
                     stateVal.takeIf { it.isNotBlank() },
                     country.takeIf { it.isNotBlank() },
-                ).joinToString(", ")
-                Text(
-                    "— $detailSummary",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    gpsLatitude.takeIf { it.isNotBlank() }?.let { lat ->
+                        gpsLongitude.takeIf { it.isNotBlank() }?.let { lon -> "$lat, $lon" }
+                    },
                 )
+                if (summaryParts.isNotEmpty()) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "— ${summaryParts.joinToString(", ")}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
         if (detailsExpanded) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 MetadataField(
                     label = "City",
@@ -633,56 +655,56 @@ internal fun LocationSection(
                     onCommit = { onMetadataHistoryUpdate("country", country) },
                 )
             }
-        }
 
-        // ── GPS Coordinates — compact single row ──
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text("GPS", style = MaterialTheme.typography.labelMedium)
-            if (overrideGps != null && onOverrideGpsChange != null) {
-                Spacer(Modifier.width(4.dp))
-                OverrideCheckbox(
-                    included = overrideGps,
-                    onIncludedChange = onOverrideGpsChange,
+            // ── GPS Coordinates — inside details section ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text("GPS", style = MaterialTheme.typography.labelMedium)
+                if (overrideGps != null && onOverrideGpsChange != null) {
+                    Spacer(Modifier.width(4.dp))
+                    OverrideCheckbox(
+                        included = overrideGps,
+                        onIncludedChange = onOverrideGpsChange,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                if (sourceGpsHint != null) {
+                    Text(
+                        sourceGpsHint,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                MetadataField(
+                    label = "Lat",
+                    placeholder = "42.2626",
+                    value = gpsLatitude,
+                    onValueChange = onGpsLatitudeChange,
+                    suggestions = metadataHistory.gpsLatitude,
+                    onCommit = { onMetadataHistoryUpdate("gpsLatitude", gpsLatitude) },
+                    keyboardType = KeyboardType.Decimal,
+                    modifier = Modifier.weight(1f),
+                )
+                MetadataField(
+                    label = "Lon",
+                    placeholder = "-71.8023",
+                    value = gpsLongitude,
+                    onValueChange = onGpsLongitudeChange,
+                    suggestions = metadataHistory.gpsLongitude,
+                    onCommit = { onMetadataHistoryUpdate("gpsLongitude", gpsLongitude) },
+                    keyboardType = KeyboardType.Decimal,
+                    modifier = Modifier.weight(1f),
                 )
             }
-            Spacer(Modifier.weight(1f))
-            if (sourceGpsHint != null) {
-                Text(
-                    sourceGpsHint,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.tertiary,
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            MetadataField(
-                label = "Lat",
-                placeholder = "42.2626",
-                value = gpsLatitude,
-                onValueChange = onGpsLatitudeChange,
-                suggestions = metadataHistory.gpsLatitude,
-                onCommit = { onMetadataHistoryUpdate("gpsLatitude", gpsLatitude) },
-                keyboardType = KeyboardType.Decimal,
-                modifier = Modifier.weight(1f),
-            )
-            MetadataField(
-                label = "Lon",
-                placeholder = "-71.8023",
-                value = gpsLongitude,
-                onValueChange = onGpsLongitudeChange,
-                suggestions = metadataHistory.gpsLongitude,
-                onCommit = { onMetadataHistoryUpdate("gpsLongitude", gpsLongitude) },
-                keyboardType = KeyboardType.Decimal,
-                modifier = Modifier.weight(1f),
-            )
         }
     }
 }
@@ -705,7 +727,7 @@ internal fun SubjectsSection(
         remember(subjects) { subjects.split(",").map { it.trim() }.filter { it.isNotBlank() } }
     var subjectInput by remember { mutableStateOf("") }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider()
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Subjects & Faces", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
@@ -720,7 +742,7 @@ internal fun SubjectsSection(
         }
         Text(
             "Subject names are written to EXIF/IPTC metadata and as MWG-RS face regions.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (onSelectFaces != null) {
@@ -737,16 +759,16 @@ internal fun SubjectsSection(
         if (faceRegions.isNotEmpty()) {
             Surface(
                 tonalElevation = 1.dp,
-                shape = RoundedCornerShape(8.dp),
+                shape = RoundedCornerShape(6.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(modifier = Modifier.padding(8.dp)) {
+                Column(modifier = Modifier.padding(6.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text("Face Regions", style = MaterialTheme.typography.labelMedium)
+                        Text("Face Regions", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                         if (onClearAllFaces != null) {
                             Text(
                                 "Clear All",
@@ -758,21 +780,21 @@ internal fun SubjectsSection(
                     }
                     faceRegions.forEachIndexed { idx, region ->
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
                             ) {
                                 Icon(
                                     regionTypeIcon(RegionType.fromMwgRs(region.type)),
                                     contentDescription = region.type,
-                                    modifier = Modifier.size(14.dp),
+                                    modifier = Modifier.size(12.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
-                                Text(region.name, style = MaterialTheme.typography.bodySmall)
+                                Text(region.name, style = MaterialTheme.typography.labelSmall)
                                 val xPct = kotlin.math.round(region.x * 100).toInt()
                                 val yPct = kotlin.math.round(region.y * 100).toInt()
                                 Text(
@@ -784,12 +806,12 @@ internal fun SubjectsSection(
                             if (onRemoveFace != null) {
                                 IconButton(
                                     onClick = { onRemoveFace(idx) },
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(18.dp),
                                 ) {
                                     Icon(
                                         Icons.Default.Close,
                                         "Remove",
-                                        modifier = Modifier.size(14.dp),
+                                        modifier = Modifier.size(12.dp),
                                         tint = MaterialTheme.colorScheme.error,
                                     )
                                 }
@@ -868,7 +890,7 @@ internal fun SubjectsSection(
                 ) {
                     filteredSuggestions.take(10).forEach { suggestion ->
                         DropdownMenuItem(
-                            text = { Text(suggestion, style = MaterialTheme.typography.bodySmall) },
+                            text = { Text(suggestion, style = MaterialTheme.typography.labelSmall) },
                             onClick = {
                                 val updated =
                                     if (subjects.isBlank()) suggestion
@@ -949,17 +971,17 @@ internal fun FaceNameEntryPanel(
     onCancel: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.width(260.dp),
+        modifier = Modifier.width(220.dp),
         tonalElevation = 8.dp,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
                 "Name this ${selectedRegionType.displayName.lowercase()}",
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
             )
             Row(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -980,13 +1002,13 @@ internal fun FaceNameEntryPanel(
             TextField(
                 value = faceNameInput,
                 onValueChange = onFaceNameInputChange,
-                placeholder = { Text("Name…", style = MaterialTheme.typography.bodySmall) },
+                placeholder = { Text("Name…", style = MaterialTheme.typography.labelSmall) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = MaterialTheme.typography.bodyMedium,
             )
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.align(Alignment.End),
             ) {
                 OutlinedButton(onClick = onCancel) {

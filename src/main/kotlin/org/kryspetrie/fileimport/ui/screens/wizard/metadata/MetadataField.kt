@@ -135,7 +135,7 @@ fun MetadataField(
                                 OverrideCheckbox(
                                     included = fieldIncluded,
                                     onIncludedChange = onFieldIncludedChange,
-                                    modifier = Modifier.size(24.dp),
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         } else null,
@@ -148,7 +148,7 @@ fun MetadataField(
                         filteredSuggestions.take(10).forEach { suggestion ->
                             DropdownMenuItem(
                                 text = {
-                                    Text(suggestion, style = MaterialTheme.typography.bodySmall)
+                                    Text(suggestion, style = MaterialTheme.typography.labelSmall)
                                 },
                                 onClick = {
                                     onValueChange(suggestion)
@@ -189,7 +189,7 @@ fun MetadataField(
                             OverrideCheckbox(
                                 included = fieldIncluded,
                                 onIncludedChange = onFieldIncludedChange,
-                                modifier = Modifier.size(24.dp),
+                                modifier = Modifier.size(20.dp),
                             )
                         }
                     } else null,
@@ -200,7 +200,7 @@ fun MetadataField(
                 text = "Source: $sourceHint",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                modifier = Modifier.padding(start = 8.dp, top = 1.dp),
+                modifier = Modifier.padding(start = 4.dp, top = 0.dp),
             )
         }
     }

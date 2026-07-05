@@ -55,6 +55,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 import java.awt.image.BufferedImage
@@ -91,7 +92,7 @@ import org.kryspetrie.fileimport.ui.screens.wizard.edit.MetadataEditorPanel
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.PhotoSidebar
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.RotationSection
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LoadSourceExifEffect
-import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerDialog
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerOverlay
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 
 /**
@@ -407,19 +408,19 @@ fun EditScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Edit Photos", style = MaterialTheme.typography.titleSmall)
+                    Text("Edit Photos", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
                 },
             )
         },
         bottomBar = {
             Surface(tonalElevation = 4.dp, modifier = Modifier.fillMaxWidth()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
+                    OutlinedButton(onClick = onBack, modifier = Modifier.height(32.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Back")
                     }
@@ -568,9 +569,9 @@ fun EditScreen(
                                     onClick = { showBackImagePicker = true },
                                     modifier =
                                         Modifier.align(Alignment.BottomEnd)
-                                            .padding(8.dp)
-                                            .height(28.dp),
-                                    contentPadding = PaddingValues(horizontal = 8.dp),
+                                            .padding(6.dp)
+                                            .height(24.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp),
                                 ) {
                                     Icon(
                                         Icons.Default.Image,
@@ -626,7 +627,7 @@ fun EditScreen(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(6.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -641,9 +642,9 @@ fun EditScreen(
                                         }
                                     }
                                 },
-                                modifier = Modifier.size(28.dp),
+                                modifier = Modifier.size(24.dp),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(18.dp))
+                                Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(16.dp))
                             }
                             IconButton(
                                 onClick = {
@@ -656,7 +657,7 @@ fun EditScreen(
                                         }
                                     }
                                 },
-                                modifier = Modifier.size(28.dp),
+                                modifier = Modifier.size(24.dp),
                             ) {
                                 Text("180°", style = MaterialTheme.typography.labelSmall)
                             }
@@ -669,9 +670,9 @@ fun EditScreen(
                                         }
                                     }
                                 },
-                                modifier = Modifier.size(28.dp),
+                                modifier = Modifier.size(24.dp),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(18.dp))
+                                Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(16.dp))
                             }
                         }
                     }
@@ -702,9 +703,9 @@ fun EditScreen(
         }
     }
 
-    // ── Location picker (opens in its own window via DialogWindow) ──
+    // ── Location picker (full-screen overlay within the same window) ──
     if (showLocationPicker && locationPickerTargetIndex != null) {
-        LocationPickerDialog(
+        LocationPickerOverlay(
             locationSearchService = locationSearchService,
             geocodingPort = geocodingPort,
             dispatcherProvider = dispatcherProvider,

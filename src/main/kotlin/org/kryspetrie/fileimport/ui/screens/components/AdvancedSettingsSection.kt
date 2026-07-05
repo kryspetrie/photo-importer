@@ -56,8 +56,6 @@ fun AdvancedSettingsSection(
         Spacer(Modifier.height(6.dp))
         SidecarSection(configuration, onConfigChange)
         Spacer(Modifier.height(6.dp))
-        PostImportSection(configuration, onConfigChange)
-        Spacer(Modifier.height(6.dp))
         WatchFolderSection(
             configuration,
             sourcePath,
@@ -77,11 +75,6 @@ private fun RawJpegPairSection(
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
     SectionLabel("RAW+JPEG Pairs")
-    Text(
-        "How to handle cameras that shoot RAW+JPEG simultaneously.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
     Row(Modifier.fillMaxWidth()) {
         RawJpegPairMode.entries.forEach { mode ->
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
@@ -95,7 +88,7 @@ private fun RawJpegPairSection(
                         RawJpegPairMode.RAW_ONLY -> "RAW only"
                         RawJpegPairMode.JPEG_ONLY -> "JPEG only"
                     },
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
                 )
             }
@@ -105,7 +98,7 @@ private fun RawJpegPairSection(
         SettingsToggle(
             checked = configuration.keepPairsTogether,
             onCheckedChange = { onConfigChange(configuration.copy(keepPairsTogether = it)) },
-            label = "Keep RAW+JPEG pairs in the same folder",
+            label = "Keep pairs in same folder",
         )
     }
 }
@@ -115,30 +108,16 @@ private fun SidecarSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("Sidecar Files")
-    SettingsToggle(
-        checked = configuration.importSidecars,
-        onCheckedChange = { onConfigChange(configuration.copy(importSidecars = it)) },
-        label = "Import sidecar files",
-        description = ".xmp, .thm, .lrv, .aae, etc.",
-    )
-    if (configuration.importSidecars) {
-        Text(
-            "Sidecar files will be copied alongside their parent media file " +
-                "to the same destination folder.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun PostImportSection(
-    configuration: ImportConfiguration,
-    onConfigChange: (ImportConfiguration) -> Unit,
-) {
-    SectionLabel("Post-Import")
+    SectionLabel("Sidecars & Post-Import")
     Row(Modifier.fillMaxWidth()) {
+        Column(Modifier.weight(1f)) {
+            SettingsToggle(
+                checked = configuration.importSidecars,
+                onCheckedChange = { onConfigChange(configuration.copy(importSidecars = it)) },
+                label = "Import sidecars",
+                description = ".xmp, .thm, .lrv, .aae",
+            )
+        }
         Column(Modifier.weight(1f)) {
             SettingsToggle(
                 checked = configuration.verifyAfterCopy,
@@ -147,19 +126,21 @@ private fun PostImportSection(
                 description = "Hash check after import",
             )
         }
+    }
+    Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             SettingsToggle(
                 checked = configuration.deleteAfterImport,
                 onCheckedChange = { onConfigChange(configuration.copy(deleteAfterImport = it)) },
                 label = "Delete source",
-                description = "Remove files after successful copy",
+                description = "Remove after successful copy",
             )
         }
     }
     if (configuration.deleteAfterImport) {
         Text(
             "Warning: Source files will be deleted after successful copy and verification.",
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.error,
         )
     }
