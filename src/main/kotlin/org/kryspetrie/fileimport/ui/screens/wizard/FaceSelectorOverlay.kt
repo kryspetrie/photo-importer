@@ -268,34 +268,37 @@ fun FaceSelectorOverlay(
     // Skip the current face: remove it and advance to next unnamed (or close if none)
     fun skipCurrentFace() {
         if (namingFaceIndex !in faceRegions.indices) return
+        // Compute next unnamed from stale list BEFORE removal (adjusting for shift after)
+        // After removal at namingFaceIndex, indices >= namingFaceIndex shift left by 1
+        var nextUnnamed: Int? = null
+        // Faces after the removed one: their new index = old index - 1
+        for (i in (namingFaceIndex + 1) until faceRegions.size) {
+            if (faceRegions[i].name.isBlank()) {
+                nextUnnamed = i - 1
+                break
+            }
+        }
+        // Faces before the removed one: their index is unchanged
+        if (nextUnnamed == null) {
+            for (i in 0 until namingFaceIndex) {
+                if (faceRegions[i].name.isBlank()) {
+                    nextUnnamed = i
+                    break
+                }
+            }
+        }
+
+        // Now perform the removal
         state.faceRegions.removeFaceRegion(idx, namingFaceIndex)
-        // After removal, find next unnamed
-        val remaining = faceRegions.size // size after removal
-        if (remaining == 0 || faceRegions.isEmpty()) {
+
+        if (nextUnnamed != null) {
+            namingFaceIndex = nextUnnamed
+            namingInput = ""
+        } else {
+            // No more unnamed faces (or was last face) — close naming
             namingFaceIndex = -1
             namingInput = ""
-            return
         }
-        // Adjust: namingFaceIndex may now point to a different region since list shifted
-        val adjustedIndex = namingFaceIndex.coerceAtMost(faceRegions.size - 1)
-        // Look for next unnamed
-        for (i in adjustedIndex until faceRegions.size) {
-            if (faceRegions[i].name.isBlank()) {
-                namingFaceIndex = i
-                namingInput = ""
-                return
-            }
-        }
-        for (i in 0 until adjustedIndex) {
-            if (faceRegions[i].name.isBlank()) {
-                namingFaceIndex = i
-                namingInput = ""
-                return
-            }
-        }
-        // No more unnamed — close naming
-        namingFaceIndex = -1
-        namingInput = ""
     }
 
     // Go back to the previous face for naming
@@ -650,41 +653,50 @@ fun FaceSelectorOverlay(
                                                 Key.Delete -> {
                                                     // Delete currently named face
                                                     if (namingFaceIndex in faceRegions.indices) {
+                                                        // Compute post-deletion state before mutation
+                                                        val wasLastFace = faceRegions.size <= 1
+                                                        val shiftedName = faceRegions.getOrNull(
+                                                            namingFaceIndex + 1
+                                                        )?.name ?: ""
                                                         state.faceRegions.removeFaceRegion(
                                                             idx,
                                                             namingFaceIndex,
                                                         )
-                                                        // Adjust naming index if needed
-                                                        val newIndex =
-                                                            namingFaceIndex.coerceAtMost(
-                                                                faceRegions.size - 1
+                                                        if (wasLastFace) {
+                                                            namingFaceIndex = -1
+                                                            namingInput = ""
+                                                        } else {
+                                                            val newIndex = namingFaceIndex.coerceAtMost(
+                                                                faceRegions.size - 2
                                                             )
-                                                        namingFaceIndex =
-                                                            if (faceRegions.isEmpty()) -1 else newIndex
-                                                        namingInput =
-                                                            if (namingFaceIndex in faceRegions.indices)
-                                                                faceRegions[namingFaceIndex].name
-                                                            else ""
+                                                            namingFaceIndex = newIndex
+                                                            namingInput = shiftedName
+                                                        }
                                                     }
                                                     true
                                                 }
                                                 Key.Backspace -> {
                                                     // Only delete face if naming input is empty
                                                     if (namingInput.isEmpty() && namingFaceIndex in faceRegions.indices) {
+                                                        // Compute post-deletion state before mutation
+                                                        val wasLastFace = faceRegions.size <= 1
+                                                        val shiftedName = faceRegions.getOrNull(
+                                                            namingFaceIndex + 1
+                                                        )?.name ?: ""
                                                         state.faceRegions.removeFaceRegion(
                                                             idx,
                                                             namingFaceIndex,
                                                         )
-                                                        val newIndex =
-                                                            namingFaceIndex.coerceAtMost(
-                                                                faceRegions.size - 1
+                                                        if (wasLastFace) {
+                                                            namingFaceIndex = -1
+                                                            namingInput = ""
+                                                        } else {
+                                                            val newIndex = namingFaceIndex.coerceAtMost(
+                                                                faceRegions.size - 2
                                                             )
-                                                        namingFaceIndex =
-                                                            if (faceRegions.isEmpty()) -1 else newIndex
-                                                        namingInput =
-                                                            if (namingFaceIndex in faceRegions.indices)
-                                                                faceRegions[namingFaceIndex].name
-                                                            else ""
+                                                            namingFaceIndex = newIndex
+                                                            namingInput = shiftedName
+                                                        }
                                                         true
                                                     } else {
                                                         false
@@ -938,7 +950,8 @@ fun FaceSelectorOverlay(
                                                     selectedFaceSize,
                                                 )
                                                 // Start naming the newly added face
-                                                namingFaceIndex = faceRegions.size - 1
+                                                // faceRegions is stale (pre-mutation); new face is at old size index
+                                                namingFaceIndex = faceRegions.size
                                                 namingInput = ""
                                             }
                                         }
@@ -982,18 +995,28 @@ fun FaceSelectorOverlay(
                                         }
                                         Key.Delete -> {
                                             if (namingFaceIndex in faceRegions.indices) {
+                                                // Compute post-deletion state from stale list before mutation
+                                                // After removal, indices >= namingFaceIndex shift left by 1
+                                                val wasLastFace = faceRegions.size <= 1
+                                                val newFacesCount = faceRegions.size - 1
+                                                // Name of the face that slides into namingFaceIndex position
+                                                val shiftedName = faceRegions.getOrNull(
+                                                    namingFaceIndex + 1
+                                                )?.name ?: ""
                                                 state.faceRegions.removeFaceRegion(
                                                     idx,
                                                     namingFaceIndex,
                                                 )
-                                                val newIndex =
-                                                    namingFaceIndex.coerceAtMost(faceRegions.size - 1)
-                                                namingFaceIndex =
-                                                    if (faceRegions.isEmpty()) -1 else newIndex
-                                                namingInput =
-                                                    if (namingFaceIndex in faceRegions.indices)
-                                                        faceRegions[namingFaceIndex].name
-                                                    else ""
+                                                if (wasLastFace) {
+                                                    namingFaceIndex = -1
+                                                    namingInput = ""
+                                                } else {
+                                                    val newIndex = namingFaceIndex.coerceAtMost(
+                                                        newFacesCount - 1
+                                                    )
+                                                    namingFaceIndex = newIndex
+                                                    namingInput = shiftedName
+                                                }
                                                 true
                                             } else {
                                                 false
