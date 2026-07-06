@@ -625,16 +625,9 @@ fun FaceSelectorOverlay(
                                     .onPreviewKeyEvent { keyEvent ->
                                         if (keyEvent.type == KeyEventType.KeyDown) {
                                             when (keyEvent.key) {
-                                                Key.Tab -> {
-                                                    if (keyEvent.isShiftPressed) {
-                                                        goToPreviousFace()
-                                                    } else {
-                                                        advanceToNextUnnamedFace()
-                                                    }
-                                                    true
-                                                }
+                                                // Enter: commit name and advance to next unnamed face.
+                                                // (Only handled here — global handler doesn't handle Enter)
                                                 Key.Enter -> {
-                                                    // Commit name and advance to next unnamed face
                                                     if (namingInput.isNotBlank()) {
                                                         state.faceRegions.updateFaceRegionName(
                                                             idx,
@@ -642,39 +635,12 @@ fun FaceSelectorOverlay(
                                                             namingInput.trim(),
                                                         )
                                                     }
-                                                    // Advance to next unnamed or close naming
                                                     advanceToNextUnnamedFace()
                                                     true
                                                 }
-                                                Key.Escape -> {
-                                                    namingFaceIndex = -1
-                                                    true
-                                                }
-                                                Key.Delete -> {
-                                                    // Delete currently named face
-                                                    if (namingFaceIndex in faceRegions.indices) {
-                                                        // Compute post-deletion state before mutation
-                                                        val wasLastFace = faceRegions.size <= 1
-                                                        val shiftedName = faceRegions.getOrNull(
-                                                            namingFaceIndex + 1
-                                                        )?.name ?: ""
-                                                        state.faceRegions.removeFaceRegion(
-                                                            idx,
-                                                            namingFaceIndex,
-                                                        )
-                                                        if (wasLastFace) {
-                                                            namingFaceIndex = -1
-                                                            namingInput = ""
-                                                        } else {
-                                                            val newIndex = namingFaceIndex.coerceAtMost(
-                                                                faceRegions.size - 2
-                                                            )
-                                                            namingFaceIndex = newIndex
-                                                            namingInput = shiftedName
-                                                        }
-                                                    }
-                                                    true
-                                                }
+                                                // Backspace: delete face when input is empty; otherwise
+                                                // let the text field handle character deletion.
+                                                // (Only handled here — global handler doesn't handle Backspace)
                                                 Key.Backspace -> {
                                                     // Only delete face if naming input is empty
                                                     if (namingInput.isEmpty() && namingFaceIndex in faceRegions.indices) {
