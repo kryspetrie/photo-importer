@@ -1211,4 +1211,4 @@ private fun findClosestFace(offset: Offset, faceRegions: List<FaceRegion>, bound
         }
     }
     return bestIdx
-}
+}// Larger delete-X button and hover cursor tracking
