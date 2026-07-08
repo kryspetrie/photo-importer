@@ -224,12 +224,16 @@ fun FaceSelectorOverlay(
         }
     }
 
-    // Auto-start naming: if requested, select first unnamed (or first) face on initial composition
+    // Auto-start naming: if requested, select first unnamed face. Only activates once
+    // when namingFaceIndex is -1 (not currently naming). Falls back to first face only
+    // if there are unnamed faces. If all faces are named, does not force naming open.
     if (autoStartNaming && namingFaceIndex < 0) {
         val firstUnnamed = faceRegions.indexOfFirst { it.name.isBlank() }
-        namingFaceIndex = if (firstUnnamed >= 0) firstUnnamed else if (faceRegions.isNotEmpty()) 0 else -1
-        namingInput =
-            if (namingFaceIndex in faceRegions.indices) faceRegions[namingFaceIndex].name else ""
+        if (firstUnnamed >= 0) {
+            namingFaceIndex = firstUnnamed
+            namingInput = faceRegions[firstUnnamed].name
+        }
+        // If no unnamed faces, don't force naming open — let user interact freely.
     }
 
     // Advance to the next unnamed face for naming. Returns true if advanced, false if done.
@@ -239,13 +243,25 @@ fun FaceSelectorOverlay(
             namingInput = ""
             return false
         }
-        // Commit current name
+        // Commit current name before advancing
         if (namingFaceIndex in faceRegions.indices && namingInput.isNotBlank()) {
             state.faceRegions.updateFaceRegionName(idx, namingFaceIndex, namingInput.trim())
         }
+        // Find next unnamed face after current, skipping any that appear blank in the stale
+        // snapshot but were just named. Use namingInput as a proxy: if we just committed
+        // a non-blank name, the face should be considered named even if faceRegions[i].name
+        // is stale (still blank).
+        val isFaceNamed: (Int) -> Boolean = { i ->
+            if (i == namingFaceIndex) {
+                // Current face: use namingInput (up-to-date) since faceRegions may be stale
+                namingInput.isNotBlank()
+            } else {
+                faceRegions.getOrNull(i)?.name?.isNotBlank() == true
+            }
+        }
         // Find next unnamed face after current
         for (i in (namingFaceIndex + 1) until faceRegions.size) {
-            if (faceRegions[i].name.isBlank()) {
+            if (!isFaceNamed(i)) {
                 namingFaceIndex = i
                 namingInput = ""
                 return true
@@ -253,13 +269,13 @@ fun FaceSelectorOverlay(
         }
         // Wrap around: find first unnamed face from start
         for (i in 0 until namingFaceIndex) {
-            if (faceRegions[i].name.isBlank()) {
+            if (!isFaceNamed(i)) {
                 namingFaceIndex = i
                 namingInput = ""
                 return true
             }
         }
-        // No more unnamed faces → close naming
+        // No more unnamed faces — close naming
         namingFaceIndex = -1
         namingInput = ""
         return false
