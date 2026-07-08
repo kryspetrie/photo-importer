@@ -781,11 +781,11 @@ fun FaceSelectorOverlay(
                                                             (pos.x - deletePos.x).pow(2) +
                                                                 (pos.y - deletePos.y).pow(2),
                                                         )
-                                                        // X button radius is 16f when hovered/selected, 12f otherwise
-                                                        val btnRadius = if (closestIdx == namingFaceIndex) 16f else 12f
+                                                        // X button radius is 20f when hovered/selected, 16f otherwise
+                                                        val btnRadius = if (closestIdx == namingFaceIndex) 20f else 16f
                                                         hoverState = HoverState(
                                                             faceIdx = closestIdx,
-                                                            isOverDelete = distToDelete < btnRadius + 6f,
+                                                            isOverDelete = distToDelete < btnRadius + 12f,
                                                         )
                                                     } else {
                                                         hoverState = HoverState(faceIdx = -1)
@@ -880,8 +880,8 @@ fun FaceSelectorOverlay(
                                                     (offset.x - deletePos.x).pow(2) +
                                                         (offset.y - deletePos.y).pow(2),
                                                 )
-                                            val btnRadius = if (closestIdx == namingFaceIndex) 16f else 12f
-                                            if (distToDelete < btnRadius + 6f) {
+                                            val btnRadius = if (closestIdx == namingFaceIndex) 20f else 16f
+                                            if (distToDelete < btnRadius + 12f) {
                                                 // Clicked on the delete X
                                                 state.faceRegions.removeFaceRegion(idx, closestIdx)
                                                 // Adjust naming index if needed
@@ -1075,9 +1075,9 @@ fun FaceSelectorOverlay(
                                 val delPos = deleteButtonPosition(region, bounds, currentDragOffset)
                                 val deleteX = delPos.x
                                 val deleteY = delPos.y
-                                val btnRadius = if (isHovered || isNamingSelected) 16f else 12f
-                                val xSize = if (isHovered || isNamingSelected) 8f else 6f
-                                val xStroke = if (isHovered || isNamingSelected) 3f else 2f
+                                val btnRadius = if (isHovered || isNamingSelected) 20f else 16f
+                                val xSize = if (isHovered || isNamingSelected) 10f else 8f
+                                val xStroke = if (isHovered || isNamingSelected) 3.5f else 2.5f
                                 val btnAlpha = if (isHovered || isNamingSelected) 1.0f else 0.85f
 
                                 drawCircle(
