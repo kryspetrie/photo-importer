@@ -46,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -213,6 +214,13 @@ fun FaceSelectorOverlay(
     // Which face is currently selected for naming (-1 = none)
     var namingFaceIndex by remember { mutableStateOf(-1) }
     var namingInput by remember { mutableStateOf("") }
+
+    // ── Refs that stay current inside pointerInput(Unit) blocks ──
+    // faceRegions is a val captured at composition time. pointerInput(Unit) never re-launches,
+    // so it would see a stale snapshot. rememberUpdatedState gives us a ref that always reads
+    // the latest value, even inside coroutines that never restart.
+    val currentFaceRegions by rememberUpdatedState(faceRegions)
+    val currentNamingFaceIndex by rememberUpdatedState(namingFaceIndex)
 
     // Focus requester for auto-focusing the naming text field
     val namingFocusRequester = remember { FocusRequester() }
@@ -777,6 +785,9 @@ fun FaceSelectorOverlay(
                                 }
                             }
                             // ── Hover tracking ──
+                            // Uses rememberUpdatedState refs (currentFaceRegions, currentNamingFaceIndex)
+                            // so the coroutine always sees the latest values even though pointerInput(Unit)
+                            // never re-launches the coroutine.
                             .pointerInput(Unit) {
                                 awaitPointerEventScope {
                                     while (true) {
@@ -787,18 +798,18 @@ fun FaceSelectorOverlay(
                                                 hoverOffset = pos
                                                 if (pos != null && imageDisplayBounds.width > 0f) {
                                                     val closestIdx = findClosestFace(
-                                                        pos, faceRegions, imageDisplayBounds,
+                                                        pos, currentFaceRegions, imageDisplayBounds,
                                                     )
                                                     if (closestIdx >= 0) {
                                                         // Check if cursor is over the delete X button
-                                                        val region = faceRegions[closestIdx]
+                                                        val region = currentFaceRegions[closestIdx]
                                                         val deletePos = deleteButtonPosition(region, imageDisplayBounds)
                                                         val distToDelete = sqrt(
                                                             (pos.x - deletePos.x).pow(2) +
                                                                 (pos.y - deletePos.y).pow(2),
                                                         )
                                                         // X button radius is 20f when hovered/selected, 16f otherwise
-                                                        val btnRadius = if (closestIdx == namingFaceIndex) 20f else 16f
+                                                        val btnRadius = if (closestIdx == currentNamingFaceIndex) 20f else 16f
                                                         hoverState = HoverState(
                                                             faceIdx = closestIdx,
                                                             isOverDelete = distToDelete < btnRadius + 12f,
@@ -881,22 +892,28 @@ fun FaceSelectorOverlay(
                                 )
                             }
                             // ── Tap gestures → place face, name face, or delete face ──
+                            // Uses rememberUpdatedState refs (currentFaceRegions, currentNamingFaceIndex)
+                            // so the coroutine always sees the latest values even though pointerInput(Unit)
+                            // never re-launches the coroutine.
                             .pointerInput(Unit) {
                                 detectTapGestures { offset ->
                                     val bounds = imageDisplayBounds
+                                    // Use up-to-date refs instead of stale captured vals
+                                    val faceRegionsNow = currentFaceRegions
+                                    val namingIdxNow = currentNamingFaceIndex
                                     if (bounds.width > 0f && bounds.height > 0f) {
                                         val closestIdx =
-                                            findClosestFace(offset, faceRegions, bounds)
+                                            findClosestFace(offset, faceRegionsNow, bounds)
                                         if (closestIdx >= 0) {
                                             // Clicked on a face — check if it's the delete X button
-                                            val region = faceRegions[closestIdx]
+                                            val region = faceRegionsNow[closestIdx]
                                             val deletePos = deleteButtonPosition(region, bounds)
                                             val distToDelete =
                                                 sqrt(
                                                     (offset.x - deletePos.x).pow(2) +
                                                         (offset.y - deletePos.y).pow(2),
                                                 )
-                                            val btnRadius = if (closestIdx == namingFaceIndex) 20f else 16f
+                                            val btnRadius = if (closestIdx == namingIdxNow) 20f else 16f
                                             if (distToDelete < btnRadius + 12f) {
                                                 // Clicked on the delete X
                                                 state.faceRegions.removeFaceRegion(idx, closestIdx)
@@ -910,7 +927,7 @@ fun FaceSelectorOverlay(
                                             } else {
                                                 // Click on face body → start naming it
                                                 namingFaceIndex = closestIdx
-                                                namingInput = faceRegions[closestIdx].name
+                                                namingInput = faceRegionsNow[closestIdx].name
                                             }
                                         } else {
                                             // Click on empty space → place a new face and start naming
@@ -932,8 +949,8 @@ fun FaceSelectorOverlay(
                                                     selectedFaceSize,
                                                 )
                                                 // Start naming the newly added face
-                                                // faceRegions is stale (pre-mutation); new face is at old size index
-                                                namingFaceIndex = faceRegions.size
+                                                // faceRegionsNow is stale (pre-mutation); new face is at old size index
+                                                namingFaceIndex = faceRegionsNow.size
                                                 namingInput = ""
                                             }
                                         }
