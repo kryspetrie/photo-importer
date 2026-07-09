@@ -1049,6 +1049,8 @@ fun FaceSelectorOverlay(
                             val isDragging = faceIdx == draggingFaceIdx
                             val isNamingSelected = faceIdx == namingFaceIndex
                             val isHovered = faceIdx == hoverState.faceIdx && !hoverState.isOverDelete
+                            // True when the cursor is inside this face circle (body or X button)
+                            val isCursorInCircle = faceIdx == hoverState.faceIdx
                             val currentDragOffset = if (isDragging) dragOffsetPx else Offset.Zero
 
                             val cx = bounds.left + (renderData.x * bounds.width).toFloat() + currentDragOffset.x
@@ -1103,18 +1105,21 @@ fun FaceSelectorOverlay(
                                 )
                             }
 
-                            // ── Delete X button near edge of circle if not dragging ──
-                            if (!isDragging) {
+                            // ── Delete X button near edge of circle — only when cursor is inside circle or face is being named ──
+                            if (!isDragging && (isCursorInCircle || isNamingSelected)) {
                                 val delPos = deleteButtonPosition(region, bounds, currentDragOffset)
                                 val deleteX = delPos.x
                                 val deleteY = delPos.y
-                                val btnRadius = if (isHovered || isNamingSelected) 20f else 16f
-                                val xSize = if (isHovered || isNamingSelected) 10f else 8f
-                                val xStroke = if (isHovered || isNamingSelected) 3.5f else 2.5f
-                                val btnAlpha = if (isHovered || isNamingSelected) 1.0f else 0.85f
+                                val isDeleteHover = isCursorInCircle && hoverState.isOverDelete
+                                val btnRadius = if (isDeleteHover || isNamingSelected) 20f else 16f
+                                val xSize = if (isDeleteHover || isNamingSelected) 10f else 8f
+                                val xStroke = if (isDeleteHover || isNamingSelected) 3.5f else 2.5f
+                                val btnAlpha = if (isDeleteHover || isNamingSelected) 1.0f else 0.7f
+                                // Brighter red background when hovered over the X
+                                val btnColor = if (isDeleteHover) Color(0xFFFF5555) else Color.Red
 
                                 drawCircle(
-                                    color = Color.Red.copy(alpha = btnAlpha),
+                                    color = btnColor.copy(alpha = btnAlpha),
                                     radius = btnRadius,
                                     center = Offset(deleteX, deleteY),
                                 )
@@ -1135,8 +1140,8 @@ fun FaceSelectorOverlay(
                             }
                         }
 
-                        // ── Yellow circle cursor preview when hovering over empty space ──
-                        if (hoverOffset != null && hoverState.faceIdx < 0 && imageDisplayBounds.width > 0f) {
+                        // ── Yellow circle cursor preview when hovering over empty space (not during drag) ──
+                        if (hoverOffset != null && hoverState.faceIdx < 0 && draggingFaceIdx < 0 && imageDisplayBounds.width > 0f) {
                             val previewRadius = (selectedFaceSize.radius * imageDisplayBounds.height).toFloat()
                             drawCircle(
                                 color = regionTypeColor(selectedRegionType).copy(alpha = 0.4f),
