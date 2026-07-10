@@ -25,7 +25,25 @@ data class FaceRegion(
     val y: Double = 0.0,
     val w: Double = 0.0,
     val h: Double = 0.0,
-)
+) {
+    /**
+     * Returns a new [FaceRegion] with coordinates transformed for a 90° clockwise image rotation.
+     * In normalized space: (x, y) → (1-y, x), and width/height swap.
+     */
+    fun rotate90CW(): FaceRegion = copy(x = 1.0 - y, y = x, w = h, h = w)
+
+    /**
+     * Returns a new [FaceRegion] with coordinates transformed for a 90° counter-clockwise image
+     * rotation. In normalized space: (x, y) → (y, 1-x), and width/height swap.
+     */
+    fun rotate90CCW(): FaceRegion = copy(x = y, y = 1.0 - x, w = h, h = w)
+
+    /**
+     * Returns a new [FaceRegion] with coordinates transformed for a 180° image rotation.
+     * In normalized space: (x, y) → (1-x, 1-y), width/height unchanged.
+     */
+    fun rotate180(): FaceRegion = copy(x = 1.0 - x, y = 1.0 - y)
+}
 
 /**
  * MWG-RS region types. Used to categorize what a region represents. See:

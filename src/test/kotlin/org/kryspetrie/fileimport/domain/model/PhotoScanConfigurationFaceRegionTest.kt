@@ -160,4 +160,121 @@ class PhotoScanConfigurationFaceRegionExtTest {
             assertEquals(1.0, region.h)
         }
     }
+
+    @Nested
+    @DisplayName("FaceRegion rotation transforms")
+    inner class FaceRegionRotationTests {
+
+        @Test
+        @DisplayName("rotate90CW transforms correctly")
+        fun rotate90CW_transformsCorrectly() {
+            val region = FaceRegion(name = "A", x = 0.2, y = 0.1, w = 0.15, h = 0.20)
+            val rotated = region.rotate90CW()
+            assertEquals(0.9, rotated.x, 0.001) // 1 - 0.1
+            assertEquals(0.2, rotated.y, 0.001)
+            assertEquals(0.20, rotated.w, 0.001) // h swapped to w
+            assertEquals(0.15, rotated.h, 0.001) // w swapped to h
+        }
+
+        @Test
+        @DisplayName("rotate90CCW transforms correctly")
+        fun rotate90CCW_transformsCorrectly() {
+            val region = FaceRegion(name = "B", x = 0.8, y = 0.1, w = 0.15, h = 0.20)
+            val rotated = region.rotate90CCW()
+            assertEquals(0.1, rotated.x, 0.001)  // y
+            assertEquals(0.2, rotated.y, 0.001)  // 1 - 0.8
+            assertEquals(0.20, rotated.w, 0.001) // h swapped
+            assertEquals(0.15, rotated.h, 0.001) // w swapped
+        }
+
+        @Test
+        @DisplayName("rotate180 mirrors both axes")
+        fun rotate180_mirrorsBothAxes() {
+            val region = FaceRegion(name = "C", x = 0.2, y = 0.3, w = 0.15, h = 0.20)
+            val rotated = region.rotate180()
+            assertEquals(0.8, rotated.x, 0.001)  // 1 - 0.2
+            assertEquals(0.7, rotated.y, 0.001)  // 1 - 0.3
+            assertEquals(0.15, rotated.w, 0.001) // w unchanged
+            assertEquals(0.20, rotated.h, 0.001) // h unchanged
+        }
+
+        @Test
+        @DisplayName("four CW rotations return to original position")
+        fun fourCWRotationsReturnToOriginal() {
+            val original = FaceRegion(name = "D", x = 0.25, y = 0.35, w = 0.10, h = 0.15)
+            var current = original
+            repeat(4) { current = current.rotate90CW() }
+            assertEquals(original.x, current.x, 0.001)
+            assertEquals(original.y, current.y, 0.001)
+            assertEquals(original.w, current.w, 0.001)
+            assertEquals(original.h, current.h, 0.001)
+            assertEquals(original.name, current.name)
+        }
+
+        @Test
+        @DisplayName("CW then CCW returns to original")
+        fun cwThenCCWReturnsToOriginal() {
+            val original = FaceRegion(name = "E", x = 0.3, y = 0.7, w = 0.12, h = 0.18)
+            val rotated = original.rotate90CW().rotate90CCW()
+            assertEquals(original.x, rotated.x, 0.001)
+            assertEquals(original.y, rotated.y, 0.001)
+            assertEquals(original.w, rotated.w, 0.001)
+            assertEquals(original.h, rotated.h, 0.001)
+        }
+    }
+
+    @Nested
+    @DisplayName("PhotoScanConfiguration rotation with face regions")
+    inner class ConfigRotationWithFaceRegions {
+
+        @Test
+        @DisplayName("cycleRotationCW transforms face regions")
+        fun cycleRotationCWTransformsFaceRegions() {
+            val config = PhotoScanConfiguration(
+                rotationDegrees = 0,
+                faceRegions = listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20))
+            )
+            val rotated = config.cycleRotationCW()
+            assertEquals(90, rotated.rotationDegrees)
+            assertEquals(1, rotated.faceRegions.size)
+            assertEquals(0.7, rotated.faceRegions[0].x, 0.001) // 1 - 0.3
+            assertEquals(0.2, rotated.faceRegions[0].y, 0.001)
+        }
+
+        @Test
+        @DisplayName("cycleRotationCCW transforms face regions")
+        fun cycleRotationCCWTransformsFaceRegions() {
+            val config = PhotoScanConfiguration(
+                rotationDegrees = 0,
+                faceRegions = listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20))
+            )
+            val rotated = config.cycleRotationCCW()
+            assertEquals(270, rotated.rotationDegrees)
+            assertEquals(1, rotated.faceRegions.size)
+            assertEquals(0.3, rotated.faceRegions[0].x, 0.001)  // y
+            assertEquals(0.8, rotated.faceRegions[0].y, 0.001)  // 1 - 0.2
+        }
+
+        @Test
+        @DisplayName("rotate180 transforms face regions")
+        fun rotate180TransformsFaceRegions() {
+            val config = PhotoScanConfiguration(
+                rotationDegrees = 0,
+                faceRegions = listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20))
+            )
+            val rotated = config.rotate180()
+            assertEquals(180, rotated.rotationDegrees)
+            assertEquals(0.8, rotated.faceRegions[0].x, 0.001)  // 1 - 0.2
+            assertEquals(0.7, rotated.faceRegions[0].y, 0.001)  // 1 - 0.3
+        }
+
+        @Test
+        @DisplayName("rotation with empty face regions doesn't crash")
+        fun rotationWithEmptyFaceRegions() {
+            val config = PhotoScanConfiguration(rotationDegrees = 0)
+            val rotated = config.cycleRotationCW()
+            assertEquals(90, rotated.rotationDegrees)
+            assertTrue(rotated.faceRegions.isEmpty())
+        }
+    }
 }

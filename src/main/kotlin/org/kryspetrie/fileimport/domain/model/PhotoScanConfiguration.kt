@@ -196,13 +196,29 @@ data class PhotoScanConfiguration(
     val overrideIso: OverrideState? = null,
     val overrideGps: OverrideState? = null, // covers lat+lon together
 ) {
-    /** Cycles rotation 90° clockwise: 0→90→180→270→0. */
-    fun cycleRotationCW(): PhotoScanConfiguration =
-        copy(rotationDegrees = (rotationDegrees + 90) % 360)
+    /** Cycles rotation 90° clockwise: 0→90→180→270→0, transforming face regions accordingly. */
+    fun cycleRotationCW(): PhotoScanConfiguration {
+        val newDegrees = (rotationDegrees + 90) % 360
+        return copy(
+            rotationDegrees = newDegrees,
+            faceRegions = faceRegions.map { it.rotate90CW() },
+        )
+    }
 
-    /** Cycles rotation 90° counter-clockwise: 0→270→180→90→0. */
-    fun cycleRotationCCW(): PhotoScanConfiguration =
-        copy(rotationDegrees = (rotationDegrees - 90 + 360) % 360)
+    /** Cycles rotation 90° counter-clockwise: 0→270→180→90→0, transforming face regions accordingly. */
+    fun cycleRotationCCW(): PhotoScanConfiguration {
+        val newDegrees = (rotationDegrees - 90 + 360) % 360
+        return copy(
+            rotationDegrees = newDegrees,
+            faceRegions = faceRegions.map { it.rotate90CCW() },
+        )
+    }
+
+    /** Rotates 180°, transforming face regions accordingly. */
+    fun rotate180(): PhotoScanConfiguration = copy(
+        rotationDegrees = (rotationDegrees + 180) % 360,
+        faceRegions = faceRegions.map { it.rotate180() },
+    )
 
     /** Returns true if any metadata fields are non-empty. */
     fun hasMetadata(): Boolean =

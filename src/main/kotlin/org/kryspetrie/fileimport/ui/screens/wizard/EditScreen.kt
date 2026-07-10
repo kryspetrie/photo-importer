@@ -662,7 +662,7 @@ fun EditScreen(
                         },
                         onRotate180 = {
                             state.configs.updatePhotoScanConfiguration(box.id) {
-                                it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
+                                it.rotate180()
                             }
                         },
                     )
@@ -699,7 +699,7 @@ fun EditScreen(
                                         if (idx < boundingBoxList.size()) {
                                             val box = boundingBoxList.boxes[idx]
                                             state.configs.updatePhotoScanConfiguration(box.id) {
-                                                it.copy(rotationDegrees = (it.rotationDegrees + 180) % 360)
+                                                it.rotate180()
                                             }
                                         }
                                     }
