@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -511,6 +512,26 @@ fun EditScreen(
                             )
                             // Back-of-photo button (only in the preview window)
                             if (config.hasBackImage()) {
+                                // Tag Photo button — opens face selection overlay
+                                OutlinedButton(
+                                    onClick = { faceSelectIndex = selectedIndex },
+                                    modifier =
+                                        Modifier.align(Alignment.BottomStart)
+                                            .padding(6.dp)
+                                            .height(24.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Sell,
+                                        "Tag people in photo",
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        "Tag Photo",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
                                 Surface(
                                     modifier =
                                         Modifier.align(Alignment.BottomEnd).padding(8.dp),
@@ -571,6 +592,26 @@ fun EditScreen(
                                     }
                                 }
                             } else {
+                                // Tag Photo button — opens face selection overlay
+                                OutlinedButton(
+                                    onClick = { faceSelectIndex = selectedIndex },
+                                    modifier =
+                                        Modifier.align(Alignment.BottomStart)
+                                            .padding(6.dp)
+                                            .height(24.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp),
+                                ) {
+                                    Icon(
+                                        Icons.Default.Sell,
+                                        "Tag people in photo",
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Text(
+                                        "Tag Photo",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
                                 OutlinedButton(
                                     onClick = { showBackImagePicker = true },
                                     modifier =

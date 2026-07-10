@@ -409,9 +409,9 @@ fun FaceSelectorOverlay(
                             val named = faceRegions.count { it.name.isNotBlank() }
                             "Naming ${namingFaceIndex + 1}/${faceRegions.size} ($named named)"
                         } else if (faceRegions.isEmpty()) {
-                            "Click to place a ${selectedRegionType.displayName.lowercase()}"
+                            "Click to tag a ${selectedRegionType.displayName.lowercase()}"
                         } else {
-                            "Click to place • Drag to move • Tap face to name"
+                            "Click to tag • Drag to move • Tap to name"
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,

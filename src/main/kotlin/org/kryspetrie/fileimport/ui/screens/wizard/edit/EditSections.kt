@@ -31,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
@@ -718,7 +719,7 @@ internal fun LocationSection(
     }
 }
 
-/** Subjects/faces section — collapsed by default (secondary workflow). */
+/** Tag Photo section — collapsed by default (secondary workflow). */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun SubjectsSection(
@@ -753,7 +754,7 @@ internal fun SubjectsSection(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(4.dp))
-            Text("Subjects & Faces", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+            Text("Tag Photo", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
         }
         if (subjectsExpanded) {
             if (faceRegions.isNotEmpty()) {
@@ -838,7 +839,7 @@ internal fun SubjectsSection(
                     }
                 }
             }
-            // ── Action buttons: Select Faces + Add person input ──
+            // ── Action buttons: Tag Photo + Add person input ──
             Surface(
                 tonalElevation = 1.dp,
                 shape = RoundedCornerShape(6.dp),
@@ -847,11 +848,11 @@ internal fun SubjectsSection(
                 Column(modifier = Modifier.padding(8.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (onSelectFaces != null) {
                         OutlinedButton(onClick = onSelectFaces, modifier = Modifier.fillMaxWidth()) {
-                            Icon(Icons.Default.Face, null, Modifier.size(16.dp))
+                            Icon(Icons.Default.Sell, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                if (faceRegions.isEmpty()) "Select Faces"
-                                else "Edit Faces (${faceRegions.size})",
+                                if (faceRegions.isEmpty()) "Tag Photo"
+                                else "Edit Tags (${faceRegions.size})",
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         }
