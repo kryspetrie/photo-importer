@@ -631,138 +631,6 @@ fun FaceSelectorOverlay(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center,
             ) {
-                // ── Naming input panel (bottom center, over the image) ────
-                if (namingFaceIndex in faceRegions.indices) {
-                    val currentRegion = faceRegions[namingFaceIndex]
-                    val hasMoreUnnamedFaces = faceRegions.indices.any { i ->
-                        i != namingFaceIndex && faceRegions[i].name.isBlank()
-                    }
-                    Surface(
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
-                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
-                        shape = RoundedCornerShape(8.dp),
-                        tonalElevation = 4.dp,
-                    ) {
-                        Row(
-                            modifier =
-                                Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                                    .onPreviewKeyEvent { keyEvent ->
-                                        if (keyEvent.type == KeyEventType.KeyDown) {
-                                            when (keyEvent.key) {
-                                                // Enter: commit name and advance to next unnamed face.
-                                                // (Only handled here — global handler doesn't handle Enter)
-                                                Key.Enter -> {
-                                                    if (namingInput.isNotBlank()) {
-                                                        state.faceRegions.updateFaceRegionName(
-                                                            idx,
-                                                            namingFaceIndex,
-                                                            namingInput.trim(),
-                                                        )
-                                                    }
-                                                    advanceToNextUnnamedFace()
-                                                    true
-                                                }
-                                                // Backspace: delete face when input is empty; otherwise
-                                                // let the text field handle character deletion.
-                                                // (Only handled here — global handler doesn't handle Backspace)
-                                                Key.Backspace -> {
-                                                    // Only delete face if naming input is empty
-                                                    if (namingInput.isEmpty() && namingFaceIndex in faceRegions.indices) {
-                                                        // Compute post-deletion state before mutation
-                                                        val wasLastFace = faceRegions.size <= 1
-                                                        val shiftedName = faceRegions.getOrNull(
-                                                            namingFaceIndex + 1
-                                                        )?.name ?: ""
-                                                        state.faceRegions.removeFaceRegion(
-                                                            idx,
-                                                            namingFaceIndex,
-                                                        )
-                                                        if (wasLastFace) {
-                                                            namingFaceIndex = -1
-                                                            namingInput = ""
-                                                        } else {
-                                                            val newIndex = namingFaceIndex.coerceAtMost(
-                                                                faceRegions.size - 2
-                                                            )
-                                                            namingFaceIndex = newIndex
-                                                            namingInput = shiftedName
-                                                        }
-                                                        true
-                                                    } else {
-                                                        false
-                                                    }
-                                                }
-                                                else -> false
-                                            }
-                                        } else {
-                                            false
-                                        }
-                                    },
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                regionTypeIcon(RegionType.fromMwgRs(currentRegion.type)),
-                                contentDescription = currentRegion.type,
-                                modifier = Modifier.size(16.dp),
-                                tint = regionTypeColor(RegionType.fromMwgRs(currentRegion.type)),
-                            )
-                            Text(
-                                "Face ${namingFaceIndex + 1}/${faceRegions.size}:",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
-                            )
-                            OutlinedTextField(
-                                value = namingInput,
-                                onValueChange = { namingInput = it },
-                                placeholder = { Text("Name...", style = MaterialTheme.typography.labelSmall) },
-                                modifier = Modifier.width(120.dp).focusRequester(namingFocusRequester),
-                                textStyle = MaterialTheme.typography.labelSmall,
-                                singleLine = true,
-                            )
-                            Button(
-                                onClick = {
-                                    if (namingInput.isNotBlank()) {
-                                        state.faceRegions.updateFaceRegionName(
-                                            idx,
-                                            namingFaceIndex,
-                                            namingInput.trim(),
-                                        )
-                                    }
-                                    advanceToNextUnnamedFace()
-                                },
-                                enabled = namingInput.isNotBlank(),
-                            ) {
-                                Text(
-                                    if (hasMoreUnnamedFaces) "Save & Next" else "Save",
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                            // Skip button: remove this face and advance. Hidden on last unnamed face.
-                            if (!isLastUnnamed) {
-                                OutlinedButton(
-                                    onClick = { skipCurrentFace() },
-                                ) {
-                                    Icon(
-                                        Icons.Default.SkipNext,
-                                        contentDescription = "Skip",
-                                        modifier = Modifier.size(14.dp),
-                                    )
-                                    Spacer(Modifier.width(2.dp))
-                                    Text("Skip", style = MaterialTheme.typography.labelSmall)
-                                }
-                            }
-                            Text(
-                                "Enter→save ${if (hasMoreUnnamedFaces) "• Tab→next" else ""} • Esc→done",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 10.sp,
-                            )
-                        }
-                    }
-                }
-
                 // ── Image + overlays ────────────────────────────────────
                 Box(
                     modifier =
@@ -1218,6 +1086,138 @@ fun FaceSelectorOverlay(
                                 end = Offset(plusX, plusY + 4f),
                                 strokeWidth = 2f,
                                 cap = StrokeCap.Round,
+                            )
+                        }
+                    }
+                }
+
+                // ── Naming input panel (bottom center, over the image) ────
+                if (namingFaceIndex in faceRegions.indices) {
+                    val currentRegion = faceRegions[namingFaceIndex]
+                    val hasMoreUnnamedFaces = faceRegions.indices.any { i ->
+                        i != namingFaceIndex && faceRegions[i].name.isBlank()
+                    }
+                    Surface(
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
+                        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
+                        shape = RoundedCornerShape(8.dp),
+                        tonalElevation = 4.dp,
+                    ) {
+                        Row(
+                            modifier =
+                                Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
+                                    .onPreviewKeyEvent { keyEvent ->
+                                        if (keyEvent.type == KeyEventType.KeyDown) {
+                                            when (keyEvent.key) {
+                                                // Enter: commit name and advance to next unnamed face.
+                                                // (Only handled here — global handler doesn't handle Enter)
+                                                Key.Enter -> {
+                                                    if (namingInput.isNotBlank()) {
+                                                        state.faceRegions.updateFaceRegionName(
+                                                            idx,
+                                                            namingFaceIndex,
+                                                            namingInput.trim(),
+                                                        )
+                                                    }
+                                                    advanceToNextUnnamedFace()
+                                                    true
+                                                }
+                                                // Backspace: delete face when input is empty; otherwise
+                                                // let the text field handle character deletion.
+                                                // (Only handled here — global handler doesn't handle Backspace)
+                                                Key.Backspace -> {
+                                                    // Only delete face if naming input is empty
+                                                    if (namingInput.isEmpty() && namingFaceIndex in faceRegions.indices) {
+                                                        // Compute post-deletion state before mutation
+                                                        val wasLastFace = faceRegions.size <= 1
+                                                        val shiftedName = faceRegions.getOrNull(
+                                                            namingFaceIndex + 1
+                                                        )?.name ?: ""
+                                                        state.faceRegions.removeFaceRegion(
+                                                            idx,
+                                                            namingFaceIndex,
+                                                        )
+                                                        if (wasLastFace) {
+                                                            namingFaceIndex = -1
+                                                            namingInput = ""
+                                                        } else {
+                                                            val newIndex = namingFaceIndex.coerceAtMost(
+                                                                faceRegions.size - 2
+                                                            )
+                                                            namingFaceIndex = newIndex
+                                                            namingInput = shiftedName
+                                                        }
+                                                        true
+                                                    } else {
+                                                        false
+                                                    }
+                                                }
+                                                else -> false
+                                            }
+                                        } else {
+                                            false
+                                        }
+                                    },
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                regionTypeIcon(RegionType.fromMwgRs(currentRegion.type)),
+                                contentDescription = currentRegion.type,
+                                modifier = Modifier.size(16.dp),
+                                tint = regionTypeColor(RegionType.fromMwgRs(currentRegion.type)),
+                            )
+                            Text(
+                                "Face ${namingFaceIndex + 1}/${faceRegions.size}:",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                            )
+                            OutlinedTextField(
+                                value = namingInput,
+                                onValueChange = { namingInput = it },
+                                placeholder = { Text("Name...", style = MaterialTheme.typography.labelSmall) },
+                                modifier = Modifier.width(120.dp).focusRequester(namingFocusRequester),
+                                textStyle = MaterialTheme.typography.labelSmall,
+                                singleLine = true,
+                            )
+                            Button(
+                                onClick = {
+                                    if (namingInput.isNotBlank()) {
+                                        state.faceRegions.updateFaceRegionName(
+                                            idx,
+                                            namingFaceIndex,
+                                            namingInput.trim(),
+                                        )
+                                    }
+                                    advanceToNextUnnamedFace()
+                                },
+                                enabled = namingInput.isNotBlank(),
+                            ) {
+                                Text(
+                                    if (hasMoreUnnamedFaces) "Save & Next" else "Save",
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
+                            // Skip button: remove this face and advance. Hidden on last unnamed face.
+                            if (!isLastUnnamed) {
+                                OutlinedButton(
+                                    onClick = { skipCurrentFace() },
+                                ) {
+                                    Icon(
+                                        Icons.Default.SkipNext,
+                                        contentDescription = "Skip",
+                                        modifier = Modifier.size(14.dp),
+                                    )
+                                    Spacer(Modifier.width(2.dp))
+                                    Text("Skip", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                            Text(
+                                "Enter→save ${if (hasMoreUnnamedFaces) "• Tab→next" else ""} • Esc→done",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 10.sp,
                             )
                         }
                     }
