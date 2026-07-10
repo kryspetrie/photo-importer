@@ -769,7 +769,7 @@ internal fun SubjectsSection(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Face Regions", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                            Text("Tag Regions", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
                             if (onClearAllFaces != null) {
                                 Text(
                                     "Clear All",

@@ -390,7 +390,7 @@ fun FaceSelectorOverlay(
                             modifier = Modifier.size(16.dp),
                         )
                         Text(
-                            "Face Editor",
+                            "Tag Editor",
                             style = MaterialTheme.typography.labelLarge.copy(
                                 fontWeight = FontWeight.Bold
                             ),
@@ -407,7 +407,8 @@ fun FaceSelectorOverlay(
                     Text(
                         if (namingFaceIndex in faceRegions.indices) {
                             val named = faceRegions.count { it.name.isNotBlank() }
-                            "Naming ${namingFaceIndex + 1}/${faceRegions.size} ($named named)"
+                            val currentType = RegionType.fromMwgRs(faceRegions[namingFaceIndex].type)
+                            "Naming ${currentType.displayName.lowercase()} tag ${namingFaceIndex + 1}/${faceRegions.size} ($named named)"
                         } else if (faceRegions.isEmpty()) {
                             "Click to tag a ${selectedRegionType.displayName.lowercase()}"
                         } else {
@@ -901,7 +902,7 @@ fun FaceSelectorOverlay(
                 ) {
                     Image(
                         bitmap = imageBitmap,
-                        contentDescription = "Select faces on photo ${idx + 1}",
+                        contentDescription = "Select tags on photo ${idx + 1}",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit,
                     )
@@ -1219,7 +1220,7 @@ fun FaceSelectorOverlay(
                                 tint = regionTypeColor(RegionType.fromMwgRs(currentRegion.type)),
                             )
                             Text(
-                                "Face ${namingFaceIndex + 1}/${faceRegions.size}:",
+                                "${RegionType.fromMwgRs(currentRegion.type).displayName} Tag ${namingFaceIndex + 1}/${faceRegions.size}:",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold
                                 ),
