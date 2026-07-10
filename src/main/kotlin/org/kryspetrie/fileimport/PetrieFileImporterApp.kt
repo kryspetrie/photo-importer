@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.MenuBar
 import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import java.awt.Dimension
@@ -110,7 +111,13 @@ fun main(args: Array<String>) {
     // Initialize window state with persisted dimensions
     // Uses Compose's dp (density-independent pixels) for consistent sizing across displays
     val windowState =
-        WindowState(width = settings.windowState.width.dp, height = settings.windowState.height.dp)
+        WindowState(
+            width = settings.windowState.width.dp,
+            height = settings.windowState.height.dp,
+            placement =
+                if (settings.windowState.isMaximized) WindowPlacement.Maximized
+                else WindowPlacement.Floating,
+        )
 
     // Generate application icon from embedded PNG resource
     // Icon is used in window title bar, taskbar, and application switcher
@@ -142,7 +149,23 @@ fun main(args: Array<String>) {
         // Window is the top-level container for all Compose UI content
         Window(
             // Callback when user clicks window close button
-            onCloseRequest = ::exitApplication,
+            onCloseRequest = {
+                // Persist window placement before exiting so we remember maximized state
+                val isMax = windowState.placement == WindowPlacement.Maximized
+                val updatedSettings =
+                    currentSettings.value.copy(
+                        windowState =
+                            org.kryspetrie.fileimport.domain.model.WindowState(
+                                width = windowState.size.width.value.toInt(),
+                                height = windowState.size.height.value.toInt(),
+                                x = windowState.position.x.value.toInt(),
+                                y = windowState.position.y.value.toInt(),
+                                isMaximized = isMax,
+                            )
+                    )
+                ioScope.launch { settingsAdapter.saveSettings(updatedSettings) }
+                exitApplication()
+            },
             // Window dimensions and position
             state = windowState,
             // Window title shown in title bar

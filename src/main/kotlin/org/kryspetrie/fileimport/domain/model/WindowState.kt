@@ -19,5 +19,5 @@ data class WindowState(
     val height: Int = 800,
     val x: Int? = null,
     val y: Int? = null,
-    val isMaximized: Boolean = false,
+    val isMaximized: Boolean = true,
 )
