@@ -54,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -221,6 +222,8 @@ fun FaceSelectorOverlay(
     // the latest value, even inside coroutines that never restart.
     val currentFaceRegions by rememberUpdatedState(faceRegions)
     val currentNamingFaceIndex by rememberUpdatedState(namingFaceIndex)
+    val currentRegionType by rememberUpdatedState(selectedRegionType)
+    val currentFaceSize by rememberUpdatedState(selectedFaceSize)
 
     // Focus requester for auto-focusing the naming text field
     val namingFocusRequester = remember { FocusRequester() }
@@ -813,8 +816,8 @@ fun FaceSelectorOverlay(
                                                     "",
                                                     normX,
                                                     normY,
-                                                    selectedRegionType,
-                                                    selectedFaceSize,
+                                                    currentRegionType,
+                                                    currentFaceSize,
                                                 )
                                                 // Start naming the newly added face
                                                 // faceRegionsNow is stale (pre-mutation); new face is at old size index
@@ -950,22 +953,32 @@ fun FaceSelectorOverlay(
                                 )
                             }
 
-                            // ── Name label ──
+                            // ── Name label (compact, always visible) ──
                             val nameLabel = renderData.name
                             if (nameLabel.isNotBlank()) {
                                 val nameLayout = textMeasurer.measure(
                                     nameLabel,
-                                    TextStyle(color = Color.White, fontSize = 11.sp),
+                                    TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold),
                                 )
-                                val labelWidth = nameLayout.size.width.toFloat() + 10f
+                                val labelWidth = nameLayout.size.width.toFloat() + 8f
                                 val labelHeight = nameLayout.size.height.toFloat() + 4f
                                 val labelX = cx - labelWidth / 2f
-                                val labelY = cy - radius - 20f
+                                val labelY = cy - radius - 18f
 
+                                // Dark background pill for high contrast
                                 drawRoundRect(
-                                    color = color.copy(alpha = 0.85f),
+                                    color = Color.Black.copy(alpha = 0.75f),
                                     topLeft = Offset(labelX, labelY),
                                     size = Size(labelWidth, labelHeight),
+                                    cornerRadius = CornerRadius(4f),
+                                )
+                                // Colored border for face type identification
+                                drawRoundRect(
+                                    color = color,
+                                    topLeft = Offset(labelX, labelY),
+                                    size = Size(labelWidth, labelHeight),
+                                    cornerRadius = CornerRadius(4f),
+                                    style = Stroke(width = 1.5f),
                                 )
                                 drawText(
                                     textLayoutResult = nameLayout,
@@ -1004,6 +1017,44 @@ fun FaceSelectorOverlay(
                                     end = Offset(deleteX - xSize, deleteY + xSize),
                                     strokeWidth = xStroke,
                                     cap = StrokeCap.Round,
+                                )
+                            }
+                        }
+
+                        // ── Hover tooltip: show face name in large text ──
+                        if (hoverState.faceIdx >= 0 && hoverState.faceIdx < faceRegions.size) {
+                            val hoveredRegion = faceRegions[hoverState.faceIdx]
+                            val hoveredName = hoveredRegion.name
+                            if (hoveredName.isNotBlank() && !hoverState.isOverDelete) {
+                                val hovCx = bounds.left + (hoveredRegion.x * bounds.width).toFloat()
+                                val hovCy = bounds.top + (hoveredRegion.y * bounds.height).toFloat()
+                                val hovRadius = (hoveredRegion.w / 2.0 * bounds.height).toFloat()
+                                val tooltipLayout = textMeasurer.measure(
+                                    hoveredName,
+                                    TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
+                                )
+                                val tooltipWidth = tooltipLayout.size.width.toFloat() + 16f
+                                val tooltipHeight = tooltipLayout.size.height.toFloat() + 10f
+                                // Position tooltip above the face circle, centered horizontally
+                                val tooltipX = (hovCx - tooltipWidth / 2f).coerceIn(bounds.left, bounds.right - tooltipWidth)
+                                val tooltipY = (hovCy - hovRadius - tooltipHeight - 12f).coerceIn(bounds.top, bounds.bottom - tooltipHeight)
+                                // Dark rounded background with colored border
+                                drawRoundRect(
+                                    color = Color.Black.copy(alpha = 0.85f),
+                                    topLeft = Offset(tooltipX, tooltipY),
+                                    size = Size(tooltipWidth, tooltipHeight),
+                                    cornerRadius = CornerRadius(8f),
+                                )
+                                drawRoundRect(
+                                    color = regionTypeColor(RegionType.fromMwgRs(hoveredRegion.type)),
+                                    topLeft = Offset(tooltipX, tooltipY),
+                                    size = Size(tooltipWidth, tooltipHeight),
+                                    cornerRadius = CornerRadius(8f),
+                                    style = Stroke(width = 2f),
+                                )
+                                drawText(
+                                    textLayoutResult = tooltipLayout,
+                                    topLeft = Offset(tooltipX + 8f, tooltipY + 5f),
                                 )
                             }
                         }
