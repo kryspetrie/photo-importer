@@ -138,7 +138,7 @@ fun EditScreen(
     var isMultiEditMode by remember { mutableStateOf(false) }
     var fullscreenPreviewIndex by remember { mutableStateOf<Int?>(null) }
     var showLocationPicker by remember { mutableStateOf(false) }
-    var locationPickerTargetIndex by remember { mutableStateOf<Int?>(null) }
+    var locationPickerTargetIndices by remember { mutableStateOf(emptyList<Int>()) }
 
     // Face selection state
     var faceSelectIndex by remember { mutableStateOf<Int?>(null) }
@@ -740,8 +740,8 @@ fun EditScreen(
                 onMetadataHistoryRemove = onMetadataHistoryRemove,
                 sourceExif = sourceExif,
                 onSelectFaces = { idx -> faceSelectIndex = idx },
-                onPickLocation = { idx ->
-                    locationPickerTargetIndex = idx
+                onPickLocation = { indices ->
+                    locationPickerTargetIndices = indices
                     showLocationPicker = true
                 },
                 onRecordMetadataSet = onRecordMetadataSet,
@@ -751,7 +751,7 @@ fun EditScreen(
     }
 
     // ── Location picker (full-screen overlay within the same window) ──
-    if (showLocationPicker && locationPickerTargetIndex != null) {
+    if (showLocationPicker && locationPickerTargetIndices.isNotEmpty()) {
         LocationPickerOverlay(
             locationSearchService = locationSearchService,
             geocodingPort = geocodingPort,
@@ -760,27 +760,28 @@ fun EditScreen(
             initialLon = settings.lastMapLon,
             initialZoom = settings.lastMapZoom,
             onLocationSelected = { result ->
-                val idx = locationPickerTargetIndex
-                if (idx != null && idx < boundingBoxList.size()) {
-                    val boxId = boundingBoxList.boxes[idx].id
-                    state.configs.updatePhotoScanConfiguration(boxId) {
-                        it.copy(
-                            locationName = result.name,
-                            address = result.displayName,
-                            city = result.city ?: it.city,
-                            state = result.state ?: it.state,
-                            country = result.country ?: it.country,
-                            gpsLatitude = result.latitude.toString(),
-                            gpsLongitude = result.longitude.toString(),
-                        )
+                for (idx in locationPickerTargetIndices) {
+                    if (idx < boundingBoxList.size()) {
+                        val boxId = boundingBoxList.boxes[idx].id
+                        state.configs.updatePhotoScanConfiguration(boxId) {
+                            it.copy(
+                                locationName = result.name,
+                                address = result.displayName,
+                                city = result.city ?: it.city,
+                                state = result.state ?: it.state,
+                                country = result.country ?: it.country,
+                                gpsLatitude = result.latitude.toString(),
+                                gpsLongitude = result.longitude.toString(),
+                            )
+                        }
                     }
                 }
                 showLocationPicker = false
-                locationPickerTargetIndex = null
+                locationPickerTargetIndices = emptyList()
             },
             onDismiss = {
                 showLocationPicker = false
-                locationPickerTargetIndex = null
+                locationPickerTargetIndices = emptyList()
             },
             onMapLocationChanged = { lat, lon, zoom ->
                 coroutineScope.launch {

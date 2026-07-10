@@ -53,7 +53,7 @@ internal fun MetadataEditorPanel(
     onMetadataHistoryRemove: (String, String) -> Unit,
     sourceExif: SourceExifSummary?,
     onSelectFaces: (Int) -> Unit,
-    onPickLocation: (Int) -> Unit,
+    onPickLocation: (List<Int>) -> Unit,
     onRecordMetadataSet: (RecentMetadataSet) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -301,10 +301,8 @@ internal fun MetadataEditorPanel(
                     }
                     editState.loadFromSet(set)
                 } } else { { set -> editState.loadFromSet(set) } },
-                // Location picker (single-edit only)
-                onPickLocation = if (!isMultiSelect && selectedIndex >= 0) {
-                    { onPickLocation(selectedIndex) }
-                } else null,
+                // Location picker (single and multi-edit)
+                onPickLocation = { onPickLocation(selectedIndices.toList()) },
                 // GPS override (single-edit only)
                 overrideGps = if (!isMultiSelect && singleEditConfig != null) {
                     singleEditConfig.overrideGps != OverrideState.NULL_OUT
