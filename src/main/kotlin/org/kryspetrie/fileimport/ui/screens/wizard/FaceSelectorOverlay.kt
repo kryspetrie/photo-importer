@@ -407,8 +407,7 @@ fun FaceSelectorOverlay(
                     Text(
                         if (namingFaceIndex in faceRegions.indices) {
                             val named = faceRegions.count { it.name.isNotBlank() }
-                            val currentType = RegionType.fromMwgRs(faceRegions[namingFaceIndex].type)
-                            "Naming ${currentType.displayName.lowercase()} tag ${namingFaceIndex + 1}/${faceRegions.size} ($named named)"
+                            "Tag ${namingFaceIndex + 1}/${faceRegions.size} ($named named)"
                         } else if (faceRegions.isEmpty()) {
                             "Click to tag a ${selectedRegionType.displayName.lowercase()}"
                         } else {
@@ -1220,7 +1219,7 @@ fun FaceSelectorOverlay(
                                 tint = regionTypeColor(RegionType.fromMwgRs(currentRegion.type)),
                             )
                             Text(
-                                "${RegionType.fromMwgRs(currentRegion.type).displayName} Tag ${namingFaceIndex + 1}/${faceRegions.size}:",
+                                "Tag ${namingFaceIndex + 1}/${faceRegions.size}:",
                                 style = MaterialTheme.typography.labelSmall.copy(
                                     fontWeight = FontWeight.Bold
                                 ),
