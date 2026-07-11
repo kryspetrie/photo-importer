@@ -225,6 +225,15 @@ fun PhotoScanImportScreen(
                                 )
                             }
                         },
+                        autoSkipBackFiles = settings.autoSkipBackFiles,
+                        onAutoSkipBackFilesChange = { newValue ->
+                            scope.launch {
+                                val currentSettings = settingsPort.observeSettings().first()
+                                settingsPort.saveSettings(
+                                    currentSettings.copy(autoSkipBackFiles = newValue)
+                                )
+                            }
+                        },
                     )
 
                     // ── Import Photo Scans Button ──

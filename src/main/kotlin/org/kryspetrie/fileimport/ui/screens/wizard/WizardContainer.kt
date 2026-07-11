@@ -369,6 +369,22 @@ private fun WizardStepContent(
                             )
                         }
                     },
+                    onSkipCurrentPhoto = if (state.batch.isBatchMode) {
+                        {
+                            // Mark current batch image as skipped and advance
+                            state.batch.markBatchIndexSkipped(state.batch.currentImageIndex.value)
+                            continueToNextBatchPhoto(
+                                state,
+                                detectorService,
+                                appLogger,
+                                dispatcherProvider,
+                                isLoading,
+                                onMessage,
+                                onError,
+                                scope,
+                            )
+                        }
+                    } else null,
                     startWithMetadata = settings.skipCropAndRotate,
                     faceRegionTransformer = faceRegionTransformer,
                 )

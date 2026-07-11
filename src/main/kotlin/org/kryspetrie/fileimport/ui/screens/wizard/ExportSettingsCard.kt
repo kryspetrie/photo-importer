@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Transform
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -36,6 +37,8 @@ fun ExportSettingsCard(
     state: PhotoScanWizardState,
     skipCropAndRotate: Boolean = false,
     onSkipCropAndRotateChange: ((Boolean) -> Unit)? = null,
+    autoSkipBackFiles: Boolean = true,
+    onAutoSkipBackFilesChange: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val perspectiveEnabled by state.exportSettings.perspectiveCorrectionEnabled.collectAsState()
@@ -51,7 +54,7 @@ fun ExportSettingsCard(
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text("Export Settings", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
 
-            // Perspective correction + Skip Crop & Rotate toggles side-by-side
+            // Perspective correction + Skip Crop & Rotate toggles
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     SettingsToggle(
@@ -76,6 +79,17 @@ fun ExportSettingsCard(
                         )
                     }
                 }
+            }
+
+            // Auto-skip back photos toggle
+            if (onAutoSkipBackFilesChange != null) {
+                SettingsToggle(
+                    checked = autoSkipBackFiles,
+                    onCheckedChange = onAutoSkipBackFilesChange,
+                    label = "Auto-skip back photos",
+                    description = "Skip files used as back-of-photo images during batch processing",
+                    icon = Icons.Default.VisibilityOff,
+                )
             }
 
             // Margin slider

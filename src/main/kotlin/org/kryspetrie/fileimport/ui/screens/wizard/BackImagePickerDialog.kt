@@ -20,6 +20,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
@@ -110,19 +113,27 @@ private enum class BackImageInteractionMode(val displayName: String) {
 @Composable
 fun BackImagePickerDialog(
     batchFiles: List<File>? = null,
+    preSelectedPath: String? = null,
     onConfirm: (sourcePath: String, cropRect: Rect?, rotation: Int, mode: String) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var selectedFile by remember { mutableStateOf<File?>(null) }
+    // Auto-select the pre-selected path or next sequential batch file
+    val initialFile = remember(preSelectedPath, batchFiles) {
+        if (preSelectedPath != null) {
+            File(preSelectedPath).takeIf { it.exists() }
+        } else {
+            // Default to next sequential file from batch after the current (often the back photo)
+            batchFiles?.firstOrNull()
+        }
+    }
+    var selectedFile by remember { mutableStateOf(initialFile) }
     var backImage by remember { mutableStateOf<BufferedImage?>(null) }
     var backImageMode by remember { mutableStateOf("combine") }
     var cropRect by remember { mutableStateOf<Rect?>(null) }
     var interactionMode by remember { mutableStateOf(BackImageInteractionMode.VIEW) }
     var cropRotation by remember { mutableStateOf(0) }
-    var showBatchPicker by remember {
-        mutableStateOf(batchFiles != null && batchFiles.isNotEmpty())
-    }
+    var showBatchPicker by remember { mutableStateOf(false) }
     // Track view container size for coordinate mapping
     var viewWidthPx by remember { mutableStateOf(0) }
     var viewHeightPx by remember { mutableStateOf(0) }
@@ -159,23 +170,30 @@ fun BackImagePickerDialog(
                     IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
 
-                // ── Source selection row ──
+                // ── Source selection row (compact: file name + Browse) ──
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (batchFiles != null && batchFiles.isNotEmpty()) {
-                        OutlinedButton(
-                            onClick = { showBatchPicker = !showBatchPicker },
-                            modifier = Modifier.height(36.dp),
-                        ) {
-                            Icon(Icons.Default.Collections, null, Modifier.size(16.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("From Batch", style = MaterialTheme.typography.labelMedium)
-                        }
+                    if (selectedFile != null) {
+                        Text(
+                            selectedFile!!.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                    } else {
+                        Text(
+                            "No back image selected",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                     OutlinedButton(
                         onClick = {
@@ -188,39 +206,15 @@ fun BackImagePickerDialog(
                                 cropRect = null
                             }
                         },
-                        modifier = Modifier.height(36.dp),
+                        modifier = Modifier.height(28.dp),
                     ) {
-                        Icon(Icons.Default.FolderOpen, null, Modifier.size(16.dp))
+                        Icon(Icons.Default.FolderOpen, null, Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Browse...", style = MaterialTheme.typography.labelMedium)
-                    }
-                    if (selectedFile != null) {
-                        Text(
-                            selectedFile!!.name,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
-                        )
+                        Text("Browse...", style = MaterialTheme.typography.labelSmall)
                     }
                 }
 
-                // ── Batch file picker ──
-                if (showBatchPicker && batchFiles != null) {
-                    Spacer(Modifier.height(8.dp))
-                    BatchFileGrid(
-                        files = batchFiles,
-                        selectedFile = selectedFile,
-                        onSelect = { file ->
-                            selectedFile = file
-                            cropRect = null
-                            showBatchPicker = false
-                        },
-                    )
-                }
-
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
 
                 // ── Image area with crop overlay ──
                 Box(
@@ -459,7 +453,23 @@ fun BackImagePickerDialog(
                     )
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
+
+                // ── Nearby files strip ──
+                if (batchFiles != null && batchFiles.isNotEmpty()) {
+                    NearbyFilesStrip(
+                        files = batchFiles,
+                        selectedFile = selectedFile,
+                        onSelect = { file ->
+                            selectedFile = file
+                            cropRect = null
+                            cropRotation = 0
+                        },
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                Spacer(Modifier.height(4.dp))
 
                 // ── Action buttons ──
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -473,6 +483,98 @@ fun BackImagePickerDialog(
                         enabled = selectedFile != null && backImage != null,
                     ) {
                         Text("Assign Back Image")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Horizontal scrolling strip of nearby batch files for quick back-image selection. */
+@Suppress("InjectDispatcher")
+@Composable
+private fun NearbyFilesStrip(
+    files: List<File>,
+    selectedFile: File?,
+    onSelect: (File) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Show up to 20 files around the currently selected file, or from the start
+    val selectedIndex = files.indexOf(selectedFile).coerceAtLeast(0)
+    val windowSize = 20
+    val startIdx = (selectedIndex - windowSize / 2).coerceIn(0, maxOf(0, files.size - windowSize))
+    val endIdx = minOf(startIdx + windowSize, files.size)
+    val nearbyFiles = files.subList(startIdx, endIdx)
+
+    val listState = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, selectedIndex - startIdx - 2))
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text("Nearby files:", style = MaterialTheme.typography.labelMedium)
+        Spacer(Modifier.height(4.dp))
+        LazyRow(
+            state = listState,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            itemsIndexed(nearbyFiles) { _, file ->
+                val isSelected = file.absolutePath == selectedFile?.absolutePath
+                val thumbnail = remember(file.absolutePath) {
+                    // Load a small thumbnail asynchronously
+                    mutableStateOf<BufferedImage?>(null)
+                }
+                LaunchedEffect(file.absolutePath) {
+                    withContext(Dispatchers.IO) {
+                        try {
+                            val img = ImageIO.read(file)
+                            if (img != null) {
+                                // Scale down to thumbnail size
+                                val maxDim = 60
+                                val scale = minOf(maxDim.toDouble() / img.width, maxDim.toDouble() / img.height)
+                                val w = (img.width * scale).toInt().coerceAtLeast(1)
+                                val h = (img.height * scale).toInt().coerceAtLeast(1)
+                                val scaled = java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB)
+                                val g = scaled.createGraphics()
+                                g.drawImage(img.getScaledInstance(w, h, java.awt.Image.SCALE_FAST), 0, 0, null)
+                                g.dispose()
+                                thumbnail.value = scaled
+                            }
+                        } catch (_: Exception) {
+                            thumbnail.value = null
+                        }
+                    }
+                }
+                Card(
+                    modifier = Modifier
+                        .width(64.dp)
+                        .height(80.dp)
+                        .clickable { onSelect(file) },
+                    shape = RoundedCornerShape(4.dp),
+                    border = if (isSelected)
+                        androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
+                    else
+                        androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                        else MaterialTheme.colorScheme.surface
+                    ),
+                ) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        val img = thumbnail.value
+                        if (img != null) {
+                            Image(
+                                bitmap = img.toComposeImageBitmap(),
+                                contentDescription = file.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit,
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(24.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                            )
+                        }
                     }
                 }
             }

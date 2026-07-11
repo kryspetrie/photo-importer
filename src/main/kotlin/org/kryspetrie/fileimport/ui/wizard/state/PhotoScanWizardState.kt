@@ -129,6 +129,16 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     /** Photo configuration state (per-photo configs, metadata selection, bulk ops). */
     val configs = PhotoScanConfigurationState(_photoConfigurations, _boundingBoxList)
 
+    /** Last-used back image source path. Persists across photo edits within a session so that
+     * subsequent crops from the same scan default to the same back file. */
+    private val _lastBackImageSourcePath = MutableStateFlow<String?>(null)
+    val lastBackImageSourcePath: StateFlow<String?> = _lastBackImageSourcePath.asStateFlow()
+
+    /** Records a back image source path for use as default in subsequent back selections. */
+    fun setLastBackImageSourcePath(path: String?) {
+        _lastBackImageSourcePath.value = path
+    }
+
     // ========== Workflow ==========
 
     /** Initializes the wizard with an image file. */

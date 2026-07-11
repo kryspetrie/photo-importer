@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
@@ -31,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -116,6 +118,7 @@ fun EditScreen(
     onRecordMetadataSet: (RecentMetadataSet) -> Unit = {},
     onBack: () -> Unit,
     onExport: () -> Unit,
+    onSkipCurrentPhoto: (() -> Unit)? = null,
     startWithMetadata: Boolean = false,
     modifier: Modifier = Modifier,
     faceRegionTransformer: FaceRegionTransformerPort? = null,
@@ -351,8 +354,12 @@ fun EditScreen(
 
     // ── Back-of-photo image picker dialog ──
     if (showBackImagePicker) {
+        // Pre-select: prefer last-used back source, then next sequential batch file
+        val preSelectedBackPath = state.lastBackImageSourcePath.value
+            ?: state.batch.peekNextBatchFile()?.absolutePath
         BackImagePickerDialog(
             batchFiles = state.batch.sourceFiles.value.ifEmpty { null },
+            preSelectedPath = preSelectedBackPath,
             onConfirm = { sourcePath, cropRect, rotation, mode ->
                 val idx = selectedIndices.firstOrNull() ?: return@BackImagePickerDialog
                 if (idx < boundingBoxList.size()) {
@@ -373,10 +380,15 @@ fun EditScreen(
                             backCropRotation = rotation,
                         )
                     }
-                    state.batch.sourceFiles.value
-                        .indexOfFirst { it.absolutePath == sourcePath }
-                        .takeIf { it >= 0 }
-                        ?.let { state.batch.markBatchIndexSkipped(it) }
+                    // Remember this back source for subsequent photos from same scan
+                    state.setLastBackImageSourcePath(sourcePath)
+                    // Auto-skip this file in batch if setting is enabled
+                    if (settings.autoSkipBackFiles) {
+                        state.batch.sourceFiles.value
+                            .indexOfFirst { it.absolutePath == sourcePath }
+                            .takeIf { it >= 0 }
+                            ?.let { state.batch.markBatchIndexSkipped(it) }
+                    }
                 }
                 showBackImagePicker = false
             },
@@ -430,6 +442,19 @@ fun EditScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Back")
+                    }
+                    if (onSkipCurrentPhoto != null) {
+                        OutlinedButton(
+                            onClick = onSkipCurrentPhoto,
+                            modifier = Modifier.height(32.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = MaterialTheme.colorScheme.error,
+                            ),
+                        ) {
+                            Icon(Icons.Default.SkipNext, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Skip Photo", style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                     // Center: photo count text
                     Text(
