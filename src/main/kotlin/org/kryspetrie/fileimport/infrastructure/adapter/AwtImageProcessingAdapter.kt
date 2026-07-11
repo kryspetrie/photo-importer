@@ -195,33 +195,33 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
         val backImage = readImage(filePath) ?: return null
         val backBuffered = backImage.toBufferedImage()
 
-        // Apply crop if normalized crop coordinates are provided
-        val croppedBack =
-            if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
-                val cropNorm = config.backCropNormalized
-                val left = cropNorm[0]
-                val top = cropNorm[1]
-                val right = cropNorm[2]
-                val bottom = cropNorm[3]
-                val cropX = (left * backBuffered.width).toInt().coerceIn(0, backBuffered.width)
-                val cropY = (top * backBuffered.height).toInt().coerceIn(0, backBuffered.height)
-                val cropW =
-                    ((right - left) * backBuffered.width).toInt().coerceIn(1, backBuffered.width - cropX)
-                val cropH =
-                    ((bottom - top) * backBuffered.height)
-                        .toInt()
-                        .coerceIn(1, backBuffered.height - cropY)
-                AwtProcessedImage(backBuffered.getSubimage(cropX, cropY, cropW, cropH))
-            } else {
-                backImage
-            }
+        // Apply rotation first (crop coordinates are in rotated-image space)
+        val rotatedBack = when (config.backCropRotation) {
+            90 -> rotateImage(backImage, RotationAngle.CW_90)
+            180 -> rotateImage(backImage, RotationAngle.CW_180)
+            270 -> rotateImage(backImage, RotationAngle.CCW_90)
+            else -> backImage
+        }
+        val rotatedBuffered = rotatedBack.toBufferedImage()
 
-        // Apply rotation (0, 90, 180, 270 degrees)
-        return when (config.backCropRotation) {
-            90 -> rotateImage(croppedBack, RotationAngle.CW_90)
-            180 -> rotateImage(croppedBack, RotationAngle.CW_180)
-            270 -> rotateImage(croppedBack, RotationAngle.CCW_90)
-            else -> croppedBack
+        // Apply crop in rotated-image space if normalized crop coordinates are provided
+        return if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
+            val cropNorm = config.backCropNormalized
+            val left = cropNorm[0]
+            val top = cropNorm[1]
+            val right = cropNorm[2]
+            val bottom = cropNorm[3]
+            val cropX = (left * rotatedBuffered.width).toInt().coerceIn(0, rotatedBuffered.width)
+            val cropY = (top * rotatedBuffered.height).toInt().coerceIn(0, rotatedBuffered.height)
+            val cropW =
+                ((right - left) * rotatedBuffered.width).toInt().coerceIn(1, rotatedBuffered.width - cropX)
+            val cropH =
+                ((bottom - top) * rotatedBuffered.height)
+                    .toInt()
+                    .coerceIn(1, rotatedBuffered.height - cropY)
+            AwtProcessedImage(rotatedBuffered.getSubimage(cropX, cropY, cropW, cropH))
+        } else {
+            rotatedBack
         }
     }
 }

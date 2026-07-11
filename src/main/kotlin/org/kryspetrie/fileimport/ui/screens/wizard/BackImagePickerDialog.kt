@@ -22,12 +22,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
+import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.automirrored.filled.RotateLeft
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -72,6 +76,8 @@ import androidx.compose.ui.window.DialogProperties
 import java.awt.Cursor
 import java.awt.image.BufferedImage
 import java.io.File
+import org.kryspetrie.fileimport.ui.screens.wizard.rotateBufferedImage
+import org.kryspetrie.fileimport.ui.screens.wizard.rotationFromDegrees
 import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -230,8 +236,14 @@ fun BackImagePickerDialog(
                 ) {
                     val img = backImage
                     if (img != null) {
+                        val rotation = rotationFromDegrees(cropRotation)
+                        val displayImage = if (rotation != org.kryspetrie.fileimport.domain.model.RotationAngle.NONE) {
+                            rotateBufferedImage(img, rotation)
+                        } else {
+                            img
+                        }
                         Image(
-                            bitmap = img.toComposeImageBitmap(),
+                            bitmap = displayImage.toComposeImageBitmap(),
                             contentDescription = "Back image",
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Fit,
@@ -241,8 +253,8 @@ fun BackImagePickerDialog(
                         val currentCrop = cropRect
                         CropOverlayCanvas(
                             cropRect = currentCrop,
-                            imageWidth = img.width,
-                            imageHeight = img.height,
+                            imageWidth = displayImage.width,
+                            imageHeight = displayImage.height,
                             viewWidthPx = viewWidthPx,
                             viewHeightPx = viewHeightPx,
                         )
@@ -250,8 +262,8 @@ fun BackImagePickerDialog(
                         // Drag overlay for defining crop region (only in CROP mode)
                         if (interactionMode == BackImageInteractionMode.CROP) {
                             CropDragOverlay(
-                                imageWidth = img.width,
-                                imageHeight = img.height,
+                                imageWidth = displayImage.width,
+                                imageHeight = displayImage.height,
                                 viewWidthPx = viewWidthPx,
                                 viewHeightPx = viewHeightPx,
                                 onCropUpdate = { rect -> cropRect = rect },
@@ -366,16 +378,47 @@ fun BackImagePickerDialog(
                             Text("Rotate:", style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.width(4.dp))
                             IconButton(
-                                onClick = { cropRotation = (cropRotation + 90) % 360 },
+                                onClick = {
+                                    cropRotation = (cropRotation - 90 + 360) % 360
+                                    cropRect = null
+                                },
                                 modifier = Modifier.size(32.dp),
                             ) {
                                 Icon(
-                                    Icons.Default.RotateRight,
-                                    "${cropRotation}°",
+                                    Icons.AutoMirrored.Filled.RotateLeft,
+                                    "Rotate CCW",
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
-                            Text("${cropRotation}°", style = MaterialTheme.typography.labelSmall)
+                            IconButton(
+                                onClick = {
+                                    cropRotation = (cropRotation + 180) % 360
+                                    cropRect = null
+                                },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.Refresh,
+                                    "Rotate 180°",
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    cropRotation = (cropRotation + 90) % 360
+                                    cropRect = null
+                                },
+                                modifier = Modifier.size(32.dp),
+                            ) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.RotateRight,
+                                    "Rotate CW",
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            }
+                            if (cropRotation != 0) {
+                                Text("${cropRotation}°", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                            }
                         }
                     }
                 }
