@@ -92,6 +92,55 @@ private enum class BackImageInteractionMode(val displayName: String) {
 }
 
 /**
+ * Transform a normalized crop rectangle for a 90° clockwise image rotation.
+ *
+ * When the displayed image rotates 90° CW, normalized coordinates transform as (x, y) → (1-y, x),
+ * and width/height swap. This matches [FaceRegion.rotate90CW].
+ */
+internal fun Rect.rotate90CW(): Rect {
+    // Transform all four corners
+    val x1 = 1.0f - bottom // top-left.x from (1-y_of_bottom)
+    val y1 = left // top-left.y from (x_of_left)
+    val x2 = 1.0f - top // bottom-right.x from (1-y_of_top)
+    val y2 = right // bottom-right.y from (x_of_right)
+    return Rect(
+        left = minOf(x1, x2),
+        top = minOf(y1, y2),
+        right = maxOf(x1, x2),
+        bottom = maxOf(y1, y2),
+    )
+}
+
+/**
+ * Transform a normalized crop rectangle for a 90° counter-clockwise image rotation.
+ *
+ * When the displayed image rotates 90° CCW, normalized coordinates transform as (x, y) → (y, 1-x).
+ * This matches [FaceRegion.rotate90CCW].
+ */
+internal fun Rect.rotate90CCW(): Rect {
+    val x1 = top // top-left.x from (y_of_top)
+    val y1 = 1.0f - right // top-left.y from (1-x_of_right)
+    val x2 = bottom // bottom-right.x from (y_of_bottom)
+    val y2 = 1.0f - left // bottom-right.y from (1-x_of_left)
+    return Rect(
+        left = minOf(x1, x2),
+        top = minOf(y1, y2),
+        right = maxOf(x1, x2),
+        bottom = maxOf(y1, y2),
+    )
+}
+
+/**
+ * Transform a normalized crop rectangle for a 180° image rotation.
+ *
+ * When the displayed image rotates 180°, normalized coordinates transform as (x, y) → (1-x, 1-y).
+ * This matches [FaceRegion.rotate180].
+ */
+internal fun Rect.rotate180(): Rect {
+    return Rect(left = 1.0f - right, top = 1.0f - bottom, right = 1.0f - left, bottom = 1.0f - top)
+}
+
+/**
  * Dialog for selecting a back-of-photo image and optionally cropping a region from it.
  *
  * Two source modes:
@@ -290,7 +339,7 @@ fun BackImagePickerDialog(
                                 zoomController = zoomController.zoomOut(cx, cy)
                             },
                             onFitToView = {
-                                if (img != null && viewSize.width > 0 && viewSize.height > 0) {
+                                if (viewSize.width > 0 && viewSize.height > 0) {
                                     zoomController =
                                         ZoomController.fit(
                                             img.width.toDouble(),
@@ -411,7 +460,7 @@ fun BackImagePickerDialog(
                             IconButton(
                                 onClick = {
                                     cropRotation = (cropRotation - 90 + 360) % 360
-                                    cropRect = null
+                                    cropRect = cropRect?.rotate90CCW()
                                 },
                                 modifier = Modifier.size(32.dp),
                             ) {
@@ -424,7 +473,7 @@ fun BackImagePickerDialog(
                             IconButton(
                                 onClick = {
                                     cropRotation = (cropRotation + 180) % 360
-                                    cropRect = null
+                                    cropRect = cropRect?.rotate180()
                                 },
                                 modifier = Modifier.size(32.dp),
                             ) {
@@ -437,7 +486,7 @@ fun BackImagePickerDialog(
                             IconButton(
                                 onClick = {
                                     cropRotation = (cropRotation + 90) % 360
-                                    cropRect = null
+                                    cropRect = cropRect?.rotate90CW()
                                 },
                                 modifier = Modifier.size(32.dp),
                             ) {
