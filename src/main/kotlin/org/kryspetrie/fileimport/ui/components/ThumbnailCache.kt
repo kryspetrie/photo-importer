@@ -20,10 +20,9 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
 /**
  * Caches thumbnail [ImageBitmap]s keyed by file path and max pixel dimension.
  *
- * Uses [ThumbnailExtractorPort] for RAW and video thumbnail extraction,
- * keeping this UI component free of direct infrastructure adapter imports
- * (except the default adapter initialization). The [thumbnailExtractor] defaults
- * to the infrastructure adapter but can be overridden in tests.
+ * Uses [ThumbnailExtractorPort] for RAW and video thumbnail extraction, keeping this UI component
+ * free of direct infrastructure adapter imports (except the default adapter initialization). The
+ * [thumbnailExtractor] defaults to the infrastructure adapter but can be overridden in tests.
  */
 object ThumbnailCache {
     /** IO dispatcher for coroutine context switching. Override in tests. */
@@ -31,8 +30,8 @@ object ThumbnailCache {
     var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
     /**
-     * Thumbnail extraction port. Defaults to the infrastructure adapter implementation.
-     * Override in tests to provide a test double.
+     * Thumbnail extraction port. Defaults to the infrastructure adapter implementation. Override in
+     * tests to provide a test double.
      */
     var thumbnailExtractor: ThumbnailExtractorPort = ThumbnailExtractorAdapter
 

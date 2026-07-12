@@ -2,17 +2,17 @@ package org.kryspetrie.fileimport.di
 
 import org.koin.dsl.module
 import org.kryspetrie.fileimport.application.DuplicateScannerService
+import org.kryspetrie.fileimport.application.FileOperationExecutor
 import org.kryspetrie.fileimport.application.ImportExecutor
 import org.kryspetrie.fileimport.application.ImportScanner
 import org.kryspetrie.fileimport.application.ImportService
 import org.kryspetrie.fileimport.application.LocationSearchService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
-import org.kryspetrie.fileimport.application.export.MetadataWritingService
-import org.kryspetrie.fileimport.application.FileOperationExecutor
 import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.application.WatchFolderService
+import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
@@ -22,33 +22,33 @@ import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.IdGenerator
+import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.ImportHistoryPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
-import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
+import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ClasspathModelResourceAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.DeduplicationAdapter
-import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultIdGenerator
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DeviceAdapter
-import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.HashCacheAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.NamingAdapter
-import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.adapter.NominatimGeocodingAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceDetectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
@@ -71,7 +71,9 @@ val appModule = module {
     single<SettingsPort> { SettingsAdapter(timeProvider = get()) }
     single<NamingPort> { NamingAdapter() }
     single { SurfDeduplicationService(dispatcherProvider = get()) }
-    single<DeduplicationPort> { DeduplicationAdapter(surfService = get(), dispatcherProvider = get()) }
+    single<DeduplicationPort> {
+        DeduplicationAdapter(surfService = get(), dispatcherProvider = get())
+    }
     single<HashCachePort> { HashCacheAdapter(dispatcherProvider = get(), timeProvider = get()) }
     single<FileSystemPort> { FileSystemAdapter() }
     single<DevicePort> { DeviceAdapter(dispatcherProvider = get()) }
@@ -89,8 +91,22 @@ val appModule = module {
 
     // ── Application Services ────────────────────────────────────────
 
-    single { ImportScanner(imageRepository = get(), hashCache = get(), dispatcherProvider = get(), fileSystem = get()) }
-    single { ImportExecutor(imageRepository = get(), namingPort = get(), timeProvider = get(), fileSystem = get()) }
+    single {
+        ImportScanner(
+            imageRepository = get(),
+            hashCache = get(),
+            dispatcherProvider = get(),
+            fileSystem = get(),
+        )
+    }
+    single {
+        ImportExecutor(
+            imageRepository = get(),
+            namingPort = get(),
+            timeProvider = get(),
+            fileSystem = get(),
+        )
+    }
     single {
         ImportService(
             importScanner = get(),
@@ -114,7 +130,12 @@ val appModule = module {
         )
     }
     single {
-        WatchFolderService(importService = get(), timeProvider = get(), dispatcherProvider = get(), fileSystem = get())
+        WatchFolderService(
+            importService = get(),
+            timeProvider = get(),
+            dispatcherProvider = get(),
+            fileSystem = get(),
+        )
     }
 
     // ── Photo Scan Pipeline ─────────────────────────────────────────
@@ -123,15 +144,29 @@ val appModule = module {
     single { RectangleDetector() }
     single { HybridCornerDetector(rectangleDetector = get()) }
     single<PhotoScanDetectorPort> { get<PhotoScanDetectorService>() }
-    single { PhotoScanDetectorService(modelResourcePort = get(), ortSessionFactory = get(), appLogger = getOrNull()) }
-    single<FaceDetectionPort> { FaceDetectionService(modelResourcePort = get(), ortSessionFactory = get()) }
+    single {
+        PhotoScanDetectorService(
+            modelResourcePort = get(),
+            ortSessionFactory = get(),
+            appLogger = getOrNull(),
+        )
+    }
+    single<FaceDetectionPort> {
+        FaceDetectionService(modelResourcePort = get(), ortSessionFactory = get())
+    }
     single<ImageProcessingPort> { AwtImageProcessingAdapter(get()) }
     single { ScanService(photoDetector = get(), fileSystem = get(), imageProcessing = get()) }
     single<PerspectiveCorrectionPort> { PerspectiveCorrectionService() }
     single { PerspectiveCorrectionService() }
     single<FaceRegionTransformerPort> { FaceRegionTransformer() }
     single { FaceRegionTransformer() }
-    single { MetadataWritingService(faceRegionTransformer = get<FaceRegionTransformerPort>(), imageProcessing = get<ImageProcessingPort>(), fileSystem = get<FileSystemPort>()) }
+    single {
+        MetadataWritingService(
+            faceRegionTransformer = get<FaceRegionTransformerPort>(),
+            imageProcessing = get<ImageProcessingPort>(),
+            fileSystem = get<FileSystemPort>(),
+        )
+    }
     single<PhotoScanExportPort> { get<PhotoScanExportService>() }
     single { PhotoScanExportService(get(), get(), get(), get()) }
 

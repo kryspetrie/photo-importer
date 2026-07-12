@@ -1,14 +1,14 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
-import org.kryspetrie.fileimport.domain.model.geometry.Point
 import java.awt.image.BufferedImage
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 
 // Debug flag for performance timing - set to true to log timing data
@@ -96,7 +96,9 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     // ========== Bounding Boxes & Selection ==========
 
-    /** Shared mutable box list — also used by [PhotoScanConfigurationState] and [FaceRegionState]. */
+    /**
+     * Shared mutable box list — also used by [PhotoScanConfigurationState] and [FaceRegionState].
+     */
     private val _boundingBoxList = MutableStateFlow(BoundingBoxList.empty())
     val boundingBoxList: StateFlow<BoundingBoxList> = _boundingBoxList.asStateFlow()
 
@@ -108,9 +110,10 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     private val _undoRedoManager = UndoRedoManager.forBoundingBox()
 
     /** Box interaction state (selection, CRUD, manipulation, undo/redo, drag throttle). */
-    val boxes = BoxInteractionState(_boundingBoxList, _undoRedoManager, _undoRedoVersion).also {
-        it.appLogger = appLogger
-    }
+    val boxes =
+        BoxInteractionState(_boundingBoxList, _undoRedoManager, _undoRedoVersion).also {
+            it.appLogger = appLogger
+        }
 
     // ========== Zoom ==========
 
@@ -119,7 +122,8 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
 
     // ========== Summary Screen Settings ==========
 
-    private val _photoConfigurations = MutableStateFlow<Map<String, PhotoScanConfiguration>>(emptyMap())
+    private val _photoConfigurations =
+        MutableStateFlow<Map<String, PhotoScanConfiguration>>(emptyMap())
     val photoConfigurations: StateFlow<Map<String, PhotoScanConfiguration>> =
         _photoConfigurations.asStateFlow()
 
@@ -129,8 +133,10 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
     /** Photo configuration state (per-photo configs, metadata selection, bulk ops). */
     val configs = PhotoScanConfigurationState(_photoConfigurations, _boundingBoxList)
 
-    /** Last-used back image source path. Persists across photo edits within a session so that
-     * subsequent crops from the same scan default to the same back file. */
+    /**
+     * Last-used back image source path. Persists across photo edits within a session so that
+     * subsequent crops from the same scan default to the same back file.
+     */
     private val _lastBackImageSourcePath = MutableStateFlow<String?>(null)
     val lastBackImageSourcePath: StateFlow<String?> = _lastBackImageSourcePath.asStateFlow()
 
@@ -408,7 +414,10 @@ class PhotoScanWizardState(val imageWidth: Int = 0, val imageHeight: Int = 0) {
         val image = _image.value
         if (image != null) {
             zoom.fitToImage(
-                image.width.toDouble(), image.height.toDouble(), viewportWidth, viewportHeight
+                image.width.toDouble(),
+                image.height.toDouble(),
+                viewportWidth,
+                viewportHeight,
             )
         }
     }

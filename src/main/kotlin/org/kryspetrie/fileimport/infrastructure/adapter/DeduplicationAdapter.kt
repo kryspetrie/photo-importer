@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.infrastructure.adapter
 
-import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.model.DeduplicationSettings
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
 import org.kryspetrie.fileimport.domain.model.DuplicateType
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
+import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 
 class DeduplicationAdapter(
     private val surfService: SurfDeduplicationService,
@@ -74,7 +74,8 @@ class DeduplicationAdapter(
 
         if (settings.enableSurfMatching) {
             val unclaimed = images.filter { it.id !in claimed && !it.fileType.isVideo }
-            val surfDuplicates = surfService.findSurfDuplicates(unclaimed, settings.surfMatchThreshold)
+            val surfDuplicates =
+                surfService.findSurfDuplicates(unclaimed, settings.surfMatchThreshold)
             duplicates.addAll(surfDuplicates)
         }
 

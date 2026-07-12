@@ -1,8 +1,6 @@
 package org.kryspetrie.fileimport.domain.model
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class MetadataHistoryTest {
@@ -11,37 +9,37 @@ class MetadataHistoryTest {
 
     @Test
     fun `addValue adds to front of list`() {
-        val history = MetadataHistory()
-            .addValue("description", "Beach sunset")
-            .addValue("description", "Mountain view")
+        val history =
+            MetadataHistory()
+                .addValue("description", "Beach sunset")
+                .addValue("description", "Mountain view")
 
         assertEquals(listOf("Mountain view", "Beach sunset"), history.description)
     }
 
     @Test
     fun `addValue deduplicates existing value`() {
-        val history = MetadataHistory()
-            .addValue("description", "Beach sunset")
-            .addValue("description", "Mountain view")
-            .addValue("description", "Beach sunset")
+        val history =
+            MetadataHistory()
+                .addValue("description", "Beach sunset")
+                .addValue("description", "Mountain view")
+                .addValue("description", "Beach sunset")
 
         assertEquals(listOf("Beach sunset", "Mountain view"), history.description)
     }
 
     @Test
     fun `addValue does not add blank values`() {
-        val history = MetadataHistory()
-            .addValue("description", "Beach sunset")
-            .addValue("description", "")
+        val history =
+            MetadataHistory().addValue("description", "Beach sunset").addValue("description", "")
 
         assertEquals(listOf("Beach sunset"), history.description)
     }
 
     @Test
     fun `addValue caps at MAX_ENTRIES`() {
-        val history = (1..15).fold(MetadataHistory()) { h, i ->
-            h.addValue("description", "Item $i")
-        }
+        val history =
+            (1..15).fold(MetadataHistory()) { h, i -> h.addValue("description", "Item $i") }
 
         assertEquals(MetadataHistory.MAX_ENTRIES, history.description.size)
         // Most recent should be first
@@ -52,12 +50,14 @@ class MetadataHistoryTest {
     @Test
     fun `addValue works for all field keys`() {
         val allKeys = MetadataHistory.FIELD_KEYS
-        val history = allKeys.fold(MetadataHistory()) { h, key ->
-            h.addValue(key, "test-value")
-        }
+        val history = allKeys.fold(MetadataHistory()) { h, key -> h.addValue(key, "test-value") }
 
         allKeys.forEach { key ->
-            assertEquals(listOf("test-value"), history.getSuggestions(key), "Field $key should have value")
+            assertEquals(
+                listOf("test-value"),
+                history.getSuggestions(key),
+                "Field $key should have value",
+            )
         }
     }
 
@@ -69,18 +69,18 @@ class MetadataHistoryTest {
 
     @Test
     fun `addValue works for gpsLatitude`() {
-        val history = MetadataHistory()
-            .addValue("gpsLatitude", "42.2626")
-            .addValue("gpsLatitude", "51.5074")
+        val history =
+            MetadataHistory().addValue("gpsLatitude", "42.2626").addValue("gpsLatitude", "51.5074")
 
         assertEquals(listOf("51.5074", "42.2626"), history.gpsLatitude)
     }
 
     @Test
     fun `addValue works for gpsLongitude`() {
-        val history = MetadataHistory()
-            .addValue("gpsLongitude", "-71.8023")
-            .addValue("gpsLongitude", "-0.1278")
+        val history =
+            MetadataHistory()
+                .addValue("gpsLongitude", "-71.8023")
+                .addValue("gpsLongitude", "-0.1278")
 
         assertEquals(listOf("-0.1278", "-71.8023"), history.gpsLongitude)
     }
@@ -95,10 +95,11 @@ class MetadataHistoryTest {
 
     @Test
     fun `getSuggestions returns values in MRU order`() {
-        val history = MetadataHistory()
-            .addValue("city", "Worcester")
-            .addValue("city", "Paris")
-            .addValue("city", "London")
+        val history =
+            MetadataHistory()
+                .addValue("city", "Worcester")
+                .addValue("city", "Paris")
+                .addValue("city", "London")
 
         assertEquals(listOf("London", "Paris", "Worcester"), history.getSuggestions("city"))
     }
@@ -107,11 +108,12 @@ class MetadataHistoryTest {
 
     @Test
     fun `removeValue removes specific value`() {
-        val history = MetadataHistory()
-            .addValue("description", "A")
-            .addValue("description", "B")
-            .addValue("description", "C")
-            .removeValue("description", "B")
+        val history =
+            MetadataHistory()
+                .addValue("description", "A")
+                .addValue("description", "B")
+                .addValue("description", "C")
+                .removeValue("description", "B")
 
         assertEquals(listOf("C", "A"), history.description)
     }
@@ -134,14 +136,15 @@ class MetadataHistoryTest {
 
     @Test
     fun `addSet adds a set to recentSets`() {
-        val set = RecentMetadataSet(
-            locationName = "Grandma's house",
-            city = "Worcester",
-            state = "MA",
-            country = "United States",
-            gpsLatitude = "42.2626",
-            gpsLongitude = "-71.8023",
-        )
+        val set =
+            RecentMetadataSet(
+                locationName = "Grandma's house",
+                city = "Worcester",
+                state = "MA",
+                country = "United States",
+                gpsLatitude = "42.2626",
+                gpsLongitude = "-71.8023",
+            )
 
         val history = MetadataHistory().addSet(set)
 
@@ -155,9 +158,7 @@ class MetadataHistoryTest {
         val first = RecentMetadataSet(city = "Boston", timestamp = 1000)
         val second = RecentMetadataSet(city = "Worcester", timestamp = 2000)
 
-        val history = MetadataHistory()
-            .addSet(first)
-            .addSet(second)
+        val history = MetadataHistory().addSet(first).addSet(second)
 
         assertEquals(2, history.recentSets.size)
         assertEquals("Worcester", history.recentSets[0].city)
@@ -169,9 +170,7 @@ class MetadataHistoryTest {
         val set1 = RecentMetadataSet(city = "Worcester", state = "MA", timestamp = 1000)
         val set2 = RecentMetadataSet(city = "Worcester", state = "MA", timestamp = 2000)
 
-        val history = MetadataHistory()
-            .addSet(set1)
-            .addSet(set2)
+        val history = MetadataHistory().addSet(set1).addSet(set2)
 
         // Should deduplicate — only one set with same non-blank fields
         assertEquals(1, history.recentSets.size)
@@ -183,9 +182,7 @@ class MetadataHistoryTest {
         val set1 = RecentMetadataSet(city = "Worcester", state = "MA", timestamp = 1000)
         val set2 = RecentMetadataSet(city = "Boston", state = "MA", timestamp = 2000)
 
-        val history = MetadataHistory()
-            .addSet(set1)
-            .addSet(set2)
+        val history = MetadataHistory().addSet(set1).addSet(set2)
 
         assertEquals(2, history.recentSets.size)
         assertEquals("Boston", history.recentSets[0].city)
@@ -219,10 +216,7 @@ class MetadataHistoryTest {
         val set1 = RecentMetadataSet(city = "Boston", timestamp = 1000)
         val set2 = RecentMetadataSet(city = "Worcester", timestamp = 2000)
 
-        val history = MetadataHistory()
-            .addSet(set1)
-            .addSet(set2)
-            .removeSet(1000)
+        val history = MetadataHistory().addSet(set1).addSet(set2).removeSet(1000)
 
         assertEquals(1, history.recentSets.size)
         assertEquals("Worcester", history.recentSets[0].city)
@@ -244,9 +238,7 @@ class MetadataHistoryTest {
         val locationSet = RecentMetadataSet(city = "Worcester", state = "MA", timestamp = 1000)
         val nonLocationSet = RecentMetadataSet(description = "Beach photo", timestamp = 2000)
 
-        val history = MetadataHistory()
-            .addSet(locationSet)
-            .addSet(nonLocationSet)
+        val history = MetadataHistory().addSet(locationSet).addSet(nonLocationSet)
 
         val locationSets = history.getLocationSets()
         assertEquals(1, locationSets.size)
@@ -255,18 +247,20 @@ class MetadataHistoryTest {
 
     @Test
     fun `getLocationSets matches on any location field`() {
-        val gpsOnly = RecentMetadataSet(gpsLatitude = "42.2626", gpsLongitude = "-71.8023", timestamp = 1000)
+        val gpsOnly =
+            RecentMetadataSet(gpsLatitude = "42.2626", gpsLongitude = "-71.8023", timestamp = 1000)
         val cityName = RecentMetadataSet(city = "Paris", timestamp = 2000)
         val stateName = RecentMetadataSet(state = "CA", timestamp = 3000)
         val countryName = RecentMetadataSet(country = "France", timestamp = 4000)
         val locName = RecentMetadataSet(locationName = "Home", timestamp = 5000)
 
-        val history = MetadataHistory()
-            .addSet(gpsOnly)
-            .addSet(cityName)
-            .addSet(stateName)
-            .addSet(countryName)
-            .addSet(locName)
+        val history =
+            MetadataHistory()
+                .addSet(gpsOnly)
+                .addSet(cityName)
+                .addSet(stateName)
+                .addSet(countryName)
+                .addSet(locName)
 
         assertEquals(5, history.getLocationSets().size)
     }
@@ -304,9 +298,10 @@ class MetadataHistoryTest {
 
     @Test
     fun `addSet preserves original individual field histories`() {
-        val history = MetadataHistory()
-            .addValue("city", "Worcester")
-            .addSet(RecentMetadataSet(city = "Boston", timestamp = 1000))
+        val history =
+            MetadataHistory()
+                .addValue("city", "Worcester")
+                .addSet(RecentMetadataSet(city = "Boston", timestamp = 1000))
 
         // Individual field history should still work
         assertEquals(listOf("Worcester"), history.city) // Individual history unchanged

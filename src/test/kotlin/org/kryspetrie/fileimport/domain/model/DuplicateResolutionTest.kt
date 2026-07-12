@@ -8,12 +8,37 @@ import org.junit.jupiter.api.Test
 @DisplayName("DuplicateResolution")
 class DuplicateResolutionTest {
 
-    private val candidates = listOf(
-        ResolvableDuplicate(id = "raw-large", pixelCount = 24_000_000, isRawFormat = true, lastModifiedEpochMillis = 1000, fileSize = 50_000_000),
-        ResolvableDuplicate(id = "jpeg-small", pixelCount = 6_000_000, isRawFormat = false, lastModifiedEpochMillis = 2000, fileSize = 5_000_000),
-        ResolvableDuplicate(id = "jpeg-new", pixelCount = 12_000_000, isRawFormat = false, lastModifiedEpochMillis = 3000, fileSize = 10_000_000),
-        ResolvableDuplicate(id = "jpeg-old", pixelCount = 12_000_000, isRawFormat = false, lastModifiedEpochMillis = 500, fileSize = 8_000_000),
-    )
+    private val candidates =
+        listOf(
+            ResolvableDuplicate(
+                id = "raw-large",
+                pixelCount = 24_000_000,
+                isRawFormat = true,
+                lastModifiedEpochMillis = 1000,
+                fileSize = 50_000_000,
+            ),
+            ResolvableDuplicate(
+                id = "jpeg-small",
+                pixelCount = 6_000_000,
+                isRawFormat = false,
+                lastModifiedEpochMillis = 2000,
+                fileSize = 5_000_000,
+            ),
+            ResolvableDuplicate(
+                id = "jpeg-new",
+                pixelCount = 12_000_000,
+                isRawFormat = false,
+                lastModifiedEpochMillis = 3000,
+                fileSize = 10_000_000,
+            ),
+            ResolvableDuplicate(
+                id = "jpeg-old",
+                pixelCount = 12_000_000,
+                isRawFormat = false,
+                lastModifiedEpochMillis = 500,
+                fileSize = 8_000_000,
+            ),
+        )
 
     @Nested
     @DisplayName("KEEP_HIGHEST_RES")
@@ -27,10 +52,23 @@ class DuplicateResolutionTest {
 
         @Test
         fun `returns first when pixel counts are equal`() {
-            val tied = listOf(
-                ResolvableDuplicate(id = "a", pixelCount = 1000, isRawFormat = false, lastModifiedEpochMillis = 0, fileSize = 0),
-                ResolvableDuplicate(id = "b", pixelCount = 1000, isRawFormat = false, lastModifiedEpochMillis = 0, fileSize = 0),
-            )
+            val tied =
+                listOf(
+                    ResolvableDuplicate(
+                        id = "a",
+                        pixelCount = 1000,
+                        isRawFormat = false,
+                        lastModifiedEpochMillis = 0,
+                        fileSize = 0,
+                    ),
+                    ResolvableDuplicate(
+                        id = "b",
+                        pixelCount = 1000,
+                        isRawFormat = false,
+                        lastModifiedEpochMillis = 0,
+                        fileSize = 0,
+                    ),
+                )
             val result = pickKeeper(tied, DuplicateAction.KEEP_HIGHEST_RES)
             assertEquals("a", result)
         }
@@ -48,10 +86,23 @@ class DuplicateResolutionTest {
 
         @Test
         fun `returns first JPEG when no RAW format exists`() {
-            val jpegsOnly = listOf(
-                ResolvableDuplicate(id = "jpeg-1", pixelCount = 1000, isRawFormat = false, lastModifiedEpochMillis = 0, fileSize = 0),
-                ResolvableDuplicate(id = "jpeg-2", pixelCount = 2000, isRawFormat = false, lastModifiedEpochMillis = 0, fileSize = 0),
-            )
+            val jpegsOnly =
+                listOf(
+                    ResolvableDuplicate(
+                        id = "jpeg-1",
+                        pixelCount = 1000,
+                        isRawFormat = false,
+                        lastModifiedEpochMillis = 0,
+                        fileSize = 0,
+                    ),
+                    ResolvableDuplicate(
+                        id = "jpeg-2",
+                        pixelCount = 2000,
+                        isRawFormat = false,
+                        lastModifiedEpochMillis = 0,
+                        fileSize = 0,
+                    ),
+                )
             val result = pickKeeper(jpegsOnly, DuplicateAction.KEEP_RAW_OVER_JPEG)
             assertEquals("jpeg-1", result)
         }
@@ -96,9 +147,16 @@ class DuplicateResolutionTest {
 
         @Test
         fun `single candidate returns itself regardless of action`() {
-            val single = listOf(
-                ResolvableDuplicate(id = "only", pixelCount = 1000, isRawFormat = false, lastModifiedEpochMillis = 0, fileSize = 0),
-            )
+            val single =
+                listOf(
+                    ResolvableDuplicate(
+                        id = "only",
+                        pixelCount = 1000,
+                        isRawFormat = false,
+                        lastModifiedEpochMillis = 0,
+                        fileSize = 0,
+                    )
+                )
             DuplicateAction.entries.forEach { action ->
                 assertEquals("only", pickKeeper(single, action))
             }
@@ -106,10 +164,23 @@ class DuplicateResolutionTest {
 
         @Test
         fun `all actions work with two candidates`() {
-            val pair = listOf(
-                ResolvableDuplicate(id = "first", pixelCount = 100, isRawFormat = false, lastModifiedEpochMillis = 100, fileSize = 50),
-                ResolvableDuplicate(id = "second", pixelCount = 200, isRawFormat = true, lastModifiedEpochMillis = 200, fileSize = 100),
-            )
+            val pair =
+                listOf(
+                    ResolvableDuplicate(
+                        id = "first",
+                        pixelCount = 100,
+                        isRawFormat = false,
+                        lastModifiedEpochMillis = 100,
+                        fileSize = 50,
+                    ),
+                    ResolvableDuplicate(
+                        id = "second",
+                        pixelCount = 200,
+                        isRawFormat = true,
+                        lastModifiedEpochMillis = 200,
+                        fileSize = 100,
+                    ),
+                )
             assertEquals("second", pickKeeper(pair, DuplicateAction.KEEP_HIGHEST_RES))
             assertEquals("second", pickKeeper(pair, DuplicateAction.KEEP_RAW_OVER_JPEG))
             assertEquals("second", pickKeeper(pair, DuplicateAction.KEEP_NEWEST))

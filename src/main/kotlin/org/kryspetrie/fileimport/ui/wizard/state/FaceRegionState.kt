@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.kryspetrie.fileimport.domain.model.FaceRegion
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RegionType
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 
 /**
  * Manages face region state for the photo scan wizard: face selection mode, face region CRUD
@@ -137,9 +137,9 @@ class FaceRegionState(
     /**
      * Adds multiple detected face regions at once (from auto-detection).
      *
-     * Creates unnamed face regions at the detected positions. Names can be assigned later
-     * via the naming cycle UI. Also auto-populates the subjects string with face names
-     * (though initially empty for auto-detected regions).
+     * Creates unnamed face regions at the detected positions. Names can be assigned later via the
+     * naming cycle UI. Also auto-populates the subjects string with face names (though initially
+     * empty for auto-detected regions).
      *
      * @param photoIndex Index of the photo in the bounding box list
      * @param regions List of face regions to add (typically from face detection)

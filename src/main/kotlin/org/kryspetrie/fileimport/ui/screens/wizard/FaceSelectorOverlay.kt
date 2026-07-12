@@ -4,7 +4,6 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -20,10 +19,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Accessibility
 import androidx.compose.material.icons.filled.Category
@@ -53,8 +52,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -63,8 +62,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -87,9 +86,9 @@ import java.awt.image.BufferedImage
 import kotlin.math.pow
 import kotlin.math.sqrt
 import org.kryspetrie.fileimport.domain.model.FaceRegion
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /** Color for each region type when drawn on the canvas. */
@@ -112,13 +111,11 @@ fun regionTypeIcon(type: RegionType): ImageVector =
 
 /**
  * Hover state tracking: which face the cursor is over and whether it's on the delete X button.
+ *
  * @param faceIdx Index of the hovered face, or -1 if not hovering over any face.
  * @param isOverDelete True if cursor is over the X delete button of the hovered face.
  */
-private data class HoverState(
-    val faceIdx: Int = -1,
-    val isOverDelete: Boolean = false,
-)
+private data class HoverState(val faceIdx: Int = -1, val isOverDelete: Boolean = false)
 
 /**
  * Immutable snapshot of face region data needed for rendering. Avoids recomposition when unrelated
@@ -139,7 +136,11 @@ private fun FaceRegion.toRenderData(): FaceRenderData =
     FaceRenderData(name = name, type = type, x = x, y = y, w = w, h = h)
 
 /** Compute the position of the delete X button for a face region, in screen coordinates. */
-private fun deleteButtonPosition(region: FaceRegion, bounds: Rect, offset: Offset = Offset.Zero): Offset {
+private fun deleteButtonPosition(
+    region: FaceRegion,
+    bounds: Rect,
+    offset: Offset = Offset.Zero,
+): Offset {
     val cx = bounds.left + (region.x * bounds.width).toFloat() + offset.x
     val cy = bounds.top + (region.y * bounds.height).toFloat() + offset.y
     val radius = (region.w / 2.0 * bounds.height).toFloat()
@@ -177,7 +178,8 @@ private fun deleteButtonPosition(region: FaceRegion, bounds: Rect, offset: Offse
  * @param selectedFaceSize Currently selected face size for new placements
  * @param onRegionTypeChange Callback when region type changes
  * @param onFaceSizeChange Callback when face size changes
- * @param onPlaceFace Callback when user places a face at normalized coordinates (legacy, used by external popup)
+ * @param onPlaceFace Callback when user places a face at normalized coordinates (legacy, used by
+ *   external popup)
  * @param onDismiss Callback to dismiss the overlay
  * @param inheritedFaceRegions Face regions inherited from the source image's XMP
  * @param onAutoDetectFaces Callback to trigger auto-detection of faces (null if model unavailable)
@@ -348,22 +350,21 @@ fun FaceSelectorOverlay(
     val isLastUnnamed = namingFaceIndex >= 0 && unnamedCount <= 1
 
     // Determine cursor icon based on hover state
-    val cursorIcon = remember(hoverState, draggingFaceIdx) {
-        when {
-            draggingFaceIdx >= 0 -> PointerIcon(Cursor(Cursor.MOVE_CURSOR))
-            hoverState.isOverDelete -> PointerIcon(Cursor(Cursor.DEFAULT_CURSOR))
-            hoverState.faceIdx >= 0 -> PointerIcon(Cursor(Cursor.MOVE_CURSOR))
-            else -> PointerIcon(Cursor(Cursor.CROSSHAIR_CURSOR))
+    val cursorIcon =
+        remember(hoverState, draggingFaceIdx) {
+            when {
+                draggingFaceIdx >= 0 -> PointerIcon(Cursor(Cursor.MOVE_CURSOR))
+                hoverState.isOverDelete -> PointerIcon(Cursor(Cursor.DEFAULT_CURSOR))
+                hoverState.faceIdx >= 0 -> PointerIcon(Cursor(Cursor.MOVE_CURSOR))
+                else -> PointerIcon(Cursor(Cursor.CROSSHAIR_CURSOR))
+            }
         }
-    }
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-        ) {
+        Row(modifier = Modifier.fillMaxSize()) {
             // ── LEFT SIDEBAR — matches map picker style ──────────────────────
             Surface(
                 modifier = Modifier.fillMaxHeight().width(220.dp),
@@ -372,9 +373,10 @@ fun FaceSelectorOverlay(
                 shape = RoundedCornerShape(0.dp),
             ) {
                 Column(
-                    modifier = Modifier.padding(8.dp)
-                        .fillMaxHeight()
-                        .verticalScroll(rememberScrollState()),
+                    modifier =
+                        Modifier.padding(8.dp)
+                            .fillMaxHeight()
+                            .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     // ── Header with close button ──
@@ -391,9 +393,10 @@ fun FaceSelectorOverlay(
                         )
                         Text(
                             "Tag Editor",
-                            style = MaterialTheme.typography.labelLarge.copy(
-                                fontWeight = FontWeight.Bold
-                            ),
+                            style =
+                                MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                         )
                         Spacer(Modifier.weight(1f))
                         IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
@@ -429,7 +432,8 @@ fun FaceSelectorOverlay(
                         RegionType.entries.forEach { type ->
                             val isSelected = selectedRegionType == type
                             Surface(
-                                modifier = Modifier.fillMaxWidth().clickable { onRegionTypeChange(type) },
+                                modifier =
+                                    Modifier.fillMaxWidth().clickable { onRegionTypeChange(type) },
                                 shape = RoundedCornerShape(4.dp),
                                 color =
                                     if (isSelected) regionTypeColor(type).copy(alpha = 0.15f)
@@ -451,12 +455,16 @@ fun FaceSelectorOverlay(
                                         regionTypeIcon(type),
                                         contentDescription = type.displayName,
                                         modifier = Modifier.size(14.dp),
-                                        tint = if (isSelected) regionTypeColor(type) else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        tint =
+                                            if (isSelected) regionTypeColor(type)
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
                                         type.displayName,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color =
+                                            if (isSelected) MaterialTheme.colorScheme.onSurface
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -477,16 +485,22 @@ fun FaceSelectorOverlay(
                     ) {
                         FaceSize.entries.forEach { size ->
                             val isSelected = selectedFaceSize == size
-                            val circleColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                            val circleColor =
+                                if (isSelected) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
                             Surface(
                                 modifier = Modifier.clickable { onFaceSizeChange(size) },
                                 shape = CircleShape,
                                 color =
-                                    if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                                    if (isSelected)
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                     else MaterialTheme.colorScheme.surfaceVariant,
                                 border =
                                     if (isSelected)
-                                        androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                                        androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            MaterialTheme.colorScheme.primary,
+                                        )
                                     else null,
                             ) {
                                 Row(
@@ -504,7 +518,9 @@ fun FaceSelectorOverlay(
                                     Text(
                                         size.displayName,
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color =
+                                            if (isSelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 10.sp,
                                     )
                                 }
@@ -581,7 +597,10 @@ fun FaceSelectorOverlay(
                         HorizontalDivider()
                         Text(
                             "Inherited (${inheritedFaceRegions.size})",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            style =
+                                MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
                             color = MaterialTheme.colorScheme.tertiary,
                         )
                         Text(
@@ -606,7 +625,8 @@ fun FaceSelectorOverlay(
                                     color = MaterialTheme.colorScheme.tertiaryContainer,
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                        modifier =
+                                            Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
                                         horizontalArrangement = Arrangement.spacedBy(3.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
@@ -630,10 +650,7 @@ fun FaceSelectorOverlay(
             }
 
             // ── IMAGE AREA ─────────────────────────────────────────────────
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center,
-            ) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 // ── Image + overlays ────────────────────────────────────
                 Box(
                     modifier =
@@ -656,8 +673,10 @@ fun FaceSelectorOverlay(
                                 }
                             }
                             // ── Hover tracking ──
-                            // Uses rememberUpdatedState refs (currentFaceRegions, currentNamingFaceIndex)
-                            // so the coroutine always sees the latest values even though pointerInput(Unit)
+                            // Uses rememberUpdatedState refs (currentFaceRegions,
+                            // currentNamingFaceIndex)
+                            // so the coroutine always sees the latest values even though
+                            // pointerInput(Unit)
                             // never re-launches the coroutine.
                             .pointerInput(Unit) {
                                 awaitPointerEventScope {
@@ -668,23 +687,40 @@ fun FaceSelectorOverlay(
                                                 val pos = event.changes.firstOrNull()?.position
                                                 hoverOffset = pos
                                                 if (pos != null && imageDisplayBounds.width > 0f) {
-                                                    val closestIdx = findClosestFace(
-                                                        pos, currentFaceRegions, imageDisplayBounds,
-                                                    )
+                                                    val closestIdx =
+                                                        findClosestFace(
+                                                            pos,
+                                                            currentFaceRegions,
+                                                            imageDisplayBounds,
+                                                        )
                                                     if (closestIdx >= 0) {
-                                                        // Check if cursor is over the delete X button
+                                                        // Check if cursor is over the delete X
+                                                        // button
                                                         val region = currentFaceRegions[closestIdx]
-                                                        val deletePos = deleteButtonPosition(region, imageDisplayBounds)
-                                                        val distToDelete = sqrt(
-                                                            (pos.x - deletePos.x).pow(2) +
-                                                                (pos.y - deletePos.y).pow(2),
-                                                        )
-                                                        // X button radius is 20f when hovered/selected, 16f otherwise
-                                                        val btnRadius = if (closestIdx == currentNamingFaceIndex) 20f else 16f
-                                                        hoverState = HoverState(
-                                                            faceIdx = closestIdx,
-                                                            isOverDelete = distToDelete < btnRadius + 12f,
-                                                        )
+                                                        val deletePos =
+                                                            deleteButtonPosition(
+                                                                region,
+                                                                imageDisplayBounds,
+                                                            )
+                                                        val distToDelete =
+                                                            sqrt(
+                                                                (pos.x - deletePos.x).pow(2) +
+                                                                    (pos.y - deletePos.y).pow(2)
+                                                            )
+                                                        // X button radius is 20f when
+                                                        // hovered/selected, 16f otherwise
+                                                        val btnRadius =
+                                                            if (
+                                                                closestIdx == currentNamingFaceIndex
+                                                            )
+                                                                20f
+                                                            else 16f
+                                                        hoverState =
+                                                            HoverState(
+                                                                faceIdx = closestIdx,
+                                                                isOverDelete =
+                                                                    distToDelete < btnRadius + 12f,
+                                                            )
                                                     } else {
                                                         hoverState = HoverState(faceIdx = -1)
                                                     }
@@ -696,7 +732,9 @@ fun FaceSelectorOverlay(
                                                 hoverOffset = null
                                                 hoverState = HoverState()
                                             }
-                                            else -> { /* no-op */ }
+                                            else -> {
+                                                /* no-op */
+                                            }
                                         }
                                     }
                                 }
@@ -718,7 +756,8 @@ fun FaceSelectorOverlay(
                                             draggingFaceIdx >= 0 &&
                                                 draggingFaceIdx < faceRegions.size
                                         ) {
-                                            // Accumulate pixel offset locally — no state update per frame
+                                            // Accumulate pixel offset locally — no state update per
+                                            // frame
                                             dragOffsetPx =
                                                 Offset(
                                                     dragOffsetPx.x + dragAmount.x,
@@ -763,8 +802,10 @@ fun FaceSelectorOverlay(
                                 )
                             }
                             // ── Tap gestures → place face, name face, or delete face ──
-                            // Uses rememberUpdatedState refs (currentFaceRegions, currentNamingFaceIndex)
-                            // so the coroutine always sees the latest values even though pointerInput(Unit)
+                            // Uses rememberUpdatedState refs (currentFaceRegions,
+                            // currentNamingFaceIndex)
+                            // so the coroutine always sees the latest values even though
+                            // pointerInput(Unit)
                             // never re-launches the coroutine.
                             .pointerInput(Unit) {
                                 detectTapGestures { offset ->
@@ -782,9 +823,10 @@ fun FaceSelectorOverlay(
                                             val distToDelete =
                                                 sqrt(
                                                     (offset.x - deletePos.x).pow(2) +
-                                                        (offset.y - deletePos.y).pow(2),
+                                                        (offset.y - deletePos.y).pow(2)
                                                 )
-                                            val btnRadius = if (closestIdx == namingIdxNow) 20f else 16f
+                                            val btnRadius =
+                                                if (closestIdx == namingIdxNow) 20f else 16f
                                             if (distToDelete < btnRadius + 12f) {
                                                 // Clicked on the delete X
                                                 state.faceRegions.removeFaceRegion(idx, closestIdx)
@@ -801,7 +843,8 @@ fun FaceSelectorOverlay(
                                                 namingInput = faceRegionsNow[closestIdx].name
                                             }
                                         } else {
-                                            // Click on empty space → place a new face and start naming
+                                            // Click on empty space → place a new face and start
+                                            // naming
                                             val normX =
                                                 ((offset.x - bounds.left) / bounds.width)
                                                     .toDouble()
@@ -820,7 +863,8 @@ fun FaceSelectorOverlay(
                                                     currentFaceSize,
                                                 )
                                                 // Start naming the newly added face
-                                                // faceRegionsNow is stale (pre-mutation); new face is at old size index
+                                                // faceRegionsNow is stale (pre-mutation); new face
+                                                // is at old size index
                                                 namingFaceIndex = faceRegionsNow.size
                                                 namingInput = ""
                                             }
@@ -835,7 +879,10 @@ fun FaceSelectorOverlay(
                                         Key.Escape -> {
                                             if (namingFaceIndex >= 0) {
                                                 // Commit name if non-empty, close naming
-                                                if (namingFaceIndex in faceRegions.indices && namingInput.isNotBlank()) {
+                                                if (
+                                                    namingFaceIndex in faceRegions.indices &&
+                                                        namingInput.isNotBlank()
+                                                ) {
                                                     state.faceRegions.updateFaceRegionName(
                                                         idx,
                                                         namingFaceIndex,
@@ -865,14 +912,17 @@ fun FaceSelectorOverlay(
                                         }
                                         Key.Delete -> {
                                             if (namingFaceIndex in faceRegions.indices) {
-                                                // Compute post-deletion state from stale list before mutation
-                                                // After removal, indices >= namingFaceIndex shift left by 1
+                                                // Compute post-deletion state from stale list
+                                                // before mutation
+                                                // After removal, indices >= namingFaceIndex shift
+                                                // left by 1
                                                 val wasLastFace = faceRegions.size <= 1
                                                 val newFacesCount = faceRegions.size - 1
-                                                // Name of the face that slides into namingFaceIndex position
-                                                val shiftedName = faceRegions.getOrNull(
-                                                    namingFaceIndex + 1
-                                                )?.name ?: ""
+                                                // Name of the face that slides into namingFaceIndex
+                                                // position
+                                                val shiftedName =
+                                                    faceRegions.getOrNull(namingFaceIndex + 1)?.name
+                                                        ?: ""
                                                 state.faceRegions.removeFaceRegion(
                                                     idx,
                                                     namingFaceIndex,
@@ -881,9 +931,10 @@ fun FaceSelectorOverlay(
                                                     namingFaceIndex = -1
                                                     namingInput = ""
                                                 } else {
-                                                    val newIndex = namingFaceIndex.coerceAtMost(
-                                                        newFacesCount - 1
-                                                    )
+                                                    val newIndex =
+                                                        namingFaceIndex.coerceAtMost(
+                                                            newFacesCount - 1
+                                                        )
                                                     namingFaceIndex = newIndex
                                                     namingInput = shiftedName
                                                 }
@@ -919,20 +970,42 @@ fun FaceSelectorOverlay(
                             val color = regionTypeColor(RegionType.fromMwgRs(renderData.type))
                             val isDragging = faceIdx == draggingFaceIdx
                             val isNamingSelected = faceIdx == namingFaceIndex
-                            val isHovered = faceIdx == hoverState.faceIdx && !hoverState.isOverDelete
+                            val isHovered =
+                                faceIdx == hoverState.faceIdx && !hoverState.isOverDelete
                             // True when the cursor is inside this face circle (body or X button)
                             val isCursorInCircle = faceIdx == hoverState.faceIdx
                             val currentDragOffset = if (isDragging) dragOffsetPx else Offset.Zero
 
-                            val cx = bounds.left + (renderData.x * bounds.width).toFloat() + currentDragOffset.x
-                            val cy = bounds.top + (renderData.y * bounds.height).toFloat() + currentDragOffset.y
+                            val cx =
+                                bounds.left +
+                                    (renderData.x * bounds.width).toFloat() +
+                                    currentDragOffset.x
+                            val cy =
+                                bounds.top +
+                                    (renderData.y * bounds.height).toFloat() +
+                                    currentDragOffset.y
                             val radius = (renderData.w / 2.0 * bounds.height).toFloat()
 
                             // ── Fill ──
                             when {
-                                isDragging -> drawCircle(color = color.copy(alpha = 0.4f), radius = radius, center = Offset(cx, cy))
-                                isNamingSelected -> drawCircle(color = color.copy(alpha = 0.25f), radius = radius, center = Offset(cx, cy))
-                                isHovered -> drawCircle(color = color.copy(alpha = 0.15f), radius = radius, center = Offset(cx, cy))
+                                isDragging ->
+                                    drawCircle(
+                                        color = color.copy(alpha = 0.4f),
+                                        radius = radius,
+                                        center = Offset(cx, cy),
+                                    )
+                                isNamingSelected ->
+                                    drawCircle(
+                                        color = color.copy(alpha = 0.25f),
+                                        radius = radius,
+                                        center = Offset(cx, cy),
+                                    )
+                                isHovered ->
+                                    drawCircle(
+                                        color = color.copy(alpha = 0.15f),
+                                        radius = radius,
+                                        center = Offset(cx, cy),
+                                    )
                             }
 
                             // ── Outline ──
@@ -956,10 +1029,15 @@ fun FaceSelectorOverlay(
                             // ── Name label (compact, always visible) ──
                             val nameLabel = renderData.name
                             if (nameLabel.isNotBlank()) {
-                                val nameLayout = textMeasurer.measure(
-                                    nameLabel,
-                                    TextStyle(color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold),
-                                )
+                                val nameLayout =
+                                    textMeasurer.measure(
+                                        nameLabel,
+                                        TextStyle(
+                                            color = Color.White,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                        ),
+                                    )
                                 val labelWidth = nameLayout.size.width.toFloat() + 8f
                                 val labelHeight = nameLayout.size.height.toFloat() + 4f
                                 val labelX = cx - labelWidth / 2f
@@ -982,11 +1060,16 @@ fun FaceSelectorOverlay(
                                 )
                                 drawText(
                                     textLayoutResult = nameLayout,
-                                    topLeft = Offset(cx - nameLayout.size.width.toFloat() / 2f, labelY + 2f),
+                                    topLeft =
+                                        Offset(
+                                            cx - nameLayout.size.width.toFloat() / 2f,
+                                            labelY + 2f,
+                                        ),
                                 )
                             }
 
-                            // ── Delete X button near edge of circle — only when cursor is inside circle or face is being named ──
+                            // ── Delete X button near edge of circle — only when cursor is inside
+                            // circle or face is being named ──
                             if (!isDragging && (isCursorInCircle || isNamingSelected)) {
                                 val delPos = deleteButtonPosition(region, bounds, currentDragOffset)
                                 val deleteX = delPos.x
@@ -1029,15 +1112,28 @@ fun FaceSelectorOverlay(
                                 val hovCx = bounds.left + (hoveredRegion.x * bounds.width).toFloat()
                                 val hovCy = bounds.top + (hoveredRegion.y * bounds.height).toFloat()
                                 val hovRadius = (hoveredRegion.w / 2.0 * bounds.height).toFloat()
-                                val tooltipLayout = textMeasurer.measure(
-                                    hoveredName,
-                                    TextStyle(color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold),
-                                )
+                                val tooltipLayout =
+                                    textMeasurer.measure(
+                                        hoveredName,
+                                        TextStyle(
+                                            color = Color.White,
+                                            fontSize = 16.sp,
+                                            fontWeight = FontWeight.Bold,
+                                        ),
+                                    )
                                 val tooltipWidth = tooltipLayout.size.width.toFloat() + 16f
                                 val tooltipHeight = tooltipLayout.size.height.toFloat() + 10f
                                 // Position tooltip above the face circle, centered horizontally
-                                val tooltipX = (hovCx - tooltipWidth / 2f).coerceIn(bounds.left, bounds.right - tooltipWidth)
-                                val tooltipY = (hovCy - hovRadius - tooltipHeight - 12f).coerceIn(bounds.top, bounds.bottom - tooltipHeight)
+                                val tooltipX =
+                                    (hovCx - tooltipWidth / 2f).coerceIn(
+                                        bounds.left,
+                                        bounds.right - tooltipWidth,
+                                    )
+                                val tooltipY =
+                                    (hovCy - hovRadius - tooltipHeight - 12f).coerceIn(
+                                        bounds.top,
+                                        bounds.bottom - tooltipHeight,
+                                    )
                                 // Dark rounded background with colored border
                                 drawRoundRect(
                                     color = Color.Black.copy(alpha = 0.85f),
@@ -1046,7 +1142,8 @@ fun FaceSelectorOverlay(
                                     cornerRadius = CornerRadius(8f),
                                 )
                                 drawRoundRect(
-                                    color = regionTypeColor(RegionType.fromMwgRs(hoveredRegion.type)),
+                                    color =
+                                        regionTypeColor(RegionType.fromMwgRs(hoveredRegion.type)),
                                     topLeft = Offset(tooltipX, tooltipY),
                                     size = Size(tooltipWidth, tooltipHeight),
                                     cornerRadius = CornerRadius(8f),
@@ -1059,9 +1156,16 @@ fun FaceSelectorOverlay(
                             }
                         }
 
-                        // ── Yellow circle cursor preview when hovering over empty space (not during drag) ──
-                        if (hoverOffset != null && hoverState.faceIdx < 0 && draggingFaceIdx < 0 && imageDisplayBounds.width > 0f) {
-                            val previewRadius = (selectedFaceSize.radius * imageDisplayBounds.height).toFloat()
+                        // ── Yellow circle cursor preview when hovering over empty space (not
+                        // during drag) ──
+                        if (
+                            hoverOffset != null &&
+                                hoverState.faceIdx < 0 &&
+                                draggingFaceIdx < 0 &&
+                                imageDisplayBounds.width > 0f
+                        ) {
+                            val previewRadius =
+                                (selectedFaceSize.radius * imageDisplayBounds.height).toFloat()
                             drawCircle(
                                 color = regionTypeColor(selectedRegionType).copy(alpha = 0.4f),
                                 radius = previewRadius,
@@ -1145,9 +1249,10 @@ fun FaceSelectorOverlay(
                 // ── Naming input panel (bottom center, over the image) ────
                 if (namingFaceIndex in faceRegions.indices) {
                     val currentRegion = faceRegions[namingFaceIndex]
-                    val hasMoreUnnamedFaces = faceRegions.indices.any { i ->
-                        i != namingFaceIndex && faceRegions[i].name.isBlank()
-                    }
+                    val hasMoreUnnamedFaces =
+                        faceRegions.indices.any { i ->
+                            i != namingFaceIndex && faceRegions[i].name.isBlank()
+                        }
                     Surface(
                         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 12.dp),
                         color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
@@ -1160,8 +1265,10 @@ fun FaceSelectorOverlay(
                                     .onPreviewKeyEvent { keyEvent ->
                                         if (keyEvent.type == KeyEventType.KeyDown) {
                                             when (keyEvent.key) {
-                                                // Enter: commit name and advance to next unnamed face.
-                                                // (Only handled here — global handler doesn't handle Enter)
+                                                // Enter: commit name and advance to next unnamed
+                                                // face.
+                                                // (Only handled here — global handler doesn't
+                                                // handle Enter)
                                                 Key.Enter -> {
                                                     if (namingInput.isNotBlank()) {
                                                         state.faceRegions.updateFaceRegionName(
@@ -1173,17 +1280,24 @@ fun FaceSelectorOverlay(
                                                     advanceToNextUnnamedFace()
                                                     true
                                                 }
-                                                // Backspace: delete face when input is empty; otherwise
+                                                // Backspace: delete face when input is empty;
+                                                // otherwise
                                                 // let the text field handle character deletion.
-                                                // (Only handled here — global handler doesn't handle Backspace)
+                                                // (Only handled here — global handler doesn't
+                                                // handle Backspace)
                                                 Key.Backspace -> {
                                                     // Only delete face if naming input is empty
-                                                    if (namingInput.isEmpty() && namingFaceIndex in faceRegions.indices) {
-                                                        // Compute post-deletion state before mutation
+                                                    if (
+                                                        namingInput.isEmpty() &&
+                                                            namingFaceIndex in faceRegions.indices
+                                                    ) {
+                                                        // Compute post-deletion state before
+                                                        // mutation
                                                         val wasLastFace = faceRegions.size <= 1
-                                                        val shiftedName = faceRegions.getOrNull(
-                                                            namingFaceIndex + 1
-                                                        )?.name ?: ""
+                                                        val shiftedName =
+                                                            faceRegions
+                                                                .getOrNull(namingFaceIndex + 1)
+                                                                ?.name ?: ""
                                                         state.faceRegions.removeFaceRegion(
                                                             idx,
                                                             namingFaceIndex,
@@ -1192,9 +1306,10 @@ fun FaceSelectorOverlay(
                                                             namingFaceIndex = -1
                                                             namingInput = ""
                                                         } else {
-                                                            val newIndex = namingFaceIndex.coerceAtMost(
-                                                                faceRegions.size - 2
-                                                            )
+                                                            val newIndex =
+                                                                namingFaceIndex.coerceAtMost(
+                                                                    faceRegions.size - 2
+                                                                )
                                                             namingFaceIndex = newIndex
                                                             namingInput = shiftedName
                                                         }
@@ -1220,15 +1335,19 @@ fun FaceSelectorOverlay(
                             )
                             Text(
                                 "Tag ${namingFaceIndex + 1}/${faceRegions.size}:",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold
-                                ),
+                                style =
+                                    MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
                             )
                             OutlinedTextField(
                                 value = namingInput,
                                 onValueChange = { namingInput = it },
-                                placeholder = { Text("Name...", style = MaterialTheme.typography.labelSmall) },
-                                modifier = Modifier.width(120.dp).focusRequester(namingFocusRequester),
+                                placeholder = {
+                                    Text("Name...", style = MaterialTheme.typography.labelSmall)
+                                },
+                                modifier =
+                                    Modifier.width(120.dp).focusRequester(namingFocusRequester),
                                 textStyle = MaterialTheme.typography.labelSmall,
                                 singleLine = true,
                             )
@@ -1250,11 +1369,10 @@ fun FaceSelectorOverlay(
                                     style = MaterialTheme.typography.labelSmall,
                                 )
                             }
-                            // Skip button: remove this face and advance. Hidden on last unnamed face.
+                            // Skip button: remove this face and advance. Hidden on last unnamed
+                            // face.
                             if (!isLastUnnamed) {
-                                OutlinedButton(
-                                    onClick = { skipCurrentFace() },
-                                ) {
+                                OutlinedButton(onClick = { skipCurrentFace() }) {
                                     Icon(
                                         Icons.Default.SkipNext,
                                         contentDescription = "Skip",
@@ -1300,4 +1418,4 @@ private fun findClosestFace(offset: Offset, faceRegions: List<FaceRegion>, bound
         }
     }
     return bestIdx
-}// Larger delete-X button and hover cursor tracking
+} // Larger delete-X button and hover cursor tracking

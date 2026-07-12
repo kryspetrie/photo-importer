@@ -14,8 +14,7 @@ class FileSystemPortContractTest {
 
     private val fileSystem: FileSystemPort = FileSystemAdapter()
 
-    @TempDir
-    lateinit var tempDir: File
+    @TempDir lateinit var tempDir: File
 
     @Test
     @DisplayName("exists returns true for existing file")
@@ -60,7 +59,8 @@ class FileSystemPortContractTest {
         val source = File(tempDir, "source.txt")
         source.writeText("hello")
         val dest = File(tempDir, "dest.txt")
-        assertThat(fileSystem.renameTo(FilePath(source.absolutePath), FilePath(dest.absolutePath))).isTrue()
+        assertThat(fileSystem.renameTo(FilePath(source.absolutePath), FilePath(dest.absolutePath)))
+            .isTrue()
         assertThat(source.exists()).isFalse()
         assertThat(dest.exists()).isTrue()
         assertThat(dest.readText()).isEqualTo("hello")
@@ -81,7 +81,8 @@ class FileSystemPortContractTest {
         val source = File(tempDir, "source.txt")
         source.writeText("hello world")
         val dest = File(tempDir, "dest.txt")
-        assertThat(fileSystem.copy(FilePath(source.absolutePath), FilePath(dest.absolutePath))).isTrue()
+        assertThat(fileSystem.copy(FilePath(source.absolutePath), FilePath(dest.absolutePath)))
+            .isTrue()
         assertThat(dest.exists()).isTrue()
         assertThat(dest.readText()).isEqualTo("hello world")
         assertThat(source.exists()).isTrue()
@@ -93,7 +94,8 @@ class FileSystemPortContractTest {
         val source = File(tempDir, "source.txt")
         source.writeText("hello")
         val dest = File(tempDir, "subdir/nested/dest.txt")
-        assertThat(fileSystem.copy(FilePath(source.absolutePath), FilePath(dest.absolutePath))).isTrue()
+        assertThat(fileSystem.copy(FilePath(source.absolutePath), FilePath(dest.absolutePath)))
+            .isTrue()
         assertThat(dest.exists()).isTrue()
     }
 

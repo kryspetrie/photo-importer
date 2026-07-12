@@ -5,23 +5,23 @@ import com.drew.metadata.iptc.IptcDirectory
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import kotlinx.coroutines.runBlocking
 import org.apache.commons.imaging.Imaging
 import org.assertj.core.api.Assertions.assertThat
-import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
-import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
-import kotlinx.coroutines.runBlocking
+import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
+import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 
 /**
  * Integration tests for XMP face region (MWG-RS) writing in PhotoScanExportService.
@@ -42,23 +42,33 @@ class XmpFaceRegionExportTest {
         perspectiveService = PerspectiveCorrectionService()
         val fileSystem = FileSystemAdapter()
         val imageProcessing = AwtImageProcessingAdapter(fileSystem)
-        service = PhotoScanExportService(
-            perspectiveService,
-            MetadataWritingService(FaceRegionTransformer(), imageProcessing, fileSystem),
-            imageProcessing,
-            fileSystem,
-        )
+        service =
+            PhotoScanExportService(
+                perspectiveService,
+                MetadataWritingService(FaceRegionTransformer(), imageProcessing, fileSystem),
+                imageProcessing,
+                fileSystem,
+            )
     }
 
-    /** Wrapper to call suspend [PhotoScanExportService.exportSinglePhoto] from non-suspend tests. */
+    /**
+     * Wrapper to call suspend [PhotoScanExportService.exportSinglePhoto] from non-suspend tests.
+     */
     private fun exportSinglePhoto(
         sourceImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
         detectedPhoto: org.kryspetrie.fileimport.domain.model.DetectedPhoto,
         destinationPath: String,
         baseFileName: String,
         sourceFile: FilePath? = null,
-    ): org.kryspetrie.fileimport.domain.model.PhotoScanSingleExportResult =
-        runBlocking { service.exportSinglePhoto(sourceImage, detectedPhoto, destinationPath, baseFileName, sourceFile) }
+    ): org.kryspetrie.fileimport.domain.model.PhotoScanSingleExportResult = runBlocking {
+        service.exportSinglePhoto(
+            sourceImage,
+            detectedPhoto,
+            destinationPath,
+            baseFileName,
+            sourceFile,
+        )
+    }
 
     private fun createDetectedPhoto(
         tlX: Float = 0f,
@@ -126,12 +136,7 @@ class XmpFaceRegionExportTest {
         destDir.mkdirs()
 
         val result =
-            exportSinglePhoto(
-                img.toProcessedImage(),
-                photo,
-                destDir.absolutePath,
-                "xmp_bytes_test",
-            )
+            exportSinglePhoto(img.toProcessedImage(), photo, destDir.absolutePath, "xmp_bytes_test")
 
         assertThat(result.success).isTrue()
         val exportedFile = File(result.destinationPath)

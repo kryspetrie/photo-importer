@@ -5,9 +5,9 @@ import kotlinx.serialization.Serializable
 /**
  * Stores recently used metadata values for photo scan EXIF fields.
  *
- * Each field maintains an MRU list of up to [MAX_ENTRIES] unique values. Additionally,
- * [recentSets] stores complete snapshots of all metadata fields (including location) as a unit,
- * enabling users to apply a previously-entered set of values to the current photo.
+ * Each field maintains an MRU list of up to [MAX_ENTRIES] unique values. Additionally, [recentSets]
+ * stores complete snapshots of all metadata fields (including location) as a unit, enabling users
+ * to apply a previously-entered set of values to the current photo.
  *
  * Persisted as part of [AppSettings] via [SettingsPort].
  */
@@ -36,8 +36,7 @@ data class MetadataHistory(
     val subjects: List<String> = emptyList(),
     /**
      * Recent complete metadata sets — snapshots of all fields from a previously-entered
-     * configuration. Stored MRU-first (most recently used is first).
-     * Capped at [MAX_SETS] entries.
+     * configuration. Stored MRU-first (most recently used is first). Capped at [MAX_SETS] entries.
      */
     val recentSets: List<RecentMetadataSet> = emptyList(),
 ) {
@@ -70,9 +69,9 @@ data class MetadataHistory(
             )
 
         /**
-         * Checks whether two recent sets match on all their non-blank fields.
-         * Used for deduplication — if the new set has the same non-blank values as an existing
-         * set, we consider them the same and only keep the newer one.
+         * Checks whether two recent sets match on all their non-blank fields. Used for
+         * deduplication — if the new set has the same non-blank values as an existing set, we
+         * consider them the same and only keep the newer one.
          */
         private fun fieldsMatch(a: RecentMetadataSet, b: RecentMetadataSet): Boolean {
             val fields =
@@ -98,10 +97,7 @@ data class MetadataHistory(
                     a.subjects to b.subjects,
                 )
             // Two sets match if all fields where at least one is non-blank are equal
-            return fields.all { (av, bv) ->
-                if (av.isBlank() && bv.isBlank()) true
-                else av == bv
-            }
+            return fields.all { (av, bv) -> if (av.isBlank() && bv.isBlank()) true else av == bv }
         }
     }
 
@@ -191,33 +187,27 @@ data class MetadataHistory(
     }
 
     /**
-     * Adds a complete metadata set to [recentSets]. Deduplicates against existing sets
-     * (matched by all non-blank fields) and caps at [MAX_SETS]. The new set is placed at
-     * the front (MRU order).
+     * Adds a complete metadata set to [recentSets]. Deduplicates against existing sets (matched by
+     * all non-blank fields) and caps at [MAX_SETS]. The new set is placed at the front (MRU order).
      */
     fun addSet(set: RecentMetadataSet): MetadataHistory {
         if (!set.hasAnyValue()) return this
 
         // Remove any existing set that matches all non-blank fields of the new set
-        val deduped =
-            recentSets.filter { existing ->
-                !fieldsMatch(existing, set)
-            }
+        val deduped = recentSets.filter { existing -> !fieldsMatch(existing, set) }
 
         val updated = (listOf(set) + deduped).take(MAX_SETS)
         return copy(recentSets = updated)
     }
 
-    /**
-     * Removes a specific recent set by its timestamp (unique identifier).
-     */
+    /** Removes a specific recent set by its timestamp (unique identifier). */
     fun removeSet(timestamp: Long): MetadataHistory =
         copy(recentSets = recentSets.filter { it.timestamp != timestamp })
 
     /**
-     * Returns location-only suggestion sets — distinct combinations of location fields
-     * from [recentSets]. Useful for the "Apply Location" quick-fill button which
-     * specifically fills location fields (locationName, address, city, state, country, lat, lon).
+     * Returns location-only suggestion sets — distinct combinations of location fields from
+     * [recentSets]. Useful for the "Apply Location" quick-fill button which specifically fills
+     * location fields (locationName, address, city, state, country, lat, lon).
      */
     fun getLocationSets(): List<RecentMetadataSet> =
         recentSets.filter {

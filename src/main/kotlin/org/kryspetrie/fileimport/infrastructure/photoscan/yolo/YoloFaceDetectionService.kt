@@ -30,13 +30,20 @@ class YoloFaceDetectionService(private val env: OrtEnvironment, private val sess
         val confidence: Float,
     ) {
         /** Center X of the bounding box. */
-        val centerX: Float get() = (x1 + x2) / 2f
+        val centerX: Float
+            get() = (x1 + x2) / 2f
+
         /** Center Y of the bounding box. */
-        val centerY: Float get() = (y1 + y2) / 2f
+        val centerY: Float
+            get() = (y1 + y2) / 2f
+
         /** Width of the bounding box. */
-        val width: Float get() = x2 - x1
+        val width: Float
+            get() = x2 - x1
+
         /** Height of the bounding box. */
-        val height: Float get() = y2 - y1
+        val height: Float
+            get() = y2 - y1
     }
 
     companion object {
@@ -49,15 +56,15 @@ class YoloFaceDetectionService(private val env: OrtEnvironment, private val sess
     /**
      * Detect faces in an image.
      *
-     * Uses letterbox preprocessing (matching [YoloDetectionService] exactly),
-     * then runs ONNX inference and parses the bounding-box output.
+     * Uses letterbox preprocessing (matching [YoloDetectionService] exactly), then runs ONNX
+     * inference and parses the bounding-box output.
      *
      * @param image Source image (any size)
      * @param confThreshold Minimum detection confidence (default 0.5)
      * @param iouThreshold NMS IoU threshold (default 0.45)
      * @param imgSize Model input size (default 640)
-     * @return List of face detections with bounding boxes in original image coordinates,
-     *   sorted by descending confidence
+     * @return List of face detections with bounding boxes in original image coordinates, sorted by
+     *   descending confidence
      */
     fun detectFaces(
         image: BufferedImage,
@@ -73,11 +80,12 @@ class YoloFaceDetectionService(private val env: OrtEnvironment, private val sess
 
         // Step 2: Run inference
         val inputName = session.inputNames.iterator().next()
-        val inputTensor = OnnxTensor.createTensor(
-            env,
-            FloatBuffer.wrap(preprocessed.flatArray),
-            preprocessed.shape,
-        )
+        val inputTensor =
+            OnnxTensor.createTensor(
+                env,
+                FloatBuffer.wrap(preprocessed.flatArray),
+                preprocessed.shape,
+            )
         val results = session.run(mapOf(inputName to inputTensor))
         val output = results[0].value as Array<Array<FloatArray>>
 
@@ -106,9 +114,9 @@ class YoloFaceDetectionService(private val env: OrtEnvironment, private val sess
      * - Transposed: `[1, 6, N]` — cx, cy, w, h, conf, cls (center-format bbox)
      *
      * Detections with confidence below [confThreshold] or zero-area bounding boxes are filtered.
-     * Coordinates are mapped from letterboxed 640-space back to original image pixels.
-     * A second pass of NMS is applied as a safety net in case the model's internal NMS
-     * left overlapping detections.
+     * Coordinates are mapped from letterboxed 640-space back to original image pixels. A second
+     * pass of NMS is applied as a safety net in case the model's internal NMS left overlapping
+     * detections.
      */
     internal fun parseFaceOutput(
         output: Array<Array<FloatArray>>,
@@ -142,10 +150,7 @@ class YoloFaceDetectionService(private val env: OrtEnvironment, private val sess
                 // Skip zero-area detections (model pads to 300 with zeros)
                 if (x2 - x1 < 1f && y2 - y1 < 1f) continue
 
-                detections.add(FaceDetection(
-                    x1 = x1, y1 = y1, x2 = x2, y2 = y2,
-                    confidence = conf,
-                ))
+                detections.add(FaceDetection(x1 = x1, y1 = y1, x2 = x2, y2 = y2, confidence = conf))
             }
         } else {
             // Transposed format: [1, 6, N] — columns are detections, center-format bbox
@@ -164,10 +169,7 @@ class YoloFaceDetectionService(private val env: OrtEnvironment, private val sess
 
                 if (x2 - x1 < 1f && y2 - y1 < 1f) continue
 
-                detections.add(FaceDetection(
-                    x1 = x1, y1 = y1, x2 = x2, y2 = y2,
-                    confidence = conf,
-                ))
+                detections.add(FaceDetection(x1 = x1, y1 = y1, x2 = x2, y2 = y2, confidence = conf))
             }
         }
 

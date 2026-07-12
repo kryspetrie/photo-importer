@@ -24,8 +24,8 @@ sealed interface ExportResult {
 }
 
 /**
- * Legacy data class for backward compatibility during migration.
- * Prefer using [ExportResult] directly.
+ * Legacy data class for backward compatibility during migration. Prefer using [ExportResult]
+ * directly.
  */
 data class ProcessedPhoto(
     val originalFile: File,
@@ -34,7 +34,8 @@ data class ProcessedPhoto(
     val correctionsApplied: List<String>,
 ) {
     /** Whether this photo failed to export. */
-    val isError: Boolean get() = outputPath.startsWith("ERROR:")
+    val isError: Boolean
+        get() = outputPath.startsWith("ERROR:")
 
     /** Convert to typed [ExportResult]. */
     fun toExportResult(): ExportResult =

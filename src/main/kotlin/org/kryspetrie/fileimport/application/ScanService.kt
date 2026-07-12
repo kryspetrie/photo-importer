@@ -63,10 +63,7 @@ class ScanService(
      * @param detectedPhoto The detected photo region with corner coordinates
      * @return The perspective-corrected photo as a new image
      */
-    fun extractPhoto(
-        scannedImage: ProcessedImage,
-        detectedPhoto: DetectedPhoto,
-    ): ProcessedImage {
+    fun extractPhoto(scannedImage: ProcessedImage, detectedPhoto: DetectedPhoto): ProcessedImage {
         return imageProcessing.cropAxisAligned(scannedImage, detectedPhoto)
     }
 
@@ -92,7 +89,8 @@ class ScanService(
 
         val baseName = fileSystem.nameWithoutExtension(originalFile)
         val extension = fileSystem.extension(originalFile)
-        val fileName = if (photoIndex <= 1) "$baseName.$extension" else "${baseName}_$photoIndex.$extension"
+        val fileName =
+            if (photoIndex <= 1) "$baseName.$extension" else "${baseName}_$photoIndex.$extension"
 
         val resolvedPath = runBlocking {
             FilenameResolver.resolveFilenameConflict(fileSystem, destDir, fileName)

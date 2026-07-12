@@ -10,9 +10,9 @@ import org.junit.jupiter.api.condition.EnabledIf
 import org.kryspetrie.fileimport.infrastructure.adapter.ClasspathModelResourceAdapter
 
 /**
- * Runs face detection on test images and prints the bounding boxes.
- * This is a "gold standard" extraction test — run manually to capture reference coordinates
- * for [FaceDetectionIntegrationTest].
+ * Runs face detection on test images and prints the bounding boxes. This is a "gold standard"
+ * extraction test — run manually to capture reference coordinates for
+ * [FaceDetectionIntegrationTest].
  *
  * Remove `@Disabled` temporarily to regenerate reference coordinates after model changes.
  */
@@ -36,8 +36,7 @@ class FaceDetectionGoldTest {
             }
         }
 
-        @JvmStatic
-        fun sessionAvailable(): Boolean = available
+        @JvmStatic fun sessionAvailable(): Boolean = available
     }
 
     @Test
@@ -48,7 +47,9 @@ class FaceDetectionGoldTest {
         println("=== faces-01.jpg (${image.width}x${image.height}) ===")
         println("Faces detected: ${results.size}")
         results.forEachIndexed { i, det ->
-            println("  Face $i: x1=${det.x1}, y1=${det.y1}, x2=${det.x2}, y2=${det.y2}, conf=${det.confidence}")
+            println(
+                "  Face $i: x1=${det.x1}, y1=${det.y1}, x2=${det.x2}, y2=${det.y2}, conf=${det.confidence}"
+            )
         }
     }
 
@@ -60,12 +61,17 @@ class FaceDetectionGoldTest {
         println("=== faces-02.jpg (${image.width}x${image.height}) ===")
         println("Faces detected: ${results.size}")
         results.forEachIndexed { i, det ->
-            println("  Face $i: x1=${det.x1}, y1=${det.y1}, x2=${det.x2}, y2=${det.y2}, conf=${det.confidence}")
+            println(
+                "  Face $i: x1=${det.x1}, y1=${det.y1}, x2=${det.x2}, y2=${det.y2}, conf=${det.confidence}"
+            )
         }
     }
 
     private fun loadTestImage(name: String): BufferedImage? {
-        val stream = javaClass.classLoader.getResourceAsStream("org/kryspetrie/fileimport/application/$name.jpg")
+        val stream =
+            javaClass.classLoader.getResourceAsStream(
+                "org/kryspetrie/fileimport/application/$name.jpg"
+            )
         if (stream != null) {
             return stream.use { ImageIO.read(it) }
         }

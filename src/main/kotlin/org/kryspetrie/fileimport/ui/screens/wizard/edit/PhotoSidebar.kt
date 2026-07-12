@@ -33,15 +33,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 
 /**
- * Vertical sidebar showing photo thumbnails stacked top-to-bottom.
- * Includes the multi-edit toggle button at the top.
- * Thumbnails scale down when there are many to fit the vertical space.
+ * Vertical sidebar showing photo thumbnails stacked top-to-bottom. Includes the multi-edit toggle
+ * button at the top. Thumbnails scale down when there are many to fit the vertical space.
  */
 @Composable
 internal fun PhotoSidebar(
@@ -58,18 +57,20 @@ internal fun PhotoSidebar(
 ) {
     val photoCount = boundingBoxList.size()
     // Scale thumbnails based on how many there are — smaller when crowded
-    val thumbHeight = when {
-        photoCount <= 3 -> 80.dp
-        photoCount <= 6 -> 64.dp
-        photoCount <= 10 -> 52.dp
-        else -> 44.dp
-    }
-    val thumbWidth = when {
-        photoCount <= 3 -> 100.dp
-        photoCount <= 6 -> 80.dp
-        photoCount <= 10 -> 66.dp
-        else -> 56.dp
-    }
+    val thumbHeight =
+        when {
+            photoCount <= 3 -> 80.dp
+            photoCount <= 6 -> 64.dp
+            photoCount <= 10 -> 52.dp
+            else -> 44.dp
+        }
+    val thumbWidth =
+        when {
+            photoCount <= 3 -> 100.dp
+            photoCount <= 6 -> 80.dp
+            photoCount <= 10 -> 66.dp
+            else -> 56.dp
+        }
 
     Surface(
         tonalElevation = 2.dp,
@@ -100,7 +101,8 @@ internal fun PhotoSidebar(
                                 onToggleMultiEdit()
                             },
                             modifier = Modifier.height(24.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
+                            contentPadding =
+                                androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
                         ) {
                             Text("Done", style = MaterialTheme.typography.labelSmall)
                         }
@@ -109,7 +111,8 @@ internal fun PhotoSidebar(
                     OutlinedButton(
                         onClick = onToggleMultiEdit,
                         modifier = Modifier.height(24.dp).padding(horizontal = 4.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
+                        contentPadding =
+                            androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
                     ) {
                         Text("Multi", style = MaterialTheme.typography.labelSmall)
                     }
@@ -124,11 +127,15 @@ internal fun PhotoSidebar(
             ) {
                 itemsIndexed(boundingBoxList.boxes) { index, box ->
                     val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
-                    val visualConfig = PhotoScanConfiguration(rotationDegrees = config.rotationDegrees)
+                    val visualConfig =
+                        PhotoScanConfiguration(rotationDegrees = config.rotationDegrees)
                     val thumbnail = previewCache.getThumbnail(image, box, visualConfig)
                     val isSelected = index in selectedIndices
                     Card(
-                        modifier = Modifier.width(thumbWidth).height(thumbHeight).clickable { onSelect(index) },
+                        modifier =
+                            Modifier.width(thumbWidth).height(thumbHeight).clickable {
+                                onSelect(index)
+                            },
                         shape = RoundedCornerShape(6.dp),
                         border =
                             BorderStroke(

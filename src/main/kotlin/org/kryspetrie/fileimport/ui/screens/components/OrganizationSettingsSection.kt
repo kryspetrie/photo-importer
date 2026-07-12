@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material3.FilterChip
@@ -60,7 +59,8 @@ fun OrganizationSettingsSection(
                         onConfigChange(
                             configuration.copy(
                                 preserveOriginalName = it,
-                                fileNamePattern = if (it) "{original}" else configuration.fileNamePattern,
+                                fileNamePattern =
+                                    if (it) "{original}" else configuration.fileNamePattern,
                             )
                         )
                     },

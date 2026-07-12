@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Manages per-photo configuration state and metadata selection for the photo scan wizard.
@@ -86,9 +86,7 @@ class PhotoScanConfigurationState(
         boxes.forEach { box -> updatePhotoScanConfiguration(box.id) { it.cycleRotationCW() } }
     }
 
-    /**
-     * Rotates all bounding boxes 90° counter-clockwise (cycles: 0°→270°→180°→90°→0°).
-     */
+    /** Rotates all bounding boxes 90° counter-clockwise (cycles: 0°→270°→180°→90°→0°). */
     fun rotateAllBoxesCCW() {
         boxes.forEach { box -> updatePhotoScanConfiguration(box.id) { it.cycleRotationCCW() } }
     }
@@ -136,9 +134,9 @@ class PhotoScanConfigurationState(
     }
 
     /**
-     * Applies metadata from a [MetadataEditState] to all selected photos.
-     * Only non-blank fields in the edit state are applied — blank fields are left unchanged.
-     * This is the preferred way to apply multi-edit metadata changes.
+     * Applies metadata from a [MetadataEditState] to all selected photos. Only non-blank fields in
+     * the edit state are applied — blank fields are left unchanged. This is the preferred way to
+     * apply multi-edit metadata changes.
      */
     fun applyMetadataToSelected(editState: MetadataEditState) {
         val indices = _selectedMetadataIndices.value
@@ -202,8 +200,7 @@ class PhotoScanConfigurationState(
                         iso = if (iso.isNotBlank()) iso else existing.iso,
                         locationName =
                             if (locationName.isNotBlank()) locationName else existing.locationName,
-                        address =
-                            if (address.isNotBlank()) address else existing.address,
+                        address = if (address.isNotBlank()) address else existing.address,
                         city = if (city.isNotBlank()) city else existing.city,
                         state = if (state.isNotBlank()) state else existing.state,
                         country = if (country.isNotBlank()) country else existing.country,

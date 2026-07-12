@@ -6,14 +6,14 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
-import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.domain.model.geometry.Point
+import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
+import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 
 /**
  * Unit tests for wizard state management. Tests state transitions, mode selections, and navigation
@@ -62,8 +62,7 @@ class WizardContainerTest {
         @DisplayName("should reset to import step")
         fun shouldResetToImportStep() {
             wizardState.resetToImportStep()
-            assertThat(wizardState.navigation.currentStep.value)
-                .isEqualTo(WizardStep.IMPORT)
+            assertThat(wizardState.navigation.currentStep.value).isEqualTo(WizardStep.IMPORT)
         }
     }
 
@@ -330,7 +329,9 @@ class WizardContainerTest {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
             wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration())
 
-            wizardState.configs.updatePhotoScanConfiguration(boxId) { it.copy(rotationDegrees = 45) }
+            wizardState.configs.updatePhotoScanConfiguration(boxId) {
+                it.copy(rotationDegrees = 45)
+            }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(45)
         }

@@ -40,8 +40,8 @@ interface FaceDetectionPort {
      *
      * @param image The source image to scan for faces
      * @param confThreshold Minimum confidence threshold for a detection to be kept (default 0.5)
-     * @param iouThreshold Intersection-over-union threshold for non-maximum suppression
-     *   (default 0.45); lower values produce fewer overlapping boxes
+     * @param iouThreshold Intersection-over-union threshold for non-maximum suppression (default
+     *   0.45); lower values produce fewer overlapping boxes
      * @return List of detected faces sorted by descending confidence
      */
     fun detectFaces(
@@ -53,20 +53,20 @@ interface FaceDetectionPort {
     /**
      * Returns whether the face detection model is available and ready to use.
      *
-     * Used by the UI to enable/disable face detection features without attempting to load
-     * the model.
+     * Used by the UI to enable/disable face detection features without attempting to load the
+     * model.
      */
     fun isFaceDetectionAvailable(): Boolean
 
     /**
      * Preloads the face detection model eagerly.
      *
-     * Without preloading, the first call to [detectFaces] pays the cost of loading ~10 MB
-     * of model bytes + ONNX session creation. Call this early in the application lifecycle
-     * to front-load that cost. Idempotent — calling it after the model is loaded is a no-op.
+     * Without preloading, the first call to [detectFaces] pays the cost of loading ~10 MB of model
+     * bytes + ONNX session creation. Call this early in the application lifecycle to front-load
+     * that cost. Idempotent — calling it after the model is loaded is a no-op.
      *
-     * @return true if the face detection service was successfully initialized, false if the
-     *   model is unavailable
+     * @return true if the face detection service was successfully initialized, false if the model
+     *   is unavailable
      */
     fun preload(): Boolean = false
 }

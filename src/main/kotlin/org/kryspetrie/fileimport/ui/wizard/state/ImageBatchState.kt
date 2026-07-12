@@ -11,8 +11,8 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Note: [PhotoScanWizardState.switchToImage] is a coordination method that remains on the parent
  * because it touches multiple sub-states (image, boxes, selection, undo, zoom, etc.).
- * [PhotoScanWizardState.nextImage] and [PhotoScanWizardState.prevImage] similarly delegate
- * to the parent's coordination method.
+ * [PhotoScanWizardState.nextImage] and [PhotoScanWizardState.prevImage] similarly delegate to the
+ * parent's coordination method.
  */
 class ImageBatchState {
 
@@ -147,7 +147,9 @@ class ImageBatchState {
         _currentImageIndex.value = index
     }
 
-    /** Resets batch state for a new import. Called during [PhotoScanWizardState.resetToImportStep]. */
+    /**
+     * Resets batch state for a new import. Called during [PhotoScanWizardState.resetToImportStep].
+     */
     fun reset() {
         _sourceFiles.value = emptyList()
         _currentImageIndex.value = 0

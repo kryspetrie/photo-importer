@@ -37,8 +37,10 @@ class ImportServiceTest {
         imageRepository = mock(ImageRepositoryPort::class.java)
         deduplicationPort = mock(DeduplicationPort::class.java)
         namingPort = mock(NamingPort::class.java)
-        val importScanner = ImportScanner(imageRepository, null, TestDispatcherProvider(), TestFileSystemAdapter())
-        val importExecutor = ImportExecutor(imageRepository, namingPort, TestTimeProvider(), TestFileSystemAdapter())
+        val importScanner =
+            ImportScanner(imageRepository, null, TestDispatcherProvider(), TestFileSystemAdapter())
+        val importExecutor =
+            ImportExecutor(imageRepository, namingPort, TestTimeProvider(), TestFileSystemAdapter())
         service = ImportService(importScanner, importExecutor, deduplicationPort, namingPort)
     }
 

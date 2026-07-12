@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
-import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,16 +43,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-
-import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
-import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
-
+import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.FourPointStatusBar
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewCanvas
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewControlsPanel
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.ZoomControls
+import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
+import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
 
 /**
  * Overview screen showing the full scanned image with all detected bounding boxes. Users can

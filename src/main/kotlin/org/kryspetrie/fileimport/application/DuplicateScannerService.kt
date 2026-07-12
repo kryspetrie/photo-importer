@@ -63,8 +63,7 @@ class DuplicateScannerService(
                     async(dispatcherProvider.io) {
                         semaphore.withPermit {
                             val cached = cachedEntries[file.filePath]
-                            val cachedLastModified =
-                                cached?.lastModified ?: 0L
+                            val cachedLastModified = cached?.lastModified ?: 0L
                             val currentLastModified = fileSystem.lastModified(file.path)
                             val hash =
                                 if (

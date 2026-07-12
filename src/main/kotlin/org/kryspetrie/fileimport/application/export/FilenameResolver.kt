@@ -64,7 +64,9 @@ object FilenameResolver {
         var candidate = "$baseName.$extension"
 
         while (true) {
-            val exists = fileSystem.exists(destinationPath.resolve(candidate)) || candidate in existingExports
+            val exists =
+                fileSystem.exists(destinationPath.resolve(candidate)) ||
+                    candidate in existingExports
             if (!exists) break
             candidate = "${baseName}_$counter.$extension"
             counter++

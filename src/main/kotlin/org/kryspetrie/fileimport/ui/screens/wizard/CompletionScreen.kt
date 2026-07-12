@@ -56,7 +56,6 @@ import java.awt.Cursor
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
-import org.kryspetrie.fileimport.ui.screens.wizard.ExportResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -112,7 +111,8 @@ fun CompletionScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        if (failedCount > 0) "$photoCount ${if (photoCount == 1) "photo" else "photos"} exported ($failedCount failed)"
+                        if (failedCount > 0)
+                            "$photoCount ${if (photoCount == 1) "photo" else "photos"} exported ($failedCount failed)"
                         else "$photoCount ${if (photoCount == 1) "photo" else "photos"} exported",
                         style = MaterialTheme.typography.titleMedium,
                         color =
@@ -156,7 +156,10 @@ fun CompletionScreen(
 
             // Per-photo export results summary
             if (exportResults.isNotEmpty()) {
-                ExportResultsSummary(results = exportResults, modifier = Modifier.fillMaxWidth(0.6f))
+                ExportResultsSummary(
+                    results = exportResults,
+                    modifier = Modifier.fillMaxWidth(0.6f),
+                )
             }
 
             // Open folder button
@@ -436,17 +439,17 @@ private fun FullscreenImageDialog(image: BufferedImage, fileName: String, onDism
  * path for each photo.
  */
 @Composable
-private fun ExportResultsSummary(
-    results: List<ExportResult>,
-    modifier: Modifier = Modifier,
-) {
+private fun ExportResultsSummary(results: List<ExportResult>, modifier: Modifier = Modifier) {
     if (results.isEmpty()) return
 
     val successCount = results.count { it is ExportResult.Success }
     val failureCount = results.count { it is ExportResult.Failure }
 
     Card(modifier = modifier, shape = RoundedCornerShape(8.dp)) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             // Summary header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -456,7 +459,10 @@ private fun ExportResultsSummary(
                 Text("Export Results", style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (successCount > 0) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Icon(
                                 Icons.Default.CheckCircle,
                                 contentDescription = null,
@@ -471,7 +477,10 @@ private fun ExportResultsSummary(
                         }
                     }
                     if (failureCount > 0) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Icon(
                                 Icons.Default.Close,
                                 contentDescription = null,
@@ -500,12 +509,22 @@ private fun ExportResultsSummary(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier =
+                            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Icon(icon, contentDescription = null, modifier = Modifier.size(14.dp), tint = iconTint)
-                        Text("Photo ${index + 1}", style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(60.dp))
+                        Icon(
+                            icon,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = iconTint,
+                        )
+                        Text(
+                            "Photo ${index + 1}",
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.width(60.dp),
+                        )
                         when (result) {
                             is ExportResult.Success -> {
                                 val fileName = result.outputPath.substringAfterLast('/')

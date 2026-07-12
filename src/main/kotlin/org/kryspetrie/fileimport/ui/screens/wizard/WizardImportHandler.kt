@@ -1,21 +1,19 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
-import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
-import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.domain.model.geometry.Point
 import org.kryspetrie.fileimport.ui.components.isImageFile
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /**
  * Handles image loading, detection, and batch navigation for the photo scan wizard.
@@ -23,7 +21,10 @@ import org.kryspetrie.fileimport.ui.components.isImageFile
  * Extracted from [WizardContainer] to keep UI composable code separate from orchestration logic.
  */
 
-/** Collects image files from the given folder, sorted by name. Returns an empty list if the folder contains no supported image files. */
+/**
+ * Collects image files from the given folder, sorted by name. Returns an empty list if the folder
+ * contains no supported image files.
+ */
 fun collectImageFiles(folder: File): List<File> {
     return folder.listFiles { f -> f.isFile && isImageFile(f) }?.sortedBy { it.name }?.toList()
         ?: emptyList()
@@ -90,7 +91,9 @@ suspend fun loadImageAndDetect(
                             OperationType.IMAGE_DETECTION,
                             "Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}",
                         )
-                        onMessage("Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}")
+                        onMessage(
+                            "Detected ${boxes.size} ${if (boxes.size == 1) "photo" else "photos"}"
+                        )
                     } else {
                         appLogger.info("No photos detected in ${file.name} - user can add manually")
                         onMessage("No photos detected. Add bounding boxes manually.")
@@ -103,7 +106,10 @@ suspend fun loadImageAndDetect(
                 onComplete()
             }
         } else {
-            appLogger.logOperationFailed(OperationType.IMAGE_LOAD, "Unsupported image format: ${file.name}")
+            appLogger.logOperationFailed(
+                OperationType.IMAGE_LOAD,
+                "Unsupported image format: ${file.name}",
+            )
             // Direct call — Compose MutableState is thread-safe; withContext(Dispatchers.Main)
             // drops MonotonicFrameClock, crashing Compose animation components.
             onError("Failed to load image: unsupported format")
@@ -117,8 +123,8 @@ suspend fun loadImageAndDetect(
 }
 
 /**
- * Starts a new import from the given file, optionally with a batch of files for folder mode.
- * Resets wizard state and launches the load+detect pipeline.
+ * Starts a new import from the given file, optionally with a batch of files for folder mode. Resets
+ * wizard state and launches the load+detect pipeline.
  */
 fun startNewImport(
     state: PhotoScanWizardState,
@@ -190,7 +196,10 @@ fun continueToNextBatchPhoto(
 ) {
     // Auto-skip files that have been marked as "backs" of other photos
     var nextFile = state.batch.advanceToNextBatchFile()
-    while (nextFile != null && state.batch.skippedBatchIndices.value.contains(state.batch.currentImageIndex.value)) {
+    while (
+        nextFile != null &&
+            state.batch.skippedBatchIndices.value.contains(state.batch.currentImageIndex.value)
+    ) {
         nextFile = state.batch.advanceToNextBatchFile()
     }
     if (nextFile == null) return

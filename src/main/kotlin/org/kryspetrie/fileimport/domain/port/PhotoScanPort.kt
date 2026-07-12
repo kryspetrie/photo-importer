@@ -45,16 +45,16 @@ interface PhotoScanDetectorPort {
     /**
      * Preloads ML models eagerly so the first call to [detectPhotos] starts immediately.
      *
-     * Without preloading, the first detection call pays the full cost of loading ~57 MB of
-     * ONNX models from the classpath, creating ONNX sessions (with GPU provider probing),
-     * and running graph optimization — adding 1-3 seconds of latency.
+     * Without preloading, the first detection call pays the full cost of loading ~57 MB of ONNX
+     * models from the classpath, creating ONNX sessions (with GPU provider probing), and running
+     * graph optimization — adding 1-3 seconds of latency.
      *
-     * Call this early in the application lifecycle (e.g., when the user first selects files)
-     * to front-load that cost. This method is idempotent — calling it after models are already
-     * loaded is a no-op.
+     * Call this early in the application lifecycle (e.g., when the user first selects files) to
+     * front-load that cost. This method is idempotent — calling it after models are already loaded
+     * is a no-op.
      *
-     * @return true if the detection pipeline was successfully initialized (or was already),
-     *   false if models are unavailable
+     * @return true if the detection pipeline was successfully initialized (or was already), false
+     *   if models are unavailable
      */
     fun preload(): Boolean = false
 }

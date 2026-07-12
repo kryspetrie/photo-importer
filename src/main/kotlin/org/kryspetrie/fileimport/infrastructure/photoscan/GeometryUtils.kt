@@ -9,8 +9,7 @@ import kotlin.math.max
  * Pure computational geometry utilities for polygon and quadrilateral operations.
  *
  * All functions are pure (no side effects, no framework dependencies) and operate on
- * [RectangleDetector.Point]. These are extracted from RectangleDetector for testability
- * and reuse.
+ * [RectangleDetector.Point]. These are extracted from RectangleDetector for testability and reuse.
  */
 object GeometryUtils {
 
@@ -21,7 +20,10 @@ object GeometryUtils {
      * @param epsilon Maximum perpendicular distance tolerance
      * @return Simplified polyline with fewer vertices
      */
-    fun douglasPeucker(points: List<RectangleDetector.Point>, epsilon: Double): List<RectangleDetector.Point> {
+    fun douglasPeucker(
+        points: List<RectangleDetector.Point>,
+        epsilon: Double,
+    ): List<RectangleDetector.Point> {
         if (points.size < 3) return points
 
         var maxDist = 0.0
@@ -56,10 +58,7 @@ object GeometryUtils {
         val dy = lineEnd.y - lineStart.y.toDouble()
         val len = hypot(dx, dy)
         if (len < 1e-9)
-            return hypot(
-                point.x - lineStart.x.toDouble(),
-                point.y - lineStart.y.toDouble(),
-            )
+            return hypot(point.x - lineStart.x.toDouble(), point.y - lineStart.y.toDouble())
         return abs(
             (dy * point.x - dx * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x)
         ) / len
@@ -101,8 +100,8 @@ object GeometryUtils {
     }
 
     /**
-     * Select the 4 most "corner-like" points from a convex hull by scoring interior angles.
-     * Lower angles (more acute) get higher scores.
+     * Select the 4 most "corner-like" points from a convex hull by scoring interior angles. Lower
+     * angles (more acute) get higher scores.
      */
     fun selectMostAcuteCorners(hull: List<RectangleDetector.Point>): List<RectangleDetector.Point> {
         val n = hull.size
@@ -136,8 +135,8 @@ object GeometryUtils {
     }
 
     /**
-     * Sort 4 corners into canonical order: top-left, top-right, bottom-right, bottom-left.
-     * Uses sum (x+y) for TL/BR and difference (x-y) for TR/BL.
+     * Sort 4 corners into canonical order: top-left, top-right, bottom-right, bottom-left. Uses sum
+     * (x+y) for TL/BR and difference (x-y) for TR/BL.
      */
     fun sortCorners(corners: List<RectangleDetector.Point>): List<RectangleDetector.Point> {
         if (corners.size != 4) return corners
@@ -189,8 +188,8 @@ object GeometryUtils {
     }
 
     /**
-     * Compute quadrilateral quality as a float between 0 and 1.
-     * 1.0 = perfect rectangle (all angles exactly 90°). Lower = more deviation.
+     * Compute quadrilateral quality as a float between 0 and 1. 1.0 = perfect rectangle (all angles
+     * exactly 90°). Lower = more deviation.
      */
     fun quadrilateralQuality(corners: List<RectangleDetector.Point>): Float {
         if (corners.size != 4) return 0f
@@ -234,7 +233,11 @@ object GeometryUtils {
     }
 
     /** 2D cross product: (a - o) × (b - o) */
-    fun cross(o: RectangleDetector.Point, a: RectangleDetector.Point, b: RectangleDetector.Point): Int {
+    fun cross(
+        o: RectangleDetector.Point,
+        a: RectangleDetector.Point,
+        b: RectangleDetector.Point,
+    ): Int {
         return (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x)
     }
 }

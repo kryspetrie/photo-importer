@@ -59,20 +59,13 @@ interface FileSystemPort {
     /** Copies a file from source to destination. Returns `true` if successful. */
     suspend fun copy(source: FilePath, destination: FilePath): Boolean
 
-    /**
-     * Returns the filename of the given path (e.g., "IMG_001.jpg" from
-     * "/photos/IMG_001.jpg").
-     */
+    /** Returns the filename of the given path (e.g., "IMG_001.jpg" from "/photos/IMG_001.jpg"). */
     fun name(path: FilePath): String = path.name
 
-    /**
-     * Returns the filename without extension (e.g., "IMG_001" from "IMG_001.jpg").
-     */
+    /** Returns the filename without extension (e.g., "IMG_001" from "IMG_001.jpg"). */
     fun nameWithoutExtension(path: FilePath): String = path.nameWithoutExtension
 
-    /**
-     * Returns the file extension without dot (e.g., "jpg" from "IMG_001.jpg").
-     */
+    /** Returns the file extension without dot (e.g., "jpg" from "IMG_001.jpg"). */
     fun extension(path: FilePath): String = path.extension
 
     /** Checks if a file can be written to. */
@@ -82,8 +75,8 @@ interface FileSystemPort {
     fun absolutePath(path: FilePath): String = path.toFile().absolutePath
 
     /**
-     * Walks the directory tree at [path] bottom-up, yielding each file/directory found.
-     * Returns an empty sequence if [path] is not a directory.
+     * Walks the directory tree at [path] bottom-up, yielding each file/directory found. Returns an
+     * empty sequence if [path] is not a directory.
      */
     fun walkBottomUp(path: FilePath): Sequence<FilePath> {
         val dir = path.toFile()
@@ -92,8 +85,8 @@ interface FileSystemPort {
     }
 
     /**
-     * Walks the directory tree at [path] top-down, yielding each file/directory found.
-     * Returns an empty sequence if [path] is not a directory.
+     * Walks the directory tree at [path] top-down, yielding each file/directory found. Returns an
+     * empty sequence if [path] is not a directory.
      */
     fun walkTopDown(path: FilePath): Sequence<FilePath> {
         val dir = path.toFile()
@@ -108,13 +101,18 @@ interface FileSystemPort {
     fun listDirectoriesRecursive(path: FilePath): List<FilePath> {
         val dir = path.toFile()
         if (!dir.isDirectory) return emptyList()
-        return dir.walkTopDown().filter { it.isDirectory }.map { FilePath(it.absolutePath) }.toList()
+        return dir.walkTopDown()
+            .filter { it.isDirectory }
+            .map { FilePath(it.absolutePath) }
+            .toList()
     }
 
     /** Reads the entire content of a file as a UTF-8 string. */
     fun readText(path: FilePath): String = path.toFile().readText()
 
-    /** Writes a UTF-8 string to a file, replacing its content. Creates parent directories if needed. */
+    /**
+     * Writes a UTF-8 string to a file, replacing its content. Creates parent directories if needed.
+     */
     fun writeText(path: FilePath, content: String) {
         path.toFile().parentFile?.mkdirs()
         path.toFile().writeText(content)
@@ -124,8 +122,7 @@ interface FileSystemPort {
     fun readBytes(path: FilePath): ByteArray = path.toFile().readBytes()
 
     /**
-     * Writes a byte array to a file, replacing its content.
-     * Creates parent directories if needed.
+     * Writes a byte array to a file, replacing its content. Creates parent directories if needed.
      */
     fun writeBytes(path: FilePath, bytes: ByteArray) {
         path.toFile().parentFile?.mkdirs()

@@ -59,7 +59,11 @@ fun SettingsSection(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Column(Modifier.weight(1f)) {
-                    Text("Custom Settings", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        "Custom Settings",
+                        style =
+                            MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    )
                     if (!expanded) {
                         Text(
                             configSummary(configuration),

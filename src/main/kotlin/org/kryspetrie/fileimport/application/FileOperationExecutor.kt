@@ -10,17 +10,14 @@ import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 
 /**
- * Executes the actual file moves/copies during reorganization and creates
- * journal entries for undo.
+ * Executes the actual file moves/copies during reorganization and creates journal entries for undo.
  */
 class FileOperationExecutor(
     private val dispatcherProvider: DispatcherProvider,
     private val fileSystem: FileSystemPort,
 ) {
 
-    /**
-     * Result of executing a single mapping operation.
-     */
+    /** Result of executing a single mapping operation. */
     data class OperationResult(
         val journalEntry: JournalEntry? = null,
         val movedCount: Int = 0,
@@ -43,7 +40,9 @@ class FileOperationExecutor(
                 val dest = FilePath(mapping.newPath)
 
                 if (!fileSystem.exists(source)) {
-                    return@withContext OperationResult(error = "Source not found: ${mapping.currentPath}")
+                    return@withContext OperationResult(
+                        error = "Source not found: ${mapping.currentPath}"
+                    )
                 }
 
                 val sourceAbsPath = fileSystem.absolutePath(source)
@@ -73,19 +72,20 @@ class FileOperationExecutor(
                     ReorganizeMode.MOVE -> {
                         if (fileSystem.renameTo(source, dest)) {
                             OperationResult(
-                                journalEntry = JournalEntry(
-                                    originalPath = mapping.currentPath,
-                                    newPath = mapping.newPath,
-                                    originalFilename = sourceName,
-                                    newFilename = destName,
-                                    originalParent = sourceParent.orEmpty(),
-                                    newParent = destParentStr.orEmpty(),
-                                    operationType = ReorganizeMode.MOVE,
-                                    wasSuccessful = true,
-                                    fileSize = fileSystem.length(source),
-                                    patternUsed = "",
-                                    changeType = changeType,
-                                ),
+                                journalEntry =
+                                    JournalEntry(
+                                        originalPath = mapping.currentPath,
+                                        newPath = mapping.newPath,
+                                        originalFilename = sourceName,
+                                        newFilename = destName,
+                                        originalParent = sourceParent.orEmpty(),
+                                        newParent = destParentStr.orEmpty(),
+                                        operationType = ReorganizeMode.MOVE,
+                                        wasSuccessful = true,
+                                        fileSize = fileSystem.length(source),
+                                        patternUsed = "",
+                                        changeType = changeType,
+                                    ),
                                 movedCount = if (sameDir) 0 else 1,
                                 renamedCount = if (sameDir) 1 else 0,
                             )
@@ -94,19 +94,20 @@ class FileOperationExecutor(
                             fileSystem.copy(source, dest)
                             fileSystem.delete(source)
                             OperationResult(
-                                journalEntry = JournalEntry(
-                                    originalPath = mapping.currentPath,
-                                    newPath = mapping.newPath,
-                                    originalFilename = sourceName,
-                                    newFilename = destName,
-                                    originalParent = sourceParent.orEmpty(),
-                                    newParent = destParentStr.orEmpty(),
-                                    operationType = ReorganizeMode.MOVE,
-                                    wasSuccessful = true,
-                                    fileSize = fileSystem.length(dest),
-                                    patternUsed = "",
-                                    changeType = changeType,
-                                ),
+                                journalEntry =
+                                    JournalEntry(
+                                        originalPath = mapping.currentPath,
+                                        newPath = mapping.newPath,
+                                        originalFilename = sourceName,
+                                        newFilename = destName,
+                                        originalParent = sourceParent.orEmpty(),
+                                        newParent = destParentStr.orEmpty(),
+                                        operationType = ReorganizeMode.MOVE,
+                                        wasSuccessful = true,
+                                        fileSize = fileSystem.length(dest),
+                                        patternUsed = "",
+                                        changeType = changeType,
+                                    ),
                                 movedCount = 1,
                             )
                         }
@@ -114,19 +115,20 @@ class FileOperationExecutor(
                     ReorganizeMode.COPY -> {
                         fileSystem.copy(source, dest)
                         OperationResult(
-                            journalEntry = JournalEntry(
-                                originalPath = mapping.currentPath,
-                                newPath = mapping.newPath,
-                                originalFilename = sourceName,
-                                newFilename = destName,
-                                originalParent = sourceParent.orEmpty(),
-                                newParent = destParentStr.orEmpty(),
-                                operationType = ReorganizeMode.COPY,
-                                wasSuccessful = true,
-                                fileSize = fileSystem.length(dest),
-                                patternUsed = "",
-                                changeType = changeType,
-                            ),
+                            journalEntry =
+                                JournalEntry(
+                                    originalPath = mapping.currentPath,
+                                    newPath = mapping.newPath,
+                                    originalFilename = sourceName,
+                                    newFilename = destName,
+                                    originalParent = sourceParent.orEmpty(),
+                                    newParent = destParentStr.orEmpty(),
+                                    operationType = ReorganizeMode.COPY,
+                                    wasSuccessful = true,
+                                    fileSize = fileSystem.length(dest),
+                                    patternUsed = "",
+                                    changeType = changeType,
+                                ),
                             copiedCount = 1,
                         )
                     }
@@ -139,13 +141,17 @@ class FileOperationExecutor(
     /**
      * Executes an undo operation for a single journal entry.
      *
-     * For MOVE: moves file back to original location.
-     * For COPY: deletes the copied file (originals were preserved).
+     * For MOVE: moves file back to original location. For COPY: deletes the copied file (originals
+     * were preserved).
      *
      * @param entry The journal entry describing the operation to undo
      * @return Pair of (restoredCount, deletedCount, error message or null)
      */
-    data class UndoResult(val restoredCount: Int = 0, val deletedCount: Int = 0, val error: String? = null)
+    data class UndoResult(
+        val restoredCount: Int = 0,
+        val deletedCount: Int = 0,
+        val error: String? = null,
+    )
 
     suspend fun executeUndo(entry: JournalEntry): UndoResult =
         withContext(dispatcherProvider.io) {
@@ -156,7 +162,9 @@ class FileOperationExecutor(
                         val original = FilePath(entry.originalPath)
 
                         if (!fileSystem.exists(current)) {
-                            return@withContext UndoResult(error = "File not found for undo: ${entry.newPath}")
+                            return@withContext UndoResult(
+                                error = "File not found for undo: ${entry.newPath}"
+                            )
                         }
 
                         val originalParent = original.parent

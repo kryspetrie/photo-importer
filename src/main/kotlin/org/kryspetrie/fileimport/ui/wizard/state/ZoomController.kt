@@ -3,6 +3,7 @@ package org.kryspetrie.fileimport.ui.wizard.state
 import kotlin.math.min
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
 import org.kryspetrie.fileimport.domain.model.geometry.Point
+
 /**
  * Controls zoom and pan operations for the image viewer. Handles zoom around cursor position and
  * bounds checking.

@@ -1,7 +1,6 @@
 package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import java.awt.image.BufferedImage
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -460,16 +459,16 @@ data class DetectedQuadrilateral(
 )
 
 /**
- * Non-maximum suppression for overlapping quadrilateral detections.
- * Removes detections with IoU > threshold (default 0.3).
+ * Non-maximum suppression for overlapping quadrilateral detections. Removes detections with IoU >
+ * threshold (default 0.3).
  */
 object NonMaxSuppression {
     /** Default IoU threshold for suppression. */
     private const val DEFAULT_IOU_THRESHOLD = 0.3f
 
     /**
-     * Suppress overlapping detections, keeping the highest-scoring (first in sorted order).
-     * Assumes [quads] is already sorted by confidence/area (largest first).
+     * Suppress overlapping detections, keeping the highest-scoring (first in sorted order). Assumes
+     * [quads] is already sorted by confidence/area (largest first).
      */
     fun suppress(
         quads: List<DetectedQuadrilateral>,

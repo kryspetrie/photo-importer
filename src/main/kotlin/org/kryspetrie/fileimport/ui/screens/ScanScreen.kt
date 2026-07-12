@@ -19,21 +19,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
-import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.ui.screens.scan.EditPhotoDialog
 import org.kryspetrie.fileimport.ui.screens.scan.ScanActionBar
 import org.kryspetrie.fileimport.ui.screens.scan.ScanImagePreview
@@ -51,7 +50,8 @@ fun ScanScreen(
     settingsPort: SettingsPort? = null,
 ) {
     val scope = rememberCoroutineScope()
-    val settings by settingsPort?.observeSettings()?.collectAsState() ?: remember { mutableStateOf(null) }
+    val settings by
+        settingsPort?.observeSettings()?.collectAsState() ?: remember { mutableStateOf(null) }
     var currentFileIndex by remember { mutableStateOf(0) }
     var currentDetectedPhotos by remember { mutableStateOf<List<DetectedPhoto>>(emptyList()) }
     var exportProgress by remember { mutableStateOf(0) }
@@ -208,14 +208,15 @@ fun ScanScreen(
         EditPhotoDialog(
             photo = photo,
             metadataHistory = settings?.metadataHistory,
-            onRecordMetadataSet = settingsPort?.let { port ->
-                { set ->
-                    scope.launch {
-                        val current = port.observeSettings().first()
-                        port.saveSettings(current.addMetadataSet(set))
+            onRecordMetadataSet =
+                settingsPort?.let { port ->
+                    { set ->
+                        scope.launch {
+                            val current = port.observeSettings().first()
+                            port.saveSettings(current.addMetadataSet(set))
+                        }
                     }
-                }
-            },
+                },
             onClose = { editingPhotoIndex = null },
             onConfigChange = { config -> updatePhotoMetadata(index, config) },
         )

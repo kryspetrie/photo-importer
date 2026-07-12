@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -26,6 +25,7 @@ import org.kryspetrie.fileimport.domain.model.ReorganizeMode
 import org.kryspetrie.fileimport.domain.model.ReorganizePhase
 import org.kryspetrie.fileimport.domain.model.ReorganizeProgress
 import org.kryspetrie.fileimport.domain.model.ReorganizeResult
+import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import org.kryspetrie.fileimport.ui.screens.ReorganizeViewModel
 
 @Composable

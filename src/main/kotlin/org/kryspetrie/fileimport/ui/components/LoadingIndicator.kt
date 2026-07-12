@@ -32,9 +32,9 @@ import kotlinx.coroutines.delay
 /**
  * Animated progress state using time-based interpolation with delay().
  *
- * Avoids Compose animation APIs (rememberInfiniteTransition, animateFloat, Animatable)
- * which require MonotonicFrameClock — not reliably available in Compose Desktop AWT contexts.
- * Instead, uses System.nanoTime() + delay(16) for ~60fps animation.
+ * Avoids Compose animation APIs (rememberInfiniteTransition, animateFloat, Animatable) which
+ * require MonotonicFrameClock — not reliably available in Compose Desktop AWT contexts. Instead,
+ * uses System.nanoTime() + delay(16) for ~60fps animation.
  */
 @Composable
 private fun rememberInfiniteProgress(animationDurationMs: Int = 1200): Float {
@@ -60,8 +60,8 @@ private fun rememberInfiniteProgress(animationDurationMs: Int = 1200): Float {
  * The animation consists of a 3x3 grid of squares that animate in a wave pattern, creating a
  * visually appealing loading indicator.
  *
- * Uses time-based animation (System.nanoTime + delay) instead of Compose animation APIs
- * to avoid MonotonicFrameClock issues in Compose Desktop.
+ * Uses time-based animation (System.nanoTime + delay) instead of Compose animation APIs to avoid
+ * MonotonicFrameClock issues in Compose Desktop.
  */
 @Composable
 fun CubeGridLoadingIndicator(

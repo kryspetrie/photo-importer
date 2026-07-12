@@ -134,7 +134,8 @@ class ReorganizeService(
                     while (
                         "$dir/${base}_$c.$ext" in usedPaths ||
                             (fileSystem.exists(FilePath("$dir/${base}_$c.$ext")) &&
-                                fileSystem.absolutePath(FilePath("$dir/${base}_$c.$ext")) != file.path.path)
+                                fileSystem.absolutePath(FilePath("$dir/${base}_$c.$ext")) !=
+                                    file.path.path)
                     ) {
                         c++
                     }
@@ -245,8 +246,7 @@ class ReorganizeService(
             // Save undo journal
             var journalPath: String? = null
             if (journalEntries.isNotEmpty()) {
-                val rootFolder =
-                    preview.mappings.firstOrNull()?.file?.path?.parent.orEmpty()
+                val rootFolder = preview.mappings.firstOrNull()?.file?.path?.parent.orEmpty()
                 val journal =
                     ReorganizeJournal(
                         rootFolder = rootFolder,
@@ -257,7 +257,8 @@ class ReorganizeService(
                         changedFiles = preview.changedFiles,
                         entries = journalEntries,
                     )
-                journalPath = journalRepository.saveJournal(journal, timeProvider.currentTimeMillis())
+                journalPath =
+                    journalRepository.saveJournal(journal, timeProvider.currentTimeMillis())
             }
 
             onProgress(
@@ -284,8 +285,8 @@ class ReorganizeService(
     /**
      * Undoes a reorganization operation by restoring files to their original locations.
      *
-     * For MOVE operations: moves files back to original paths
-     * For COPY operations: deletes the copied files (originals were preserved)
+     * For MOVE operations: moves files back to original paths For COPY operations: deletes the
+     * copied files (originals were preserved)
      *
      * @param journalPath Path to journal file from reorganization
      * @param onProgress Progress callback
@@ -299,8 +300,9 @@ class ReorganizeService(
             val journalFilePath = FilePath(journalPath)
             require(fileSystem.exists(journalFilePath)) { "Journal file not found: $journalPath" }
 
-            val journal = journalRepository.getJournal(journalPath)
-                ?: throw IllegalArgumentException("Invalid journal file: $journalPath")
+            val journal =
+                journalRepository.getJournal(journalPath)
+                    ?: throw IllegalArgumentException("Invalid journal file: $journalPath")
 
             val entries = journal.entries.reversed()
             var restoredCount = 0

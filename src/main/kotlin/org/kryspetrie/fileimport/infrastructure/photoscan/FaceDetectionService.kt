@@ -1,7 +1,6 @@
 package org.kryspetrie.fileimport.infrastructure.photoscan
 
 import ai.onnxruntime.OrtEnvironment
-import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.port.DetectedFace
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
@@ -11,16 +10,18 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
 import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloFaceDetectionService
 
 /**
- * Infrastructure adapter implementing [FaceDetectionPort] using ONNX Runtime YOLO face detection model.
+ * Infrastructure adapter implementing [FaceDetectionPort] using ONNX Runtime YOLO face detection
+ * model.
  *
  * Lazily initializes the ONNX session when face detection is first requested. If the model file is
- * not available on the classpath, [isFaceDetectionAvailable] returns false and [detectFaces] throws.
+ * not available on the classpath, [isFaceDetectionAvailable] returns false and [detectFaces]
+ * throws.
  *
  * ## Model
  *
- * The face detection model (`models/face_detection_model.onnx`) is a YOLO12n-face model that outputs
- * face bounding boxes with confidence scores in NMS-filtered `[1, 300, 6]` format
- * (x1, y1, x2, y2, confidence, class).
+ * The face detection model (`models/face_detection_model.onnx`) is a YOLO12n-face model that
+ * outputs face bounding boxes with confidence scores in NMS-filtered `[1, 300, 6]` format (x1, y1,
+ * x2, y2, confidence, class).
  *
  * ## GPU Acceleration
  *
@@ -30,8 +31,9 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.yolo.YoloFaceDetection
  *
  * ## Threading
  *
- * ONNX Runtime sessions are thread-safe for concurrent inference calls. The [ai.onnx.runtime.OrtEnvironment]
- * is shared with other YOLO services (detection, pose, corner regression).
+ * ONNX Runtime sessions are thread-safe for concurrent inference calls. The
+ * [ai.onnx.runtime.OrtEnvironment] is shared with other YOLO services (detection, pose, corner
+ * regression).
  *
  * @param modelResourcePort Model loading interface for obtaining the ONNX model bytes
  * @param ortSessionFactory Factory for creating GPU-accelerated ONNX sessions
@@ -49,14 +51,14 @@ class FaceDetectionService(
     /**
      * Preload the face detection model eagerly.
      *
-     * Call this early in the application lifecycle to front-load the model loading cost.
-     * Without preloading, the first call to [detectFaces] pays the cost of classpath I/O
-     * (~10 MB) + ONNX session creation + GPU provider probing.
+     * Call this early in the application lifecycle to front-load the model loading cost. Without
+     * preloading, the first call to [detectFaces] pays the cost of classpath I/O (~10 MB) + ONNX
+     * session creation + GPU provider probing.
      *
      * This method is idempotent — calling it after the service is already loaded is a no-op.
      *
-     * @return true if the face detection service was successfully initialized, false if the
-     *   model is unavailable or initialization failed
+     * @return true if the face detection service was successfully initialized, false if the model
+     *   is unavailable or initialization failed
      */
     override fun preload(): Boolean {
         return faceService != null
@@ -92,7 +94,8 @@ class FaceDetectionService(
         if (!modelResourcePort.isFaceDetectionModelAvailable()) return null
         return try {
             val env = OrtEnvironment.getEnvironment()
-            val session = ortSessionFactory.createSession(modelResourcePort.loadFaceDetectionModel())
+            val session =
+                ortSessionFactory.createSession(modelResourcePort.loadFaceDetectionModel())
             YoloFaceDetectionService(env, session)
         } catch (_: Exception) {
             null

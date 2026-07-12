@@ -29,11 +29,9 @@ import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Collections
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.CropFree
 import androidx.compose.material.icons.filled.FolderOpen
-import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material3.Button
@@ -79,8 +77,6 @@ import androidx.compose.ui.window.DialogProperties
 import java.awt.Cursor
 import java.awt.image.BufferedImage
 import java.io.File
-import org.kryspetrie.fileimport.ui.screens.wizard.rotateBufferedImage
-import org.kryspetrie.fileimport.ui.screens.wizard.rotationFromDegrees
 import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -119,14 +115,16 @@ fun BackImagePickerDialog(
     modifier: Modifier = Modifier,
 ) {
     // Auto-select the pre-selected path or next sequential batch file
-    val initialFile = remember(preSelectedPath, batchFiles) {
-        if (preSelectedPath != null) {
-            File(preSelectedPath).takeIf { it.exists() }
-        } else {
-            // Default to next sequential file from batch after the current (often the back photo)
-            batchFiles?.firstOrNull()
+    val initialFile =
+        remember(preSelectedPath, batchFiles) {
+            if (preSelectedPath != null) {
+                File(preSelectedPath).takeIf { it.exists() }
+            } else {
+                // Default to next sequential file from batch after the current (often the back
+                // photo)
+                batchFiles?.firstOrNull()
+            }
         }
-    }
     var selectedFile by remember { mutableStateOf(initialFile) }
     var backImage by remember { mutableStateOf<BufferedImage?>(null) }
     var backImageMode by remember { mutableStateOf("combine") }
@@ -231,11 +229,15 @@ fun BackImagePickerDialog(
                     val img = backImage
                     if (img != null) {
                         val rotation = rotationFromDegrees(cropRotation)
-                        val displayImage = if (rotation != org.kryspetrie.fileimport.domain.model.RotationAngle.NONE) {
-                            rotateBufferedImage(img, rotation)
-                        } else {
-                            img
-                        }
+                        val displayImage =
+                            if (
+                                rotation !=
+                                    org.kryspetrie.fileimport.domain.model.RotationAngle.NONE
+                            ) {
+                                rotateBufferedImage(img, rotation)
+                            } else {
+                                img
+                            }
                         Image(
                             bitmap = displayImage.toComposeImageBitmap(),
                             contentDescription = "Back image",
@@ -411,7 +413,11 @@ fun BackImagePickerDialog(
                                 )
                             }
                             if (cropRotation != 0) {
-                                Text("${cropRotation}°", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+                                Text(
+                                    "${cropRotation}°",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                )
                             }
                         }
                     }
@@ -506,7 +512,8 @@ private fun NearbyFilesStrip(
     val endIdx = minOf(startIdx + windowSize, files.size)
     val nearbyFiles = files.subList(startIdx, endIdx)
 
-    val listState = rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, selectedIndex - startIdx - 2))
+    val listState =
+        rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, selectedIndex - startIdx - 2))
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text("Nearby files:", style = MaterialTheme.typography.labelMedium)
@@ -518,10 +525,11 @@ private fun NearbyFilesStrip(
         ) {
             itemsIndexed(nearbyFiles) { _, file ->
                 val isSelected = file.absolutePath == selectedFile?.absolutePath
-                val thumbnail = remember(file.absolutePath) {
-                    // Load a small thumbnail asynchronously
-                    mutableStateOf<BufferedImage?>(null)
-                }
+                val thumbnail =
+                    remember(file.absolutePath) {
+                        // Load a small thumbnail asynchronously
+                        mutableStateOf<BufferedImage?>(null)
+                    }
                 LaunchedEffect(file.absolutePath) {
                     withContext(Dispatchers.IO) {
                         try {
@@ -529,12 +537,26 @@ private fun NearbyFilesStrip(
                             if (img != null) {
                                 // Scale down to thumbnail size
                                 val maxDim = 60
-                                val scale = minOf(maxDim.toDouble() / img.width, maxDim.toDouble() / img.height)
+                                val scale =
+                                    minOf(
+                                        maxDim.toDouble() / img.width,
+                                        maxDim.toDouble() / img.height,
+                                    )
                                 val w = (img.width * scale).toInt().coerceAtLeast(1)
                                 val h = (img.height * scale).toInt().coerceAtLeast(1)
-                                val scaled = java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_RGB)
+                                val scaled =
+                                    java.awt.image.BufferedImage(
+                                        w,
+                                        h,
+                                        java.awt.image.BufferedImage.TYPE_INT_RGB,
+                                    )
                                 val g = scaled.createGraphics()
-                                g.drawImage(img.getScaledInstance(w, h, java.awt.Image.SCALE_FAST), 0, 0, null)
+                                g.drawImage(
+                                    img.getScaledInstance(w, h, java.awt.Image.SCALE_FAST),
+                                    0,
+                                    0,
+                                    null,
+                                )
                                 g.dispose()
                                 thumbnail.value = scaled
                             }
@@ -544,19 +566,25 @@ private fun NearbyFilesStrip(
                     }
                 }
                 Card(
-                    modifier = Modifier
-                        .width(64.dp)
-                        .height(80.dp)
-                        .clickable { onSelect(file) },
+                    modifier = Modifier.width(64.dp).height(80.dp).clickable { onSelect(file) },
                     shape = RoundedCornerShape(4.dp),
-                    border = if (isSelected)
-                        androidx.compose.foundation.BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                    else
-                        androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.surface
-                    ),
+                    border =
+                        if (isSelected)
+                            androidx.compose.foundation.BorderStroke(
+                                2.dp,
+                                MaterialTheme.colorScheme.primary,
+                            )
+                        else
+                            androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                MaterialTheme.colorScheme.outlineVariant,
+                            ),
+                    colors =
+                        CardDefaults.cardColors(
+                            containerColor =
+                                if (isSelected) MaterialTheme.colorScheme.primaryContainer
+                                else MaterialTheme.colorScheme.surface
+                        ),
                 ) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         val img = thumbnail.value

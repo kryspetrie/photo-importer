@@ -86,9 +86,9 @@ class MetadataEditState {
     }
 
     /**
-     * Loads non-blank values from a [RecentMetadataSet], overwriting only the fields
-     * that have values in the set. Blank fields in the set are left unchanged in the state,
-     * supporting the "fill only what you previously entered" pattern.
+     * Loads non-blank values from a [RecentMetadataSet], overwriting only the fields that have
+     * values in the set. Blank fields in the set are left unchanged in the state, supporting the
+     * "fill only what you previously entered" pattern.
      */
     fun loadFromSet(set: RecentMetadataSet) {
         if (set.description.isNotBlank()) description = set.description
@@ -141,8 +141,8 @@ class MetadataEditState {
         )
 
     /**
-     * Creates a [RecentMetadataSet] from the current buffered values.
-     * Useful for recording recently-used metadata for reuse.
+     * Creates a [RecentMetadataSet] from the current buffered values. Useful for recording
+     * recently-used metadata for reuse.
      */
     fun toRecentMetadataSet(): RecentMetadataSet =
         RecentMetadataSet(

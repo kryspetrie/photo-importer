@@ -9,18 +9,15 @@ import kotlin.math.atan2
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sqrt
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 
 /**
  * Extracts the corner rescue/refinement logic from YoloPhotoScanPipeline.
  *
- * Provides CV-based Sobel edge detection, strip search, and 2D orientation-aware
- * line intersection to recover low-visibility corners that the pose model misses.
+ * Provides CV-based Sobel edge detection, strip search, and 2D orientation-aware line intersection
+ * to recover low-visibility corners that the pose model misses.
  */
-class CornerRescueService(
-    private val appLogger: AppLogger? = null,
-) {
+class CornerRescueService(private val appLogger: AppLogger? = null) {
     // -----------------------------------------------------------------------
     // Data classes
     // -----------------------------------------------------------------------
@@ -330,7 +327,10 @@ class CornerRescueService(
      *
      * Only uses neighbors with visibility >= NEIGHBOR_VIS_THRESHOLD (0.5).
      */
-    internal fun projectFromNeighbors(kps: List<MutableKeypoint>, cornerIdx: Int): ProjectionResult {
+    internal fun projectFromNeighbors(
+        kps: List<MutableKeypoint>,
+        cornerIdx: Int,
+    ): ProjectionResult {
         val kp = kps[cornerIdx]
         val cornerName = kp.name
         val neighbors =
@@ -849,7 +849,8 @@ class CornerRescueService(
         val bestTwo = lines.take(2)
 
         // Intersect lines
-        val intersection = ImageProcessingUtils.intersectLines(bestTwo[0], bestTwo[1]) ?: return null
+        val intersection =
+            ImageProcessingUtils.intersectLines(bestTwo[0], bestTwo[1]) ?: return null
         val (ix, iy) = intersection
 
         // Validate
@@ -862,5 +863,4 @@ class CornerRescueService(
 
         return Triple(ix, iy, 1.0f)
     }
-
 }

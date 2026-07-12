@@ -11,11 +11,11 @@ import org.kryspetrie.fileimport.domain.port.ModelResourcePort
  * default strategy — models ship with the application and require no user configuration.
  *
  * ## Model files
- * | File                                  | Purpose                                  | Approx. size |
- * |---------------------------------------|------------------------------------------|--------------|
- * | `models/detection_model.onnx`         | YOLO detection — finds bounding boxes    | ~10 MB       |
- * | `models/pose_model.onnx`              | YOLO pose — finds 4-corner keypoints     | ~38 MB       |
- * | `models/face_detection_model.onnx`  | YOLO12n face detection — bounding boxes  | ~10 MB       |
+ * | File                               | Purpose                                 | Approx. size |
+ * |------------------------------------|-----------------------------------------|--------------|
+ * | `models/detection_model.onnx`      | YOLO detection — finds bounding boxes   | ~10 MB       |
+ * | `models/pose_model.onnx`           | YOLO pose — finds 4-corner keypoints    | ~38 MB       |
+ * | `models/face_detection_model.onnx` | YOLO12n face detection — bounding boxes | ~10 MB       |
  *
  * ## Error handling
  *
@@ -53,7 +53,9 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
     }
 
     /** Cached face detection model bytes, loaded lazily. May not be available. */
-    private val faceDetectionModelBytes: ByteArray? by lazy { loadResourceOrNull(FACE_DETECTION_MODEL_PATH) }
+    private val faceDetectionModelBytes: ByteArray? by lazy {
+        loadResourceOrNull(FACE_DETECTION_MODEL_PATH)
+    }
 
     override fun loadDetectionModel(): ByteArray = detectionModelBytes
 

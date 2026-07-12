@@ -18,21 +18,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Sell
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -61,35 +60,30 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-
 import java.awt.image.BufferedImage
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.kryspetrie.fileimport.domain.model.AppSettings
-import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.koin.compose.koinInject
-import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
-import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
+import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
-import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
-import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
+import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
+import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.adapter.transformFaceRegionsFromSource
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
-import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 import org.kryspetrie.fileimport.ui.components.PreviewCache
-
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.FaceNameEntryPanel
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.MetadataEditorPanel
@@ -97,11 +91,12 @@ import org.kryspetrie.fileimport.ui.screens.wizard.edit.PhotoSidebar
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.RotationSection
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LoadSourceExifEffect
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerOverlay
-import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
+import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /**
- * Edit screen with vertical thumbnail sidebar on the left, large preview in the center,
- * and metadata panel on the right. Rotation controls are inline in the metadata panel.
+ * Edit screen with vertical thumbnail sidebar on the left, large preview in the center, and
+ * metadata panel on the right. Rotation controls are inline in the metadata panel.
  *
  * Layout: [Thumbnail sidebar | Preview | Metadata panel]
  */
@@ -178,9 +173,7 @@ fun EditScreen(
         val box = boundingBoxList.boxes[idx]
         val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
         val fullPreview = previewCache.getFullPreview(image, box, config)
-        val fullscreenBitmap = remember(fullPreview) {
-            fullPreview?.toComposeImageBitmap()
-        }
+        val fullscreenBitmap = remember(fullPreview) { fullPreview?.toComposeImageBitmap() }
         androidx.compose.ui.window.Popup(onDismissRequest = { fullscreenPreviewIndex = null }) {
             Box(
                 modifier = Modifier.fillMaxSize().background(Color.Black),
@@ -220,7 +213,8 @@ fun EditScreen(
                 ) {
                     try {
                         val marginFraction = state.exportSettings.exportMarginPercent.value
-                        val perspectiveEnabled = state.exportSettings.perspectiveCorrectionEnabled.value
+                        val perspectiveEnabled =
+                            state.exportSettings.perspectiveCorrectionEnabled.value
                         val detectedPhoto =
                             boxToDetectedPhoto(box, perspectiveEnabled, config.rotationDegrees)
                         val marginedPhoto =
@@ -279,36 +273,43 @@ fun EditScreen(
                 },
                 inheritedFaceRegions = inheritedFaceRegions,
                 autoStartNaming = autoStartNaming,
-                onAutoDetectFaces = if (faceDetectionPort.isFaceDetectionAvailable()) {
-                    {
-                        try {
-                            val detections = faceDetectionPort.detectFaces(fullPreview.toProcessedImage())
-                            if (detections.isNotEmpty()) {
-                                val imgW = fullPreview.width.toDouble()
-                                val imgH = fullPreview.height.toDouble()
-                                val detectedRegions = detections.map { det ->
-                                    val centerX = ((det.x1 + det.x2) / 2.0 / imgW).coerceIn(0.0, 1.0)
-                                    val centerY = ((det.y1 + det.y2) / 2.0 / imgH).coerceIn(0.0, 1.0)
-                                    val width = ((det.x2 - det.x1) / imgW).coerceIn(0.01, 1.0)
-                                    FaceRegion(
-                                        name = "",
-                                        type = RegionType.FACE.mwgRsValue,
-                                        x = centerX,
-                                        y = centerY,
-                                        w = width,
-                                        h = width,
-                                    )
+                onAutoDetectFaces =
+                    if (faceDetectionPort.isFaceDetectionAvailable()) {
+                        {
+                            try {
+                                val detections =
+                                    faceDetectionPort.detectFaces(fullPreview.toProcessedImage())
+                                if (detections.isNotEmpty()) {
+                                    val imgW = fullPreview.width.toDouble()
+                                    val imgH = fullPreview.height.toDouble()
+                                    val detectedRegions =
+                                        detections.map { det ->
+                                            val centerX =
+                                                ((det.x1 + det.x2) / 2.0 / imgW).coerceIn(0.0, 1.0)
+                                            val centerY =
+                                                ((det.y1 + det.y2) / 2.0 / imgH).coerceIn(0.0, 1.0)
+                                            val width =
+                                                ((det.x2 - det.x1) / imgW).coerceIn(0.01, 1.0)
+                                            FaceRegion(
+                                                name = "",
+                                                type = RegionType.FACE.mwgRsValue,
+                                                x = centerX,
+                                                y = centerY,
+                                                w = width,
+                                                h = width,
+                                            )
+                                        }
+                                    state.faceRegions.addDetectedFaceRegions(idx, detectedRegions)
+                                    autoStartNaming = true
                                 }
-                                state.faceRegions.addDetectedFaceRegions(idx, detectedRegions)
-                                autoStartNaming = true                            }
-                        } catch (e: CancellationException) {
-                            // Cancellation must propagate to preserve coroutine lifecycle
-                            throw e
-                        } catch (_: Exception) {
-                            // Detection failed silently — user can still place faces manually
+                            } catch (e: CancellationException) {
+                                // Cancellation must propagate to preserve coroutine lifecycle
+                                throw e
+                            } catch (_: Exception) {
+                                // Detection failed silently — user can still place faces manually
+                            }
                         }
-                    }
-                } else null,
+                    } else null,
             )
         }
     }
@@ -351,12 +352,11 @@ fun EditScreen(
         }
     }
 
-
     // ── Back-of-photo image picker dialog ──
     if (showBackImagePicker) {
         // Pre-select: prefer last-used back source, then next sequential batch file
-        val preSelectedBackPath = state.lastBackImageSourcePath.value
-            ?: state.batch.peekNextBatchFile()?.absolutePath
+        val preSelectedBackPath =
+            state.lastBackImageSourcePath.value ?: state.batch.peekNextBatchFile()?.absolutePath
         BackImagePickerDialog(
             batchFiles = state.batch.sourceFiles.value.ifEmpty { null },
             preSelectedPath = preSelectedBackPath,
@@ -427,8 +427,12 @@ fun EditScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Edit Photos", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
-                },
+                    Text(
+                        "Edit Photos",
+                        style =
+                            MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    )
+                }
             )
         },
         bottomBar = {
@@ -447,9 +451,10 @@ fun EditScreen(
                         OutlinedButton(
                             onClick = onSkipCurrentPhoto,
                             modifier = Modifier.height(32.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = MaterialTheme.colorScheme.error,
-                            ),
+                            colors =
+                                ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.error
+                                ),
                         ) {
                             Icon(Icons.Default.SkipNext, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
@@ -514,11 +519,11 @@ fun EditScreen(
                     val selectedIndex = selectedIndices.first()
                     val box = boundingBoxList.boxes[selectedIndex]
                     val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
-                    val visualConfig = PhotoScanConfiguration(rotationDegrees = config.rotationDegrees)
+                    val visualConfig =
+                        PhotoScanConfiguration(rotationDegrees = config.rotationDegrees)
                     val previewImage = previewCache.getFullPreview(image, box, visualConfig)
-                    val previewBitmap = remember(previewImage) {
-                        previewImage?.toComposeImageBitmap()
-                    }
+                    val previewBitmap =
+                        remember(previewImage) { previewImage?.toComposeImageBitmap() }
                     Box(
                         modifier =
                             Modifier.weight(1f)
@@ -552,23 +557,16 @@ fun EditScreen(
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        "Tag Photo",
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
+                                    Text("Tag Photo", style = MaterialTheme.typography.labelSmall)
                                 }
                                 Surface(
-                                    modifier =
-                                        Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                                    modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
                                     color = MaterialTheme.colorScheme.primaryContainer,
                                     shape = RoundedCornerShape(4.dp),
                                 ) {
                                     Row(
                                         modifier =
-                                            Modifier.padding(
-                                                horizontal = 8.dp,
-                                                vertical = 4.dp,
-                                            ),
+                                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Icon(
@@ -579,8 +577,7 @@ fun EditScreen(
                                         )
                                         Spacer(Modifier.width(4.dp))
                                         Text(
-                                            if (config.backImageMode == "combine")
-                                                "Back: Combined"
+                                            if (config.backImageMode == "combine") "Back: Combined"
                                             else "Back: Appended",
                                             style = MaterialTheme.typography.labelSmall,
                                             color = MaterialTheme.colorScheme.primary,
@@ -632,10 +629,7 @@ fun EditScreen(
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        "Tag Photo",
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
+                                    Text("Tag Photo", style = MaterialTheme.typography.labelSmall)
                                 }
                                 OutlinedButton(
                                     onClick = { showBackImagePicker = true },
@@ -651,10 +645,7 @@ fun EditScreen(
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        "Add Back",
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
+                                    Text("Add Back", style = MaterialTheme.typography.labelSmall)
                                 }
                             }
                         }
@@ -680,15 +671,17 @@ fun EditScreen(
                     RotationSection(
                         rotationDegrees = config.rotationDegrees,
                         onRotateCW = {
-                            state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCW() }
+                            state.configs.updatePhotoScanConfiguration(box.id) {
+                                it.cycleRotationCW()
+                            }
                         },
                         onRotateCCW = {
-                            state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCCW() }
+                            state.configs.updatePhotoScanConfiguration(box.id) {
+                                it.cycleRotationCCW()
+                            }
                         },
                         onRotate180 = {
-                            state.configs.updatePhotoScanConfiguration(box.id) {
-                                it.rotate180()
-                            }
+                            state.configs.updatePhotoScanConfiguration(box.id) { it.rotate180() }
                         },
                     )
                 } else if (isMultiEditMode && selectedIndices.size > 1) {
@@ -696,10 +689,13 @@ fun EditScreen(
                     Surface(
                         tonalElevation = 1.dp,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier =
+                            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+                            modifier =
+                                Modifier.fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -710,13 +706,19 @@ fun EditScreen(
                                     selectedIndices.forEach { idx ->
                                         if (idx < boundingBoxList.size()) {
                                             val box = boundingBoxList.boxes[idx]
-                                            state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCCW() }
+                                            state.configs.updatePhotoScanConfiguration(box.id) {
+                                                it.cycleRotationCCW()
+                                            }
                                         }
                                     }
                                 },
                                 modifier = Modifier.size(24.dp),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(16.dp))
+                                Icon(
+                                    Icons.AutoMirrored.Filled.RotateLeft,
+                                    "CCW",
+                                    Modifier.size(16.dp),
+                                )
                             }
                             IconButton(
                                 onClick = {
@@ -738,13 +740,19 @@ fun EditScreen(
                                     selectedIndices.forEach { idx ->
                                         if (idx < boundingBoxList.size()) {
                                             val box = boundingBoxList.boxes[idx]
-                                            state.configs.updatePhotoScanConfiguration(box.id) { it.cycleRotationCW() }
+                                            state.configs.updatePhotoScanConfiguration(box.id) {
+                                                it.cycleRotationCW()
+                                            }
                                         }
                                     }
                                 },
                                 modifier = Modifier.size(24.dp),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(16.dp))
+                                Icon(
+                                    Icons.AutoMirrored.Filled.RotateRight,
+                                    "CW",
+                                    Modifier.size(16.dp),
+                                )
                             }
                         }
                     }

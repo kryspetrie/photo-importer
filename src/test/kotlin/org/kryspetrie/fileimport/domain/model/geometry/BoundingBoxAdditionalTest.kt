@@ -5,10 +5,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
-import org.kryspetrie.fileimport.domain.model.geometry.Corner
-import org.kryspetrie.fileimport.domain.model.geometry.Point
+
 /** Unit tests for BoundingBox and related classes. */
 @DisplayName("BoundingBox Tests")
 class BoundingBoxAdditionalTest {
@@ -389,5 +386,3 @@ class PhotoCornerTest {
         assertThat(point.y).isEqualTo(75.0)
     }
 }
-
-

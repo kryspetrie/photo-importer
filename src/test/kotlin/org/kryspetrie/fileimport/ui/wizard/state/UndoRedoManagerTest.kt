@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.Corner
 import org.kryspetrie.fileimport.domain.model.geometry.Point
+
 /** Unit tests for UndoRedoManager. Tests UR-01 through UR-06 from the implementation plan. */
 class UndoRedoManagerTest {
 

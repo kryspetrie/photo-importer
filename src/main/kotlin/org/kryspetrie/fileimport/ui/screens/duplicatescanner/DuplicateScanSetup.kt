@@ -48,7 +48,10 @@ fun DuplicateScanSetup(
     // Detection methods
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Detection Methods", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+            Text(
+                "Detection Methods",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            )
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     SettingsToggle(

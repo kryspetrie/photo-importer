@@ -69,12 +69,11 @@ data class AppSettings(
     val lastMapZoom: Double = 5.0,
 
     /**
-     * When true, automatically skip files that have been used as "back" images during
-     * batch folder processing. This prevents the wizard from presenting back-of-photo
-     * images as photos to process.
+     * When true, automatically skip files that have been used as "back" images during batch folder
+     * processing. This prevents the wizard from presenting back-of-photo images as photos to
+     * process.
      */
     val autoSkipBackFiles: Boolean = true,
-
 ) {
     /** Returns the currently active Photo Scan profile, or the default if none is selected. */
     val activePhotoScanProfile: PhotoScanProfile

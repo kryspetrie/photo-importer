@@ -113,15 +113,15 @@ data class PhotoScanConfiguration(
     // -- Location metadata (IPTC Core + EXIF GPS) --
 
     /**
-     * Sub-location / location name (IPTC 2:91). E.g. "Grandma's house" or "Disney World".
-     * A colloquial or recognizable name for the place. Empty = preserve original.
+     * Sub-location / location name (IPTC 2:91). E.g. "Grandma's house" or "Disney World". A
+     * colloquial or recognizable name for the place. Empty = preserve original.
      */
     val locationName: String = "",
 
     /**
-     * Full street address from geocoding (e.g. "Worcester, Massachusetts, United States").
-     * Written to IPTC SubLocation when set, providing the detailed address. Falls back to
-     * [locationName] in IPTC export if this is blank. Empty = preserve original.
+     * Full street address from geocoding (e.g. "Worcester, Massachusetts, United States"). Written
+     * to IPTC SubLocation when set, providing the detailed address. Falls back to [locationName] in
+     * IPTC export if this is blank. Empty = preserve original.
      */
     val address: String = "",
 
@@ -199,13 +199,12 @@ data class PhotoScanConfiguration(
     /** Cycles rotation 90° clockwise: 0→90→180→270→0, transforming face regions accordingly. */
     fun cycleRotationCW(): PhotoScanConfiguration {
         val newDegrees = (rotationDegrees + 90) % 360
-        return copy(
-            rotationDegrees = newDegrees,
-            faceRegions = faceRegions.map { it.rotate90CW() },
-        )
+        return copy(rotationDegrees = newDegrees, faceRegions = faceRegions.map { it.rotate90CW() })
     }
 
-    /** Cycles rotation 90° counter-clockwise: 0→270→180→90→0, transforming face regions accordingly. */
+    /**
+     * Cycles rotation 90° counter-clockwise: 0→270→180→90→0, transforming face regions accordingly.
+     */
     fun cycleRotationCCW(): PhotoScanConfiguration {
         val newDegrees = (rotationDegrees - 90 + 360) % 360
         return copy(
@@ -215,10 +214,11 @@ data class PhotoScanConfiguration(
     }
 
     /** Rotates 180°, transforming face regions accordingly. */
-    fun rotate180(): PhotoScanConfiguration = copy(
-        rotationDegrees = (rotationDegrees + 180) % 360,
-        faceRegions = faceRegions.map { it.rotate180() },
-    )
+    fun rotate180(): PhotoScanConfiguration =
+        copy(
+            rotationDegrees = (rotationDegrees + 180) % 360,
+            faceRegions = faceRegions.map { it.rotate180() },
+        )
 
     /** Returns true if any metadata fields are non-empty. */
     fun hasMetadata(): Boolean =
@@ -258,7 +258,9 @@ data class PhotoScanConfiguration(
 
     /** Returns a human-readable location string, e.g. "Grandma's house, Worcester, MA". */
     fun locationDisplay(): String =
-        listOf(locationName, address, city, state, country).filter { it.isNotBlank() }.joinToString(", ")
+        listOf(locationName, address, city, state, country)
+            .filter { it.isNotBlank() }
+            .joinToString(", ")
 
     /** Returns true if there is GPS coordinate data. */
     fun hasGpsCoordinates(): Boolean = gpsLatitude.isNotBlank() && gpsLongitude.isNotBlank()

@@ -1,13 +1,12 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
-import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
-import org.kryspetrie.fileimport.domain.model.PhotoCorner
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
+import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
 
 /**
  * Crops and rotates a bounding box from an image using perspective correction and rotation.

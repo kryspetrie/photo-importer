@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.domain.model
 
-import org.apache.commons.imaging.common.RationalNumber
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

@@ -60,7 +60,9 @@ private fun TransferredDetectionSection(
         Column(Modifier.weight(1f)) {
             SettingsToggle(
                 checked = configuration.detectTransferredByHash,
-                onCheckedChange = { onConfigChange(configuration.copy(detectTransferredByHash = it)) },
+                onCheckedChange = {
+                    onConfigChange(configuration.copy(detectTransferredByHash = it))
+                },
                 label = "Match by hash",
                 description = "Compare file content hash (MD5)",
             )
@@ -68,7 +70,9 @@ private fun TransferredDetectionSection(
         Column(Modifier.weight(1f)) {
             SettingsToggle(
                 checked = configuration.detectTransferredByExif,
-                onCheckedChange = { onConfigChange(configuration.copy(detectTransferredByExif = it)) },
+                onCheckedChange = {
+                    onConfigChange(configuration.copy(detectTransferredByExif = it))
+                },
                 label = "Match by EXIF",
                 description = "Compare EXIF metadata",
             )

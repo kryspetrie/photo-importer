@@ -4,10 +4,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import java.awt.image.BufferedImage
 import java.util.concurrent.ConcurrentHashMap
-import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
-import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.screens.wizard.cropAndRotateBoundingBox
 
 /**
@@ -31,9 +30,9 @@ class PreviewCache(
 
     /**
      * Generates a cache key from only the geometric properties that affect the visual preview:
-     * bounding box corners + rotation + perspective correction + aspect ratio.
-     * Metadata fields (description, keywords, etc.) are intentionally excluded because they
-     * don't change the image appearance.
+     * bounding box corners + rotation + perspective correction + aspect ratio. Metadata fields
+     * (description, keywords, etc.) are intentionally excluded because they don't change the image
+     * appearance.
      */
     fun cacheKey(box: BoundingBox, config: PhotoScanConfiguration): String {
         val c = box.corners
@@ -51,10 +50,14 @@ class PreviewCache(
     }
 
     /**
-     * Returns the full-resolution perspective-corrected preview for the given box+config,
-     * computing it if not already cached.
+     * Returns the full-resolution perspective-corrected preview for the given box+config, computing
+     * it if not already cached.
      */
-    fun getFullPreview(sourceImage: BufferedImage, box: BoundingBox, config: PhotoScanConfiguration): BufferedImage? {
+    fun getFullPreview(
+        sourceImage: BufferedImage,
+        box: BoundingBox,
+        config: PhotoScanConfiguration,
+    ): BufferedImage? {
         val key = cacheKey(box, config)
         return fullCache.getOrPut(key) {
             cropAndRotateBoundingBox(sourceImage, box, config, perspectiveService) ?: return null
@@ -62,13 +65,19 @@ class PreviewCache(
     }
 
     /**
-     * Returns a downsampled thumbnail [ImageBitmap] for the given box+config.
-     * The full preview is computed first (and cached), then downsampled to
-     * [thumbnailMaxSize] max dimension for efficient list rendering.
+     * Returns a downsampled thumbnail [ImageBitmap] for the given box+config. The full preview is
+     * computed first (and cached), then downsampled to [thumbnailMaxSize] max dimension for
+     * efficient list rendering.
      */
-    fun getThumbnail(sourceImage: BufferedImage, box: BoundingBox, config: PhotoScanConfiguration): ImageBitmap? {
+    fun getThumbnail(
+        sourceImage: BufferedImage,
+        box: BoundingBox,
+        config: PhotoScanConfiguration,
+    ): ImageBitmap? {
         val key = cacheKey(box, config)
-        thumbnailCache[key]?.let { return it }
+        thumbnailCache[key]?.let {
+            return it
+        }
 
         val fullPreview = getFullPreview(sourceImage, box, config) ?: return null
         val thumbnail = downsampleToBitmap(fullPreview, thumbnailMaxSize)
@@ -77,10 +86,14 @@ class PreviewCache(
     }
 
     /**
-     * Pre-warms the cache for multiple boxes, computing full previews off-thread.
-     * Call this when entering a screen to avoid lag during first render.
+     * Pre-warms the cache for multiple boxes, computing full previews off-thread. Call this when
+     * entering a screen to avoid lag during first render.
      */
-    fun preWarm(sourceImage: BufferedImage, boxes: List<BoundingBox>, configs: Map<String, PhotoScanConfiguration>) {
+    fun preWarm(
+        sourceImage: BufferedImage,
+        boxes: List<BoundingBox>,
+        configs: Map<String, PhotoScanConfiguration>,
+    ) {
         for (box in boxes) {
             val config = configs[box.id] ?: PhotoScanConfiguration()
             val key = cacheKey(box, config)
@@ -95,9 +108,8 @@ class PreviewCache(
 
     /** Removes entries for boxes/configs that are no longer in use. */
     fun retainOnly(boxes: List<BoundingBox>, configs: Map<String, PhotoScanConfiguration>) {
-        val retainedKeys = boxes.map { box ->
-            cacheKey(box, configs[box.id] ?: PhotoScanConfiguration())
-        }.toSet()
+        val retainedKeys =
+            boxes.map { box -> cacheKey(box, configs[box.id] ?: PhotoScanConfiguration()) }.toSet()
 
         fullCache.keys.retainAll(retainedKeys)
         thumbnailCache.keys.retainAll(retainedKeys)
@@ -117,18 +129,20 @@ class PreviewCache(
     }
 
     /** Number of full-resolution entries currently cached. */
-    val fullSize: Int get() = fullCache.size
+    val fullSize: Int
+        get() = fullCache.size
 
     /** Number of thumbnail entries currently cached. */
-    val thumbnailSize: Int get() = thumbnailCache.size
+    val thumbnailSize: Int
+        get() = thumbnailCache.size
 
     companion object {
         /** Default maximum dimension for thumbnail images. */
         const val DEFAULT_THUMBNAIL_MAX_SIZE = 400
 
         /**
-         * Downsamples a [BufferedImage] to an [ImageBitmap] with maximum dimension [maxSize].
-         * Uses area averaging for good quality at small sizes.
+         * Downsamples a [BufferedImage] to an [ImageBitmap] with maximum dimension [maxSize]. Uses
+         * area averaging for good quality at small sizes.
          */
         fun downsampleToBitmap(image: BufferedImage, maxSize: Int): ImageBitmap {
             val srcW = image.width
@@ -141,7 +155,8 @@ class PreviewCache(
             val dstW = (srcW * scale).toInt().coerceAtLeast(1)
             val dstH = (srcH * scale).toInt().coerceAtLeast(1)
 
-            val scaled = java.awt.image.BufferedImage(dstW, dstH, java.awt.image.BufferedImage.TYPE_INT_RGB)
+            val scaled =
+                java.awt.image.BufferedImage(dstW, dstH, java.awt.image.BufferedImage.TYPE_INT_RGB)
             val g = scaled.createGraphics()
             g.setRenderingHint(
                 java.awt.RenderingHints.KEY_INTERPOLATION,

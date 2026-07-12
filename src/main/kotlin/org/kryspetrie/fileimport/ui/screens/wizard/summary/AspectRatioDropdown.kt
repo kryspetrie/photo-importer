@@ -54,14 +54,9 @@ fun AspectRatioDropdown(
             label = { Text("Aspect Ratio") },
             modifier = Modifier.width(140.dp).height(40.dp),
             textStyle = MaterialTheme.typography.labelSmall,
-            trailingIcon = {
-                Text("▾", style = MaterialTheme.typography.bodySmall)
-            },
+            trailingIcon = { Text("▾", style = MaterialTheme.typography.bodySmall) },
         )
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             AspectRatio.entries.forEach { ratio ->
                 DropdownMenuItem(
                     text = { Text(ratio.displayName, style = MaterialTheme.typography.labelSmall) },

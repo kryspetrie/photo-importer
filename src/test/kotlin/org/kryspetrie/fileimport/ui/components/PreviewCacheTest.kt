@@ -7,13 +7,13 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.DetectionMode
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
 import org.kryspetrie.fileimport.domain.model.geometry.Point
+import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 
 @DisplayName("PreviewCache")
 @Tag("UnitTest")
@@ -30,14 +30,16 @@ class PreviewCacheTest {
         perspectiveService = PerspectiveCorrectionService()
         previewCache = PreviewCache(perspectiveService)
         testImage = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
-        testBox = BoundingBox(
-            corners = BoundingBoxCorners(
-                topLeft = Point(100.0, 100.0),
-                topRight = Point(300.0, 100.0),
-                bottomRight = Point(300.0, 200.0),
-                bottomLeft = Point(100.0, 200.0),
+        testBox =
+            BoundingBox(
+                corners =
+                    BoundingBoxCorners(
+                        topLeft = Point(100.0, 100.0),
+                        topRight = Point(300.0, 100.0),
+                        bottomRight = Point(300.0, 200.0),
+                        bottomLeft = Point(100.0, 200.0),
+                    )
             )
-        )
         defaultConfig = PhotoScanConfiguration()
     }
 
@@ -96,14 +98,16 @@ class PreviewCacheTest {
         @Test
         @DisplayName("different box corners produce different cache key")
         fun differentBoxCornersProduceDifferentKey() {
-            val otherBox = BoundingBox(
-                corners = BoundingBoxCorners(
-                    topLeft = Point(200.0, 200.0),
-                    topRight = Point(400.0, 200.0),
-                    bottomRight = Point(400.0, 300.0),
-                    bottomLeft = Point(200.0, 300.0),
+            val otherBox =
+                BoundingBox(
+                    corners =
+                        BoundingBoxCorners(
+                            topLeft = Point(200.0, 200.0),
+                            topRight = Point(400.0, 200.0),
+                            bottomRight = Point(400.0, 300.0),
+                            bottomLeft = Point(200.0, 300.0),
+                        )
                 )
-            )
             val key1 = previewCache.cacheKey(testBox, defaultConfig)
             val key2 = previewCache.cacheKey(otherBox, defaultConfig)
             assertThat(key1).isNotEqualTo(key2)
@@ -113,13 +117,14 @@ class PreviewCacheTest {
         @DisplayName("metadata-only changes do not affect cache key")
         fun metadataOnlyChangesDoNotAffectCacheKey() {
             val configNoMetadata = PhotoScanConfiguration()
-            val configWithMetadata = PhotoScanConfiguration(
-                description = "Test photo",
-                keywords = "wedding, family",
-                originalDate = "2024-01-15",
-                cameraMake = "Canon",
-                subjects = "Mom, Dad",
-            )
+            val configWithMetadata =
+                PhotoScanConfiguration(
+                    description = "Test photo",
+                    keywords = "wedding, family",
+                    originalDate = "2024-01-15",
+                    cameraMake = "Canon",
+                    subjects = "Mom, Dad",
+                )
             val keyNoMetadata = previewCache.cacheKey(testBox, configNoMetadata)
             val keyWithMetadata = previewCache.cacheKey(testBox, configWithMetadata)
             assertThat(keyNoMetadata).isEqualTo(keyWithMetadata)
@@ -255,14 +260,16 @@ class PreviewCacheTest {
         @Test
         @DisplayName("retainOnly removes entries not in the given list")
         fun retainOnlyRemovesUnneededEntries() {
-            val box2 = BoundingBox(
-                corners = BoundingBoxCorners(
-                    topLeft = Point(400.0, 400.0),
-                    topRight = Point(500.0, 400.0),
-                    bottomRight = Point(500.0, 500.0),
-                    bottomLeft = Point(400.0, 500.0),
+            val box2 =
+                BoundingBox(
+                    corners =
+                        BoundingBoxCorners(
+                            topLeft = Point(400.0, 400.0),
+                            topRight = Point(500.0, 400.0),
+                            bottomRight = Point(500.0, 500.0),
+                            bottomLeft = Point(400.0, 500.0),
+                        )
                 )
-            )
             val config0 = PhotoScanConfiguration(rotationDegrees = 0)
             val config90 = PhotoScanConfiguration(rotationDegrees = 90)
 
@@ -279,18 +286,17 @@ class PreviewCacheTest {
         @Test
         @DisplayName("preWarm populates cache for multiple boxes")
         fun preWarmPopulatesCache() {
-            val box2 = BoundingBox(
-                corners = BoundingBoxCorners(
-                    topLeft = Point(400.0, 400.0),
-                    topRight = Point(500.0, 400.0),
-                    bottomRight = Point(500.0, 500.0),
-                    bottomLeft = Point(400.0, 500.0),
+            val box2 =
+                BoundingBox(
+                    corners =
+                        BoundingBoxCorners(
+                            topLeft = Point(400.0, 400.0),
+                            topRight = Point(500.0, 400.0),
+                            bottomRight = Point(500.0, 500.0),
+                            bottomLeft = Point(400.0, 500.0),
+                        )
                 )
-            )
-            val configs = mapOf(
-                testBox.id to defaultConfig,
-                box2.id to defaultConfig,
-            )
+            val configs = mapOf(testBox.id to defaultConfig, box2.id to defaultConfig)
             val boxes = listOf(testBox, box2)
 
             previewCache.preWarm(testImage, boxes, configs)

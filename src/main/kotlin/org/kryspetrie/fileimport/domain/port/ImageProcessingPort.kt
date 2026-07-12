@@ -78,8 +78,8 @@ interface ImageProcessingPort {
      *
      * The back image is loaded from [PhotoScanConfiguration.backImageSourcePath], optionally
      * cropped using [PhotoScanConfiguration.backCropNormalized], and optionally rotated by
-     * [PhotoScanConfiguration.backCropRotation]. The images are stacked vertically with a 2px
-     * grey separator, back image scaled to match front image width.
+     * [PhotoScanConfiguration.backCropRotation]. The images are stacked vertically with a 2px grey
+     * separator, back image scaled to match front image width.
      *
      * Returns [frontImage] unchanged if no back image is configured or if loading fails.
      *

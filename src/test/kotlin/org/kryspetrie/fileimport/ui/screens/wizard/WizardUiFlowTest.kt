@@ -14,21 +14,21 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
-import org.kryspetrie.fileimport.domain.port.SettingsPort
-import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.domain.model.geometry.Point
-import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
+import org.kryspetrie.fileimport.domain.port.SettingsPort
+import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
+import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
 
 /**
  * Compose UI flow tests that render actual Compose components and simulate user interactions.
  *
- * These tests verify that the UI renders correctly and that user interactions (button clicks,
- * etc.) drive state changes and invoke callbacks as expected.
+ * These tests verify that the UI renders correctly and that user interactions (button clicks, etc.)
+ * drive state changes and invoke callbacks as expected.
  *
  * NOTE: These tests require a display/graphical environment to run. They are tagged with
  * `UiComponentTest` and excluded from the default `test` task. Run with `./gradlew uiTest`.
@@ -39,8 +39,7 @@ import org.kryspetrie.fileimport.ui.components.PreviewCache
 @Tag("UiComponentTest")
 class WizardUiFlowTest {
 
-    @get:Rule
-    val composeTestRule = createComposeRule()
+    @get:Rule val composeTestRule = createComposeRule()
 
     private lateinit var wizardState: PhotoScanWizardState
     private lateinit var testImage: BufferedImage
@@ -275,9 +274,7 @@ class WizardUiFlowTest {
         @Test
         @DisplayName("should display Export Settings title")
         fun shouldDisplayExportSettingsTitle() {
-            composeTestRule.setContent {
-                ExportSettingsCard(state = wizardState)
-            }
+            composeTestRule.setContent { ExportSettingsCard(state = wizardState) }
 
             composeTestRule.onNodeWithText("Export Settings").assertIsDisplayed()
         }
@@ -285,9 +282,7 @@ class WizardUiFlowTest {
         @Test
         @DisplayName("should display perspective correction toggle")
         fun shouldDisplayPerspectiveCorrectionToggle() {
-            composeTestRule.setContent {
-                ExportSettingsCard(state = wizardState)
-            }
+            composeTestRule.setContent { ExportSettingsCard(state = wizardState) }
 
             composeTestRule.onNodeWithText("Perspective correction").assertIsDisplayed()
         }
@@ -297,9 +292,7 @@ class WizardUiFlowTest {
         fun shouldDisplayCorrectionStrategyWhenPerspectiveOff() {
             wizardState.exportSettings.setPerspectiveCorrectionEnabled(false)
 
-            composeTestRule.setContent {
-                ExportSettingsCard(state = wizardState)
-            }
+            composeTestRule.setContent { ExportSettingsCard(state = wizardState) }
 
             composeTestRule.onNodeWithText("Correction strategy").assertIsDisplayed()
         }
@@ -309,9 +302,7 @@ class WizardUiFlowTest {
         fun shouldNotDisplayCorrectionStrategyWhenPerspectiveOn() {
             wizardState.exportSettings.setPerspectiveCorrectionEnabled(true)
 
-            composeTestRule.setContent {
-                ExportSettingsCard(state = wizardState)
-            }
+            composeTestRule.setContent { ExportSettingsCard(state = wizardState) }
 
             composeTestRule.onNodeWithText("Correction strategy").assertDoesNotExist()
         }
@@ -319,9 +310,7 @@ class WizardUiFlowTest {
         @Test
         @DisplayName("should display Additional margin label")
         fun shouldDisplayAdditionalMarginLabel() {
-            composeTestRule.setContent {
-                ExportSettingsCard(state = wizardState)
-            }
+            composeTestRule.setContent { ExportSettingsCard(state = wizardState) }
 
             composeTestRule.onNodeWithText("Additional margin").assertIsDisplayed()
         }
@@ -604,9 +593,13 @@ class WizardUiFlowTest {
         @BeforeEach
         fun setup() {
             wizardState = PhotoScanWizardState()
-            settingsPort = SettingsAdapter(
-                File(System.getProperty("java.io.tmpdir"), "test-settings-ui-flow-${System.nanoTime()}")
-            )
+            settingsPort =
+                SettingsAdapter(
+                    File(
+                        System.getProperty("java.io.tmpdir"),
+                        "test-settings-ui-flow-${System.nanoTime()}",
+                    )
+                )
             testImage = BufferedImage(800, 600, BufferedImage.TYPE_INT_RGB)
         }
 

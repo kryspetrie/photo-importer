@@ -11,10 +11,10 @@ import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.application
 import java.awt.Dimension
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.koin.core.context.startKoin
 import org.kryspetrie.fileimport.di.appModule
 import org.kryspetrie.fileimport.domain.model.AppTheme

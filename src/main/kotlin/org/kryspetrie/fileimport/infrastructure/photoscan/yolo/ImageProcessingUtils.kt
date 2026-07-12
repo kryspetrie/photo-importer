@@ -136,7 +136,6 @@ object ImageProcessingUtils {
         }
         return Triple(gradX, gradY, gradMag)
     }
-
 }
 
 /** Inline sqrt for floats. */

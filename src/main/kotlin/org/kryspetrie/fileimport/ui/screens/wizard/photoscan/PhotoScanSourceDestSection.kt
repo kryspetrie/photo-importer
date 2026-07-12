@@ -14,7 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.unit.dp
 import java.io.File
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
@@ -111,10 +110,7 @@ fun SourceDestRow(
                 when {
                     destinationPath.isBlank() -> Text("Paste a path or browse")
                     !destValid && !destCanCreate ->
-                        Text(
-                            "Path not accessible",
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                        Text("Path not accessible", color = MaterialTheme.colorScheme.error)
                     !destValid && destCanCreate ->
                         Text("Will be created", color = MaterialTheme.colorScheme.primary)
                     else -> Text(destDirName.orEmpty())

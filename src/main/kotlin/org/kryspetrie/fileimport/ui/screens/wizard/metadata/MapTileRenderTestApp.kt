@@ -14,27 +14,25 @@ import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 /**
  * Standalone component test for [OsmMapView] tile rendering.
  *
- * Launch this to verify that map tiles load and render properly. The window shows
- * a full OpenStreetMap view centered on the Eastern US at zoom level 5. You can
- * pan (drag), zoom (scroll wheel or +/- buttons), and switch between street and
- * satellite views (🛰 button).
+ * Launch this to verify that map tiles load and render properly. The window shows a full
+ * OpenStreetMap view centered on the Eastern US at zoom level 5. You can pan (drag), zoom (scroll
+ * wheel or +/- buttons), and switch between street and satellite views (🛰 button).
  *
  * Run via: `./gradlew runMapTileTest`
  */
 fun mainMapTileTest() = application {
-    val koin = startKoin {
-        modules(appModule)
-    }
+    val koin = startKoin { modules(appModule) }
 
     val dispatcherProvider: DispatcherProvider = koin.koin.get()
 
     Window(
         onCloseRequest = ::exitApplication,
         title = "OsmMapView Tile Render Test",
-        state = rememberWindowState(
-            width = androidx.compose.ui.unit.Dp(1200f),
-            height = androidx.compose.ui.unit.Dp(800f)
-        ),
+        state =
+            rememberWindowState(
+                width = androidx.compose.ui.unit.Dp(1200f),
+                height = androidx.compose.ui.unit.Dp(800f),
+            ),
     ) {
         MaterialTheme {
             Surface(modifier = Modifier.fillMaxSize()) {
@@ -43,9 +41,7 @@ fun mainMapTileTest() = application {
                     initialLat = 39.0,
                     initialLon = -78.0,
                     initialZoom = 5.0,
-                    onMapClick = { lat, lon ->
-                        println("Map clicked: lat=$lat, lon=$lon")
-                    },
+                    onMapClick = { lat, lon -> println("Map clicked: lat=$lat, lon=$lon") },
                     dispatcherProvider = dispatcherProvider,
                 )
             }

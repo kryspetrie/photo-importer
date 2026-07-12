@@ -15,7 +15,8 @@ import org.kryspetrie.fileimport.infrastructure.logging.OperationType
  * move/resize/rotate, and undo/redo. Extracted from [PhotoScanWizardState] to separate box
  * interaction concerns from navigation, batch, and configuration state.
  *
- * @param _boundingBoxList Shared reference to the bounding box list (mutated by this class and others).
+ * @param _boundingBoxList Shared reference to the bounding box list (mutated by this class and
+ *   others).
  * @param _undoRedoManager Shared undo/redo manager.
  * @param _undoRedoVersion Shared version counter for undo/redo (incremented on undo/redo ops).
  */
@@ -431,8 +432,8 @@ class BoxInteractionState(
     }
 
     /**
-     * Gets the last box index in the current list. Used by parent to set selection after
-     * adding a box.
+     * Gets the last box index in the current list. Used by parent to set selection after adding a
+     * box.
      */
     val lastBoxIndex: Int
         get() = _boundingBoxList.value.size() - 1

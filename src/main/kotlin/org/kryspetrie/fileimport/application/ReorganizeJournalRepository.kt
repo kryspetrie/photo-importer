@@ -14,8 +14,8 @@ val json = Json { prettyPrint = true }
 /**
  * Handles all journal file I/O for reorganization operations.
  *
- * Responsible for listing, reading, and writing journal files that enable
- * undo functionality after reorganize operations.
+ * Responsible for listing, reading, and writing journal files that enable undo functionality after
+ * reorganize operations.
  */
 class ReorganizeJournalRepository(private val fileSystem: FileSystemPort) {
 
@@ -32,10 +32,11 @@ class ReorganizeJournalRepository(private val fileSystem: FileSystemPort) {
 
         val files = fileSystem.listFiles(dir)
         val jsonFiles = files.filter { fileSystem.extension(it) == "json" }
-        val sortedFiles = jsonFiles
-            .map { it to fileSystem.lastModified(it) }
-            .sortedByDescending { it.second }
-            .map { it.first }
+        val sortedFiles =
+            jsonFiles
+                .map { it to fileSystem.lastModified(it) }
+                .sortedByDescending { it.second }
+                .map { it.first }
 
         return@runBlocking sortedFiles.mapNotNull { filePath ->
             try {

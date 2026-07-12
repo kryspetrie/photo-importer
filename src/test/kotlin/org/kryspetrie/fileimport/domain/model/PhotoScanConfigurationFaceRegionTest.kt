@@ -1,13 +1,11 @@
 package org.kryspetrie.fileimport.domain.model
 
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
-import org.kryspetrie.fileimport.domain.model.FaceRegion
 
 /** Tests for FaceRegion data class and PhotoScanConfiguration face region behavior. */
 @DisplayName("PhotoScanConfiguration Face Regions")
@@ -181,8 +179,8 @@ class PhotoScanConfigurationFaceRegionExtTest {
         fun rotate90CCW_transformsCorrectly() {
             val region = FaceRegion(name = "B", x = 0.8, y = 0.1, w = 0.15, h = 0.20)
             val rotated = region.rotate90CCW()
-            assertEquals(0.1, rotated.x, 0.001)  // y
-            assertEquals(0.2, rotated.y, 0.001)  // 1 - 0.8
+            assertEquals(0.1, rotated.x, 0.001) // y
+            assertEquals(0.2, rotated.y, 0.001) // 1 - 0.8
             assertEquals(0.20, rotated.w, 0.001) // h swapped
             assertEquals(0.15, rotated.h, 0.001) // w swapped
         }
@@ -192,8 +190,8 @@ class PhotoScanConfigurationFaceRegionExtTest {
         fun rotate180_mirrorsBothAxes() {
             val region = FaceRegion(name = "C", x = 0.2, y = 0.3, w = 0.15, h = 0.20)
             val rotated = region.rotate180()
-            assertEquals(0.8, rotated.x, 0.001)  // 1 - 0.2
-            assertEquals(0.7, rotated.y, 0.001)  // 1 - 0.3
+            assertEquals(0.8, rotated.x, 0.001) // 1 - 0.2
+            assertEquals(0.7, rotated.y, 0.001) // 1 - 0.3
             assertEquals(0.15, rotated.w, 0.001) // w unchanged
             assertEquals(0.20, rotated.h, 0.001) // h unchanged
         }
@@ -230,10 +228,12 @@ class PhotoScanConfigurationFaceRegionExtTest {
         @Test
         @DisplayName("cycleRotationCW transforms face regions")
         fun cycleRotationCWTransformsFaceRegions() {
-            val config = PhotoScanConfiguration(
-                rotationDegrees = 0,
-                faceRegions = listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20))
-            )
+            val config =
+                PhotoScanConfiguration(
+                    rotationDegrees = 0,
+                    faceRegions =
+                        listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20)),
+                )
             val rotated = config.cycleRotationCW()
             assertEquals(90, rotated.rotationDegrees)
             assertEquals(1, rotated.faceRegions.size)
@@ -244,28 +244,32 @@ class PhotoScanConfigurationFaceRegionExtTest {
         @Test
         @DisplayName("cycleRotationCCW transforms face regions")
         fun cycleRotationCCWTransformsFaceRegions() {
-            val config = PhotoScanConfiguration(
-                rotationDegrees = 0,
-                faceRegions = listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20))
-            )
+            val config =
+                PhotoScanConfiguration(
+                    rotationDegrees = 0,
+                    faceRegions =
+                        listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20)),
+                )
             val rotated = config.cycleRotationCCW()
             assertEquals(270, rotated.rotationDegrees)
             assertEquals(1, rotated.faceRegions.size)
-            assertEquals(0.3, rotated.faceRegions[0].x, 0.001)  // y
-            assertEquals(0.8, rotated.faceRegions[0].y, 0.001)  // 1 - 0.2
+            assertEquals(0.3, rotated.faceRegions[0].x, 0.001) // y
+            assertEquals(0.8, rotated.faceRegions[0].y, 0.001) // 1 - 0.2
         }
 
         @Test
         @DisplayName("rotate180 transforms face regions")
         fun rotate180TransformsFaceRegions() {
-            val config = PhotoScanConfiguration(
-                rotationDegrees = 0,
-                faceRegions = listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20))
-            )
+            val config =
+                PhotoScanConfiguration(
+                    rotationDegrees = 0,
+                    faceRegions =
+                        listOf(FaceRegion(name = "A", x = 0.2, y = 0.3, w = 0.15, h = 0.20)),
+                )
             val rotated = config.rotate180()
             assertEquals(180, rotated.rotationDegrees)
-            assertEquals(0.8, rotated.faceRegions[0].x, 0.001)  // 1 - 0.2
-            assertEquals(0.7, rotated.faceRegions[0].y, 0.001)  // 1 - 0.3
+            assertEquals(0.8, rotated.faceRegions[0].x, 0.001) // 1 - 0.2
+            assertEquals(0.7, rotated.faceRegions[0].y, 0.001) // 1 - 0.3
         }
 
         @Test

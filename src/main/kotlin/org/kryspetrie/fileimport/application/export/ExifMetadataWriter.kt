@@ -43,7 +43,11 @@ class ExifMetadataWriter(private val fileSystem: FileSystemPort) {
      * @param config Configuration with EXIF override values and the copyOriginalExif flag
      * @param sourcePath The original source file path to read baseline EXIF from (may be null)
      */
-    fun writeExifMetadata(jpegPath: FilePath, config: PhotoScanConfiguration, sourcePath: FilePath?) {
+    fun writeExifMetadata(
+        jpegPath: FilePath,
+        config: PhotoScanConfiguration,
+        sourcePath: FilePath?,
+    ) {
         try {
             // Determine the baseline EXIF output set
             val outputSet =

@@ -36,14 +36,21 @@ fun ExportBottomBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("$photoCount ${if (photoCount == 1) "photo" else "photos"} ready", style = MaterialTheme.typography.bodyMedium)
+            Text(
+                "$photoCount ${if (photoCount == 1) "photo" else "photos"} ready",
+                style = MaterialTheme.typography.bodyMedium,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
                     Text("Back")
                 }
-                Button(onClick = onExport, enabled = photoCount > 0, modifier = Modifier.height(40.dp)) {
+                Button(
+                    onClick = onExport,
+                    enabled = photoCount > 0,
+                    modifier = Modifier.height(40.dp),
+                ) {
                     Text("Next")
                     Spacer(Modifier.width(4.dp))
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))

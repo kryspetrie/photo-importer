@@ -8,20 +8,20 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.file
 import kotlinx.coroutines.runBlocking
+import org.kryspetrie.fileimport.application.FileOperationExecutor
 import org.kryspetrie.fileimport.application.ImportExecutor
 import org.kryspetrie.fileimport.application.ImportScanner
 import org.kryspetrie.fileimport.application.ImportService
-import org.kryspetrie.fileimport.application.FileOperationExecutor
 import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
 import org.kryspetrie.fileimport.application.ReorganizeService
-import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.infrastructure.adapter.DeduplicationAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
-import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
+import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.NamingAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
 
 class PhotoImportCli(
     private val importService: ImportService,
@@ -192,7 +192,12 @@ fun main(args: Array<String>) {
     val executor = ImportExecutor(imageRepo, NamingAdapter(), timeProvider, fileSystem)
     val surfService = SurfDeduplicationService(dispatcherProvider)
     val importService =
-        ImportService(scanner, executor, DeduplicationAdapter(surfService, dispatcherProvider), NamingAdapter())
+        ImportService(
+            scanner,
+            executor,
+            DeduplicationAdapter(surfService, dispatcherProvider),
+            NamingAdapter(),
+        )
     val reorganizeService =
         ReorganizeService(
             imageRepo,

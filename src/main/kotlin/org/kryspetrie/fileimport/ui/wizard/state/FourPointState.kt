@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.ui.wizard.state
 
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.Point
+
 /**
  * State machine for bounding box creation modes. Supports both:
  * - 2-click rectangle mode (diagonal corners)

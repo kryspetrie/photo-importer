@@ -253,9 +253,9 @@ class HexagonalArchitectureKonsistTest {
         /**
          * Application layer must not import java.awt or javax.imageio.
          *
-         * All AWT-dependent pixel operations (crop, rotate, composite, JPEG write, image I/O)
-         * are handled by [ImageProcessingPort] in the infrastructure layer. Application services
-         * use [ProcessedImage] and domain ports exclusively.
+         * All AWT-dependent pixel operations (crop, rotate, composite, JPEG write, image I/O) are
+         * handled by [ImageProcessingPort] in the infrastructure layer. Application services use
+         * [ProcessedImage] and domain ports exclusively.
          */
         @Test
         @DisplayName("Application must not import java.awt or javax.imageio")
@@ -371,8 +371,8 @@ class HexagonalArchitectureKonsistTest {
          * Application-layer services that the UI is allowed to import directly.
          *
          * These are use-case orchestration services accessed via Koin DI. Algorithm/detail services
-         * (PerspectiveCorrectionService, FaceRegionTransformer, etc.) are now in infrastructure
-         * and accessed through their domain port interfaces.
+         * (PerspectiveCorrectionService, FaceRegionTransformer, etc.) are now in infrastructure and
+         * accessed through their domain port interfaces.
          */
         private val allowedApplicationImportsInUI: Set<String> = buildSet {
             // Use-case services (orchestration, no direct AWT coupling)

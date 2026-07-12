@@ -61,14 +61,16 @@ class WatchFolderService(
                     )
 
                     if (config.recursive) {
-                        val directories = fileSystem.listDirectoriesRecursive(FilePath(config.watchPath))
+                        val directories =
+                            fileSystem.listDirectoriesRecursive(FilePath(config.watchPath))
                         for (dirPath in directories) {
                             try {
-                                Paths.get(dirPath.path).register(
-                                    watchService,
-                                    StandardWatchEventKinds.ENTRY_CREATE,
-                                    StandardWatchEventKinds.ENTRY_MODIFY,
-                                )
+                                Paths.get(dirPath.path)
+                                    .register(
+                                        watchService,
+                                        StandardWatchEventKinds.ENTRY_CREATE,
+                                        StandardWatchEventKinds.ENTRY_MODIFY,
+                                    )
                             } catch (_: Exception) {}
                         }
                     }

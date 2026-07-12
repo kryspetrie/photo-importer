@@ -7,6 +7,7 @@ import com.drew.metadata.iptc.IptcDirectory
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
+import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.within
 import org.junit.jupiter.api.BeforeEach
@@ -14,18 +15,17 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
 import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
-import kotlinx.coroutines.runBlocking
 
 @DisplayName("PhotoScanExportService")
 class PhotoScanExportServiceTest {
@@ -39,12 +39,13 @@ class PhotoScanExportServiceTest {
         perspectiveService = PerspectiveCorrectionService()
         val fileSystem = FileSystemAdapter()
         val imageProcessing = AwtImageProcessingAdapter(fileSystem)
-        service = PhotoScanExportService(
-            perspectiveService,
-            MetadataWritingService(FaceRegionTransformer(), imageProcessing, fileSystem),
-            imageProcessing,
-            fileSystem,
-        )
+        service =
+            PhotoScanExportService(
+                perspectiveService,
+                MetadataWritingService(FaceRegionTransformer(), imageProcessing, fileSystem),
+                imageProcessing,
+                fileSystem,
+            )
     }
 
     /** Wrapper to call suspend [PhotoScanExportService.exportPhotos] from non-suspend tests. */
@@ -54,18 +55,28 @@ class PhotoScanExportServiceTest {
         detectedPhotos: List<org.kryspetrie.fileimport.domain.model.DetectedPhoto>,
         destinationPath: String,
         baseFileName: String,
-    ): org.kryspetrie.fileimport.domain.model.PhotoScanExportResult =
-        runBlocking { service.exportPhotos(sourceFile, image, detectedPhotos, destinationPath, baseFileName) }
+    ): org.kryspetrie.fileimport.domain.model.PhotoScanExportResult = runBlocking {
+        service.exportPhotos(sourceFile, image, detectedPhotos, destinationPath, baseFileName)
+    }
 
-    /** Wrapper to call suspend [PhotoScanExportService.exportSinglePhoto] from non-suspend tests. */
+    /**
+     * Wrapper to call suspend [PhotoScanExportService.exportSinglePhoto] from non-suspend tests.
+     */
     private fun exportSinglePhoto(
         sourceImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
         detectedPhoto: org.kryspetrie.fileimport.domain.model.DetectedPhoto,
         destinationPath: String,
         baseFileName: String,
         sourceFile: FilePath? = null,
-    ): org.kryspetrie.fileimport.domain.model.PhotoScanSingleExportResult =
-        runBlocking { service.exportSinglePhoto(sourceImage, detectedPhoto, destinationPath, baseFileName, sourceFile) }
+    ): org.kryspetrie.fileimport.domain.model.PhotoScanSingleExportResult = runBlocking {
+        service.exportSinglePhoto(
+            sourceImage,
+            detectedPhoto,
+            destinationPath,
+            baseFileName,
+            sourceFile,
+        )
+    }
 
     private fun createTestImage(width: Int, height: Int, color: Int): File {
         val img = BufferedImage(width, height, BufferedImage.TYPE_INT_RGB)
@@ -1131,10 +1142,11 @@ class PhotoScanExportServiceTest {
         @DisplayName("null correctionStrategy with perspective correction ON uses PERSPECTIVE")
         fun nullStrategyWithPerspectiveCorrectionOnUsesPerspective() {
             val photo =
-                createDetectedPhoto().copy(
-                    applyPerspectiveCorrection = true,
-                    configuration = PhotoScanConfiguration(correctionStrategy = null),
-                )
+                createDetectedPhoto()
+                    .copy(
+                        applyPerspectiveCorrection = true,
+                        configuration = PhotoScanConfiguration(correctionStrategy = null),
+                    )
             val marginedPhoto = GeometryUtils.applyMargin(photo, 0.02)
             // When correctionStrategy is null and perspectiveCorrection is ON,
             // the export service should use PERSPECTIVE
@@ -1145,10 +1157,11 @@ class PhotoScanExportServiceTest {
         @DisplayName("null correctionStrategy with perspective correction OFF uses auto-detect")
         fun nullStrategyWithPerspectiveCorrectionOffUsesAutoDetect() {
             val photo =
-                createDetectedPhoto().copy(
-                    applyPerspectiveCorrection = false,
-                    configuration = PhotoScanConfiguration(correctionStrategy = null),
-                )
+                createDetectedPhoto()
+                    .copy(
+                        applyPerspectiveCorrection = false,
+                        configuration = PhotoScanConfiguration(correctionStrategy = null),
+                    )
             // When correctionStrategy is null and perspectiveCorrection is OFF,
             // the strategy is determined from corner geometry
             assertThat(photo.configuration.correctionStrategy).isNull()
@@ -1159,11 +1172,12 @@ class PhotoScanExportServiceTest {
         @DisplayName("explicit CROP strategy overrides perspective correction being ON")
         fun explicitCropStrategyOverridesPerspectiveCorrection() {
             val photo =
-                createDetectedPhoto().copy(
-                    applyPerspectiveCorrection = true,
-                    configuration =
-                        PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
-                )
+                createDetectedPhoto()
+                    .copy(
+                        applyPerspectiveCorrection = true,
+                        configuration =
+                            PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
+                    )
             // Even though perspectiveCorrection is ON, explicit CROP strategy should be used
             assertThat(photo.configuration.correctionStrategy).isEqualTo(CorrectionStrategy.CROP)
         }
@@ -1172,13 +1186,14 @@ class PhotoScanExportServiceTest {
         @DisplayName("explicit PERSPECTIVE strategy when perspective correction OFF")
         fun explicitPerspectiveStrategyWhenPerspectiveCorrectionOff() {
             val photo =
-                createDetectedPhoto().copy(
-                    applyPerspectiveCorrection = false,
-                    configuration =
-                        PhotoScanConfiguration(
-                            correctionStrategy = CorrectionStrategy.PERSPECTIVE
-                        ),
-                )
+                createDetectedPhoto()
+                    .copy(
+                        applyPerspectiveCorrection = false,
+                        configuration =
+                            PhotoScanConfiguration(
+                                correctionStrategy = CorrectionStrategy.PERSPECTIVE
+                            ),
+                    )
             // Even though perspectiveCorrection is OFF, explicit PERSPECTIVE strategy is used
             assertThat(photo.configuration.correctionStrategy)
                 .isEqualTo(CorrectionStrategy.PERSPECTIVE)
@@ -1207,11 +1222,12 @@ class PhotoScanExportServiceTest {
             val destDir = File(tempDir, "crop_test_${System.nanoTime()}")
             destDir.mkdirs()
             val photo =
-                createDetectedPhoto().copy(
-                    applyPerspectiveCorrection = true,
-                    configuration =
-                        PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
-                )
+                createDetectedPhoto()
+                    .copy(
+                        applyPerspectiveCorrection = true,
+                        configuration =
+                            PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
+                    )
             val result =
                 exportSinglePhoto(
                     source.toProcessedImage(),
@@ -1232,13 +1248,14 @@ class PhotoScanExportServiceTest {
             val destDir = File(tempDir, "persp_test_${System.nanoTime()}")
             destDir.mkdirs()
             val photo =
-                createDetectedPhoto().copy(
-                    applyPerspectiveCorrection = true,
-                    configuration =
-                        PhotoScanConfiguration(
-                            correctionStrategy = CorrectionStrategy.PERSPECTIVE
-                        ),
-                )
+                createDetectedPhoto()
+                    .copy(
+                        applyPerspectiveCorrection = true,
+                        configuration =
+                            PhotoScanConfiguration(
+                                correctionStrategy = CorrectionStrategy.PERSPECTIVE
+                            ),
+                    )
             val result =
                 exportSinglePhoto(
                     source.toProcessedImage(),

@@ -1,11 +1,9 @@
 package org.kryspetrie.fileimport.domain.model
 
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.kryspetrie.fileimport.domain.model.FaceRegion
 
 /**
  * Unit tests for PhotoScanConfiguration.
@@ -59,7 +57,8 @@ class PhotoScanConfigurationExtTest {
 
     @Test
     fun `copy with modification changes only specified field`() {
-        val original = PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 0)
+        val original =
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 0)
 
         val modified = original.copy(perspectiveCorrectionEnabled = true)
 
@@ -71,7 +70,8 @@ class PhotoScanConfigurationExtTest {
 
     @Test
     fun `perspective and rotation can both be false-and-zero`() {
-        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 0)
+        val config =
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 0)
 
         assertFalse(config.perspectiveCorrectionEnabled)
         assertEquals(0, config.rotationDegrees)
@@ -79,7 +79,8 @@ class PhotoScanConfigurationExtTest {
 
     @Test
     fun `perspective can be true with rotation`() {
-        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
+        val config =
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
 
         assertTrue(config.perspectiveCorrectionEnabled)
         assertEquals(90, config.rotationDegrees)
@@ -87,7 +88,8 @@ class PhotoScanConfigurationExtTest {
 
     @Test
     fun `rotation can be non-zero when perspective is false`() {
-        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 270)
+        val config =
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = false, rotationDegrees = 270)
 
         assertFalse(config.perspectiveCorrectionEnabled)
         assertEquals(270, config.rotationDegrees)
@@ -327,7 +329,8 @@ class PhotoScanConfigurationExtTest {
 
     @Test
     fun `withKeywordList joins list into comma-separated string`() {
-        val config = PhotoScanConfiguration().withKeywordList(listOf("vacation", "family", "holiday"))
+        val config =
+            PhotoScanConfiguration().withKeywordList(listOf("vacation", "family", "holiday"))
         assertEquals("vacation, family, holiday", config.keywords)
     }
 

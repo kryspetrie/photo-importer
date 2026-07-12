@@ -248,11 +248,12 @@ class MetadataEditStateTest {
         state.description = "Existing description"
         state.city = "Existing city"
 
-        val set = RecentMetadataSet(
-            locationName = "Grandma's house",
-            city = "Worcester",
-            country = "United States",
-        )
+        val set =
+            RecentMetadataSet(
+                locationName = "Grandma's house",
+                city = "Worcester",
+                country = "United States",
+            )
         state.loadFromSet(set)
 
         // Non-blank fields from the set overwrite existing values
@@ -284,26 +285,27 @@ class MetadataEditStateTest {
         val state = MetadataEditState()
         state.description = "Old"
 
-        val set = RecentMetadataSet(
-            description = "New",
-            keywords = "new, keywords",
-            originalDate = "2024-01-01",
-            year = "2024",
-            cameraMake = "Canon",
-            cameraModel = "EOS R5",
-            lensModel = "RF 24-70mm",
-            focalLength = "35mm",
-            aperture = "f/2.8",
-            shutterSpeed = "1/500",
-            iso = "400",
-            locationName = "Grandma's house",
-            city = "Worcester",
-            state = "MA",
-            country = "United States",
-            gpsLatitude = "42.2626",
-            gpsLongitude = "-71.8023",
-            subjects = "Alice",
-        )
+        val set =
+            RecentMetadataSet(
+                description = "New",
+                keywords = "new, keywords",
+                originalDate = "2024-01-01",
+                year = "2024",
+                cameraMake = "Canon",
+                cameraModel = "EOS R5",
+                lensModel = "RF 24-70mm",
+                focalLength = "35mm",
+                aperture = "f/2.8",
+                shutterSpeed = "1/500",
+                iso = "400",
+                locationName = "Grandma's house",
+                city = "Worcester",
+                state = "MA",
+                country = "United States",
+                gpsLatitude = "42.2626",
+                gpsLongitude = "-71.8023",
+                subjects = "Alice",
+            )
         state.loadFromSet(set)
 
         assertEquals("New", state.description)

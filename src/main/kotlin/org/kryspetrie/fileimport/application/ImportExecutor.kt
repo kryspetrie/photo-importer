@@ -223,13 +223,16 @@ class ImportExecutor(
                 if (configuration.importSidecars && image.sidecars.isNotEmpty()) {
                     for (sidecar in image.sidecars) {
                         try {
-                            val sidecarDestPath = destFilePath.parent?.let { parent ->
-                                FilePath(parent).resolve(
-                                    "${fileSystem.nameWithoutExtension(destFilePath)}.${sidecar.extension}"
-                                )
-                            } ?: FilePath(
-                                "${fileSystem.nameWithoutExtension(destFilePath)}.${sidecar.extension}"
-                            )
+                            val sidecarDestPath =
+                                destFilePath.parent?.let { parent ->
+                                    FilePath(parent)
+                                        .resolve(
+                                            "${fileSystem.nameWithoutExtension(destFilePath)}.${sidecar.extension}"
+                                        )
+                                }
+                                    ?: FilePath(
+                                        "${fileSystem.nameWithoutExtension(destFilePath)}.${sidecar.extension}"
+                                    )
                             fileSystem.copy(sidecar, sidecarDestPath)
                             sidecarFiles.add(fileSystem.absolutePath(sidecarDestPath))
                         } catch (_: Exception) {}

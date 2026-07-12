@@ -40,55 +40,53 @@ class SurfDeduplicationService(private val dispatcherProvider: DispatcherProvide
     private val associator: AssociateDescription<TupleDesc_F64> =
         FactoryAssociation.greedy(ConfigAssociateGreedy(true, 0.7), scoreAssociation)
 
-    suspend fun findSurfDuplicates(
-        images: List<ImageFile>,
-        threshold: Int,
-    ): List<DuplicateInfo> = coroutineScope {
-        if (images.size < 2) return@coroutineScope emptyList()
+    suspend fun findSurfDuplicates(images: List<ImageFile>, threshold: Int): List<DuplicateInfo> =
+        coroutineScope {
+            if (images.size < 2) return@coroutineScope emptyList()
 
-        val semaphore = Semaphore(SURF_CONCURRENCY)
-        val descriptorMap =
-            images
-                .map { image ->
-                    async(dispatcherProvider.io) {
-                        semaphore.withPermit { image to extractSurfDescriptors(image.file) }
+            val semaphore = Semaphore(SURF_CONCURRENCY)
+            val descriptorMap =
+                images
+                    .map { image ->
+                        async(dispatcherProvider.io) {
+                            semaphore.withPermit { image to extractSurfDescriptors(image.file) }
+                        }
+                    }
+                    .awaitAll()
+                    .filter { it.second.isNotEmpty() }
+
+            val duplicates = mutableListOf<DuplicateInfo>()
+            val claimed = mutableSetOf<String>()
+
+            for (i in descriptorMap.indices) {
+                if (descriptorMap[i].first.id in claimed) continue
+                val (imgA, descA) = descriptorMap[i]
+                val matches = mutableListOf<ImageFile>()
+
+                for (j in i + 1 until descriptorMap.size) {
+                    if (descriptorMap[j].first.id in claimed) continue
+                    val (imgB, descB) = descriptorMap[j]
+                    val matchCount = countSurfMatches(descA, descB)
+                    if (matchCount >= threshold) {
+                        matches.add(imgB)
+                        claimed.add(imgB.id)
                     }
                 }
-                .awaitAll()
-                .filter { it.second.isNotEmpty() }
 
-        val duplicates = mutableListOf<DuplicateInfo>()
-        val claimed = mutableSetOf<String>()
-
-        for (i in descriptorMap.indices) {
-            if (descriptorMap[i].first.id in claimed) continue
-            val (imgA, descA) = descriptorMap[i]
-            val matches = mutableListOf<ImageFile>()
-
-            for (j in i + 1 until descriptorMap.size) {
-                if (descriptorMap[j].first.id in claimed) continue
-                val (imgB, descB) = descriptorMap[j]
-                val matchCount = countSurfMatches(descA, descB)
-                if (matchCount >= threshold) {
-                    matches.add(imgB)
-                    claimed.add(imgB.id)
+                if (matches.isNotEmpty()) {
+                    claimed.add(imgA.id)
+                    duplicates.add(
+                        DuplicateInfo(
+                            primaryImage = imgA,
+                            duplicateImages = matches,
+                            duplicateType = DuplicateType.SURF_MATCH,
+                            similarityScore = matches.size.toFloat(),
+                        )
+                    )
                 }
             }
-
-            if (matches.isNotEmpty()) {
-                claimed.add(imgA.id)
-                duplicates.add(
-                    DuplicateInfo(
-                        primaryImage = imgA,
-                        duplicateImages = matches,
-                        duplicateType = DuplicateType.SURF_MATCH,
-                        similarityScore = matches.size.toFloat(),
-                    )
-                )
-            }
+            duplicates
         }
-        duplicates
-    }
 
     /**
      * Extracts SURF descriptors using subsampled image read to avoid loading full-resolution

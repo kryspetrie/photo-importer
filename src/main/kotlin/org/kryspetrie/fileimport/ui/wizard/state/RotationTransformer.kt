@@ -3,9 +3,9 @@ package org.kryspetrie.fileimport.ui.wizard.state
 import java.awt.geom.AffineTransform
 import java.awt.image.BufferedImage
 import kotlin.math.cos
+import kotlin.math.sin
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
 import org.kryspetrie.fileimport.domain.model.geometry.Point
-import kotlin.math.sin
 
 /**
  * Handles rotation transformation with bounding box expansion. Ensures rotated images don't clip at

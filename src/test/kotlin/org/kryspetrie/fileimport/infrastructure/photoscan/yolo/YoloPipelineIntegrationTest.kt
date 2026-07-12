@@ -191,7 +191,9 @@ class YoloPipelineIntegrationTest {
                     val status = if (dist < tolerance) "PASS" else "FAIL"
                     val detStr = "(${coords[0].toInt()}, ${coords[1].toInt()})"
                     val refStr = "(${refCoords[0].toInt()}, ${refCoords[1].toInt()})"
-                    println("    $name: detected=$detStr ref=$refStr delta=${dist.toInt()}px $status")
+                    println(
+                        "    $name: detected=$detStr ref=$refStr delta=${dist.toInt()}px $status"
+                    )
                     totalChecks++
                     if (dist < tolerance) totalMatches++
                 }

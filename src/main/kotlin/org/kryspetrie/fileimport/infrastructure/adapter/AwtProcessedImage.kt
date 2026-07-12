@@ -55,8 +55,8 @@ fun ProcessedImage.toBufferedImage(): BufferedImage =
 /**
  * AWT convenience extension: corrects perspective using [BufferedImage] directly.
  *
- * Wraps the [BufferedImage] as a [ProcessedImage] for the port call and unwraps the result.
- * UI code that works with [BufferedImage] can use this instead of manual conversion.
+ * Wraps the [BufferedImage] as a [ProcessedImage] for the port call and unwraps the result. UI code
+ * that works with [BufferedImage] can use this instead of manual conversion.
  */
 fun PerspectiveCorrectionPort.correctPerspective(
     sourceImage: BufferedImage,
@@ -69,8 +69,8 @@ fun PerspectiveCorrectionPort.correctPerspective(
 /**
  * AWT convenience extension: transforms face regions using [File] directly.
  *
- * Converts the [File] to a [FilePath] for the port call. UI code that works with [File] can
- * use this instead of manual conversion.
+ * Converts the [File] to a [FilePath] for the port call. UI code that works with [File] can use
+ * this instead of manual conversion.
  */
 fun FaceRegionTransformerPort.transformFaceRegionsFromSource(
     sourceFile: File,
@@ -96,6 +96,5 @@ fun FaceRegionTransformerPort.transformFaceRegionsFromSource(
  *
  * Converts the [File] to a [FilePath] for the port call.
  */
-fun FaceRegionTransformerPort.readFaceRegionsFromXmp(
-    file: File
-): List<FaceRegion> = readFaceRegionsFromXmp(FilePath(file.absolutePath))
+fun FaceRegionTransformerPort.readFaceRegionsFromXmp(file: File): List<FaceRegion> =
+    readFaceRegionsFromXmp(FilePath(file.absolutePath))

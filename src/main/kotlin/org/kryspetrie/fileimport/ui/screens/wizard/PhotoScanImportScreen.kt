@@ -16,8 +16,8 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -39,13 +39,11 @@ import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
-
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.ScanModeCard
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SourceDestRow
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /** Import screen for the wizard - source selection and configuration. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -166,27 +164,25 @@ fun PhotoScanImportScreen(
     val canStart = firstImageFile != null && (destValid || destCanCreate)
 
     Scaffold(
-        modifier = Modifier.onPreviewKeyEvent { keyEvent ->
-            if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Enter && canStart) {
-                firstImageFile?.let { file ->
-                    val batchFiles =
-                        if (sourceFile?.isDirectory == true) {
-                            sourceFile
-                                .listFiles { f -> f.isFile && isImageFile(f) }
-                                ?.sortedBy { it.name }
-                                ?.toList()
-                        } else null
-                    onImageSelected(file, batchFiles)
-                }
-                true
-            } else false
-        },
-        topBar = {
-            TopAppBar(
-                title = { Text("Import Photos") },
-                navigationIcon = {},
-            )
-        },
+        modifier =
+            Modifier.onPreviewKeyEvent { keyEvent ->
+                if (
+                    keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Enter && canStart
+                ) {
+                    firstImageFile?.let { file ->
+                        val batchFiles =
+                            if (sourceFile?.isDirectory == true) {
+                                sourceFile
+                                    .listFiles { f -> f.isFile && isImageFile(f) }
+                                    ?.sortedBy { it.name }
+                                    ?.toList()
+                            } else null
+                        onImageSelected(file, batchFiles)
+                    }
+                    true
+                } else false
+            },
+        topBar = { TopAppBar(title = { Text("Import Photos") }, navigationIcon = {}) },
         content = { paddingValues ->
             ChunkyScrollbar(modifier = modifier.fillMaxSize().padding(paddingValues)) {
                 Column(
@@ -270,7 +266,7 @@ fun PhotoScanImportScreen(
                     )
                 }
             }
-        }
+        },
     )
 
     // Save config to wizard state when it changes

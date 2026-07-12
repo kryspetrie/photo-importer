@@ -19,7 +19,8 @@ import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 
 /**
- * Thin orchestrator for exporting extracted photos with EXIF metadata preservation and modification.
+ * Thin orchestrator for exporting extracted photos with EXIF metadata preservation and
+ * modification.
  *
  * Delegates to specialized services and ports:
  * - [PerspectiveCorrectionPort] — perspective warping
@@ -27,8 +28,8 @@ import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
  * - [MetadataWritingService] — layering EXIF, IPTC, and XMP metadata onto JPEG files
  * - [FilenameResolver] — filename conflict resolution
  *
- * All image operations use [ProcessedImage] via [ImageProcessingPort], keeping this service free
- * of `java.awt.image.BufferedImage` imports. All file operations use [FilePath] via [FileSystemPort],
+ * All image operations use [ProcessedImage] via [ImageProcessingPort], keeping this service free of
+ * `java.awt.image.BufferedImage` imports. All file operations use [FilePath] via [FileSystemPort],
  * keeping this service free of `java.io.File` imports.
  *
  * @see DetectedPhoto
@@ -71,11 +72,8 @@ class PhotoScanExportService(
 
         for ((index, photo) in detectedPhotos.withIndex()) {
             try {
-                val result = processPhoto(
-                    sourceImage = image,
-                    detectedPhoto = photo,
-                    marginFraction = 0.02,
-                )
+                val result =
+                    processPhoto(sourceImage = image, detectedPhoto = photo, marginFraction = 0.02)
 
                 val fileName =
                     if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}.jpg"
@@ -154,11 +152,12 @@ class PhotoScanExportService(
         sourceFile: FilePath?,
     ): SingleExportResult {
         return try {
-            val result = processPhoto(
-                sourceImage = sourceImage,
-                detectedPhoto = detectedPhoto,
-                marginFraction = 0.02,
-            )
+            val result =
+                processPhoto(
+                    sourceImage = sourceImage,
+                    detectedPhoto = detectedPhoto,
+                    marginFraction = 0.02,
+                )
 
             val destDir = FilePath(destinationPath)
             fileSystem.mkdirs(destDir)

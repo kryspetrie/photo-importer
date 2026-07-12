@@ -121,8 +121,9 @@ interface ModelResourcePort {
     /**
      * Loads the face detection model bytes.
      *
-     * The face detection model takes a 640×640 letterboxed image and outputs face bounding boxes with
-     * confidence scores in NMS-filtered `[1, 300, 6]` format (x1, y1, x2, y2, confidence, class).
+     * The face detection model takes a 640×640 letterboxed image and outputs face bounding boxes
+     * with confidence scores in NMS-filtered `[1, 300, 6]` format (x1, y1, x2, y2, confidence,
+     * class).
      *
      * @return Raw model bytes suitable for ONNX Runtime `SessionOptions`
      * @throws ModelNotFoundException if the model resource cannot be found or read

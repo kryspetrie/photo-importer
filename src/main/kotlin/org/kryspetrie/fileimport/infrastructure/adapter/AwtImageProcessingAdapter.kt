@@ -59,7 +59,10 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
 
     // ── Transformations ──────────────────────────────────────────────────
 
-    override fun cropAxisAligned(sourceImage: ProcessedImage, photo: DetectedPhoto): ProcessedImage {
+    override fun cropAxisAligned(
+        sourceImage: ProcessedImage,
+        photo: DetectedPhoto,
+    ): ProcessedImage {
         val src = sourceImage.toBufferedImage()
         val bounds = photo.getBounds()
 
@@ -68,26 +71,27 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
         val cropWidth = bounds.getWidth().coerceIn(1, (src.width - cropX).coerceAtLeast(1))
         val cropHeight = bounds.getHeight().coerceIn(1, (src.height - cropY).coerceAtLeast(1))
 
-        val cropped = try {
-            src.getSubimage(cropX, cropY, cropWidth, cropHeight)
-        } catch (_: Exception) {
-            // Fallback to manual copy if getSubimage fails
-            val fallback = BufferedImage(cropWidth, cropHeight, BufferedImage.TYPE_INT_RGB)
-            val g = fallback.createGraphics()
-            g.drawImage(
-                src.getSubimage(
-                    cropX.coerceAtLeast(0),
-                    cropY.coerceAtLeast(0),
-                    cropWidth.coerceAtMost(src.width - cropX),
-                    cropHeight.coerceAtMost(src.height - cropY),
-                ),
-                0,
-                0,
-                null,
-            )
-            g.dispose()
-            fallback
-        }
+        val cropped =
+            try {
+                src.getSubimage(cropX, cropY, cropWidth, cropHeight)
+            } catch (_: Exception) {
+                // Fallback to manual copy if getSubimage fails
+                val fallback = BufferedImage(cropWidth, cropHeight, BufferedImage.TYPE_INT_RGB)
+                val g = fallback.createGraphics()
+                g.drawImage(
+                    src.getSubimage(
+                        cropX.coerceAtLeast(0),
+                        cropY.coerceAtLeast(0),
+                        cropWidth.coerceAtMost(src.width - cropX),
+                        cropHeight.coerceAtMost(src.height - cropY),
+                    ),
+                    0,
+                    0,
+                    null,
+                )
+                g.dispose()
+                fallback
+            }
 
         return AwtProcessedImage(cropped)
     }
@@ -103,7 +107,8 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
         val newHeight: Int
 
         when (rotation) {
-            RotationAngle.CW_90, RotationAngle.CCW_90 -> {
+            RotationAngle.CW_90,
+            RotationAngle.CCW_90 -> {
                 newWidth = src.height
                 newHeight = src.width
             }
@@ -196,12 +201,13 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
         val backBuffered = backImage.toBufferedImage()
 
         // Apply rotation first (crop coordinates are in rotated-image space)
-        val rotatedBack = when (config.backCropRotation) {
-            90 -> rotateImage(backImage, RotationAngle.CW_90)
-            180 -> rotateImage(backImage, RotationAngle.CW_180)
-            270 -> rotateImage(backImage, RotationAngle.CCW_90)
-            else -> backImage
-        }
+        val rotatedBack =
+            when (config.backCropRotation) {
+                90 -> rotateImage(backImage, RotationAngle.CW_90)
+                180 -> rotateImage(backImage, RotationAngle.CW_180)
+                270 -> rotateImage(backImage, RotationAngle.CCW_90)
+                else -> backImage
+            }
         val rotatedBuffered = rotatedBack.toBufferedImage()
 
         // Apply crop in rotated-image space if normalized crop coordinates are provided
@@ -214,7 +220,9 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
             val cropX = (left * rotatedBuffered.width).toInt().coerceIn(0, rotatedBuffered.width)
             val cropY = (top * rotatedBuffered.height).toInt().coerceIn(0, rotatedBuffered.height)
             val cropW =
-                ((right - left) * rotatedBuffered.width).toInt().coerceIn(1, rotatedBuffered.width - cropX)
+                ((right - left) * rotatedBuffered.width)
+                    .toInt()
+                    .coerceIn(1, rotatedBuffered.width - cropX)
             val cropH =
                 ((bottom - top) * rotatedBuffered.height)
                     .toInt()

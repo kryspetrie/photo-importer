@@ -1,7 +1,6 @@
 package org.kryspetrie.fileimport.domain.model
 
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -203,9 +202,10 @@ class AppSettingsPhotoScanTest {
 
     @Test
     fun `addMetadataSet preserves existing history`() {
-        val settings = AppSettings()
-            .addMetadataHistory("city", "Boston")
-            .addMetadataSet(RecentMetadataSet(city = "Worcester", timestamp = 1000))
+        val settings =
+            AppSettings()
+                .addMetadataHistory("city", "Boston")
+                .addMetadataSet(RecentMetadataSet(city = "Worcester", timestamp = 1000))
 
         val updated = settings.addMetadataSet(RecentMetadataSet(city = "Paris", timestamp = 2000))
 
@@ -219,10 +219,8 @@ class AppSettingsPhotoScanTest {
         val set1 = RecentMetadataSet(city = "Boston", timestamp = 1000)
         val set2 = RecentMetadataSet(city = "Worcester", timestamp = 2000)
 
-        val settings = AppSettings()
-            .addMetadataSet(set1)
-            .addMetadataSet(set2)
-            .removeMetadataSet(1000)
+        val settings =
+            AppSettings().addMetadataSet(set1).addMetadataSet(set2).removeMetadataSet(1000)
 
         assertEquals(1, settings.metadataHistory.recentSets.size)
         assertEquals("Worcester", settings.metadataHistory.recentSets[0].city)
@@ -230,27 +228,37 @@ class AppSettingsPhotoScanTest {
 
     @Test
     fun `metadata set serialization round trip`() {
-        val original = AppSettings(
-            metadataHistory = MetadataHistory(
-                description = listOf("Sunset", "Beach"),
-                city = listOf("Worcester", "Boston"),
-                recentSets = listOf(
-                    RecentMetadataSet(
-                        city = "Worcester",
-                        state = "MA",
-                        gpsLatitude = "42.2626",
-                        gpsLongitude = "-71.8023",
-                        timestamp = 1700000000000L,
+        val original =
+            AppSettings(
+                metadataHistory =
+                    MetadataHistory(
+                        description = listOf("Sunset", "Beach"),
+                        city = listOf("Worcester", "Boston"),
+                        recentSets =
+                            listOf(
+                                RecentMetadataSet(
+                                    city = "Worcester",
+                                    state = "MA",
+                                    gpsLatitude = "42.2626",
+                                    gpsLongitude = "-71.8023",
+                                    timestamp = 1700000000000L,
+                                )
+                            ),
                     )
-                )
             )
-        )
 
-        val json = kotlinx.serialization.json.Json { prettyPrint = true; ignoreUnknownKeys = true }
-            .encodeToString(AppSettings.serializer(), original)
+        val json =
+            kotlinx.serialization.json
+                .Json {
+                    prettyPrint = true
+                    ignoreUnknownKeys = true
+                }
+                .encodeToString(AppSettings.serializer(), original)
 
-        val deserialized = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-            .decodeFromString(AppSettings.serializer(), json)
+        val deserialized =
+            kotlinx.serialization.json
+                .Json { ignoreUnknownKeys = true }
+                .decodeFromString(AppSettings.serializer(), json)
 
         assertEquals(original.metadataHistory.description, deserialized.metadataHistory.description)
         assertEquals(original.metadataHistory.city, deserialized.metadataHistory.city)
@@ -262,10 +270,11 @@ class AppSettingsPhotoScanTest {
 
     @Test
     fun `addMetadataHistory works for gpsLatitude and gpsLongitude`() {
-        val settings = AppSettings()
-            .addMetadataHistory("gpsLatitude", "42.2626")
-            .addMetadataHistory("gpsLatitude", "51.5074")
-            .addMetadataHistory("gpsLongitude", "-71.8023")
+        val settings =
+            AppSettings()
+                .addMetadataHistory("gpsLatitude", "42.2626")
+                .addMetadataHistory("gpsLatitude", "51.5074")
+                .addMetadataHistory("gpsLongitude", "-71.8023")
 
         assertEquals(listOf("51.5074", "42.2626"), settings.metadataHistory.gpsLatitude)
         assertEquals(listOf("-71.8023"), settings.metadataHistory.gpsLongitude)

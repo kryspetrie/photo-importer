@@ -8,23 +8,23 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
-import org.kryspetrie.fileimport.domain.model.geometry.Corner
-import org.kryspetrie.fileimport.domain.model.geometry.Point
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RegionType
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.Corner
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 
 /**
  * End-to-end flow tests for PhotoScanWizardState.
  *
- * Tests realistic user workflows by driving the state machine through multiple steps
- * in sequence, verifying intermediate and final state at each point. Unlike the unit
- * tests in PhotoScanWizardStateTest which test individual operations in isolation,
- * these tests exercise the state transitions a real user would trigger.
+ * Tests realistic user workflows by driving the state machine through multiple steps in sequence,
+ * verifying intermediate and final state at each point. Unlike the unit tests in
+ * PhotoScanWizardStateTest which test individual operations in isolation, these tests exercise the
+ * state transitions a real user would trigger.
  */
 @DisplayName("Photo Scan Wizard Flow Tests")
 class PhotoScanWizardFlowTest {
@@ -107,7 +107,8 @@ class PhotoScanWizardFlowTest {
             state.initializeWithImage(testImage, File("scan.jpg"))
             state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0))
             state.configs.setPhotoScanConfiguration(
-                state.configs.boxes[0].id, PhotoScanConfiguration(description = "Test")
+                state.configs.boxes[0].id,
+                PhotoScanConfiguration(description = "Test"),
             )
             state.navigation.goToSummary()
             state.navigation.goToProcessing()
@@ -157,7 +158,11 @@ class PhotoScanWizardFlowTest {
 
             // Undo the corner move
             state.boxes.undo()
-            assertEquals(box1.corners.bottomRight.x + 10.0, state.configs.boxes[0].corners.bottomRight.x, 0.01)
+            assertEquals(
+                box1.corners.bottomRight.x + 10.0,
+                state.configs.boxes[0].corners.bottomRight.x,
+                0.01,
+            )
 
             // Undo the box move
             state.boxes.undo()
@@ -166,7 +171,11 @@ class PhotoScanWizardFlowTest {
 
             // Redo
             state.boxes.redo()
-            assertEquals(box1.corners.topLeft.x + 10.0, state.configs.boxes[0].corners.topLeft.x, 0.01)
+            assertEquals(
+                box1.corners.topLeft.x + 10.0,
+                state.configs.boxes[0].corners.topLeft.x,
+                0.01,
+            )
         }
 
         @Test
@@ -192,7 +201,8 @@ class PhotoScanWizardFlowTest {
 
             // Rotate CCW — back to 90°
             state.configs.rotateAllBoxesCCW()
-            val config1AfterCCW = state.photoConfigurations.value[box1Id] ?: PhotoScanConfiguration()
+            val config1AfterCCW =
+                state.photoConfigurations.value[box1Id] ?: PhotoScanConfiguration()
             assertEquals(90, config1AfterCCW.rotationDegrees)
         }
 
@@ -273,16 +283,20 @@ class PhotoScanWizardFlowTest {
 
             // Set per-photo strategy to CROP (different from global PERSPECTIVE)
             state.configs.setPhotoScanConfiguration(
-                box.id, PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP)
+                box.id,
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
             )
 
             // Per-photo strategy takes precedence
             assertEquals(
                 CorrectionStrategy.CROP,
-                state.photoConfigurations.value[box.id]?.correctionStrategy
+                state.photoConfigurations.value[box.id]?.correctionStrategy,
             )
             // Global default is still PERSPECTIVE for other photos
-            assertEquals(CorrectionStrategy.PERSPECTIVE, state.exportSettings.defaultCorrectionStrategy.value)
+            assertEquals(
+                CorrectionStrategy.PERSPECTIVE,
+                state.exportSettings.defaultCorrectionStrategy.value,
+            )
         }
 
         @Test
@@ -293,7 +307,8 @@ class PhotoScanWizardFlowTest {
             val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
             state.boxes.addBox(box)
             state.configs.setPhotoScanConfiguration(
-                box.id, PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP)
+                box.id,
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
             )
 
             // Change global default
@@ -302,7 +317,7 @@ class PhotoScanWizardFlowTest {
             // Per-photo strategy is still CROP, unchanged
             assertEquals(
                 CorrectionStrategy.CROP,
-                state.photoConfigurations.value[box.id]?.correctionStrategy
+                state.photoConfigurations.value[box.id]?.correctionStrategy,
             )
         }
 
@@ -320,7 +335,10 @@ class PhotoScanWizardFlowTest {
 
             // Set global strategy to CROP (only matters when perspective correction OFF)
             state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
-            assertEquals(CorrectionStrategy.CROP, state.exportSettings.defaultCorrectionStrategy.value)
+            assertEquals(
+                CorrectionStrategy.CROP,
+                state.exportSettings.defaultCorrectionStrategy.value,
+            )
 
             // Re-enable perspective correction — strategy dropdown hidden, PERSPECTIVE implied
             state.exportSettings.setPerspectiveCorrectionEnabled(true)
@@ -543,7 +561,9 @@ class PhotoScanWizardFlowTest {
     inner class ExportConfigurationFlow {
 
         @Test
-        @DisplayName("Set correction strategy, export margin, and perspective correction for all photos")
+        @DisplayName(
+            "Set correction strategy, export margin, and perspective correction for all photos"
+        )
         fun configureExportSettingsFlow() {
             state.initializeWithImage(testImage, File("scan.jpg"))
             state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0))
@@ -554,7 +574,10 @@ class PhotoScanWizardFlowTest {
             state.exportSettings.setExportMarginPercent(0.05)
             state.exportSettings.setPerspectiveCorrectionEnabled(false)
 
-            assertEquals(CorrectionStrategy.CROP_AND_ROTATE, state.exportSettings.defaultCorrectionStrategy.value)
+            assertEquals(
+                CorrectionStrategy.CROP_AND_ROTATE,
+                state.exportSettings.defaultCorrectionStrategy.value,
+            )
             assertEquals(0.05, state.exportSettings.exportMarginPercent.value, 0.001)
             assertFalse(state.exportSettings.perspectiveCorrectionEnabled.value)
 
@@ -568,7 +591,7 @@ class PhotoScanWizardFlowTest {
             // Verify per-photo override
             assertEquals(
                 CorrectionStrategy.PERSPECTIVE,
-                state.photoConfigurations.value[box1Id]?.correctionStrategy
+                state.photoConfigurations.value[box1Id]?.correctionStrategy,
             )
 
             // Second photo still uses global default (null per-photo)
@@ -598,21 +621,12 @@ class PhotoScanWizardFlowTest {
             // Set different metadata for second photo
             state.configs.setPhotoScanConfiguration(
                 box2.id,
-                PhotoScanConfiguration(
-                    description = "Vacation photo",
-                    originalDate = "2024-07-20",
-                ),
+                PhotoScanConfiguration(description = "Vacation photo", originalDate = "2024-07-20"),
             )
 
             // Verify each photo has its own config
-            assertEquals(
-                "Family photo",
-                state.photoConfigurations.value[box1.id]?.description
-            )
-            assertEquals(
-                "Vacation photo",
-                state.photoConfigurations.value[box2.id]?.description
-            )
+            assertEquals("Family photo", state.photoConfigurations.value[box1.id]?.description)
+            assertEquals("Vacation photo", state.photoConfigurations.value[box2.id]?.description)
             assertEquals("Canon", state.photoConfigurations.value[box1.id]?.cameraMake)
             // Second photo has default empty cameraMake (not null)
             assertTrue(state.photoConfigurations.value[box2.id]?.cameraMake?.isEmpty() ?: true)

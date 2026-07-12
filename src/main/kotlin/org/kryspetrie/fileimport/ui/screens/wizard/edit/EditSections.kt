@@ -8,48 +8,43 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
-import androidx.compose.material3.DatePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -62,8 +57,8 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -74,13 +69,13 @@ import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.model.RegionType
-import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
-import org.kryspetrie.fileimport.ui.screens.wizard.regionTypeIcon
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataField
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.OverrideCheckbox
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentLocationDropdown
+import org.kryspetrie.fileimport.ui.screens.wizard.regionTypeIcon
+import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 
 /** Rotation controls section. */
 @Composable
@@ -118,7 +113,9 @@ internal fun RotationSection(
             Text(
                 "${rotationDegrees}°",
                 style = MaterialTheme.typography.labelSmall,
-                color = if (rotationDegrees != 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                color =
+                    if (rotationDegrees != 0) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.width(36.dp),
                 textAlign = TextAlign.End,
             )
@@ -291,10 +288,7 @@ internal fun QuickEditMetadataFields(
     }
 
     // Original Date + Year on the same line
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -317,7 +311,11 @@ internal fun QuickEditMetadataFields(
                     onClick = { showDatePicker = true },
                     modifier = Modifier.size(32.dp).padding(top = 20.dp),
                 ) {
-                    Icon(Icons.Default.DateRange, "Pick date", tint = MaterialTheme.colorScheme.primary)
+                    Icon(
+                        Icons.Default.DateRange,
+                        "Pick date",
+                        tint = MaterialTheme.colorScheme.primary,
+                    )
                 }
             }
         }
@@ -386,9 +384,7 @@ internal fun CameraSection(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded },
+            modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -398,7 +394,10 @@ internal fun CameraSection(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(4.dp))
-            Text("Camera Settings", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+            Text(
+                "Camera Settings",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+            )
         }
         if (expanded) {
             Row(
@@ -509,13 +508,13 @@ private val ExpandLessIcon = Icons.Default.ExpandLess
 
 /**
  * Location section — condensed layout.
- *
  * - **Location Name**: A colloquial/recognizable name (e.g. "Grandma's House", "Disney World")
- * - **Address**: Full geocoded address from the map picker (e.g. "Worcester, Massachusetts, United States")
+ * - **Address**: Full geocoded address from the map picker (e.g. "Worcester, Massachusetts, United
+ *   States")
  *
  * If `address` is set, it is written to IPTC SubLocation in EXIF; otherwise locationName is used.
- * City/State/Country/GPS are collapsed by default since the map picker typically fills them;
- * they remain editable for fine-grained control when expanded.
+ * City/State/Country/GPS are collapsed by default since the map picker typically fills them; they
+ * remain editable for fine-grained control when expanded.
  */
 @Composable
 internal fun LocationSection(
@@ -543,14 +542,21 @@ internal fun LocationSection(
 ) {
     // Collapse details by default — the map picker fills City/State/Country/GPS automatically.
     // Users can expand for fine-grained manual control.
-    val hasDetails = city.isNotBlank() || stateVal.isNotBlank() || country.isNotBlank() ||
-        gpsLatitude.isNotBlank() || gpsLongitude.isNotBlank()
+    val hasDetails =
+        city.isNotBlank() ||
+            stateVal.isNotBlank() ||
+            country.isNotBlank() ||
+            gpsLatitude.isNotBlank() ||
+            gpsLongitude.isNotBlank()
     var detailsExpanded by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
         // ── Section header ──
-        Text("Location", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+        Text(
+            "Location",
+            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+        )
 
         // ── Recent Locations ──
         if (onApplyRecentLocation != null) {
@@ -578,28 +584,24 @@ internal fun LocationSection(
             onValueChange = onAddressChange,
             suggestions = metadataHistory.address,
             onCommit = { onMetadataHistoryUpdate("address", address) },
-            trailingIcon = if (onPickLocation != null) {
-                {
-                    IconButton(
-                        onClick = onPickLocation,
-                        modifier = Modifier.size(32.dp),
-                    ) {
-                        Icon(
-                            Icons.Default.LocationOn,
-                            contentDescription = "Pick on Map",
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
+            trailingIcon =
+                if (onPickLocation != null) {
+                    {
+                        IconButton(onClick = onPickLocation, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.Default.LocationOn,
+                                contentDescription = "Pick on Map",
+                                modifier = Modifier.size(18.dp),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                     }
-                }
-            } else null,
+                } else null,
         )
 
         // ── Expand/collapse for City/State/Country/GPS details ──
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { detailsExpanded = !detailsExpanded },
+            modifier = Modifier.fillMaxWidth().clickable { detailsExpanded = !detailsExpanded },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -615,14 +617,17 @@ internal fun LocationSection(
                 color = MaterialTheme.colorScheme.primary,
             )
             if (!detailsExpanded) {
-                val summaryParts = listOfNotNull(
-                    city.takeIf { it.isNotBlank() },
-                    stateVal.takeIf { it.isNotBlank() },
-                    country.takeIf { it.isNotBlank() },
-                    gpsLatitude.takeIf { it.isNotBlank() }?.let { lat ->
-                        gpsLongitude.takeIf { it.isNotBlank() }?.let { lon -> "$lat, $lon" }
-                    },
-                )
+                val summaryParts =
+                    listOfNotNull(
+                        city.takeIf { it.isNotBlank() },
+                        stateVal.takeIf { it.isNotBlank() },
+                        country.takeIf { it.isNotBlank() },
+                        gpsLatitude
+                            .takeIf { it.isNotBlank() }
+                            ?.let { lat ->
+                                gpsLongitude.takeIf { it.isNotBlank() }?.let { lon -> "$lat, $lon" }
+                            },
+                    )
                 if (summaryParts.isNotEmpty()) {
                     Spacer(Modifier.width(6.dp))
                     Text(
@@ -676,10 +681,7 @@ internal fun LocationSection(
                 Text("GPS", style = MaterialTheme.typography.labelMedium)
                 if (overrideGps != null && onOverrideGpsChange != null) {
                     Spacer(Modifier.width(4.dp))
-                    OverrideCheckbox(
-                        included = overrideGps,
-                        onIncludedChange = onOverrideGpsChange,
-                    )
+                    OverrideCheckbox(included = overrideGps, onIncludedChange = onOverrideGpsChange)
                 }
                 Spacer(Modifier.weight(1f))
                 if (sourceGpsHint != null) {
@@ -743,9 +745,7 @@ internal fun SubjectsSection(
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { subjectsExpanded = !subjectsExpanded },
+            modifier = Modifier.fillMaxWidth().clickable { subjectsExpanded = !subjectsExpanded },
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -755,7 +755,10 @@ internal fun SubjectsSection(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(4.dp))
-            Text("Tag Photo", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+            Text(
+                "Tag Photo",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+            )
         }
         if (subjectsExpanded) {
             if (faceRegions.isNotEmpty()) {
@@ -770,11 +773,20 @@ internal fun SubjectsSection(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Tag Regions", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold))
+                            Text(
+                                "Tag Regions",
+                                style =
+                                    MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold
+                                    ),
+                            )
                             if (onClearAllFaces != null) {
                                 Text(
                                     "Clear All",
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    style =
+                                        MaterialTheme.typography.labelSmall.copy(
+                                            fontWeight = FontWeight.Bold
+                                        ),
                                     color = Color(0xFFFF6666),
                                     modifier = Modifier.clickable { onClearAllFaces() },
                                 )
@@ -846,9 +858,15 @@ internal fun SubjectsSection(
                 shape = RoundedCornerShape(6.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Column(modifier = Modifier.padding(8.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(
+                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
                     if (onSelectFaces != null) {
-                        OutlinedButton(onClick = onSelectFaces, modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = onSelectFaces,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
                             Icon(Icons.Default.Sell, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                             Text(
@@ -858,87 +876,112 @@ internal fun SubjectsSection(
                             )
                         }
                     }
-            var suggestionsExpanded by remember { mutableStateOf(false) }
-            val availableSuggestions =
-                remember(metadataHistory.subjects, subjectList) {
-                    metadataHistory.subjects.filter { it !in subjectList }
-                }
-            val filteredSuggestions =
-                remember(availableSuggestions, subjectInput) {
-                    if (subjectInput.isBlank()) availableSuggestions
-                    else availableSuggestions.filter { it.contains(subjectInput, ignoreCase = true) }
-                }
-            Box {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    OutlinedTextField(
-                        value = subjectInput,
-                        onValueChange = {
-                            subjectInput = it
-                            suggestionsExpanded = true
-                        },
-                        placeholder = { Text("Add person...", style = MaterialTheme.typography.labelSmall) },
-                        modifier = Modifier.weight(1f).defaultMinSize(minHeight = 0.dp),
-                        singleLine = true,
-                        keyboardActions =
-                            KeyboardActions(
-                                onDone = {
+                    var suggestionsExpanded by remember { mutableStateOf(false) }
+                    val availableSuggestions =
+                        remember(metadataHistory.subjects, subjectList) {
+                            metadataHistory.subjects.filter { it !in subjectList }
+                        }
+                    val filteredSuggestions =
+                        remember(availableSuggestions, subjectInput) {
+                            if (subjectInput.isBlank()) availableSuggestions
+                            else
+                                availableSuggestions.filter {
+                                    it.contains(subjectInput, ignoreCase = true)
+                                }
+                        }
+                    Box {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            OutlinedTextField(
+                                value = subjectInput,
+                                onValueChange = {
+                                    subjectInput = it
+                                    suggestionsExpanded = true
+                                },
+                                placeholder = {
+                                    Text(
+                                        "Add person...",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                },
+                                modifier = Modifier.weight(1f).defaultMinSize(minHeight = 0.dp),
+                                singleLine = true,
+                                keyboardActions =
+                                    KeyboardActions(
+                                        onDone = {
+                                            if (subjectInput.isNotBlank()) {
+                                                val updated =
+                                                    if (subjects.isBlank()) subjectInput.trim()
+                                                    else
+                                                        "${subjects.trim()}, ${subjectInput.trim()}"
+                                                onSubjectsChange(updated)
+                                                onMetadataHistoryUpdate(
+                                                    "subjects",
+                                                    subjectInput.trim(),
+                                                )
+                                                subjectInput = ""
+                                            }
+                                            subjectFocusManager.moveFocus(FocusDirection.Down)
+                                        }
+                                    ),
+                                textStyle = MaterialTheme.typography.bodyMedium,
+                                trailingIcon = {
                                     if (subjectInput.isNotBlank()) {
-                                        val updated =
-                                            if (subjects.isBlank()) subjectInput.trim()
-                                            else "${subjects.trim()}, ${subjectInput.trim()}"
-                                        onSubjectsChange(updated)
-                                        onMetadataHistoryUpdate("subjects", subjectInput.trim())
-                                        subjectInput = ""
+                                        IconButton(
+                                            onClick = {
+                                                val updated =
+                                                    if (subjects.isBlank()) subjectInput.trim()
+                                                    else
+                                                        "${subjects.trim()}, ${subjectInput.trim()}"
+                                                onSubjectsChange(updated)
+                                                onMetadataHistoryUpdate(
+                                                    "subjects",
+                                                    subjectInput.trim(),
+                                                )
+                                                subjectInput = ""
+                                            },
+                                            modifier = Modifier.size(20.dp),
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Add,
+                                                "Add subject",
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                        }
                                     }
-                                    subjectFocusManager.moveFocus(FocusDirection.Down)
-                                }
-                            ),
-                        textStyle = MaterialTheme.typography.bodyMedium,
-                        trailingIcon = {
-                            if (subjectInput.isNotBlank()) {
-                                IconButton(
-                                    onClick = {
-                                        val updated =
-                                            if (subjects.isBlank()) subjectInput.trim()
-                                            else "${subjects.trim()}, ${subjectInput.trim()}"
-                                        onSubjectsChange(updated)
-                                        onMetadataHistoryUpdate("subjects", subjectInput.trim())
-                                        subjectInput = ""
-                                    },
-                                    modifier = Modifier.size(20.dp),
-                                ) {
-                                    Icon(Icons.Default.Add, "Add subject", modifier = Modifier.size(16.dp))
-                                }
-                            }
-                        },
-                    )
-                }
-                if (filteredSuggestions.isNotEmpty()) {
-                    DropdownMenu(
-                        expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
-                        onDismissRequest = { suggestionsExpanded = false },
-                    ) {
-                        filteredSuggestions.take(10).forEach { suggestion ->
-                            DropdownMenuItem(
-                                text = { Text(suggestion, style = MaterialTheme.typography.labelSmall) },
-                                onClick = {
-                                    val updated =
-                                        if (subjects.isBlank()) suggestion
-                                        else "${subjects.trim()}, $suggestion"
-                                    onSubjectsChange(updated)
-                                    onMetadataHistoryUpdate("subjects", suggestion)
-                                    subjectInput = ""
-                                    suggestionsExpanded = false
                                 },
                             )
                         }
+                        if (filteredSuggestions.isNotEmpty()) {
+                            DropdownMenu(
+                                expanded = suggestionsExpanded && filteredSuggestions.isNotEmpty(),
+                                onDismissRequest = { suggestionsExpanded = false },
+                            ) {
+                                filteredSuggestions.take(10).forEach { suggestion ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                suggestion,
+                                                style = MaterialTheme.typography.labelSmall,
+                                            )
+                                        },
+                                        onClick = {
+                                            val updated =
+                                                if (subjects.isBlank()) suggestion
+                                                else "${subjects.trim()}, $suggestion"
+                                            onSubjectsChange(updated)
+                                            onMetadataHistoryUpdate("subjects", suggestion)
+                                            subjectInput = ""
+                                            suggestionsExpanded = false
+                                        },
+                                    )
+                                }
+                            }
+                        }
                     }
-                }
-            }
                 } // closes Column
             } // closes Surface
         }
@@ -1058,8 +1101,8 @@ internal fun FaceNameEntryPanel(
                 }
             }
         }
-        }
     }
+}
 
 /** A removable chip/tag for keywords and subjects. Shows text with an X button to remove. */
 @Composable

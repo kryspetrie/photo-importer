@@ -55,14 +55,14 @@ class PhotoScanDetectorService(
     /**
      * Preload the YOLO detection pipeline eagerly.
      *
-     * Call this early in the application lifecycle (e.g. when the user first selects files)
-     * to front-load the model loading cost. Without preloading, the first call to [detectPhotos]
-     * pays the full cost of: classpath I/O (~57 MB of ONNX models) + ONNX session creation +
-     * GPU provider probing + graph optimization, which adds 1-3 seconds of latency.
+     * Call this early in the application lifecycle (e.g. when the user first selects files) to
+     * front-load the model loading cost. Without preloading, the first call to [detectPhotos] pays
+     * the full cost of: classpath I/O (~57 MB of ONNX models) + ONNX session creation + GPU
+     * provider probing + graph optimization, which adds 1-3 seconds of latency.
      *
-     * After preloading, subsequent [detectPhotos] calls start immediately since the pipeline
-     * is already initialized. This method is idempotent — calling it after the pipeline is
-     * already loaded is a no-op.
+     * After preloading, subsequent [detectPhotos] calls start immediately since the pipeline is
+     * already initialized. This method is idempotent — calling it after the pipeline is already
+     * loaded is a no-op.
      *
      * @return true if the YOLO pipeline was successfully initialized, false if models are
      *   unavailable or initialization failed

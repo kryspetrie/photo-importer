@@ -127,9 +127,7 @@ fun ChunkyScrollbar(
                                 // one scroll can cancel another via CancellationException.
                                 coroutineScope.launch {
                                     try {
-                                        scrollState.scrollTo(
-                                            (targetFraction * maxScroll).toInt()
-                                        )
+                                        scrollState.scrollTo((targetFraction * maxScroll).toInt())
                                     } catch (_: CancellationException) {
                                         // Scroll cancelled by a new scroll — safe to ignore
                                     }
@@ -155,7 +153,8 @@ fun ChunkyScrollbar(
                                         (dragStartScroll + totalDragY * scrollPerPx)
                                             .toInt()
                                             .coerceIn(0, maxScroll.toInt())
-                                    // scrollTo() uses MutatorMutex internally. During rapid drag calls,
+                                    // scrollTo() uses MutatorMutex internally. During rapid drag
+                                    // calls,
                                     // one scroll can cancel another via CancellationException.
                                     coroutineScope.launch {
                                         try {

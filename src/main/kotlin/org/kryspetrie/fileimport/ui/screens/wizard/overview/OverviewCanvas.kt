@@ -23,13 +23,13 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.model.DetectionMode
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.model.geometry.Corner
-import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.domain.model.geometry.Point
+import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
 import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
 

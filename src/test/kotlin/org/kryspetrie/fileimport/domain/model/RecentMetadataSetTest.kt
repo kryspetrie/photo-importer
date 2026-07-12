@@ -11,12 +11,13 @@ class RecentMetadataSetTest {
 
     @Test
     fun `label prefers location over description`() {
-        val set = RecentMetadataSet(
-            locationName = "Grandma's house",
-            city = "Worcester",
-            country = "United States",
-            description = "Beach photo",
-        )
+        val set =
+            RecentMetadataSet(
+                locationName = "Grandma's house",
+                city = "Worcester",
+                country = "United States",
+                description = "Beach photo",
+            )
 
         assertEquals("Grandma's house, Worcester, United States", set.label)
     }
@@ -44,10 +45,7 @@ class RecentMetadataSetTest {
 
     @Test
     fun `label combines location fields correctly`() {
-        val set = RecentMetadataSet(
-            city = "Worcester",
-            state = "MA",
-        )
+        val set = RecentMetadataSet(city = "Worcester", state = "MA")
 
         assertEquals("Worcester, MA", set.label)
     }
@@ -80,11 +78,7 @@ class RecentMetadataSetTest {
 
     @Test
     fun `hasAnyValue returns false when all fields are blank strings`() {
-        val set = RecentMetadataSet(
-            description = "",
-            city = "",
-            gpsLatitude = "",
-        )
+        val set = RecentMetadataSet(description = "", city = "", gpsLatitude = "")
         assertFalse(set.hasAnyValue())
     }
 
@@ -92,13 +86,14 @@ class RecentMetadataSetTest {
 
     @Test
     fun `summary shows location, date, and camera`() {
-        val set = RecentMetadataSet(
-            city = "Worcester",
-            state = "MA",
-            originalDate = "2024-06-15",
-            cameraMake = "Canon",
-            cameraModel = "EOS R5",
-        )
+        val set =
+            RecentMetadataSet(
+                city = "Worcester",
+                state = "MA",
+                originalDate = "2024-06-15",
+                cameraMake = "Canon",
+                cameraModel = "EOS R5",
+            )
 
         assertTrue(set.summary.contains("Worcester, MA"))
         assertTrue(set.summary.contains("2024-06-15"))
@@ -127,11 +122,8 @@ class RecentMetadataSetTest {
 
     @Test
     fun `summary shows location name over city for short labels`() {
-        val set = RecentMetadataSet(
-            locationName = "Grandma's house",
-            city = "Worcester",
-            state = "MA",
-        )
+        val set =
+            RecentMetadataSet(locationName = "Grandma's house", city = "Worcester", state = "MA")
 
         assertTrue(set.summary.startsWith("Grandma's house, Worcester, MA"))
     }
@@ -140,26 +132,27 @@ class RecentMetadataSetTest {
 
     @Test
     fun `fromConfig captures all metadata fields`() {
-        val config = PhotoScanConfiguration(
-            description = "Sunset over mountains",
-            keywords = "vacation, landscape",
-            originalDate = "2024-06-15",
-            year = "2024",
-            cameraMake = "Canon",
-            cameraModel = "EOS R5",
-            lensModel = "RF 24-70mm f/2.8L",
-            focalLength = "35mm",
-            aperture = "f/2.8",
-            shutterSpeed = "1/500",
-            iso = "400",
-            locationName = "Grandma's house",
-            city = "Worcester",
-            state = "MA",
-            country = "United States",
-            gpsLatitude = "42.2626",
-            gpsLongitude = "-71.8023",
-            subjects = "Alice, Bob",
-        )
+        val config =
+            PhotoScanConfiguration(
+                description = "Sunset over mountains",
+                keywords = "vacation, landscape",
+                originalDate = "2024-06-15",
+                year = "2024",
+                cameraMake = "Canon",
+                cameraModel = "EOS R5",
+                lensModel = "RF 24-70mm f/2.8L",
+                focalLength = "35mm",
+                aperture = "f/2.8",
+                shutterSpeed = "1/500",
+                iso = "400",
+                locationName = "Grandma's house",
+                city = "Worcester",
+                state = "MA",
+                country = "United States",
+                gpsLatitude = "42.2626",
+                gpsLongitude = "-71.8023",
+                subjects = "Alice, Bob",
+            )
 
         val set = RecentMetadataSet.fromConfig(config)
 
@@ -208,17 +201,15 @@ class RecentMetadataSetTest {
 
     @Test
     fun `mergeInto applies non-blank fields over existing config`() {
-        val set = RecentMetadataSet(
-            description = "New desc",
-            city = "Paris",
-            gpsLatitude = "48.8566",
-        )
-        val config = PhotoScanConfiguration(
-            description = "Old desc",
-            keywords = "old keywords",
-            city = "Boston",
-            country = "US",
-        )
+        val set =
+            RecentMetadataSet(description = "New desc", city = "Paris", gpsLatitude = "48.8566")
+        val config =
+            PhotoScanConfiguration(
+                description = "Old desc",
+                keywords = "old keywords",
+                city = "Boston",
+                country = "US",
+            )
         val merged = set.mergeInto(config)
 
         assertEquals("New desc", merged.description)
@@ -240,20 +231,18 @@ class RecentMetadataSetTest {
 
     @Test
     fun `mergeLocationInto applies only location fields`() {
-        val set = RecentMetadataSet(
-            description = "Should not be applied",
-            locationName = "Grandma's house",
-            city = "Worcester",
-            state = "MA",
-            country = "United States",
-            gpsLatitude = "42.2626",
-            gpsLongitude = "-71.8023",
-        )
-        val config = PhotoScanConfiguration(
-            description = "Original desc",
-            city = "Boston",
-            country = "US",
-        )
+        val set =
+            RecentMetadataSet(
+                description = "Should not be applied",
+                locationName = "Grandma's house",
+                city = "Worcester",
+                state = "MA",
+                country = "United States",
+                gpsLatitude = "42.2626",
+                gpsLongitude = "-71.8023",
+            )
+        val config =
+            PhotoScanConfiguration(description = "Original desc", city = "Boston", country = "US")
         val merged = set.mergeLocationInto(config)
 
         assertEquals("Original desc", merged.description) // Not a location field → preserved

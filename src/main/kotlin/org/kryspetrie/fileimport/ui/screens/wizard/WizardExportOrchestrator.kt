@@ -2,21 +2,18 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 
 import java.awt.image.BufferedImage
 import java.io.File
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
-import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanConstants
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.screens.wizard.rotationFromDegrees
 
 /**
  * Orchestrates the photo scan export pipeline: validates destination, iterates through detected
@@ -25,7 +22,9 @@ import org.kryspetrie.fileimport.ui.screens.wizard.rotationFromDegrees
  * Extracted from [WizardContainer] to keep UI composable code separate from orchestration logic.
  */
 
-/** Validates the export destination directory. Returns an error string if invalid, or null if valid. */
+/**
+ * Validates the export destination directory. Returns an error string if invalid, or null if valid.
+ */
 fun validateExportDestination(destinationPath: String): String? {
     val outputDir = File(destinationPath)
     return when {
@@ -39,7 +38,10 @@ fun validateExportDestination(destinationPath: String): String? {
     }
 }
 
-/** Opens the export destination folder in the system file browser. Best-effort — silently skips on failure. */
+/**
+ * Opens the export destination folder in the system file browser. Best-effort — silently skips on
+ * failure.
+ */
 fun openExportFolder(exportDestination: String) {
     try {
         val dir = File(exportDestination)

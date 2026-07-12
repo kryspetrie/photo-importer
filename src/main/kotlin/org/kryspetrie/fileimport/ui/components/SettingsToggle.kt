@@ -3,8 +3,6 @@ package org.kryspetrie.fileimport.ui.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -42,11 +40,7 @@ fun SettingsToggle(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         if (icon != null) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-            )
+            Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         }
         Column(modifier = Modifier.weight(1f, fill = false)) {
             Text(label, style = MaterialTheme.typography.labelMedium)

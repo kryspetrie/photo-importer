@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -19,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.ImportProgress
+import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import org.kryspetrie.fileimport.ui.components.formatFileSize
 
 @Composable

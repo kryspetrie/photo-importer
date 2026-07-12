@@ -1,9 +1,8 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -96,11 +95,23 @@ fun MetadataField(
         }
 
     // Build the combined trailing icon: custom icon + override checkbox
-    val combinedTrailingIcon: (@Composable () -> Unit)? = when {
-        trailingIcon != null && hasOverride -> {
-            {
-                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                    trailingIcon.invoke()
+    val combinedTrailingIcon: (@Composable () -> Unit)? =
+        when {
+            trailingIcon != null && hasOverride -> {
+                {
+                    Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                        trailingIcon.invoke()
+                        OverrideCheckbox(
+                            included = fieldIncluded,
+                            onIncludedChange = onFieldIncludedChange,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            }
+            trailingIcon != null -> trailingIcon
+            hasOverride -> {
+                {
                     OverrideCheckbox(
                         included = fieldIncluded,
                         onIncludedChange = onFieldIncludedChange,
@@ -108,19 +119,8 @@ fun MetadataField(
                     )
                 }
             }
+            else -> null
         }
-        trailingIcon != null -> trailingIcon
-        hasOverride -> {
-            {
-                OverrideCheckbox(
-                    included = fieldIncluded,
-                    onIncludedChange = onFieldIncludedChange,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-        }
-        else -> null
-    }
 
     Column(modifier = modifier) {
         if (suggestions.isNotEmpty()) {
@@ -151,7 +151,10 @@ fun MetadataField(
                                 else Modifier
                             ),
                     singleLine = singleLine,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
+                    keyboardOptions =
+                        androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = keyboardType
+                        ),
                     keyboardActions = keyboardActions,
                     textStyle =
                         if (fieldExcluded)
@@ -164,10 +167,7 @@ fun MetadataField(
                     trailingIcon = combinedTrailingIcon,
                 )
                 if (filteredSuggestions.isNotEmpty()) {
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                    ) {
+                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         filteredSuggestions.take(10).forEach { suggestion ->
                             DropdownMenuItem(
                                 text = {
@@ -197,7 +197,8 @@ fun MetadataField(
                             else Modifier
                         ),
                 singleLine = singleLine,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
+                keyboardOptions =
+                    androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
                 keyboardActions = keyboardActions,
                 textStyle =
                     if (fieldExcluded)

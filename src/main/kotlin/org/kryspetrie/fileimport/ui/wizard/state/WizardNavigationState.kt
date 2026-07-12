@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.asStateFlow
  * Manages wizard step navigation state. Extracted from [PhotoScanWizardState] to separate
  * navigation concerns from box manipulation and other state.
  *
- * Other sub-states and the parent facade can set the step directly through the shared
- * [step] MutableStateFlow when needed (e.g., initialization, reset, refinement transitions).
+ * Other sub-states and the parent facade can set the step directly through the shared [step]
+ * MutableStateFlow when needed (e.g., initialization, reset, refinement transitions).
  */
 class WizardNavigationState {
 

@@ -15,15 +15,15 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import kotlin.math.min
+import kotlinx.coroutines.delay
 
 /**
  * Indeterminate circular progress indicator using time-based animation.
  *
- * Visually similar to Material3's `CircularProgressIndicator` but uses
- * `System.nanoTime() + delay()` instead of `InfiniteTransition.animateFloat()`,
- * avoiding `MonotonicFrameClock` issues in Compose Desktop AWT contexts.
+ * Visually similar to Material3's `CircularProgressIndicator` but uses `System.nanoTime() +
+ * delay()` instead of `InfiniteTransition.animateFloat()`, avoiding `MonotonicFrameClock` issues in
+ * Compose Desktop AWT contexts.
  */
 @Composable
 fun CircularSpinner(
@@ -36,8 +36,8 @@ fun CircularSpinner(
     var arcLength by remember { mutableFloatStateOf(45f) }
 
     LaunchedEffect(Unit) {
-        val rotationSpeed = 6f   // degrees per frame (~1.5s per revolution)
-        val arcSpeed = 1.5f     // arc degrees change per frame
+        val rotationSpeed = 6f // degrees per frame (~1.5s per revolution)
+        val arcSpeed = 1.5f // arc degrees change per frame
         var growing = true
 
         while (true) {
@@ -63,10 +63,7 @@ fun CircularSpinner(
             startAngle = rotation - arcLength / 2f,
             sweepAngle = arcLength,
             useCenter = false,
-            style = Stroke(
-                width = strokeWidthPx,
-                cap = StrokeCap.Round,
-            ),
+            style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round),
         )
     }
 }

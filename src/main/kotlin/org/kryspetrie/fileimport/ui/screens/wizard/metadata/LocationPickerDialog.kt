@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 
-
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,8 +17,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -42,7 +41,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,8 +57,8 @@ import org.kryspetrie.fileimport.ui.components.LoadingIndicator
  * Full-screen location picker overlay with an OpenStreetMap map and unified search panel.
  *
  * Uses a [Dialog] with `usePlatformDefaultWidth = false` so it renders as a full-screen overlay
- * within the existing window (matching the face selector overlay pattern), rather than opening
- * a separate window.
+ * within the existing window (matching the face selector overlay pattern), rather than opening a
+ * separate window.
  *
  * Layout: Map fills the entire overlay; a floating search panel overlays the left side.
  * - Type a query to search for locations via Nominatim
@@ -92,9 +90,7 @@ fun LocationPickerOverlay(
             initialLat = initialLat,
             initialLon = initialLon,
             initialZoom = initialZoom,
-            onLocationSelected = { result ->
-                onLocationSelected(result)
-            },
+            onLocationSelected = { result -> onLocationSelected(result) },
             onDismiss = onDismiss,
             onMapLocationChanged = onMapLocationChanged,
         )
@@ -102,11 +98,11 @@ fun LocationPickerOverlay(
 }
 
 /**
- * The actual content of the location picker, extracted so it can be tested
- * independently (e.g. in a standalone Window for component testing).
+ * The actual content of the location picker, extracted so it can be tested independently (e.g. in a
+ * standalone Window for component testing).
  *
- * Layout: Map fills the entire area. The search panel floats over the map
- * on the left side as a translucent overlay.
+ * Layout: Map fills the entire area. The search panel floats over the map on the left side as a
+ * translucent overlay.
  */
 @Composable
 fun LocationPickerContent(
@@ -182,10 +178,11 @@ fun LocationPickerContent(
 
         // ── Floating search panel overlaid on the left side of the map ──
         Surface(
-            modifier = Modifier.align(Alignment.CenterStart)
-                .widthIn(min = 260.dp, max = 320.dp)
-                .fillMaxSize()
-                .padding(8.dp),
+            modifier =
+                Modifier.align(Alignment.CenterStart)
+                    .widthIn(min = 260.dp, max = 320.dp)
+                    .fillMaxSize()
+                    .padding(8.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
             tonalElevation = 4.dp,
             shape = RoundedCornerShape(12.dp),
@@ -205,7 +202,11 @@ fun LocationPickerContent(
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(16.dp),
                     )
-                    Text("Pick Location", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    Text(
+                        "Pick Location",
+                        style =
+                            MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                    )
                     Spacer(Modifier.weight(1f))
                     IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
                         Icon(
@@ -312,10 +313,11 @@ fun LocationPickerContent(
                                 maxLines = 3,
                             )
                             Text(
-                                "%.4f, %.4f".format(
-                                    selectedLocation!!.latitude,
-                                    selectedLocation!!.longitude,
-                                ),
+                                "%.4f, %.4f"
+                                    .format(
+                                        selectedLocation!!.latitude,
+                                        selectedLocation!!.longitude,
+                                    ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -335,7 +337,11 @@ fun LocationPickerContent(
                             ) {
                                 OutlinedButton(
                                     onClick = {
-                                        onMapLocationChanged?.invoke(mapCenterLat, mapCenterLon, mapZoom)
+                                        onMapLocationChanged?.invoke(
+                                            mapCenterLat,
+                                            mapCenterLon,
+                                            mapZoom,
+                                        )
                                         onLocationSelected(selectedLocation!!)
                                     },
                                     modifier = Modifier.weight(1f),

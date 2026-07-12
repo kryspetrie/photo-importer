@@ -16,8 +16,8 @@ import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 /**
  * Standalone component test for the full [LocationPickerContent] (unified search + map overlay).
  *
- * Launches a separate window containing the complete location picker UI that is used
- * in the Edit screen's "Pick on map" feature. This allows testing:
+ * Launches a separate window containing the complete location picker UI that is used in the Edit
+ * screen's "Pick on map" feature. This allows testing:
  * - Map tile rendering (reuses [OsmMapView] which is independently tested via `runMapTileTest`)
  * - Unified search field for location queries
  * - Reverse geocoding on map click
@@ -28,9 +28,7 @@ import org.kryspetrie.fileimport.domain.port.LocationSearchPort
  * Run via: `./gradlew runLocationPickerTest`
  */
 fun mainLocationPickerTest() = application {
-    val koin = startKoin {
-        modules(appModule)
-    }
+    val koin = startKoin { modules(appModule) }
 
     val dispatcherProvider: DispatcherProvider = koin.koin.get()
     val geocodingPort: GeocodingPort = koin.koin.get()
@@ -39,10 +37,11 @@ fun mainLocationPickerTest() = application {
     Window(
         onCloseRequest = ::exitApplication,
         title = "Location Picker Test",
-        state = rememberWindowState(
-            width = androidx.compose.ui.unit.Dp(1200f),
-            height = androidx.compose.ui.unit.Dp(800f)
-        ),
+        state =
+            rememberWindowState(
+                width = androidx.compose.ui.unit.Dp(1200f),
+                height = androidx.compose.ui.unit.Dp(800f),
+            ),
     ) {
         MaterialTheme {
             Surface(modifier = Modifier.fillMaxSize()) {
@@ -54,8 +53,12 @@ fun mainLocationPickerTest() = application {
                     initialLon = -78.0,
                     initialZoom = 5.0,
                     onLocationSelected = { result ->
-                        println("Location selected: ${result.name} (${result.latitude}, ${result.longitude})")
-                        println("  City: ${result.city}, State: ${result.state}, Country: ${result.country}")
+                        println(
+                            "Location selected: ${result.name} (${result.latitude}, ${result.longitude})"
+                        )
+                        println(
+                            "  City: ${result.city}, State: ${result.state}, Country: ${result.country}"
+                        )
                     },
                     onDismiss = {
                         println("Location picker dismissed")

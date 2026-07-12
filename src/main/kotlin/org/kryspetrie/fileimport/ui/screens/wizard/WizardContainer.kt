@@ -9,13 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -41,24 +39,23 @@ import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.kryspetrie.fileimport.application.PhotoScanExportService
+import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
-import org.kryspetrie.fileimport.application.PhotoScanExportService
-import org.kryspetrie.fileimport.domain.model.AppSettings
-
-import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
-
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
+import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 
 /**
  * Main container for the Photo Import Wizard. Manages the step-by-step workflow: Import → Overview
@@ -112,9 +109,7 @@ fun WizardContainer(
 
     // Clear preview cache when the source image changes (new import)
     val sourceImage by state.image.collectAsState()
-    LaunchedEffect(sourceImage) {
-        previewCache.clear()
-    }
+    LaunchedEffect(sourceImage) { previewCache.clear() }
 
     // Preload ML models eagerly on a background thread so the first detection call
     // doesn't pay the cold-start cost (~57 MB classpath I/O + ONNX session creation).
@@ -132,7 +127,6 @@ fun WizardContainer(
             }
         }
     }
-
 
     Box(modifier = modifier.fillMaxSize()) {
         WizardStepContent(
@@ -369,22 +363,25 @@ private fun WizardStepContent(
                             )
                         }
                     },
-                    onSkipCurrentPhoto = if (state.batch.isBatchMode) {
-                        {
-                            // Mark current batch image as skipped and advance
-                            state.batch.markBatchIndexSkipped(state.batch.currentImageIndex.value)
-                            continueToNextBatchPhoto(
-                                state,
-                                detectorService,
-                                appLogger,
-                                dispatcherProvider,
-                                isLoading,
-                                onMessage,
-                                onError,
-                                scope,
-                            )
-                        }
-                    } else null,
+                    onSkipCurrentPhoto =
+                        if (state.batch.isBatchMode) {
+                            {
+                                // Mark current batch image as skipped and advance
+                                state.batch.markBatchIndexSkipped(
+                                    state.batch.currentImageIndex.value
+                                )
+                                continueToNextBatchPhoto(
+                                    state,
+                                    detectorService,
+                                    appLogger,
+                                    dispatcherProvider,
+                                    isLoading,
+                                    onMessage,
+                                    onError,
+                                    scope,
+                                )
+                            }
+                        } else null,
                     startWithMetadata = settings.skipCropAndRotate,
                     faceRegionTransformer = faceRegionTransformer,
                 )
@@ -549,9 +546,10 @@ private fun ProcessingScreen(
     var showCancelConfirm by remember { mutableStateOf(false) }
 
     // Derive current photo index from progress fraction
-    val currentIndex = (progress * totalPhotos).toInt().coerceIn(1, totalPhotos).let {
-        if (progress >= 1f) totalPhotos else it
-    }
+    val currentIndex =
+        (progress * totalPhotos).toInt().coerceIn(1, totalPhotos).let {
+            if (progress >= 1f) totalPhotos else it
+        }
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(

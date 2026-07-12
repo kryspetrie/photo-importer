@@ -29,8 +29,8 @@ import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /**
- * Card with export settings for the photo scan import screen: perspective correction toggle,
- * margin slider, and skip crop & rotate toggle.
+ * Card with export settings for the photo scan import screen: perspective correction toggle, margin
+ * slider, and skip crop & rotate toggle.
  */
 @Composable
 fun ExportSettingsCard(
@@ -52,18 +52,22 @@ fun ExportSettingsCard(
             ),
     ) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Export Settings", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+            Text(
+                "Export Settings",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            )
 
             // Perspective correction + Skip Crop & Rotate toggles
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     SettingsToggle(
                         checked = perspectiveEnabled,
-                        onCheckedChange = { state.exportSettings.setPerspectiveCorrectionEnabled(it) },
+                        onCheckedChange = {
+                            state.exportSettings.setPerspectiveCorrectionEnabled(it)
+                        },
                         label = "Perspective correction",
                         description =
-                            if (perspectiveEnabled)
-                                "Warp-stretch removes skew"
+                            if (perspectiveEnabled) "Warp-stretch removes skew"
                             else "Simple crop, no skew removal",
                         icon = Icons.Default.Transform,
                     )
@@ -114,7 +118,9 @@ fun ExportSettingsCard(
                     }
                     Slider(
                         value = marginPercent.toFloat(),
-                        onValueChange = { state.exportSettings.setExportMarginPercent(it.toDouble()) },
+                        onValueChange = {
+                            state.exportSettings.setExportMarginPercent(it.toDouble())
+                        },
                         valueRange = 0f..0.1f,
                         steps = 9,
                         modifier = Modifier.fillMaxWidth(),

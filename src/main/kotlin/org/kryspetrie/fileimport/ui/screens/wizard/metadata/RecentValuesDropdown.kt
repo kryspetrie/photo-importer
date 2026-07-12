@@ -1,20 +1,16 @@
 package org.kryspetrie.fileimport.ui.screens.wizard.metadata
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -33,11 +29,11 @@ import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 
 /**
- * A dropdown button that shows recently used metadata value sets and allows the user
- * to apply one to the current fields. This is the primary "apply recent values" UI.
+ * A dropdown button that shows recently used metadata value sets and allows the user to apply one
+ * to the current fields. This is the primary "apply recent values" UI.
  *
- * Shows a compact dropdown of recent sets, each displaying a label (location/date/camera)
- * and a summary line. When selected, calls [onApplySet] with the chosen set.
+ * Shows a compact dropdown of recent sets, each displaying a label (location/date/camera) and a
+ * summary line. When selected, calls [onApplySet] with the chosen set.
  *
  * Uses Box + DropdownMenu instead of ExposedDropdownMenuBox to avoid
  * MutatorMutex/MonotonicFrameClock crashes on Compose Desktop.
@@ -59,22 +55,12 @@ fun RecentValuesDropdown(
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        OutlinedButton(
-            onClick = { expanded = true },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            Icon(
-                Icons.Default.History,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-            )
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
             Text("Apply Recent Values", style = MaterialTheme.typography.labelSmall)
         }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             recentSets.take(10).forEach { set ->
                 DropdownMenuItem(
                     text = {
@@ -104,9 +90,9 @@ fun RecentValuesDropdown(
 }
 
 /**
- * A dropdown button specifically for applying recent location values.
- * Shows recent sets that have location data, and applies only the location fields
- * (locationName, city, state, country, gpsLatitude, gpsLongitude).
+ * A dropdown button specifically for applying recent location values. Shows recent sets that have
+ * location data, and applies only the location fields (locationName, city, state, country,
+ * gpsLatitude, gpsLongitude).
  *
  * Uses Box + DropdownMenu instead of ExposedDropdownMenuBox to avoid
  * MutatorMutex/MonotonicFrameClock crashes on Compose Desktop.
@@ -127,10 +113,7 @@ fun RecentLocationDropdown(
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        OutlinedButton(
-            onClick = { expanded = true },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(
                 Icons.Default.LocationOn,
                 contentDescription = null,
@@ -139,10 +122,7 @@ fun RecentLocationDropdown(
             Spacer(Modifier.width(4.dp))
             Text("Recent Locations", style = MaterialTheme.typography.labelSmall)
         }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             locationSets.take(10).forEach { set ->
                 DropdownMenuItem(
                     text = {
@@ -160,11 +140,13 @@ fun RecentLocationDropdown(
                             Column(modifier = Modifier.weight(1f)) {
                                 val locLabel =
                                     listOfNotNull(
-                                        if (set.locationName.isNotBlank()) set.locationName else null,
-                                        if (set.city.isNotBlank()) set.city else null,
-                                        if (set.state.isNotBlank()) set.state else null,
-                                        if (set.country.isNotBlank()) set.country else null,
-                                    ).joinToString(", ")
+                                            if (set.locationName.isNotBlank()) set.locationName
+                                            else null,
+                                            if (set.city.isNotBlank()) set.city else null,
+                                            if (set.state.isNotBlank()) set.state else null,
+                                            if (set.country.isNotBlank()) set.country else null,
+                                        )
+                                        .joinToString(", ")
                                 Text(
                                     locLabel.ifBlank { set.label },
                                     style = MaterialTheme.typography.labelSmall,

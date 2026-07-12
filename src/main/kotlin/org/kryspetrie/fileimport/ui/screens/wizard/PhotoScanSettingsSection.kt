@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -109,7 +108,10 @@ private fun SettingsCardHeader(
             tint = MaterialTheme.colorScheme.primary,
         )
         Column(Modifier.weight(1f)) {
-            Text("Custom Settings", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+            Text(
+                "Custom Settings",
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+            )
             if (!settingsExpanded) {
                 Text(
                     configSummary(config),
@@ -241,7 +243,8 @@ private fun ConflictResolutionField(
         ConflictResolution.entries.forEach { r ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onConfigChange(config.copy(conflictResolution = r)) },
+                modifier =
+                    Modifier.clickable { onConfigChange(config.copy(conflictResolution = r)) },
             ) {
                 RadioButton(
                     config.conflictResolution == r,
@@ -330,7 +333,10 @@ private fun PhotoScanCollapsibleSubsection(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Icon(icon, null, Modifier.size(14.dp), tint = MaterialTheme.colorScheme.primary)
-            Text(title, style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+            )
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 null,

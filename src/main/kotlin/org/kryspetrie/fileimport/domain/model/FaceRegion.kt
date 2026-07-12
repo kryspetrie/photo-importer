@@ -39,8 +39,8 @@ data class FaceRegion(
     fun rotate90CCW(): FaceRegion = copy(x = y, y = 1.0 - x, w = h, h = w)
 
     /**
-     * Returns a new [FaceRegion] with coordinates transformed for a 180° image rotation.
-     * In normalized space: (x, y) → (1-x, 1-y), width/height unchanged.
+     * Returns a new [FaceRegion] with coordinates transformed for a 180° image rotation. In
+     * normalized space: (x, y) → (1-x, 1-y), width/height unchanged.
      */
     fun rotate180(): FaceRegion = copy(x = 1.0 - x, y = 1.0 - y)
 }

@@ -1,11 +1,5 @@
 package org.kryspetrie.fileimport.ui.wizard.state
 
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
-import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
-import org.kryspetrie.fileimport.domain.model.geometry.Corner
-import org.kryspetrie.fileimport.domain.model.geometry.Point
 import java.awt.image.BufferedImage
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -15,7 +9,12 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RegionType
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
+import org.kryspetrie.fileimport.domain.model.geometry.Corner
+import org.kryspetrie.fileimport.domain.model.geometry.Point
 
 /**
  * Unit tests for PhotoScanWizardState. Tests state transitions, box management, configuration, and
@@ -356,7 +355,8 @@ class PhotoScanWizardStateTest {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.boxes.addBox(box)
 
-        val config = PhotoScanConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
+        val config =
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = true, rotationDegrees = 90)
         state.configs.setPhotoScanConfiguration(box.id, config)
 
         val storedConfig = state.photoConfigurations.value[box.id]
@@ -371,7 +371,10 @@ class PhotoScanWizardStateTest {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.boxes.addBox(box)
 
-        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(
+            box.id,
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = true),
+        )
         state.configs.updatePhotoScanConfiguration(box.id) { it.copy(rotationDegrees = 90) }
 
         val config = state.photoConfigurations.value[box.id]
@@ -384,7 +387,10 @@ class PhotoScanWizardStateTest {
     fun `clear photo configuration removes config`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.boxes.addBox(box)
-        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(
+            box.id,
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = true),
+        )
 
         state.configs.clearPhotoScanConfiguration(box.id)
 
@@ -424,7 +430,10 @@ class PhotoScanWizardStateTest {
     fun `clear all configurations removes all configs`() {
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0)
         state.boxes.addBox(box)
-        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(
+            box.id,
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = true),
+        )
 
         state.configs.clearAllConfigurations()
 
@@ -437,7 +446,10 @@ class PhotoScanWizardStateTest {
         state.initializeWithImage(sampleImage, java.io.File("/test/image.jpg"))
         state.boxes.addBox(BoundingBox.createRectangular(Point(100.0, 100.0), 100.0, 80.0))
         state.boxes.selectBox(0)
-        state.configs.setPhotoScanConfiguration(state.boundingBoxList.value.boxes[0].id, PhotoScanConfiguration())
+        state.configs.setPhotoScanConfiguration(
+            state.boundingBoxList.value.boxes[0].id,
+            PhotoScanConfiguration(),
+        )
 
         state.resetToImportStep()
 
@@ -796,7 +808,10 @@ class PhotoScanWizardStateTest {
         state.boxes.addBox(box)
 
         // Set some photo configuration
-        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(
+            box.id,
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = true),
+        )
         assertTrue(state.photoConfigurations.value.isNotEmpty())
 
         val files = listOf(file1, file2)
@@ -880,7 +895,10 @@ class PhotoScanWizardStateTest {
         state.initializeWithImage(sampleImage, file1)
         val box = BoundingBox.createRectangular(Point(100.0, 100.0), 200.0, 150.0)
         state.boxes.addBox(box)
-        state.configs.setPhotoScanConfiguration(box.id, PhotoScanConfiguration(perspectiveCorrectionEnabled = true))
+        state.configs.setPhotoScanConfiguration(
+            box.id,
+            PhotoScanConfiguration(perspectiveCorrectionEnabled = true),
+        )
 
         // Before reset: has boxes and configs
         assertEquals(1, state.boxes.boxCount())
@@ -1009,7 +1027,10 @@ class PhotoScanWizardStateTest {
     // WS-61: defaultCorrectionStrategy defaults to PERSPECTIVE
     @Test
     fun `defaultCorrectionStrategy defaults to PERSPECTIVE`() {
-        assertEquals(CorrectionStrategy.PERSPECTIVE, state.exportSettings.defaultCorrectionStrategy.value)
+        assertEquals(
+            CorrectionStrategy.PERSPECTIVE,
+            state.exportSettings.defaultCorrectionStrategy.value,
+        )
     }
 
     // WS-62: setDefaultCorrectionStrategy changes the strategy
@@ -1019,10 +1040,16 @@ class PhotoScanWizardStateTest {
         assertEquals(CorrectionStrategy.CROP, state.exportSettings.defaultCorrectionStrategy.value)
 
         state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
-        assertEquals(CorrectionStrategy.CROP_AND_ROTATE, state.exportSettings.defaultCorrectionStrategy.value)
+        assertEquals(
+            CorrectionStrategy.CROP_AND_ROTATE,
+            state.exportSettings.defaultCorrectionStrategy.value,
+        )
 
         state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
-        assertEquals(CorrectionStrategy.PERSPECTIVE, state.exportSettings.defaultCorrectionStrategy.value)
+        assertEquals(
+            CorrectionStrategy.PERSPECTIVE,
+            state.exportSettings.defaultCorrectionStrategy.value,
+        )
     }
 
     // ==================== Face Region Tests ====================
@@ -1176,10 +1203,19 @@ class PhotoScanWizardStateTest {
         addSampleBox()
         state.faceRegions.addFaceRegion(0, "Alice", 0.3, 0.4)
         state.faceRegions.addFaceRegion(0, "Bob", 0.6, 0.5)
-        assertEquals(2, state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions.size)
-        assertEquals("Alice, Bob", state.photoConfigurations.value[state.configs.boxes[0].id]!!.subjects)
+        assertEquals(
+            2,
+            state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions.size,
+        )
+        assertEquals(
+            "Alice, Bob",
+            state.photoConfigurations.value[state.configs.boxes[0].id]!!.subjects,
+        )
         state.faceRegions.clearAllFaceRegions(0)
-        assertEquals(0, state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions.size)
+        assertEquals(
+            0,
+            state.photoConfigurations.value[state.configs.boxes[0].id]!!.faceRegions.size,
+        )
         assertEquals("", state.photoConfigurations.value[state.configs.boxes[0].id]!!.subjects)
     }
 

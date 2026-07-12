@@ -61,7 +61,13 @@ class ExportResultTest {
         @Test
         @DisplayName("success photo converts to Success")
         fun successPhotoConvertsToSuccess() {
-            val photo = ProcessedPhoto(testFile, "/output/photo.jpg", 800 to 600, listOf("rotation", "crop"))
+            val photo =
+                ProcessedPhoto(
+                    testFile,
+                    "/output/photo.jpg",
+                    800 to 600,
+                    listOf("rotation", "crop"),
+                )
             val result = photo.toExportResult()
 
             assertThat(result).isInstanceOf(ExportResult.Success::class.java)
@@ -91,12 +97,13 @@ class ExportResultTest {
         @Test
         @DisplayName("Success converts to ProcessedPhoto with original path and dimensions")
         fun successConvertsToProcessedPhoto() {
-            val success = ExportResult.Success(
-                originalFile = testFile,
-                outputPath = "/output/photo.jpg",
-                dimensions = 800 to 600,
-                correctionsApplied = listOf("crop"),
-            )
+            val success =
+                ExportResult.Success(
+                    originalFile = testFile,
+                    outputPath = "/output/photo.jpg",
+                    dimensions = 800 to 600,
+                    correctionsApplied = listOf("crop"),
+                )
             val photo = success.toProcessedPhoto()
 
             assertThat(photo.originalFile).isEqualTo(testFile)
@@ -107,13 +114,16 @@ class ExportResultTest {
         }
 
         @Test
-        @DisplayName("Failure converts to ProcessedPhoto with ERROR: prefixed path and zero dimensions")
+        @DisplayName(
+            "Failure converts to ProcessedPhoto with ERROR: prefixed path and zero dimensions"
+        )
         fun failureConvertsToProcessedPhoto() {
-            val failure = ExportResult.Failure(
-                originalFile = testFile,
-                errorMessage = "Disk full",
-                correctionsApplied = listOf("rotation"),
-            )
+            val failure =
+                ExportResult.Failure(
+                    originalFile = testFile,
+                    errorMessage = "Disk full",
+                    correctionsApplied = listOf("rotation"),
+                )
             val photo = failure.toProcessedPhoto()
 
             assertThat(photo.originalFile).isEqualTo(testFile)
@@ -133,7 +143,13 @@ class ExportResultTest {
         @Test
         @DisplayName("success round-trip preserves all fields")
         fun successRoundTripPreservesAllFields() {
-            val original = ProcessedPhoto(testFile, "/output/photo.jpg", 800 to 600, listOf("crop", "rotation"))
+            val original =
+                ProcessedPhoto(
+                    testFile,
+                    "/output/photo.jpg",
+                    800 to 600,
+                    listOf("crop", "rotation"),
+                )
             val result = original.toExportResult()
             val restored = result.toProcessedPhoto()
 

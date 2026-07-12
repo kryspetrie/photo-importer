@@ -8,8 +8,8 @@ import org.kryspetrie.fileimport.domain.port.ThumbnailExtractorPort
  * Adapter implementing [ThumbnailExtractorPort] by delegating to the existing
  * [RawThumbnailExtractor] and [VideoThumbnailAdapter] infrastructure services.
  *
- * Converts between domain [FilePath] and `java.io.File` at the boundary, and between
- * domain [ProcessedImage] and infrastructure [java.awt.image.BufferedImage] at the boundary.
+ * Converts between domain [FilePath] and `java.io.File` at the boundary, and between domain
+ * [ProcessedImage] and infrastructure [java.awt.image.BufferedImage] at the boundary.
  */
 object ThumbnailExtractorAdapter : ThumbnailExtractorPort {
 

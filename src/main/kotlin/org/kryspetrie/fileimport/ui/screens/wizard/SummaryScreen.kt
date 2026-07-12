@@ -22,6 +22,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowLeft
+import androidx.compose.material.icons.automirrored.filled.ArrowRight
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.Close
@@ -51,14 +53,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.ContentScale
@@ -67,26 +69,22 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import java.awt.Cursor
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.model.AspectRatio
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache
-
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.BulkActionButtons
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
-import androidx.compose.material.icons.automirrored.filled.ArrowLeft
-import androidx.compose.material.icons.automirrored.filled.ArrowRight
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /**
  * Summary screen with a two-panel layout: scrollable photo list on the left, large preview on the
  * right. Each list item shows a thumbnail with metadata; the right panel shows a large
- * perspective-corrected preview with rotation, aspect ratio, and correction strategy controls.
- * Uses [PreviewCache] to avoid recomputing perspective correction. Supports full-screen preview on
- * image click.
+ * perspective-corrected preview with rotation, aspect ratio, and correction strategy controls. Uses
+ * [PreviewCache] to avoid recomputing perspective correction. Supports full-screen preview on image
+ * click.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -106,12 +104,17 @@ fun SummaryScreen(
     val boxCount = boundingBoxList.size()
 
     Scaffold(
-        modifier = Modifier.onPreviewKeyEvent { keyEvent ->
-            if (keyEvent.type == KeyEventType.KeyDown && keyEvent.key == Key.Enter && boxCount > 0) {
-                onExport()
-                true
-            } else false
-        },
+        modifier =
+            Modifier.onPreviewKeyEvent { keyEvent ->
+                if (
+                    keyEvent.type == KeyEventType.KeyDown &&
+                        keyEvent.key == Key.Enter &&
+                        boxCount > 0
+                ) {
+                    onExport()
+                    true
+                } else false
+            },
         topBar = {
             SummaryTopAppBar(
                 photoCount = boundingBoxList.size(),
@@ -129,7 +132,9 @@ fun SummaryScreen(
                 photoConfigurations = photoConfigurations,
                 selectedIndex = selectedIndex,
                 onSelectedIndexChange = { selectedIndex = it },
-                onConfigChange = { boxId, config -> state.configs.setPhotoScanConfiguration(boxId, config) },
+                onConfigChange = { boxId, config ->
+                    state.configs.setPhotoScanConfiguration(boxId, config)
+                },
                 onBoxDelete = { index ->
                     state.boxes.removeBox(index)
                     val newSize = boundingBoxList.size() - 1
@@ -221,10 +226,7 @@ private fun TwoPanelLayout(
     onClearAllConfigurations: () -> Unit,
     state: PhotoScanWizardState,
 ) {
-    Row(
-        modifier = modifier.fillMaxSize(),
-        horizontalArrangement = Arrangement.spacedBy(0.dp),
-    ) {
+    Row(modifier = modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(0.dp)) {
         PhotoSidebarList(
             image = image,
             previewCache = previewCache,
@@ -251,9 +253,7 @@ private fun TwoPanelLayout(
             config = selectedConfig,
             index = selectedIndex,
             totalPhotos = boundingBoxList.size(),
-            onConfigChange = { config ->
-                selectedBox?.let { onConfigChange(it.id, config) }
-            },
+            onConfigChange = { config -> selectedBox?.let { onConfigChange(it.id, config) } },
             onRotateCW = {
                 selectedBox?.let {
                     val current = photoConfigurations[it.id] ?: PhotoScanConfiguration()
@@ -267,13 +267,18 @@ private fun TwoPanelLayout(
                 }
             },
             onPrev = { if (selectedIndex > 0) onSelectedIndexChange(selectedIndex - 1) },
-            onNext = { if (selectedIndex < boundingBoxList.size() - 1) onSelectedIndexChange(selectedIndex + 1) },
+            onNext = {
+                if (selectedIndex < boundingBoxList.size() - 1)
+                    onSelectedIndexChange(selectedIndex + 1)
+            },
             modifier = Modifier.weight(0.65f).fillMaxHeight(),
         )
     }
 }
 
-/** Top app bar with rotation controls and a destructive "Reset" button that requires confirmation. */
+/**
+ * Top app bar with rotation controls and a destructive "Reset" button that requires confirmation.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SummaryTopAppBar(
@@ -343,17 +348,17 @@ private fun ResetConfirmDialog(photoCount: Int, onConfirm: () -> Unit, onDismiss
             )
         },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text("Reset", color = MaterialTheme.colorScheme.error) }
+            TextButton(onClick = onConfirm) {
+                Text("Reset", color = MaterialTheme.colorScheme.error)
+            }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
-        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }
 
 /**
- * Left sidebar: scrollable list of photo cards with thumbnails, bulk action buttons, and
- * selection state.
+ * Left sidebar: scrollable list of photo cards with thumbnails, bulk action buttons, and selection
+ * state.
  */
 @Composable
 private fun PhotoSidebarList(
@@ -386,13 +391,18 @@ private fun PhotoSidebarList(
                 Modifier.weight(1f)
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outlineVariant,
+                        RoundedCornerShape(8.dp),
+                    ),
             verticalArrangement = Arrangement.spacedBy(4.dp),
             contentPadding = PaddingValues(4.dp),
         ) {
             itemsIndexed(boundingBoxList.boxes) { index, box ->
                 val config = photoConfigurations[box.id] ?: PhotoScanConfiguration()
-                val thumbnail = remember(image, box, config) { previewCache.getThumbnail(image, box, config) }
+                val thumbnail =
+                    remember(image, box, config) { previewCache.getThumbnail(image, box, config) }
 
                 SidebarPhotoCard(
                     index = index,
@@ -413,12 +423,18 @@ private fun PhotoSidebarList(
         AlertDialog(
             onDismissRequest = { pendingDeleteIndex = null },
             title = { Text("Delete Photo?") },
-            text = { Text("Remove Photo ${deleteIndex + 1} from the scan? This cannot be undone.") },
+            text = {
+                Text("Remove Photo ${deleteIndex + 1} from the scan? This cannot be undone.")
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    onDelete(deleteIndex)
-                    pendingDeleteIndex = null
-                }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                TextButton(
+                    onClick = {
+                        onDelete(deleteIndex)
+                        pendingDeleteIndex = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
             },
             dismissButton = {
                 TextButton(onClick = { pendingDeleteIndex = null }) { Text("Cancel") }
@@ -464,7 +480,12 @@ private fun SidebarPhotoCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SidebarThumbnail(index = index, thumbnail = thumbnail)
-            SidebarInfoColumn(index = index, box = box, config = config, modifier = Modifier.weight(1f))
+            SidebarInfoColumn(
+                index = index,
+                box = box,
+                config = config,
+                modifier = Modifier.weight(1f),
+            )
             IconButton(onClick = onDelete, modifier = Modifier.height(24.dp).width(24.dp)) {
                 Icon(
                     Icons.Default.Delete,
@@ -503,11 +524,13 @@ private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?) {
 
 /** Info column within a sidebar card showing photo name and dimensions. */
 @Composable
-private fun SidebarInfoColumn(index: Int, box: BoundingBox, config: PhotoScanConfiguration, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
+private fun SidebarInfoColumn(
+    index: Int,
+    box: BoundingBox,
+    config: PhotoScanConfiguration,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -521,8 +544,9 @@ private fun SidebarInfoColumn(index: Int, box: BoundingBox, config: PhotoScanCon
                 )
             }
             if (config.aspectRatio != 0.0) {
-                val ratioLabel = AspectRatio.entries.find { it.value == config.aspectRatio }?.displayName
-                    ?: String.format("%.2f", config.aspectRatio)
+                val ratioLabel =
+                    AspectRatio.entries.find { it.value == config.aspectRatio }?.displayName
+                        ?: String.format("%.2f", config.aspectRatio)
                 Text(
                     ratioLabel,
                     style = MaterialTheme.typography.labelSmall,
@@ -546,8 +570,8 @@ private fun SidebarInfoColumn(index: Int, box: BoundingBox, config: PhotoScanCon
 }
 
 /**
- * Right panel: large preview of the selected photo with detailed controls. Clicking the image
- * opens a full-screen preview dialog.
+ * Right panel: large preview of the selected photo with detailed controls. Clicking the image opens
+ * a full-screen preview dialog.
  */
 @Composable
 private fun DetailPreviewPanel(
@@ -565,7 +589,8 @@ private fun DetailPreviewPanel(
     modifier: Modifier = Modifier,
 ) {
     var showFullscreen by remember { mutableStateOf(false) }
-    val preview = box?.let { remember(image, it, config) { previewCache.getFullPreview(image, it, config) } }
+    val preview =
+        box?.let { remember(image, it, config) { previewCache.getFullPreview(image, it, config) } }
     val previewBitmap = remember(preview) { preview?.toComposeImageBitmap() }
 
     Surface(modifier = modifier, tonalElevation = 1.dp, shape = RoundedCornerShape(0.dp)) {
@@ -615,11 +640,12 @@ private fun DetailPreviewImage(
     modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.DarkGray)
-            .pointerHoverIcon(PointerIcon(Cursor(Cursor.HAND_CURSOR)))
-            .clickable(onClick = onImageClick),
+        modifier =
+            modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.DarkGray)
+                .pointerHoverIcon(PointerIcon(Cursor(Cursor.HAND_CURSOR)))
+                .clickable(onClick = onImageClick),
         contentAlignment = Alignment.Center,
     ) {
         if (previewBitmap != null) {
@@ -652,7 +678,12 @@ private fun ZoomHintOverlay(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(Icons.Default.ZoomIn, contentDescription = null, modifier = Modifier.height(14.dp).width(14.dp), tint = Color.White)
+            Icon(
+                Icons.Default.ZoomIn,
+                contentDescription = null,
+                modifier = Modifier.height(14.dp).width(14.dp),
+                tint = Color.White,
+            )
             Spacer(Modifier.width(4.dp))
             Text("Click to zoom", style = MaterialTheme.typography.labelSmall, color = Color.White)
         }
@@ -687,7 +718,6 @@ private fun DetailControlsRow(
                 onRotateCW = onRotateCW,
                 onRotateCCW = onRotateCCW,
             )
-
         }
     }
 }
@@ -708,7 +738,10 @@ private fun DetailLabelAndRotation(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             IconButton(onClick = onPrev, enabled = index > 0) {
                 Icon(Icons.AutoMirrored.Filled.ArrowLeft, "Previous photo")
             }
@@ -726,16 +759,22 @@ private fun DetailLabelAndRotation(
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(onClick = onRotateCCW) {
-                Icon(Icons.AutoMirrored.Filled.RotateLeft, "Rotate counter-clockwise", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    Icons.AutoMirrored.Filled.RotateLeft,
+                    "Rotate counter-clockwise",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
             IconButton(onClick = onRotateCW) {
-                Icon(Icons.AutoMirrored.Filled.RotateRight, "Rotate clockwise", tint = MaterialTheme.colorScheme.primary)
+                Icon(
+                    Icons.AutoMirrored.Filled.RotateRight,
+                    "Rotate clockwise",
+                    tint = MaterialTheme.colorScheme.primary,
+                )
             }
         }
     }
 }
-
-
 
 /** Placeholder shown when no photo is selected in the detail panel. */
 @Composable
@@ -763,13 +802,14 @@ private fun SummaryFullscreenPreviewDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(
-            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f)).clickable(onClick = onDismiss),
+            modifier =
+                Modifier.fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.95f))
+                    .clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
             // Info text: top-left
-            Column(
-                modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
-            ) {
+            Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
                 Text(
                     "Photo ${photoIndex + 1} of $totalCount",
                     style = MaterialTheme.typography.titleSmall,
@@ -789,7 +829,11 @@ private fun SummaryFullscreenPreviewDialog(
                 modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
                 colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(28.dp))
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close",
+                    modifier = Modifier.size(28.dp),
+                )
             }
             // Image: centered
             Image(

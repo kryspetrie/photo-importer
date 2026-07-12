@@ -8,20 +8,20 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
+import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxCorners
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 import org.kryspetrie.fileimport.domain.model.geometry.Point
+import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
+import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 
 /**
  * Pure state-based flow tests for the wizard workflow.
  *
- * These tests verify state transitions, configuration changes, and data flow through
- * the PhotoScanWizardState without requiring Compose UI rendering. This makes them
- * fast, reliable, and runnable in any environment (including headless CI).
+ * These tests verify state transitions, configuration changes, and data flow through the
+ * PhotoScanWizardState without requiring Compose UI rendering. This makes them fast, reliable, and
+ * runnable in any environment (including headless CI).
  *
  * Tested workflows:
  * - Wizard step transitions (IMPORT → OVERVIEW → SUMMARY → EDIT → PROCESSING → COMPLETE)
@@ -78,8 +78,7 @@ class WizardStateFlowTest {
         @DisplayName("should start at IMPORT step")
         fun shouldStartAtImportStep() {
             val state = PhotoScanWizardState()
-            assertThat(state.navigation.currentStep.value)
-                .isEqualTo(WizardStep.IMPORT)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.IMPORT)
         }
 
         @Test
@@ -90,8 +89,7 @@ class WizardStateFlowTest {
             state.initializeWithImage(image, File("test.jpg"))
             state.goToOverview()
 
-            assertThat(state.navigation.currentStep.value)
-                .isEqualTo(WizardStep.OVERVIEW)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.OVERVIEW)
         }
 
         @Test
@@ -101,8 +99,7 @@ class WizardStateFlowTest {
             state.goToOverview()
             state.navigation.goToSummary()
 
-            assertThat(state.navigation.currentStep.value)
-                .isEqualTo(WizardStep.SUMMARY)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.SUMMARY)
         }
 
         @Test
@@ -113,8 +110,7 @@ class WizardStateFlowTest {
             state.navigation.goToSummary()
             state.navigation.goToEdit()
 
-            assertThat(state.navigation.currentStep.value)
-                .isEqualTo(WizardStep.EDIT)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.EDIT)
         }
 
         @Test
@@ -126,8 +122,7 @@ class WizardStateFlowTest {
             state.navigation.goToEdit()
             state.navigation.goToProcessing()
 
-            assertThat(state.navigation.currentStep.value)
-                .isEqualTo(WizardStep.PROCESSING)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.PROCESSING)
         }
 
         @Test
@@ -140,8 +135,7 @@ class WizardStateFlowTest {
             state.navigation.goToProcessing()
             state.navigation.goToComplete()
 
-            assertThat(state.navigation.currentStep.value)
-                .isEqualTo(WizardStep.COMPLETE)
+            assertThat(state.navigation.currentStep.value).isEqualTo(WizardStep.COMPLETE)
         }
 
         @Test
@@ -241,7 +235,10 @@ class WizardStateFlowTest {
         fun shouldSetAndRetrievePerPhotoScanConfiguration() {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
-            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration(rotationDegrees = 90))
+            wizardState.configs.setPhotoScanConfiguration(
+                boxId,
+                PhotoScanConfiguration(rotationDegrees = 90),
+            )
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(90)
         }
@@ -252,7 +249,9 @@ class WizardStateFlowTest {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
             wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration())
 
-            wizardState.configs.updatePhotoScanConfiguration(boxId) { it.copy(rotationDegrees = 45) }
+            wizardState.configs.updatePhotoScanConfiguration(boxId) {
+                it.copy(rotationDegrees = 45)
+            }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(45)
         }
@@ -265,7 +264,9 @@ class WizardStateFlowTest {
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(0)
 
-            wizardState.configs.updatePhotoScanConfiguration(boxId) { it.copy(rotationDegrees = 90) }
+            wizardState.configs.updatePhotoScanConfiguration(boxId) {
+                it.copy(rotationDegrees = 90)
+            }
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.rotationDegrees).isEqualTo(90)
         }
@@ -278,18 +279,25 @@ class WizardStateFlowTest {
 
             wizardState.configs.setPhotoScanConfiguration(
                 box1Id,
-                PhotoScanConfiguration(rotationDegrees = 90, correctionStrategy = CorrectionStrategy.CROP),
+                PhotoScanConfiguration(
+                    rotationDegrees = 90,
+                    correctionStrategy = CorrectionStrategy.CROP,
+                ),
             )
             wizardState.configs.setPhotoScanConfiguration(
                 box2Id,
-                PhotoScanConfiguration(rotationDegrees = 180, correctionStrategy = CorrectionStrategy.PERSPECTIVE),
+                PhotoScanConfiguration(
+                    rotationDegrees = 180,
+                    correctionStrategy = CorrectionStrategy.PERSPECTIVE,
+                ),
             )
 
             val configs = wizardState.photoConfigurations.value
             assertThat(configs[box1Id]?.rotationDegrees).isEqualTo(90)
             assertThat(configs[box1Id]?.correctionStrategy).isEqualTo(CorrectionStrategy.CROP)
             assertThat(configs[box2Id]?.rotationDegrees).isEqualTo(180)
-            assertThat(configs[box2Id]?.correctionStrategy).isEqualTo(CorrectionStrategy.PERSPECTIVE)
+            assertThat(configs[box2Id]?.correctionStrategy)
+                .isEqualTo(CorrectionStrategy.PERSPECTIVE)
         }
 
         @Test
@@ -298,8 +306,14 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.configs.setPhotoScanConfiguration(box1Id, PhotoScanConfiguration(rotationDegrees = 90))
-            wizardState.configs.setPhotoScanConfiguration(box2Id, PhotoScanConfiguration(rotationDegrees = 180))
+            wizardState.configs.setPhotoScanConfiguration(
+                box1Id,
+                PhotoScanConfiguration(rotationDegrees = 90),
+            )
+            wizardState.configs.setPhotoScanConfiguration(
+                box2Id,
+                PhotoScanConfiguration(rotationDegrees = 180),
+            )
             assertThat(wizardState.photoConfigurations.value).hasSize(2)
 
             wizardState.configs.clearAllConfigurations()
@@ -312,8 +326,14 @@ class WizardStateFlowTest {
             val box1Id = wizardState.boundingBoxList.value.boxes[0].id
             val box2Id = wizardState.boundingBoxList.value.boxes[1].id
 
-            wizardState.configs.setPhotoScanConfiguration(box1Id, PhotoScanConfiguration(rotationDegrees = 0))
-            wizardState.configs.setPhotoScanConfiguration(box2Id, PhotoScanConfiguration(rotationDegrees = 90))
+            wizardState.configs.setPhotoScanConfiguration(
+                box1Id,
+                PhotoScanConfiguration(rotationDegrees = 0),
+            )
+            wizardState.configs.setPhotoScanConfiguration(
+                box2Id,
+                PhotoScanConfiguration(rotationDegrees = 90),
+            )
 
             wizardState.configs.rotateAllBoxesCW()
 
@@ -338,10 +358,8 @@ class WizardStateFlowTest {
         @DisplayName("should change export margin")
         fun shouldChangeExportMargin() {
             wizardState.exportSettings.setExportMarginPercent(0.05)
-            assertThat(wizardState.exportSettings.exportMarginPercent.value).isCloseTo(
-                0.05,
-                org.assertj.core.data.Offset.offset(0.001),
-            )
+            assertThat(wizardState.exportSettings.exportMarginPercent.value)
+                .isCloseTo(0.05, org.assertj.core.data.Offset.offset(0.001))
         }
     }
 
@@ -369,9 +387,12 @@ class WizardStateFlowTest {
         @DisplayName("should change default correction strategy")
         fun shouldChangeDefaultCorrectionStrategy() {
             wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
-            assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP)
+            assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value)
+                .isEqualTo(CorrectionStrategy.CROP)
 
-            wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
+            wizardState.exportSettings.setDefaultCorrectionStrategy(
+                CorrectionStrategy.CROP_AND_ROTATE
+            )
             assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value)
                 .isEqualTo(CorrectionStrategy.CROP_AND_ROTATE)
         }
@@ -402,7 +423,10 @@ class WizardStateFlowTest {
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy)
                 .isEqualTo(CorrectionStrategy.CROP)
 
-            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration(correctionStrategy = null))
+            wizardState.configs.setPhotoScanConfiguration(
+                boxId,
+                PhotoScanConfiguration(correctionStrategy = null),
+            )
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy).isNull()
         }
 
@@ -423,7 +447,8 @@ class WizardStateFlowTest {
 
             val configs = wizardState.photoConfigurations.value
             assertThat(configs[box1Id]?.correctionStrategy).isEqualTo(CorrectionStrategy.CROP)
-            assertThat(configs[box2Id]?.correctionStrategy).isEqualTo(CorrectionStrategy.PERSPECTIVE)
+            assertThat(configs[box2Id]?.correctionStrategy)
+                .isEqualTo(CorrectionStrategy.PERSPECTIVE)
         }
 
         @Test
@@ -432,10 +457,14 @@ class WizardStateFlowTest {
             val boxId = wizardState.boundingBoxList.value.boxes[0].id
 
             wizardState.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP)
-            wizardState.configs.setPhotoScanConfiguration(boxId, PhotoScanConfiguration(correctionStrategy = null))
+            wizardState.configs.setPhotoScanConfiguration(
+                boxId,
+                PhotoScanConfiguration(correctionStrategy = null),
+            )
 
             assertThat(wizardState.photoConfigurations.value[boxId]?.correctionStrategy).isNull()
-            assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP)
+            assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value)
+                .isEqualTo(CorrectionStrategy.CROP)
         }
 
         @Test
@@ -458,7 +487,8 @@ class WizardStateFlowTest {
         fun shouldPersistStrategyChangeAcrossAllThreeStrategies() {
             for (strategy in CorrectionStrategy.entries) {
                 wizardState.exportSettings.setDefaultCorrectionStrategy(strategy)
-                assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value).isEqualTo(strategy)
+                assertThat(wizardState.exportSettings.defaultCorrectionStrategy.value)
+                    .isEqualTo(strategy)
             }
         }
     }
@@ -523,9 +553,15 @@ class WizardStateFlowTest {
         @Test
         @DisplayName("should navigate boxes in refinement mode")
         fun shouldNavigateBoxesInRefinementMode() {
-            wizardState.boxes.addBox(createTestBox(x = 10.0, y = 10.0, width = 100.0, height = 80.0))
-            wizardState.boxes.addBox(createTestBox(x = 250.0, y = 10.0, width = 100.0, height = 80.0))
-            wizardState.boxes.addBox(createTestBox(x = 500.0, y = 10.0, width = 100.0, height = 80.0))
+            wizardState.boxes.addBox(
+                createTestBox(x = 10.0, y = 10.0, width = 100.0, height = 80.0)
+            )
+            wizardState.boxes.addBox(
+                createTestBox(x = 250.0, y = 10.0, width = 100.0, height = 80.0)
+            )
+            wizardState.boxes.addBox(
+                createTestBox(x = 500.0, y = 10.0, width = 100.0, height = 80.0)
+            )
 
             wizardState.enterRefinement(0)
             assertThat(wizardState.boxes.refinementBoxIndex.value).isEqualTo(0)
@@ -723,11 +759,16 @@ class WizardStateFlowTest {
             val box2Id = state.boundingBoxList.value.boxes[1].id
 
             state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.PERSPECTIVE)
-            state.configs.setPhotoScanConfiguration(box1Id, PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP))
+            state.configs.setPhotoScanConfiguration(
+                box1Id,
+                PhotoScanConfiguration(correctionStrategy = CorrectionStrategy.CROP),
+            )
             state.configs.updatePhotoScanConfiguration(box2Id) { it.copy(rotationDegrees = 90) }
 
-            assertThat(state.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.PERSPECTIVE)
-            assertThat(state.photoConfigurations.value[box1Id]?.correctionStrategy).isEqualTo(CorrectionStrategy.CROP)
+            assertThat(state.exportSettings.defaultCorrectionStrategy.value)
+                .isEqualTo(CorrectionStrategy.PERSPECTIVE)
+            assertThat(state.photoConfigurations.value[box1Id]?.correctionStrategy)
+                .isEqualTo(CorrectionStrategy.CROP)
             assertThat(state.photoConfigurations.value[box2Id]?.rotationDegrees).isEqualTo(90)
 
             // 4. NAVIGATE: Overview → Summary
@@ -739,7 +780,8 @@ class WizardStateFlowTest {
             state.exportSettings.setDefaultCorrectionStrategy(CorrectionStrategy.CROP_AND_ROTATE)
 
             assertThat(state.photoConfigurations.value[box1Id]?.rotationDegrees).isEqualTo(90)
-            assertThat(state.exportSettings.defaultCorrectionStrategy.value).isEqualTo(CorrectionStrategy.CROP_AND_ROTATE)
+            assertThat(state.exportSettings.defaultCorrectionStrategy.value)
+                .isEqualTo(CorrectionStrategy.CROP_AND_ROTATE)
 
             // 6. NAVIGATE: Summary → Edit
             state.navigation.goToEdit()
