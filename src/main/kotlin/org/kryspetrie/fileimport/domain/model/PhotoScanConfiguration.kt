@@ -167,9 +167,11 @@ data class PhotoScanConfiguration(
     val backImageSourcePath: String? = null,
 
     /**
-     * Bounding box coordinates for cropping the back image, in the back image's coordinate space.
-     * Stored as [topLeft, topRight, bottomRight, bottomLeft] in normalized coordinates (0.0-1.0).
-     * If null, the entire back image is used as the crop.
+     * Coordinates for cropping the back image, in the rotated back image's coordinate space.
+     * - 4 values: rectangular crop as [left, top, right, bottom] in normalized coords (0.0-1.0)
+     * - 8 values: perspective quad as [tl_x, tl_y, tr_x, tr_y, br_x, br_y, bl_x, bl_y] in
+     *   normalized coords (0.0-1.0), which will be perspective-corrected on export If null, the
+     *   entire back image is used.
      */
     val backCropNormalized: List<Float>? = null,
 

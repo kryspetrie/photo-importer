@@ -401,7 +401,7 @@ fun EditScreen(
         BackImagePickerDialog(
             batchFiles = backImageBatchFiles.ifEmpty { null },
             preSelectedPath = preSelectedBackPath,
-            onConfirm = { sourcePath, cropRect, rotation, mode ->
+            onConfirm = { sourcePath, cropResult, rotation, mode ->
                 val idx = selectedIndices.firstOrNull() ?: return@BackImagePickerDialog
                 if (idx < boundingBoxList.size()) {
                     val boxId = boundingBoxList.boxes[idx].id
@@ -409,15 +409,7 @@ fun EditScreen(
                         it.copy(
                             backImageMode = mode,
                             backImageSourcePath = sourcePath,
-                            backCropNormalized =
-                                cropRect?.let { rect ->
-                                    listOf(
-                                        rect.left.toFloat(),
-                                        rect.top.toFloat(),
-                                        rect.right.toFloat(),
-                                        rect.bottom.toFloat(),
-                                    )
-                                },
+                            backCropNormalized = cropResult?.toNormalizedList(),
                             backCropRotation = rotation,
                         )
                     }

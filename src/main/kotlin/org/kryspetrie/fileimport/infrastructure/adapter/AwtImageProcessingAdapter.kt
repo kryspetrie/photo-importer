@@ -11,6 +11,7 @@ import javax.imageio.plugins.jpeg.JPEGImageWriteParam
 import kotlinx.coroutines.runBlocking
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
+import org.kryspetrie.fileimport.domain.model.PhotoCorner
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.model.RotationAngle
@@ -211,7 +212,26 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
         val rotatedBuffered = rotatedBack.toBufferedImage()
 
         // Apply crop in rotated-image space if normalized crop coordinates are provided
-        return if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
+        return if (config.backCropNormalized != null && config.backCropNormalized.size == 8) {
+            // 8 values = 4-point perspective quad: [tl_x, tl_y, tr_x, tr_y, br_x, br_y, bl_x, bl_y]
+            val n = config.backCropNormalized
+            val detectedPhoto =
+                DetectedPhoto(
+                    topLeft =
+                        PhotoCorner(n[0] * rotatedBuffered.width, n[1] * rotatedBuffered.height),
+                    topRight =
+                        PhotoCorner(n[2] * rotatedBuffered.width, n[3] * rotatedBuffered.height),
+                    bottomRight =
+                        PhotoCorner(n[4] * rotatedBuffered.width, n[5] * rotatedBuffered.height),
+                    bottomLeft =
+                        PhotoCorner(n[6] * rotatedBuffered.width, n[7] * rotatedBuffered.height),
+                )
+            val perspectiveService =
+                org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService()
+            val corrected = perspectiveService.correctPerspective(rotatedBuffered, detectedPhoto)
+            AwtProcessedImage(corrected)
+        } else if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
+            // 4 values = rectangular crop: [left, top, right, bottom]
             val cropNorm = config.backCropNormalized
             val left = cropNorm[0]
             val top = cropNorm[1]
