@@ -10,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.DriveFileMove
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -29,6 +30,7 @@ import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.ui.screens.DuplicateScannerScreen
 import org.kryspetrie.fileimport.ui.screens.MediaImportScreen
 import org.kryspetrie.fileimport.ui.screens.ReorganizeScreen
+import org.kryspetrie.fileimport.ui.screens.metadataeditor.MetadataEditorScreen
 import org.kryspetrie.fileimport.ui.screens.wizard.WizardContainer
 import org.kryspetrie.fileimport.ui.theme.PetrieTheme
 
@@ -129,6 +131,23 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
      * @see DuplicateScannerScreen The composable that implements this tab
      */
     DUPLICATES("Library Duplicates", Icons.Default.ContentCopy),
+
+    /**
+     * Bulk Metadata Editor tab - bulk metadata editing on individual files or folders.
+     *
+     * Enables users to:
+     * - Open a folder of images or select individual files
+     * - Edit EXIF metadata (date, camera info, location, subjects) on any photo
+     * - Add back-of-photo images to any photo
+     * - Save changes by overwriting originals or creating new files
+     * - Navigate between images with Previous/Next and a scrollable thumbnail sidebar
+     *
+     * Unlike the Photo Scan wizard, this operates on existing individual image files rather than
+     * photos detected within a scanned image.
+     *
+     * @see MetadataEditorScreen The composable that implements this tab
+     */
+    METADATA_EDITOR("Metadata Editor", Icons.Default.Edit),
 }
 
 /**
@@ -366,6 +385,13 @@ fun PetrieFileImporterApp(
                                     currentTab = AppTab.MEDIA_IMPORT
                                 },
                                 onCancel = { currentTab = AppTab.MEDIA_IMPORT },
+                            )
+
+                        // Metadata Editor tab: bulk edit metadata on individual images
+                        AppTab.METADATA_EDITOR ->
+                            MetadataEditorScreen(
+                                settings = settings,
+                                onSettingsChange = onSettingsChange,
                             )
                     }
                 }

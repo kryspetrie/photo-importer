@@ -382,6 +382,7 @@ class HexagonalArchitectureKonsistTest {
             add("org.kryspetrie.fileimport.application.WatchFolderService")
             add("org.kryspetrie.fileimport.application.PhotoScanExportService")
             add("org.kryspetrie.fileimport.application.ScanService")
+            add("org.kryspetrie.fileimport.application.export.MetadataWritingService")
         }
 
         @Test

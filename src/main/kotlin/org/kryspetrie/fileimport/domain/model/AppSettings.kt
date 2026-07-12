@@ -74,6 +74,9 @@ data class AppSettings(
      * process.
      */
     val autoSkipBackFiles: Boolean = true,
+
+    /** Recent folder paths used in the Bulk Metadata Editor. Maximum 5 entries. */
+    val metadataEditorRecentPaths: List<String> = emptyList(),
 ) {
     /** Returns the currently active Photo Scan profile, or the default if none is selected. */
     val activePhotoScanProfile: PhotoScanProfile
@@ -132,4 +135,12 @@ data class AppSettings(
     /** Removes a metadata set from history by timestamp. */
     fun removeMetadataSet(timestamp: Long): AppSettings =
         copy(metadataHistory = metadataHistory.removeSet(timestamp))
+
+    /** Adds a folder path to the metadata editor recent paths list (max 5, deduped). */
+    fun withMetadataEditorRecentPath(path: String): AppSettings =
+        if (path.isBlank()) this
+        else {
+            val updated = metadataEditorRecentPaths.filter { it != path }.take(4)
+            copy(metadataEditorRecentPaths = listOf(path) + updated)
+        }
 }

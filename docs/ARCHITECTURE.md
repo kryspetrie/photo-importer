@@ -247,6 +247,7 @@ The UI directly imports application use-case services for user interaction flows
 | `ReorganizeService` | Library reorganization |
 | `DuplicateScannerService` | Duplicate finding |
 | `WatchFolderService` | Auto-import from watched folders |
+| `MetadataWritingService` | Write image + EXIF/IPTC/XMP metadata |
 
 ### UI → Application (AWT-Coupled Services)
 
