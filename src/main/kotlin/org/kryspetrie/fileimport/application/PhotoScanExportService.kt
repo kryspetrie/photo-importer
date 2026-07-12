@@ -107,7 +107,12 @@ class PhotoScanExportService(
 
                 // Export back image as separate "_back" file if mode is append_back
                 if (result.backMode == "append_back" && photo.configuration.hasBackImage()) {
-                    val backImageResult = imageProcessing.prepareBackImage(photo.configuration)
+                    val backImageResult =
+                        imageProcessing.prepareBackImage(
+                            photo.configuration,
+                            maxWidth = result.compositedImage.width,
+                            maxHeight = result.compositedImage.height,
+                        )
                     if (backImageResult != null) {
                         val backFileName =
                             if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}_back.jpg"
@@ -179,7 +184,12 @@ class PhotoScanExportService(
 
             // Export back image as separate "_back" file if mode is append_back
             if (result.backMode == "append_back" && detectedPhoto.configuration.hasBackImage()) {
-                val backImageResult = imageProcessing.prepareBackImage(detectedPhoto.configuration)
+                val backImageResult =
+                    imageProcessing.prepareBackImage(
+                        detectedPhoto.configuration,
+                        maxWidth = result.compositedImage.width,
+                        maxHeight = result.compositedImage.height,
+                    )
                 if (backImageResult != null) {
                     val backResolvedPath =
                         FilenameResolver.resolveFilenameConflict(

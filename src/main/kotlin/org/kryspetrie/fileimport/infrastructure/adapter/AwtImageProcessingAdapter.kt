@@ -160,24 +160,16 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
         frontImage: ProcessedImage,
         config: PhotoScanConfiguration,
     ): ProcessedImage {
-        val preparedBack = prepareBackImage(config) ?: return frontImage
         val front = frontImage.toBufferedImage()
+        val preparedBack =
+            prepareBackImage(config, maxWidth = front.width, maxHeight = front.height)
+                ?: return frontImage
         val back = preparedBack.toBufferedImage()
-
-        // Scale back image to match front image width
-        val targetWidth = front.width
-        val scale = targetWidth.toFloat() / back.width.toFloat()
-        val targetHeight = (back.height * scale).toInt()
-
-        val scaledBack = BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB)
-        val g2d = scaledBack.createGraphics()
-        g2d.drawImage(back, 0, 0, targetWidth, targetHeight, null)
-        g2d.dispose()
 
         // Stack front and back vertically with a 2px separator
         val separatorHeight = 2
         val compositeWidth = front.width
-        val compositeHeight = front.height + separatorHeight + scaledBack.height
+        val compositeHeight = front.height + separatorHeight + back.height
 
         val composite = BufferedImage(compositeWidth, compositeHeight, BufferedImage.TYPE_INT_RGB)
         val g = composite.createGraphics()
@@ -187,13 +179,46 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
         g.color = Color.LIGHT_GRAY
         g.fillRect(0, front.height, compositeWidth, separatorHeight)
         // Draw back image below
-        g.drawImage(scaledBack, 0, front.height + separatorHeight, null)
+        g.drawImage(back, 0, front.height + separatorHeight, null)
         g.dispose()
 
         return AwtProcessedImage(composite)
     }
 
-    override fun prepareBackImage(config: PhotoScanConfiguration): ProcessedImage? {
+    /**
+     * Scales [backImage] proportionally so that it never exceeds [maxWidth] or [maxHeight] in
+     * either dimension. Only scales *down* — if the image already fits, it is returned unchanged.
+     *
+     * The constraint is:
+     * - scaled width ≤ maxWidth
+     * - scaled height ≤ maxHeight
+     * - scale ≤ 1.0 (never scale up)
+     * - Among all scales satisfying the above, choose the largest (to preserve detail).
+     */
+    private fun scaleToFitFront(
+        backImage: BufferedImage,
+        maxWidth: Int,
+        maxHeight: Int,
+    ): BufferedImage {
+        val widthScale = maxWidth.toFloat() / backImage.width.toFloat()
+        val heightScale = maxHeight.toFloat() / backImage.height.toFloat()
+        val scale = minOf(widthScale, heightScale, 1.0f)
+
+        val targetWidth = (backImage.width * scale).toInt().coerceAtLeast(1)
+        val targetHeight = (backImage.height * scale).toInt().coerceAtLeast(1)
+
+        val scaled = BufferedImage(targetWidth, targetHeight, BufferedImage.TYPE_INT_RGB)
+        val g2d = scaled.createGraphics()
+        g2d.drawImage(backImage, 0, 0, targetWidth, targetHeight, null)
+        g2d.dispose()
+        return scaled
+    }
+
+    override fun prepareBackImage(
+        config: PhotoScanConfiguration,
+        maxWidth: Int?,
+        maxHeight: Int?,
+    ): ProcessedImage? {
         val sourcePath = config.backImageSourcePath ?: return null
         val filePath = FilePath(sourcePath)
         if (!runBlocking { fileSystem.exists(filePath) }) return null
@@ -212,44 +237,67 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
         val rotatedBuffered = rotatedBack.toBufferedImage()
 
         // Apply crop in rotated-image space if normalized crop coordinates are provided
-        return if (config.backCropNormalized != null && config.backCropNormalized.size == 8) {
-            // 8 values = 4-point perspective quad: [tl_x, tl_y, tr_x, tr_y, br_x, br_y, bl_x, bl_y]
-            val n = config.backCropNormalized
-            val detectedPhoto =
-                DetectedPhoto(
-                    topLeft =
-                        PhotoCorner(n[0] * rotatedBuffered.width, n[1] * rotatedBuffered.height),
-                    topRight =
-                        PhotoCorner(n[2] * rotatedBuffered.width, n[3] * rotatedBuffered.height),
-                    bottomRight =
-                        PhotoCorner(n[4] * rotatedBuffered.width, n[5] * rotatedBuffered.height),
-                    bottomLeft =
-                        PhotoCorner(n[6] * rotatedBuffered.width, n[7] * rotatedBuffered.height),
-                )
-            val perspectiveService =
-                org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService()
-            val corrected = perspectiveService.correctPerspective(rotatedBuffered, detectedPhoto)
-            AwtProcessedImage(corrected)
-        } else if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
-            // 4 values = rectangular crop: [left, top, right, bottom]
-            val cropNorm = config.backCropNormalized
-            val left = cropNorm[0]
-            val top = cropNorm[1]
-            val right = cropNorm[2]
-            val bottom = cropNorm[3]
-            val cropX = (left * rotatedBuffered.width).toInt().coerceIn(0, rotatedBuffered.width)
-            val cropY = (top * rotatedBuffered.height).toInt().coerceIn(0, rotatedBuffered.height)
-            val cropW =
-                ((right - left) * rotatedBuffered.width)
-                    .toInt()
-                    .coerceIn(1, rotatedBuffered.width - cropX)
-            val cropH =
-                ((bottom - top) * rotatedBuffered.height)
-                    .toInt()
-                    .coerceIn(1, rotatedBuffered.height - cropY)
-            AwtProcessedImage(rotatedBuffered.getSubimage(cropX, cropY, cropW, cropH))
-        } else {
-            rotatedBack
-        }
+        val prepared: BufferedImage =
+            if (config.backCropNormalized != null && config.backCropNormalized.size == 8) {
+                // 8 values = 4-point perspective quad: [tl_x, tl_y, tr_x, tr_y, br_x, br_y, bl_x,
+                // bl_y]
+                val n = config.backCropNormalized
+                val detectedPhoto =
+                    DetectedPhoto(
+                        topLeft =
+                            PhotoCorner(
+                                n[0] * rotatedBuffered.width,
+                                n[1] * rotatedBuffered.height,
+                            ),
+                        topRight =
+                            PhotoCorner(
+                                n[2] * rotatedBuffered.width,
+                                n[3] * rotatedBuffered.height,
+                            ),
+                        bottomRight =
+                            PhotoCorner(
+                                n[4] * rotatedBuffered.width,
+                                n[5] * rotatedBuffered.height,
+                            ),
+                        bottomLeft =
+                            PhotoCorner(n[6] * rotatedBuffered.width, n[7] * rotatedBuffered.height),
+                    )
+                val perspectiveService =
+                    org.kryspetrie.fileimport.infrastructure.photoscan
+                        .PerspectiveCorrectionService()
+                perspectiveService.correctPerspective(rotatedBuffered, detectedPhoto)
+            } else if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
+                // 4 values = rectangular crop: [left, top, right, bottom]
+                val cropNorm = config.backCropNormalized
+                val left = cropNorm[0]
+                val top = cropNorm[1]
+                val right = cropNorm[2]
+                val bottom = cropNorm[3]
+                val cropX =
+                    (left * rotatedBuffered.width).toInt().coerceIn(0, rotatedBuffered.width)
+                val cropY =
+                    (top * rotatedBuffered.height).toInt().coerceIn(0, rotatedBuffered.height)
+                val cropW =
+                    ((right - left) * rotatedBuffered.width)
+                        .toInt()
+                        .coerceIn(1, rotatedBuffered.width - cropX)
+                val cropH =
+                    ((bottom - top) * rotatedBuffered.height)
+                        .toInt()
+                        .coerceIn(1, rotatedBuffered.height - cropY)
+                rotatedBuffered.getSubimage(cropX, cropY, cropW, cropH)
+            } else {
+                rotatedBuffered
+            }
+
+        // Scale down if the back image would exceed front image dimensions
+        val result =
+            if (maxWidth != null && maxHeight != null) {
+                scaleToFitFront(prepared, maxWidth, maxHeight)
+            } else {
+                prepared
+            }
+
+        return AwtProcessedImage(result)
     }
 }

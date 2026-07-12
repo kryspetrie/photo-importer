@@ -95,10 +95,22 @@ interface ImageProcessingPort {
     /**
      * Prepares the back-of-photo image: loads, crops, and rotates it.
      *
+     * If [maxWidth] and [maxHeight] are provided, the back image is scaled down proportionally so
+     * that it never exceeds the front image in either dimension. If both are null, no scaling
+     * constraint is applied.
+     *
      * Returns `null` if no back image is configured or if loading fails.
      *
      * @param config Configuration containing back image path, crop, and rotation settings
+     * @param maxWidth Maximum width (front image width) to constrain the back image, or null for no
+     *   constraint
+     * @param maxHeight Maximum height (front image height) to constrain the back image, or null for
+     *   no constraint
      * @return The prepared back image, or `null`
      */
-    fun prepareBackImage(config: PhotoScanConfiguration): ProcessedImage?
+    fun prepareBackImage(
+        config: PhotoScanConfiguration,
+        maxWidth: Int? = null,
+        maxHeight: Int? = null,
+    ): ProcessedImage?
 }
