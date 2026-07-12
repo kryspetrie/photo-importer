@@ -17,7 +17,9 @@ import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridOn
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -125,6 +127,7 @@ private fun ActionButtonsRow(
     boxCount: Int,
     onBack: () -> Unit,
     onToSummary: () -> Unit,
+    onSkipCurrentPhoto: (() -> Unit)? = null,
     refocus: () -> Unit = {},
     viewportWidth: Double = 800.0,
     viewportHeight: Double = 600.0,
@@ -209,6 +212,22 @@ private fun ActionButtonsRow(
 
         Spacer(Modifier.weight(1f))
 
+        // Skip Photo button (batch mode only)
+        if (onSkipCurrentPhoto != null) {
+            OutlinedButton(
+                onClick = onSkipCurrentPhoto,
+                modifier = Modifier.height(40.dp),
+                colors =
+                    ButtonDefaults.outlinedButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error
+                    ),
+            ) {
+                Icon(Icons.Default.SkipNext, null, Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Skip Photo")
+            }
+        }
+
         // Back and Next buttons
         OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
@@ -237,6 +256,7 @@ fun OverviewControlsPanel(
     boxCount: Int,
     onBack: () -> Unit,
     onToSummary: () -> Unit,
+    onSkipCurrentPhoto: (() -> Unit)? = null,
     refocus: () -> Unit = {},
     viewportWidth: Double = 800.0,
     viewportHeight: Double = 600.0,
@@ -262,6 +282,7 @@ fun OverviewControlsPanel(
                 boxCount = boxCount,
                 onBack = onBack,
                 onToSummary = onToSummary,
+                onSkipCurrentPhoto = onSkipCurrentPhoto,
                 refocus = refocus,
                 modifier = Modifier.fillMaxWidth(),
                 viewportWidth = viewportWidth,

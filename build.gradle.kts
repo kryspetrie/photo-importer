@@ -145,10 +145,13 @@ dependencies {
     }
 
     tasks.register<JavaExec>("runLocationPickerTest") {
-        description = "Launches a standalone window to test the full LocationPickerContent (search + map)"
+        description =
+            "Launches a standalone window to test the full LocationPickerContent (search + map)"
         group = "verification"
         classpath = sourceSets.main.get().runtimeClasspath
-        mainClass.set("org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerTestAppKt")
+        mainClass.set(
+            "org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerTestAppKt"
+        )
         dependsOn("classes")
     }
 

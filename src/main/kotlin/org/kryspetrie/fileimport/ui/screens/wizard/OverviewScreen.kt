@@ -63,6 +63,7 @@ fun OverviewScreen(
     state: PhotoScanWizardState,
     onBack: () -> Unit,
     onToSummary: () -> Unit,
+    onSkipCurrentPhoto: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     // Collect state flows
@@ -148,6 +149,7 @@ fun OverviewScreen(
                     boxCount = boundingBoxList.size(),
                     onBack = onBack,
                     onToSummary = onToSummary,
+                    onSkipCurrentPhoto = onSkipCurrentPhoto,
                     refocus = { focusRequester.requestFocus() },
                     viewportWidth = containerSize.width.toDouble(),
                     viewportHeight = containerSize.height.toDouble(),

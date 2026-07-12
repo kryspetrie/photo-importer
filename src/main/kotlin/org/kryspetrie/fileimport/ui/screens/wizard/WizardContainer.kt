@@ -275,6 +275,24 @@ private fun WizardStepContent(
                             state.navigation.goToSummary()
                         }
                     },
+                    onSkipCurrentPhoto =
+                        if (state.batch.isBatchMode) {
+                            {
+                                state.batch.markBatchIndexSkipped(
+                                    state.batch.currentImageIndex.value
+                                )
+                                continueToNextBatchPhoto(
+                                    state,
+                                    detectorService,
+                                    appLogger,
+                                    dispatcherProvider,
+                                    isLoading,
+                                    onMessage,
+                                    onError,
+                                    scope,
+                                )
+                            }
+                        } else null,
                 )
             } else {
                 LoadingContent(message = "Loading image...")
@@ -405,7 +423,7 @@ private fun WizardStepContent(
                 photoCount = state.boxes.boxCount(),
                 exportDestination = exportDestination,
                 isBatchMode = state.batch.isBatchMode,
-                hasMoreBatchImages = state.batch.hasMoreBatchImages,
+                hasMoreBatchImages = state.batch.hasMoreNonSkippedBatchImages,
                 currentBatchIndex = state.batch.currentImageIndex.value,
                 batchTotal = state.batch.batchTotal,
                 skippedCount = state.batch.skippedBatchIndices.value.size,
@@ -454,7 +472,7 @@ private fun WizardStepContent(
                         }
                     }
                 },
-                nextBatchFile = state.batch.peekNextBatchFile(),
+                nextBatchFile = state.batch.peekNextNonSkippedBatchFile(),
                 onContinueToNextPhoto = {
                     continueToNextBatchPhoto(
                         state,
@@ -468,7 +486,7 @@ private fun WizardStepContent(
                     )
                 },
                 onSkipNextPhoto =
-                    if (state.batch.hasMoreBatchImages) {
+                    if (state.batch.hasMoreNonSkippedBatchImages) {
                         { skipNextBatchPhoto(state) }
                     } else null,
                 onCancelImport = { state.resetToImportStep() },

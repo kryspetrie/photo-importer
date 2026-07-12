@@ -129,9 +129,14 @@ fun BackImagePickerDialog(
     var backImage by remember { mutableStateOf<BufferedImage?>(null) }
     var backImageMode by remember { mutableStateOf("combine") }
     var cropRect by remember { mutableStateOf<Rect?>(null) }
-    var interactionMode by remember { mutableStateOf(BackImageInteractionMode.VIEW) }
+    // Auto-enter crop mode when a file is pre-selected (happy path: user wants to crop the back)
+    var interactionMode by remember {
+        mutableStateOf(
+            if (initialFile != null) BackImageInteractionMode.CROP
+            else BackImageInteractionMode.VIEW
+        )
+    }
     var cropRotation by remember { mutableStateOf(0) }
-    var showBatchPicker by remember { mutableStateOf(false) }
     // Track view container size for coordinate mapping
     var viewWidthPx by remember { mutableStateOf(0) }
     var viewHeightPx by remember { mutableStateOf(0) }

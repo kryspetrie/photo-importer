@@ -84,12 +84,30 @@ class ImageBatchState {
 
     /**
      * Peeks at the next file in the batch without advancing the index. Returns null if there is no
-     * next file.
+     * next file. Note: this does NOT skip already-skipped files — use [peekNextNonSkippedBatchFile]
+     * to find the next non-skipped file for preview purposes.
      */
     fun peekNextBatchFile(): File? {
         val nextIndex = _currentImageIndex.value + 1
         return if (nextIndex < _sourceFiles.value.size) _sourceFiles.value[nextIndex] else null
     }
+
+    /**
+     * Finds the next batch file that is not in the skipped set, starting from the next index after
+     * the current one. Used for preview purposes to show the user what they'll process next.
+     * Returns null if no more non-skipped files remain.
+     */
+    fun peekNextNonSkippedBatchFile(): File? {
+        val skipped = _skippedBatchIndices.value
+        for (i in (_currentImageIndex.value + 1) until _sourceFiles.value.size) {
+            if (i !in skipped) return _sourceFiles.value[i]
+        }
+        return null
+    }
+
+    /** Returns true when in batch mode and there are more non-skipped images to process. */
+    val hasMoreNonSkippedBatchImages: Boolean
+        get() = isBatchMode && peekNextNonSkippedBatchFile() != null
 
     /**
      * Skips the next file in the batch by advancing the index without loading or detecting. Returns
