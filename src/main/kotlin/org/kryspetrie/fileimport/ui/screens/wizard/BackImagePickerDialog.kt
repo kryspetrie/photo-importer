@@ -6,7 +6,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,9 +30,12 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Crop
 import androidx.compose.material.icons.filled.CropFree
+import androidx.compose.material.icons.filled.FitScreen
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.RotateRight
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -61,7 +63,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toComposeImageBitmap
-import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -70,6 +72,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -80,6 +83,7 @@ import java.io.File
 import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
 
 /** Mode for the back-image crop overlay interaction. */
 private enum class BackImageInteractionMode(val displayName: String) {
@@ -95,7 +99,8 @@ private enum class BackImageInteractionMode(val displayName: String) {
  * 2. Browse for a file on disk
  *
  * After selecting an image, the user can:
- * - Switch to Crop mode and drag to define a rectangular crop region on the image
+ * - Zoom and pan to find small text (mouse wheel to zoom, drag to pan in VIEW mode)
+ * - Switch to Crop mode and drag to define a rectangular crop region
  * - Rotate the back image in 90° increments
  * - Choose the back image mode (combine or append_back)
  *
@@ -137,9 +142,12 @@ fun BackImagePickerDialog(
         )
     }
     var cropRotation by remember { mutableStateOf(0) }
+
+    // Zoom/pan state — local to this dialog, not shared with wizard
+    var zoomController by remember { mutableStateOf(ZoomController()) }
+
     // Track view container size for coordinate mapping
-    var viewWidthPx by remember { mutableStateOf(0) }
-    var viewHeightPx by remember { mutableStateOf(0) }
+    var viewSize by remember { mutableStateOf(IntSize.Zero) }
 
     // Load image when file is selected
     LaunchedEffect(selectedFile?.absolutePath) {
@@ -150,6 +158,32 @@ fun BackImagePickerDialog(
             } catch (_: Exception) {
                 backImage = null
             }
+        }
+    }
+
+    // Fit image to view when image loads or rotation changes
+    val displayImage =
+        remember(backImage, cropRotation) {
+            val img = backImage ?: return@remember null
+            val rotation = rotationFromDegrees(cropRotation)
+            if (rotation != org.kryspetrie.fileimport.domain.model.RotationAngle.NONE) {
+                rotateBufferedImage(img, rotation)
+            } else {
+                img
+            }
+        }
+
+    // Auto-fit when the image or viewport size changes
+    LaunchedEffect(displayImage, viewSize) {
+        val img = displayImage ?: return@LaunchedEffect
+        if (viewSize.width > 0 && viewSize.height > 0) {
+            zoomController =
+                ZoomController.fit(
+                    img.width.toDouble(),
+                    img.height.toDouble(),
+                    viewSize.width.toDouble(),
+                    viewSize.height.toDouble(),
+                )
         }
     }
 
@@ -219,58 +253,54 @@ fun BackImagePickerDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                // ── Image area with crop overlay ──
+                // ── Image area with zoom/pan and crop overlay ──
                 Box(
                     modifier =
                         Modifier.weight(1f)
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
                             .background(Color.DarkGray)
-                            .onGloballyPositioned { coords ->
-                                viewWidthPx = coords.size.width
-                                viewHeightPx = coords.size.height
-                            }
+                            .onGloballyPositioned { coords -> viewSize = coords.size }
                 ) {
-                    val img = backImage
+                    val img = displayImage
                     if (img != null) {
-                        val rotation = rotationFromDegrees(cropRotation)
-                        val displayImage =
-                            if (
-                                rotation !=
-                                    org.kryspetrie.fileimport.domain.model.RotationAngle.NONE
-                            ) {
-                                rotateBufferedImage(img, rotation)
-                            } else {
-                                img
-                            }
-                        Image(
-                            bitmap = displayImage.toComposeImageBitmap(),
-                            contentDescription = "Back image",
+                        // Canvas-based rendering with zoom/pan support
+                        BackImageCanvas(
+                            image = img,
+                            cropRect = cropRect,
+                            zoomController = zoomController,
+                            onZoomControllerChange = { zoomController = it },
+                            interactionMode = interactionMode,
+                            onCropUpdate = { rect -> cropRect = rect },
+                            onCropEnd = { /* crop is already set */ },
                             modifier = Modifier.fillMaxSize(),
-                            contentScale = ContentScale.Fit,
                         )
 
-                        // Crop overlay canvas — renders the dimming and crop rectangle
-                        val currentCrop = cropRect
-                        CropOverlayCanvas(
-                            cropRect = currentCrop,
-                            imageWidth = displayImage.width,
-                            imageHeight = displayImage.height,
-                            viewWidthPx = viewWidthPx,
-                            viewHeightPx = viewHeightPx,
+                        // Zoom controls overlay (top-right)
+                        BackImageZoomControls(
+                            zoomController = zoomController,
+                            onZoomIn = {
+                                val cx = viewSize.width.toDouble() / 2
+                                val cy = viewSize.height.toDouble() / 2
+                                zoomController = zoomController.zoomIn(cx, cy)
+                            },
+                            onZoomOut = {
+                                val cx = viewSize.width.toDouble() / 2
+                                val cy = viewSize.height.toDouble() / 2
+                                zoomController = zoomController.zoomOut(cx, cy)
+                            },
+                            onFitToView = {
+                                if (img != null && viewSize.width > 0 && viewSize.height > 0) {
+                                    zoomController =
+                                        ZoomController.fit(
+                                            img.width.toDouble(),
+                                            img.height.toDouble(),
+                                            viewSize.width.toDouble(),
+                                            viewSize.height.toDouble(),
+                                        )
+                                }
+                            },
                         )
-
-                        // Drag overlay for defining crop region (only in CROP mode)
-                        if (interactionMode == BackImageInteractionMode.CROP) {
-                            CropDragOverlay(
-                                imageWidth = displayImage.width,
-                                imageHeight = displayImage.height,
-                                viewWidthPx = viewWidthPx,
-                                viewHeightPx = viewHeightPx,
-                                onCropUpdate = { rect -> cropRect = rect },
-                                onCropEnd = { /* crop is already set */ },
-                            )
-                        }
                     } else {
                         Box(
                             modifier = Modifier.fillMaxSize(),
@@ -417,13 +447,15 @@ fun BackImagePickerDialog(
                                     modifier = Modifier.size(18.dp),
                                 )
                             }
-                            if (cropRotation != 0) {
-                                Text(
-                                    "${cropRotation}°",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                )
-                            }
+                            // Fixed-width degree text to avoid jumping
+                            Text(
+                                "${cropRotation}°",
+                                style = MaterialTheme.typography.labelSmall,
+                                color =
+                                    if (cropRotation != 0) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.width(36.dp),
+                            )
                         }
                     }
                 }
@@ -495,6 +527,287 @@ fun BackImagePickerDialog(
                     ) {
                         Text("Assign Back Image")
                     }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Canvas composable that renders the back image with zoom/pan support, crop overlay, and gesture
+ * handling.
+ *
+ * Uses the same approach as OverviewCanvas: draw the image at offset+scale determined by
+ * ZoomController, then overlay the crop rectangle in screen coordinates, and handle pointer events
+ * for scrolling (zoom), panning (VIEW mode), and cropping (CROP mode).
+ */
+@Composable
+private fun BackImageCanvas(
+    image: BufferedImage,
+    cropRect: Rect?,
+    zoomController: ZoomController,
+    onZoomControllerChange: (ZoomController) -> Unit,
+    interactionMode: BackImageInteractionMode,
+    onCropUpdate: (Rect) -> Unit,
+    onCropEnd: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val textMeasurer = rememberTextMeasurer()
+    val currentCrop = cropRect
+
+    // Drag state for crop mode
+    var dragStart by remember { mutableStateOf<Offset?>(null) }
+    var isDragging by remember { mutableStateOf(false) }
+    var totalMovement by remember { mutableStateOf(0f) }
+
+    // Use sampled image for performance when zoomed out
+    val scale = zoomController.zoom.toFloat()
+    val panX = zoomController.panX.toFloat()
+    val panY = zoomController.panY.toFloat()
+
+    val displayBitmap =
+        remember(image, scale) {
+            val sampled =
+                org.kryspetrie.fileimport.ui.screens.wizard.overview.createSampledImage(
+                    image,
+                    scale.toDouble(),
+                )
+            sampled?.toComposeImageBitmap()
+        }
+
+    Canvas(
+        modifier =
+            modifier
+                .pointerInput(interactionMode, zoomController) {
+                    // Unified pointer handler for zoom/pan/crop
+                    awaitPointerEventScope {
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val pos = event.changes.firstOrNull()?.position ?: continue
+
+                            when (event.type) {
+                                PointerEventType.Press -> {
+                                    dragStart = pos
+                                    isDragging = true
+                                    totalMovement = 0f
+                                }
+                                PointerEventType.Move -> {
+                                    if (isDragging && dragStart != null) {
+                                        val delta =
+                                            pos -
+                                                (event.changes.firstOrNull()?.previousPosition
+                                                    ?: pos)
+                                        totalMovement += delta.getDistance()
+
+                                        if (interactionMode == BackImageInteractionMode.CROP) {
+                                            // In crop mode, dragging defines the crop rectangle
+                                            val start =
+                                                zoomController.screenToImage(
+                                                    dragStart!!.x.toDouble(),
+                                                    dragStart!!.y.toDouble(),
+                                                )
+                                            val current =
+                                                zoomController.screenToImage(
+                                                    pos.x.toDouble(),
+                                                    pos.y.toDouble(),
+                                                )
+                                            // Convert to normalized [0,1] coordinates
+                                            val x1 = (start.x / image.width).coerceIn(0.0, 1.0)
+                                            val y1 = (start.y / image.height).coerceIn(0.0, 1.0)
+                                            val x2 = (current.x / image.width).coerceIn(0.0, 1.0)
+                                            val y2 = (current.y / image.height).coerceIn(0.0, 1.0)
+                                            onCropUpdate(
+                                                Rect(
+                                                    left = minOf(x1, x2).toFloat(),
+                                                    top = minOf(y1, y2).toFloat(),
+                                                    right = maxOf(x1, x2).toFloat(),
+                                                    bottom = maxOf(y1, y2).toFloat(),
+                                                )
+                                            )
+                                        } else {
+                                            // In view mode, drag to pan
+                                            val newZoom =
+                                                zoomController.pan(
+                                                    delta.x.toDouble(),
+                                                    delta.y.toDouble(),
+                                                )
+                                            onZoomControllerChange(newZoom)
+                                        }
+                                    }
+                                }
+                                PointerEventType.Release -> {
+                                    isDragging = false
+                                    dragStart = null
+                                    // If we were crop-dragging and released, finalize
+                                    if (
+                                        interactionMode == BackImageInteractionMode.CROP &&
+                                            totalMovement > 5f
+                                    ) {
+                                        onCropEnd()
+                                    }
+                                }
+                                PointerEventType.Scroll -> {
+                                    // Mouse wheel zoom around cursor position
+                                    val scrollDelta =
+                                        event.changes.firstOrNull()?.scrollDelta?.y ?: 0f
+                                    if (scrollDelta != 0f) {
+                                        val newZoom =
+                                            if (scrollDelta > 0) {
+                                                zoomController.zoomIn(
+                                                    pos.x.toDouble(),
+                                                    pos.y.toDouble(),
+                                                )
+                                            } else {
+                                                zoomController.zoomOut(
+                                                    pos.x.toDouble(),
+                                                    pos.y.toDouble(),
+                                                )
+                                            }
+                                        onZoomControllerChange(newZoom)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                .pointerHoverIcon(
+                    if (interactionMode == BackImageInteractionMode.CROP)
+                        androidx.compose.ui.input.pointer.PointerIcon(
+                            java.awt.Cursor(java.awt.Cursor.CROSSHAIR_CURSOR)
+                        )
+                    else
+                        androidx.compose.ui.input.pointer.PointerIcon(
+                            java.awt.Cursor(java.awt.Cursor.HAND_CURSOR)
+                        )
+                )
+    ) {
+        // Draw background
+        drawRect(color = Color(0xFF404040.toInt())) // Dark gray background
+
+        // Draw image at zoom/pan position
+        if (displayBitmap != null) {
+            drawImage(
+                image = displayBitmap,
+                srcOffset = androidx.compose.ui.unit.IntOffset.Zero,
+                srcSize =
+                    androidx.compose.ui.unit.IntSize(displayBitmap.width, displayBitmap.height),
+                dstOffset = androidx.compose.ui.unit.IntOffset(panX.toInt(), panY.toInt()),
+                dstSize =
+                    androidx.compose.ui.unit.IntSize(
+                        (image.width * scale).toInt(),
+                        (image.height * scale).toInt(),
+                    ),
+            )
+        }
+
+        // Draw crop overlay if a crop rect is defined
+        val crop = currentCrop
+        if (crop != null && image.width > 0 && image.height > 0) {
+            // Convert normalized crop coordinates to screen coordinates using zoom/pan
+            val cropLeftPx = (crop.left * image.width * scale) + panX
+            val cropTopPx = (crop.top * image.height * scale) + panY
+            val cropRightPx = (crop.right * image.width * scale) + panX
+            val cropBottomPx = (crop.bottom * image.height * scale) + panY
+            val cropWidthPx = cropRightPx - cropLeftPx
+            val cropHeightPx = cropBottomPx - cropTopPx
+
+            // Dim outside the crop
+            val dimColor = Color.Black.copy(alpha = 0.55f)
+            // Top band
+            drawRect(dimColor, topLeft = Offset(0f, 0f), size = Size(size.width, cropTopPx))
+            // Bottom band
+            drawRect(
+                dimColor,
+                topLeft = Offset(0f, cropBottomPx),
+                size = Size(size.width, size.height - cropBottomPx),
+            )
+            // Left band
+            drawRect(
+                dimColor,
+                topLeft = Offset(0f, cropTopPx),
+                size = Size(cropLeftPx, cropHeightPx),
+            )
+            // Right band
+            drawRect(
+                dimColor,
+                topLeft = Offset(cropRightPx, cropTopPx),
+                size = Size(size.width - cropRightPx, cropHeightPx),
+            )
+
+            // Yellow border around crop area
+            drawRect(
+                color = Color.Yellow,
+                topLeft = Offset(cropLeftPx, cropTopPx),
+                size = Size(cropWidthPx, cropHeightPx),
+                style = Stroke(width = 2.5f),
+            )
+
+            // Crop dimension label
+            val pctLabel = "%.0f%% × %.0f%%".format(crop.width * 100, crop.height * 100)
+            val labelLayout =
+                textMeasurer.measure(pctLabel, TextStyle(color = Color.White, fontSize = 11.sp))
+            drawText(
+                textLayoutResult = labelLayout,
+                topLeft = Offset(cropLeftPx + 4f, cropTopPx + 2f),
+            )
+        }
+
+        // Draw drag preview while actively cropping
+        if (isDragging && dragStart != null && interactionMode == BackImageInteractionMode.CROP) {
+            // Light crosshair at start position
+            drawLine(
+                color = Color.White.copy(alpha = 0.5f),
+                start = Offset(dragStart!!.x - 10f, dragStart!!.y),
+                end = Offset(dragStart!!.x + 10f, dragStart!!.y),
+                strokeWidth = 1f,
+            )
+            drawLine(
+                color = Color.White.copy(alpha = 0.5f),
+                start = Offset(dragStart!!.x, dragStart!!.y - 10f),
+                end = Offset(dragStart!!.x, dragStart!!.y + 10f),
+                strokeWidth = 1f,
+            )
+        }
+    }
+}
+
+/** Zoom controls overlay for the back image canvas. */
+@Composable
+private fun BackImageZoomControls(
+    zoomController: ZoomController,
+    onZoomIn: () -> Unit,
+    onZoomOut: () -> Unit,
+    onFitToView: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(modifier = modifier.fillMaxSize()) {
+        Surface(
+            modifier = Modifier.align(Alignment.TopEnd).padding(8.dp),
+            shape = RoundedCornerShape(4.dp),
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(4.dp),
+            ) {
+                IconButton(onClick = onZoomOut, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.ZoomOut, "Zoom out", Modifier.size(18.dp))
+                }
+
+                Text(
+                    zoomController.zoomPercent(),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.width(48.dp),
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+
+                IconButton(onClick = onZoomIn, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.ZoomIn, "Zoom in", Modifier.size(18.dp))
+                }
+
+                IconButton(onClick = onFitToView, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Default.FitScreen, "Fit to view", Modifier.size(18.dp))
                 }
             }
         }
@@ -613,169 +926,6 @@ private fun NearbyFilesStrip(
             }
         }
     }
-}
-
-/**
- * Canvas overlay that renders the crop rectangle with dimmed regions outside. All coordinates are
- * in normalized (0-1) space relative to the image, mapped to view pixels accounting for
- * ContentScale.Fit centering.
- */
-@Composable
-private fun CropOverlayCanvas(
-    cropRect: Rect?,
-    imageWidth: Int,
-    imageHeight: Int,
-    viewWidthPx: Int,
-    viewHeightPx: Int,
-) {
-    val currentCrop = cropRect ?: return
-    if (viewWidthPx <= 0 || viewHeightPx <= 0) return
-
-    val textMeasurer = rememberTextMeasurer()
-
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val (offset, scale) = computeFitMapping(imageWidth, imageHeight, viewWidthPx, viewHeightPx)
-
-        // Pixel coordinates of the crop rect on screen
-        val leftPx = currentCrop.left * imageWidth * scale + offset.x
-        val topPx = currentCrop.top * imageHeight * scale + offset.y
-        val rightPx = currentCrop.right * imageWidth * scale + offset.x
-        val bottomPx = currentCrop.bottom * imageHeight * scale + offset.y
-        val cropWidthPx = rightPx - leftPx
-        val cropHeightPx = bottomPx - topPx
-
-        // Dim outside the crop
-        val dimColor = Color.Black.copy(alpha = 0.55f)
-        // Top band
-        drawRect(dimColor, topLeft = Offset.Zero, size = Size(size.width, topPx))
-        // Bottom band
-        drawRect(
-            dimColor,
-            topLeft = Offset(0f, bottomPx),
-            size = Size(size.width, size.height - bottomPx),
-        )
-        // Left band
-        drawRect(dimColor, topLeft = Offset(0f, topPx), size = Size(leftPx, cropHeightPx))
-        // Right band
-        drawRect(
-            dimColor,
-            topLeft = Offset(rightPx, topPx),
-            size = Size(size.width - rightPx, cropHeightPx),
-        )
-
-        // Yellow border around crop area
-        drawRect(
-            color = Color.Yellow,
-            topLeft = Offset(leftPx, topPx),
-            size = Size(cropWidthPx, cropHeightPx),
-            style = Stroke(width = 2.5f),
-        )
-
-        // Crop dimension label (percentage of image)
-        val pctLabel = "%.0f%% × %.0f%%".format(currentCrop.width * 100, currentCrop.height * 100)
-        val labelLayout =
-            textMeasurer.measure(pctLabel, TextStyle(color = Color.White, fontSize = 11.sp))
-        drawText(textLayoutResult = labelLayout, topLeft = Offset(leftPx + 4f, topPx + 2f))
-    }
-}
-
-/**
- * Draggable overlay for defining a crop region. Converts view-pixel coordinates to normalized image
- * coordinates accounting for ContentScale.Fit centering.
- */
-@Composable
-private fun CropDragOverlay(
-    imageWidth: Int,
-    imageHeight: Int,
-    viewWidthPx: Int,
-    viewHeightPx: Int,
-    onCropUpdate: (Rect) -> Unit,
-    onCropEnd: () -> Unit,
-) {
-    var dragStart by remember { mutableStateOf<Offset?>(null) }
-    var isDragging by remember { mutableStateOf(false) }
-
-    Box(
-        modifier =
-            Modifier.fillMaxSize()
-                .pointerHoverIcon(PointerIcon(Cursor(Cursor.CROSSHAIR_CURSOR)))
-                .pointerInput(imageWidth, imageHeight) {
-                    detectDragGestures(
-                        onDragStart = { offset ->
-                            isDragging = true
-                            dragStart = offset
-                        },
-                        onDrag = { change, _ ->
-                            change.consume()
-                            val start = dragStart ?: return@detectDragGestures
-                            val (imgOffset, imgScale) =
-                                computeFitMapping(
-                                    imageWidth,
-                                    imageHeight,
-                                    viewWidthPx,
-                                    viewHeightPx,
-                                )
-
-                            // Convert view-pixel coordinates to normalized [0,1] image coordinates
-                            val x1 =
-                                ((start.x - imgOffset.x) / (imageWidth * imgScale)).coerceIn(0f, 1f)
-                            val y1 =
-                                ((start.y - imgOffset.y) / (imageHeight * imgScale)).coerceIn(
-                                    0f,
-                                    1f,
-                                )
-                            val x2 =
-                                ((change.position.x - imgOffset.x) / (imageWidth * imgScale))
-                                    .coerceIn(0f, 1f)
-                            val y2 =
-                                ((change.position.y - imgOffset.y) / (imageHeight * imgScale))
-                                    .coerceIn(0f, 1f)
-
-                            onCropUpdate(
-                                Rect(
-                                    left = minOf(x1, x2),
-                                    top = minOf(y1, y2),
-                                    right = maxOf(x1, x2),
-                                    bottom = maxOf(y1, y2),
-                                )
-                            )
-                        },
-                        onDragEnd = {
-                            isDragging = false
-                            dragStart = null
-                            onCropEnd()
-                        },
-                        onDragCancel = {
-                            isDragging = false
-                            dragStart = null
-                        },
-                    )
-                }
-    )
-}
-
-/**
- * Computes the offset and scale for ContentScale.Fit mapping from image coordinates to view pixels.
- * Account for the letterboxing that ContentScale.Fit introduces (centering the image within the
- * container with possible padding on sides or top/bottom).
- *
- * @return Pair of (pixel offset of image top-left in the view, scale factor from image pixels to
- *   view pixels)
- */
-private fun computeFitMapping(
-    imageWidth: Int,
-    imageHeight: Int,
-    viewWidthPx: Int,
-    viewHeightPx: Int,
-): Pair<Offset, Float> {
-    val scaleX = viewWidthPx.toFloat() / imageWidth.toFloat()
-    val scaleY = viewHeightPx.toFloat() / imageHeight.toFloat()
-    val scale = minOf(scaleX, scaleY)
-    val imgDisplayW = imageWidth * scale
-    val imgDisplayH = imageHeight * scale
-    val offsetX = (viewWidthPx - imgDisplayW) / 2f
-    val offsetY = (viewHeightPx - imgDisplayH) / 2f
-    return Pair(Offset(offsetX, offsetY), scale)
 }
 
 /** Grid of batch files for selecting a back image from the current batch. */
