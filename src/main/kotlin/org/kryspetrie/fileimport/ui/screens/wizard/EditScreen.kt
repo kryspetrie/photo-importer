@@ -84,6 +84,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.correctPerspective
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.adapter.transformFaceRegionsFromSource
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.FaceNameEntryPanel
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.MetadataEditorPanel
@@ -354,11 +355,51 @@ fun EditScreen(
 
     // ── Back-of-photo image picker dialog ──
     if (showBackImagePicker) {
-        // Pre-select: prefer last-used back source, then next sequential batch file
+        // Compute batch/sibling files for the nearby files strip.
+        // In batch mode, use the batch file list. For single-image mode, scan the containing folder
+        // for sibling image files so the user can still browse nearby photos.
+        val backImageBatchFiles =
+            remember(state.batch.sourceFiles.value, currentImageFile) {
+                val batch = state.batch.sourceFiles.value
+                if (batch.isNotEmpty()) {
+                    batch
+                } else {
+                    // Single-photo mode: scan the containing folder for sibling images
+                    val parentDir = currentImageFile?.parentFile
+                    if (parentDir != null && parentDir.isDirectory) {
+                        parentDir
+                            .listFiles()
+                            ?.filter { it.isFile && isImageFile(it) }
+                            ?.sortedBy { it.name } ?: emptyList()
+                    } else {
+                        emptyList()
+                    }
+                }
+            }
+        // Pre-select: prefer last-used back source, then next sequential file
         val preSelectedBackPath =
-            state.lastBackImageSourcePath.value ?: state.batch.peekNextBatchFile()?.absolutePath
+            remember(
+                state.lastBackImageSourcePath.value,
+                state.batch.peekNextBatchFile()?.absolutePath,
+                currentImageFile?.absolutePath,
+                backImageBatchFiles,
+            ) {
+                state.lastBackImageSourcePath.value
+                    ?: state.batch.peekNextBatchFile()?.absolutePath
+                    ?: run {
+                        // Single photo mode: pick the next sibling file after the current one
+                        val currentPath = currentImageFile?.absolutePath
+                        if (currentPath != null && backImageBatchFiles.isNotEmpty()) {
+                            val currentIdx =
+                                backImageBatchFiles.indexOfFirst { it.absolutePath == currentPath }
+                            if (currentIdx >= 0 && currentIdx + 1 < backImageBatchFiles.size) {
+                                backImageBatchFiles[currentIdx + 1].absolutePath
+                            } else null
+                        } else null
+                    }
+            }
         BackImagePickerDialog(
-            batchFiles = state.batch.sourceFiles.value.ifEmpty { null },
+            batchFiles = backImageBatchFiles.ifEmpty { null },
             preSelectedPath = preSelectedBackPath,
             onConfirm = { sourcePath, cropRect, rotation, mode ->
                 val idx = selectedIndices.firstOrNull() ?: return@BackImagePickerDialog
