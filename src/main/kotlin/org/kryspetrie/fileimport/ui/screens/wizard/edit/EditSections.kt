@@ -62,6 +62,7 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -92,7 +93,7 @@ internal fun RotationSection(
     Surface(
         tonalElevation = 1.dp,
         shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -114,13 +115,13 @@ internal fun RotationSection(
             IconButton(onClick = onRotateCW, modifier = Modifier.size(24.dp)) {
                 Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(16.dp))
             }
-            if (rotationDegrees != 0) {
-                Text(
-                    "${rotationDegrees}°",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
+            Text(
+                "${rotationDegrees}°",
+                style = MaterialTheme.typography.labelSmall,
+                color = if (rotationDegrees != 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.width(36.dp),
+                textAlign = TextAlign.End,
+            )
         }
     }
 }

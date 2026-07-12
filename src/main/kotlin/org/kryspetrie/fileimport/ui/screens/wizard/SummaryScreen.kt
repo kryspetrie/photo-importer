@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -33,6 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -764,53 +766,38 @@ private fun SummaryFullscreenPreviewDialog(
             modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.95f)).clickable(onClick = onDismiss),
             contentAlignment = Alignment.Center,
         ) {
+            // Info text: top-left
             Column(
-                modifier = Modifier.fillMaxSize().padding(20.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.align(Alignment.TopStart).padding(16.dp),
             ) {
-                FullscreenHeaderRow(
-                    photoIndex = photoIndex,
-                    rotationDegrees = rotationDegrees,
-                    totalCount = totalCount,
-                    onDismiss = onDismiss,
+                Text(
+                    "Photo ${photoIndex + 1} of $totalCount",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.White.copy(alpha = 0.8f),
                 )
-                Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    Image(
-                        bitmap = bitmap,
-                        contentDescription = "Photo ${photoIndex + 1} full preview",
-                        modifier = Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Fit,
+                if (rotationDegrees != 0) {
+                    Text(
+                        "${rotationDegrees}° rotation",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.6f),
                     )
                 }
-                Spacer(Modifier.height(8.dp))
             }
-        }
-    }
-}
-
-/** Header row in the fullscreen preview dialog. */
-@Composable
-private fun FullscreenHeaderRow(
-    photoIndex: Int,
-    totalCount: Int,
-    rotationDegrees: Int,
-    onDismiss: () -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            "Photo ${photoIndex + 1} of $totalCount",
-            style = MaterialTheme.typography.titleSmall,
-            color = Color.White.copy(alpha = 0.8f),
-        )
-        if (rotationDegrees != 0) {
-            Text("${rotationDegrees}° rotation", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
-        }
-        IconButton(onClick = onDismiss) {
-            Icon(Icons.Default.Close, contentDescription = "Close", tint = Color.White.copy(alpha = 0.8f))
+            // Close button: top-right
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+                colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(28.dp))
+            }
+            // Image: centered
+            Image(
+                bitmap = bitmap,
+                contentDescription = "Photo ${photoIndex + 1} full preview",
+                modifier = Modifier.fillMaxSize().padding(32.dp),
+                contentScale = ContentScale.Fit,
+            )
         }
     }
 }

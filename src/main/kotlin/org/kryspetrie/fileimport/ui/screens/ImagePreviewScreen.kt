@@ -48,6 +48,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
@@ -880,46 +881,35 @@ private fun FullScreenOverlay(image: ImageFile, onDismiss: () -> Unit) {
                 .clickable(onClick = onDismiss),
         contentAlignment = Alignment.Center,
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxSize().padding(20.dp),
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    image.fileName,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.White.copy(alpha = 0.8f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, "Close", tint = Color.White.copy(alpha = 0.8f))
-                }
-            }
-
-            Box(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentAlignment = Alignment.Center,
-            ) {
-                ThumbnailImage(
-                    file = image.file,
-                    maxPx = PREVIEW_PX,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit,
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
+        // Info text: top-left
+        Column(modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
+            Text(
+                image.fileName,
+                style = MaterialTheme.typography.titleSmall,
+                color = Color.White.copy(alpha = 0.8f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
             Text(
                 "${formatFileSize(image.fileSize)} \u00B7 ${image.fileType.displayName}",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.5f),
             )
         }
+        // Close button: top-right
+        IconButton(
+            onClick = onDismiss,
+            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+            colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
+        ) {
+            Icon(Icons.Default.Close, "Close", modifier = Modifier.size(28.dp))
+        }
+        // Image: centered
+        ThumbnailImage(
+            file = image.file,
+            maxPx = PREVIEW_PX,
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            contentScale = ContentScale.Fit,
+        )
     }
 }

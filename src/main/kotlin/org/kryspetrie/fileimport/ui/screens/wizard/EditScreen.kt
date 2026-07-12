@@ -199,7 +199,7 @@ fun EditScreen(
                     modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
                     colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
                 ) {
-                    Icon(Icons.Default.Close, "Close preview", modifier = Modifier.size(36.dp))
+                    Icon(Icons.Default.Close, "Close", modifier = Modifier.size(28.dp))
                 }
             }
         }
@@ -696,10 +696,10 @@ fun EditScreen(
                     Surface(
                         tonalElevation = 1.dp,
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
                     ) {
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
