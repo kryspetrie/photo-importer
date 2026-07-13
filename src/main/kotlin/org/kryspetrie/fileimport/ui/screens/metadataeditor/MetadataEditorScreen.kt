@@ -24,7 +24,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.RotateLeft
 import androidx.compose.material.icons.automirrored.filled.RotateRight
-import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
@@ -91,7 +90,11 @@ import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
+import org.kryspetrie.fileimport.ui.components.FolderSelectionField
+import org.kryspetrie.fileimport.ui.components.SourcePathField
 import org.kryspetrie.fileimport.ui.components.isImageFile
+import org.kryspetrie.fileimport.ui.components.pickFolder
+import org.kryspetrie.fileimport.ui.components.pickImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.BackImagePickerDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.CameraSection
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
@@ -143,6 +146,7 @@ fun MetadataEditorScreen(
     var selectedRegionType by remember { mutableStateOf(RegionType.FACE) }
     var selectedFaceSize by remember { mutableStateOf(FaceSize.DEFAULT) }
     var showBackImagePicker by remember { mutableStateOf(false) }
+    var showBulkSelectionDialog by remember { mutableStateOf(false) }
 
     // Location picker
     var showLocationPicker by remember { mutableStateOf(false) }
@@ -247,44 +251,64 @@ fun MetadataEditorScreen(
         }
     }
 
-    // ── Folder picker ──
-    // No showFolderPicker state needed — folder picker is launched directly via JFileChooser
+    // ── Source loading (file or folder) ──
 
-    val loadFolder: (String) -> Unit = { path ->
+    val loadSourcePath: (String) -> Unit = { path ->
         state.isLoading = true
         state.errorMessage = null
         coroutineScope.launch {
             try {
-                val folder = File(path)
-                if (!folder.isDirectory) {
-                    state.errorMessage = "Not a directory: $path"
-                    state.isLoading = false
-                    return@launch
-                }
-                val imageFiles =
-                    withContext(dispatcherProvider.io) {
-                        folder
-                            .listFiles()
-                            ?.filter { it.isFile && isImageFile(it) }
-                            ?.sortedBy { it.name.lowercase() } ?: emptyList()
+                val source = File(path)
+                if (source.isFile) {
+                    if (!isImageFile(source)) {
+                        state.errorMessage = "Not an image file: $path"
+                        state.isLoading = false
+                        return@launch
                     }
-                if (imageFiles.isEmpty()) {
-                    state.errorMessage = "No image files found in: $path"
+                    state.loadSingleFile(source)
+                    thumbnailCache.clear()
+                    onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
+                } else if (source.isDirectory) {
+                    val imageFiles =
+                        withContext(dispatcherProvider.io) {
+                            source
+                                .listFiles()
+                                ?.filter { it.isFile && isImageFile(it) }
+                                ?.sortedBy { it.name.lowercase() } ?: emptyList()
+                        }
+                    if (imageFiles.isEmpty()) {
+                        state.errorMessage = "No image files found in: $path"
+                        state.isLoading = false
+                        return@launch
+                    }
+                    state.sourcePath = path
+                    state.loadFiles(imageFiles)
+                    thumbnailCache.clear()
+                    onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
+                } else {
+                    state.errorMessage = "Path does not exist: $path"
                     state.isLoading = false
-                    return@launch
                 }
-                state.sourcePath = path
-                state.loadFiles(imageFiles)
-                thumbnailCache.clear()
-                onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
             } catch (_: CancellationException) {
                 // Cancellation must propagate
             } catch (e: Exception) {
-                state.errorMessage = "Error loading folder: ${e.message}"
+                state.errorMessage = "Error loading: ${e.message}"
             } finally {
                 state.isLoading = false
             }
         }
+    }
+
+    val onPickSourceFile: () -> Unit = {
+        pickImageFile("Select Image File")?.let { loadSourcePath(it) }
+    }
+
+    val onPickSourceFolder: () -> Unit = {
+        pickFolder("Select Image Folder")?.let { loadSourcePath(it) }
+    }
+
+    val onPickOutputFolder: () -> Unit = {
+        pickFolder("Select Output Folder")?.let { state.outputDirectory = it }
     }
 
     // ── Save ──
@@ -505,6 +529,24 @@ fun MetadataEditorScreen(
         )
     }
 
+    // ── Bulk selection dialog ──
+    if (showBulkSelectionDialog && isMultiEditMode) {
+        BulkSelectionDialog(
+            state = state,
+            thumbnailCache = thumbnailCache,
+            selectedIndices = selectedIndices,
+            onToggleSelection = { index ->
+                selectedIndices =
+                    if (index in selectedIndices) selectedIndices - index
+                    else selectedIndices + index
+            },
+            onSelectAll = { selectedIndices = state.files.indices.toSet() },
+            onSelectNone = { selectedIndices = emptySet() },
+            onConfirm = { showBulkSelectionDialog = false },
+            onDismiss = { showBulkSelectionDialog = false },
+        )
+    }
+
     Scaffold(
         modifier =
             modifier.onPreviewKeyEvent { keyEvent ->
@@ -556,51 +598,14 @@ fun MetadataEditorScreen(
                         Text("Save New", style = MaterialTheme.typography.labelSmall)
                     }
                     if (state.outputMode == OutputMode.SAVE_NEW) {
-                        OutlinedButton(
-                            onClick = {
-                                coroutineScope.launch {
-                                    val initialDir =
-                                        state.outputDirectory.ifBlank {
-                                            currentSettings.metadataEditorRecentPaths.firstOrNull()
-                                                ?: System.getProperty("user.home")
-                                                ?: ""
-                                        }
-                                    val result =
-                                        withContext(dispatcherProvider.io) {
-                                            val chooser = javax.swing.JFileChooser()
-                                            chooser.fileSelectionMode =
-                                                javax.swing.JFileChooser.DIRECTORIES_ONLY
-                                            chooser.dialogTitle = "Select Output Folder"
-                                            if (initialDir.isNotBlank())
-                                                chooser.currentDirectory = File(initialDir)
-                                            chooser.showOpenDialog(null)
-                                        }
-                                    if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
-                                        val selected =
-                                            withContext(dispatcherProvider.io) {
-                                                // Can't access chooser.selectedFile from here,
-                                                // re-derive
-                                                // Actually we need to keep the chooser reference
-                                                null // Will fix below
-                                            }
-                                    }
-                                }
-                            },
-                            modifier = Modifier.height(32.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp),
-                        ) {
-                            Icon(
-                                Icons.Default.CreateNewFolder,
-                                "Select output folder",
-                                Modifier.size(16.dp),
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                state.outputDirectory.ifBlank { "Output Folder" },
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1,
-                            )
-                        }
+                        FolderSelectionField(
+                            value = state.outputDirectory,
+                            onValueChange = { state.outputDirectory = it },
+                            modifier = Modifier.width(220.dp).height(48.dp),
+                            label = "Output",
+                            placeholder = "Output folder...",
+                            title = "Select Output Folder",
+                        )
                     }
                 },
             )
@@ -666,53 +671,45 @@ fun MetadataEditorScreen(
                     } else {
                         Icon(
                             Icons.Default.FolderOpen,
-                            "Open folder",
+                            "Open source",
                             modifier = Modifier.size(64.dp),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            "Select a folder with images to edit metadata",
+                            "Select a file or folder with images to edit metadata",
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        OutlinedButton(
-                            onClick = {
-                                val initialDir =
-                                    state.sourcePath.ifBlank {
-                                        currentSettings.metadataEditorRecentPaths.firstOrNull()
-                                            ?: System.getProperty("user.home")
-                                            ?: ""
-                                    }
-                                val chooser = javax.swing.JFileChooser()
-                                chooser.fileSelectionMode =
-                                    javax.swing.JFileChooser.DIRECTORIES_ONLY
-                                chooser.dialogTitle = "Select Image Folder"
-                                if (initialDir.isNotBlank())
-                                    chooser.currentDirectory = File(initialDir)
-                                val result = chooser.showOpenDialog(null)
-                                if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
-                                    loadFolder(chooser.selectedFile.absolutePath)
-                                }
-                            }
+                        Column(
+                            modifier = Modifier.width(400.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Icon(Icons.Default.FolderOpen, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("Open Image Folder")
-                        }
-                        val recentPaths = currentSettings.metadataEditorRecentPaths
-                        if (recentPaths.isNotEmpty()) {
-                            HorizontalDivider(modifier = Modifier.width(200.dp))
-                            Text("Recent:", style = MaterialTheme.typography.labelMedium)
-                            recentPaths.forEach { path ->
-                                OutlinedButton(
-                                    onClick = { loadFolder(path) },
-                                    modifier = Modifier.fillMaxWidth(0.6f),
-                                ) {
-                                    Text(
-                                        path,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                    )
+                            SourcePathField(
+                                value = state.sourcePath,
+                                onValueChange = { loadSourcePath(it) },
+                                onPickFile = onPickSourceFile,
+                                onPickFolder = onPickSourceFolder,
+                                modifier = Modifier.fillMaxWidth(),
+                                label = "Source",
+                                placeholder = "Select file or folder...",
+                                isError = state.errorMessage != null,
+                            )
+                            val recentPaths = currentSettings.metadataEditorRecentPaths
+                            if (recentPaths.isNotEmpty()) {
+                                HorizontalDivider(modifier = Modifier.width(200.dp))
+                                Text("Recent:", style = MaterialTheme.typography.labelMedium)
+                                recentPaths.forEach { path ->
+                                    OutlinedButton(
+                                        onClick = { loadSourcePath(path) },
+                                        modifier = Modifier.fillMaxWidth(0.6f),
+                                    ) {
+                                        Text(
+                                            path,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            maxLines = 1,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -728,276 +725,290 @@ fun MetadataEditorScreen(
                 }
             }
         } else {
-            // Main editor layout: [Sidebar | Preview | Metadata Panel]
-            Row(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                // ═══ Left sidebar: scrollable thumbnail strip ═══
-                MetadataEditorSidebar(
-                    state = state,
-                    thumbnailCache = thumbnailCache,
-                    isMultiEditMode = isMultiEditMode,
-                    selectedIndices = selectedIndices,
-                    onSelect = { index ->
-                        if (isMultiEditMode) {
-                            selectedIndices =
-                                if (index in selectedIndices) selectedIndices - index
-                                else selectedIndices + index
-                        } else {
-                            state.selectFile(index)
-                        }
-                    },
-                    onToggleMultiEdit = {
-                        isMultiEditMode = !isMultiEditMode
-                        if (!isMultiEditMode) {
-                            if (selectedIndices.size == 1) state.selectFile(selectedIndices.first())
-                            selectedIndices = emptySet()
-                        } else {
-                            if (state.selectedIndex >= 0)
-                                selectedIndices = setOf(state.selectedIndex)
-                        }
-                    },
-                    onDeselectAll = { selectedIndices = emptySet() },
-                    onOpenFolder = {
-                        val initialDir =
-                            state.sourcePath.ifBlank {
-                                currentSettings.metadataEditorRecentPaths.firstOrNull()
-                                    ?: System.getProperty("user.home")
-                                    ?: ""
-                            }
-                        val chooser = javax.swing.JFileChooser()
-                        chooser.fileSelectionMode = javax.swing.JFileChooser.DIRECTORIES_ONLY
-                        chooser.dialogTitle = "Select Image Folder"
-                        if (initialDir.isNotBlank()) chooser.currentDirectory = File(initialDir)
-                        val result = chooser.showOpenDialog(null)
-                        if (result == javax.swing.JFileChooser.APPROVE_OPTION) {
-                            loadFolder(chooser.selectedFile.absolutePath)
-                        }
-                    },
-                    modifier = Modifier.fillMaxHeight(),
-                )
-
-                // ═══ Center: image preview ═══
-                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    if (isLoadingImage) {
-                        Box(
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            contentAlignment = Alignment.Center,
+            // Main editor layout: [Source bar] + [Sidebar | Preview | Metadata Panel]
+            Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                // ── Source path bar ──
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    SourcePathField(
+                        value = state.sourcePath,
+                        onValueChange = { loadSourcePath(it) },
+                        onPickFile = onPickSourceFile,
+                        onPickFolder = onPickSourceFolder,
+                        modifier = Modifier.weight(1f),
+                        label = "Source",
+                        placeholder = "File or folder...",
+                        isError = state.errorMessage != null,
+                    )
+                    if (isMultiEditMode) {
+                        OutlinedButton(
+                            onClick = { showBulkSelectionDialog = true },
+                            modifier = Modifier.height(40.dp),
                         ) {
-                            CircularProgressIndicator()
-                        }
-                    } else if (currentImage != null && !isMultiEditMode) {
-                        val previewBitmap =
-                            remember(currentImage) { currentImage?.toComposeImageBitmap() }
-                        Box(
-                            modifier =
-                                Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (previewBitmap != null) {
-                                Image(
-                                    bitmap = previewBitmap,
-                                    contentDescription = "Selected image",
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit,
-                                )
-
-                                val config = state.selectedConfig
-
-                                // Back-of-photo controls
-                                if (config.hasBackImage()) {
-                                    Surface(
-                                        modifier =
-                                            Modifier.align(Alignment.BottomEnd).padding(8.dp),
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shape = RoundedCornerShape(4.dp),
-                                    ) {
-                                        Row(
-                                            modifier =
-                                                Modifier.padding(
-                                                    horizontal = 8.dp,
-                                                    vertical = 4.dp,
-                                                ),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Image,
-                                                "Back image assigned",
-                                                modifier = Modifier.size(14.dp),
-                                                tint = MaterialTheme.colorScheme.primary,
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            Text(
-                                                if (config.backImageMode == "combine")
-                                                    "Back: Combined"
-                                                else "Back: Appended",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            OutlinedButton(
-                                                onClick = { showBackImagePicker = true },
-                                                contentPadding = PaddingValues(0.dp),
-                                            ) {
-                                                Text(
-                                                    "Change",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                )
-                                            }
-                                            OutlinedButton(
-                                                onClick = {
-                                                    state.updateSelectedConfig {
-                                                        it.copy(
-                                                            backImageMode = null,
-                                                            backImageSourcePath = null,
-                                                            backCropNormalized = null,
-                                                            backCropRotation = 0,
-                                                        )
-                                                    }
-                                                },
-                                                contentPadding = PaddingValues(0.dp),
-                                            ) {
-                                                Text(
-                                                    "Remove",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.error,
-                                                )
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    OutlinedButton(
-                                        onClick = { showBackImagePicker = true },
-                                        modifier =
-                                            Modifier.align(Alignment.BottomEnd)
-                                                .padding(8.dp)
-                                                .height(28.dp),
-                                        contentPadding = PaddingValues(horizontal = 8.dp),
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Image,
-                                            "Select back of photo",
-                                            modifier = Modifier.size(16.dp),
-                                        )
-                                        Spacer(Modifier.width(4.dp))
-                                        Text(
-                                            "Add Back",
-                                            style = MaterialTheme.typography.labelSmall,
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // Rotation controls
-                        Surface(
-                            tonalElevation = 1.dp,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier =
-                                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                        ) {
-                            Row(
-                                modifier =
-                                    Modifier.fillMaxWidth()
-                                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text("Rotate:", style = MaterialTheme.typography.labelMedium)
-                                Spacer(Modifier.weight(1f))
-                                IconButton(
-                                    onClick = {
-                                        state.updateSelectedConfig { it.cycleRotationCCW() }
-                                    },
-                                    modifier = Modifier.size(24.dp),
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.RotateLeft,
-                                        "CCW",
-                                        Modifier.size(16.dp),
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { state.updateSelectedConfig { it.rotate180() } },
-                                    modifier = Modifier.size(24.dp),
-                                ) {
-                                    Icon(Icons.Default.Refresh, "180°", Modifier.size(16.dp))
-                                }
-                                IconButton(
-                                    onClick = {
-                                        state.updateSelectedConfig { it.cycleRotationCW() }
-                                    },
-                                    modifier = Modifier.size(24.dp),
-                                ) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.RotateRight,
-                                        "CW",
-                                        Modifier.size(16.dp),
-                                    )
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    "${state.selectedConfig.rotationDegrees}°",
-                                    style = MaterialTheme.typography.labelSmall,
-                                )
-                            }
-                        }
-                    } else if (isMultiEditMode && selectedIndices.isNotEmpty()) {
-                        Box(
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                "${selectedIndices.size} photos selected",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    } else {
-                        Box(
-                            modifier = Modifier.weight(1f).fillMaxWidth(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    Icons.Default.Image,
-                                    "No image",
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                                Text(
-                                    "Select an image",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
+                            Text("Select…", style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
 
-                // ═══ Right pane: metadata editor ═══
-                MetadataEditorPanel(
-                    state = state,
-                    editState = editState,
-                    isMultiEditMode = isMultiEditMode,
-                    selectedIndices = selectedIndices,
-                    sourceExif = sourceExif,
-                    metadataHistory = metadataHistory,
-                    onSettingsChange = onSettingsChange,
-                    currentSettings = currentSettings,
-                    settingsPort = settingsPort,
-                    coroutineScope = coroutineScope,
-                    dispatcherProvider = dispatcherProvider,
-                    onPickLocation = { indices ->
-                        locationPickerTargetIndices = indices
-                        showLocationPicker = true
-                    },
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                )
+                Row(modifier = Modifier.fillMaxSize().weight(1f)) {
+                    // ═══ Left sidebar: scrollable thumbnail strip ═══
+                    MetadataEditorSidebar(
+                        state = state,
+                        thumbnailCache = thumbnailCache,
+                        isMultiEditMode = isMultiEditMode,
+                        selectedIndices = selectedIndices,
+                        onSelect = { index ->
+                            if (isMultiEditMode) {
+                                selectedIndices =
+                                    if (index in selectedIndices) selectedIndices - index
+                                    else selectedIndices + index
+                            } else {
+                                state.selectFile(index)
+                            }
+                        },
+                        onToggleMultiEdit = {
+                            isMultiEditMode = !isMultiEditMode
+                            if (!isMultiEditMode) {
+                                if (selectedIndices.size == 1)
+                                    state.selectFile(selectedIndices.first())
+                                selectedIndices = emptySet()
+                            } else {
+                                if (state.selectedIndex >= 0)
+                                    selectedIndices = setOf(state.selectedIndex)
+                            }
+                        },
+                        onDeselectAll = { selectedIndices = emptySet() },
+                        onOpenFolder = { onPickSourceFolder() },
+                        modifier = Modifier.fillMaxHeight(),
+                    )
+
+                    // ═══ Center: image preview ═══
+                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        if (isLoadingImage) {
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator()
+                            }
+                        } else if (currentImage != null && !isMultiEditMode) {
+                            val previewBitmap =
+                                remember(currentImage) { currentImage?.toComposeImageBitmap() }
+                            Box(
+                                modifier =
+                                    Modifier.weight(1f)
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (previewBitmap != null) {
+                                    Image(
+                                        bitmap = previewBitmap,
+                                        contentDescription = "Selected image",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Fit,
+                                    )
+
+                                    val config = state.selectedConfig
+
+                                    // Back-of-photo controls
+                                    if (config.hasBackImage()) {
+                                        Surface(
+                                            modifier =
+                                                Modifier.align(Alignment.BottomEnd).padding(8.dp),
+                                            color = MaterialTheme.colorScheme.primaryContainer,
+                                            shape = RoundedCornerShape(4.dp),
+                                        ) {
+                                            Row(
+                                                modifier =
+                                                    Modifier.padding(
+                                                        horizontal = 8.dp,
+                                                        vertical = 4.dp,
+                                                    ),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Image,
+                                                    "Back image assigned",
+                                                    modifier = Modifier.size(14.dp),
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                )
+                                                Spacer(Modifier.width(4.dp))
+                                                Text(
+                                                    if (config.backImageMode == "combine")
+                                                        "Back: Combined"
+                                                    else "Back: Appended",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                )
+                                                Spacer(Modifier.width(4.dp))
+                                                OutlinedButton(
+                                                    onClick = { showBackImagePicker = true },
+                                                    contentPadding = PaddingValues(0.dp),
+                                                ) {
+                                                    Text(
+                                                        "Change",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                    )
+                                                }
+                                                OutlinedButton(
+                                                    onClick = {
+                                                        state.updateSelectedConfig {
+                                                            it.copy(
+                                                                backImageMode = null,
+                                                                backImageSourcePath = null,
+                                                                backCropNormalized = null,
+                                                                backCropRotation = 0,
+                                                            )
+                                                        }
+                                                    },
+                                                    contentPadding = PaddingValues(0.dp),
+                                                ) {
+                                                    Text(
+                                                        "Remove",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.error,
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        OutlinedButton(
+                                            onClick = { showBackImagePicker = true },
+                                            modifier =
+                                                Modifier.align(Alignment.BottomEnd)
+                                                    .padding(8.dp)
+                                                    .height(28.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp),
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Image,
+                                                "Select back of photo",
+                                                modifier = Modifier.size(16.dp),
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(
+                                                "Add Back",
+                                                style = MaterialTheme.typography.labelSmall,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Rotation controls
+                            Surface(
+                                tonalElevation = 1.dp,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier =
+                                    Modifier.fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                            ) {
+                                Row(
+                                    modifier =
+                                        Modifier.fillMaxWidth()
+                                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text("Rotate:", style = MaterialTheme.typography.labelMedium)
+                                    Spacer(Modifier.weight(1f))
+                                    IconButton(
+                                        onClick = {
+                                            state.updateSelectedConfig { it.cycleRotationCCW() }
+                                        },
+                                        modifier = Modifier.size(24.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.RotateLeft,
+                                            "CCW",
+                                            Modifier.size(16.dp),
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { state.updateSelectedConfig { it.rotate180() } },
+                                        modifier = Modifier.size(24.dp),
+                                    ) {
+                                        Icon(Icons.Default.Refresh, "180°", Modifier.size(16.dp))
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            state.updateSelectedConfig { it.cycleRotationCW() }
+                                        },
+                                        modifier = Modifier.size(24.dp),
+                                    ) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.RotateRight,
+                                            "CW",
+                                            Modifier.size(16.dp),
+                                        )
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "${state.selectedConfig.rotationDegrees}°",
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
+                                }
+                            }
+                        } else if (isMultiEditMode && selectedIndices.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    "${selectedIndices.size} photos selected",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxWidth(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Default.Image,
+                                        "No image",
+                                        modifier = Modifier.size(64.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Text(
+                                        "Select an image",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // ═══ Right pane: metadata editor ═══
+                    MetadataEditorPanel(
+                        state = state,
+                        editState = editState,
+                        isMultiEditMode = isMultiEditMode,
+                        selectedIndices = selectedIndices,
+                        sourceExif = sourceExif,
+                        metadataHistory = metadataHistory,
+                        onSettingsChange = onSettingsChange,
+                        currentSettings = currentSettings,
+                        settingsPort = settingsPort,
+                        coroutineScope = coroutineScope,
+                        dispatcherProvider = dispatcherProvider,
+                        onPickLocation = { indices ->
+                            locationPickerTargetIndices = indices
+                            showLocationPicker = true
+                        },
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                }
             }
         }
     }
-
-    // ── Folder picker is handled via coroutineScope.launch from button onClick handlers ──
-    // The JFileChooser is shown on the IO dispatcher to avoid blocking the UI.
 }
 
 // ── Sidebar ──
