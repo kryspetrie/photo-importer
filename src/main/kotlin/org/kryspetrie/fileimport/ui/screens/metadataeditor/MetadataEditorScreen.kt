@@ -273,7 +273,7 @@ fun MetadataEditorScreen(
                     state.isLoading = false
                     return@launch
                 }
-                state.folderPath = path
+                state.sourcePath = path
                 state.loadFiles(imageFiles)
                 thumbnailCache.clear()
                 onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
@@ -678,7 +678,7 @@ fun MetadataEditorScreen(
                         OutlinedButton(
                             onClick = {
                                 val initialDir =
-                                    state.folderPath.ifBlank {
+                                    state.sourcePath.ifBlank {
                                         currentSettings.metadataEditorRecentPaths.firstOrNull()
                                             ?: System.getProperty("user.home")
                                             ?: ""
@@ -758,7 +758,7 @@ fun MetadataEditorScreen(
                     onDeselectAll = { selectedIndices = emptySet() },
                     onOpenFolder = {
                         val initialDir =
-                            state.folderPath.ifBlank {
+                            state.sourcePath.ifBlank {
                                 currentSettings.metadataEditorRecentPaths.firstOrNull()
                                     ?: System.getProperty("user.home")
                                     ?: ""

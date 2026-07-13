@@ -39,11 +39,11 @@ enum class OutputMode {
  * - Per-file metadata configurations
  * - The output mode (overwrite vs save new)
  * - The output directory for save-new mode
- * - The current folder path
+ * - The source path (file or folder)
  */
 class BulkEditState {
-    /** Current folder path being edited. */
-    var folderPath by mutableStateOf("")
+    /** Current source path being edited (can be a file or folder). */
+    var sourcePath by mutableStateOf("")
 
     /** All image files in the current folder. */
     var files by mutableStateOf<List<File>>(emptyList())
@@ -57,7 +57,7 @@ class BulkEditState {
     var selectedIndex by mutableStateOf(-1)
 
     /** Output mode: overwrite original or save new. */
-    var outputMode by mutableStateOf(OutputMode.SAVE_NEW)
+    var outputMode by mutableStateOf(OutputMode.OVERWRITE)
 
     /** Output directory for save-new mode. */
     var outputDirectory by mutableStateOf("")
@@ -83,11 +83,25 @@ class BulkEditState {
     val fileCount: Int
         get() = files.size
 
+    /** Whether the source is a single file (vs a folder). */
+    val isSingleFile: Boolean
+        get() = files.size == 1 && sourcePath.isNotEmpty() && File(sourcePath).isFile
+
     /** Loads a list of files into the state. */
     fun loadFiles(imageFiles: List<File>) {
         files = imageFiles
         fileConfigs = imageFiles.associate { it.absolutePath to BulkEditFileEntry(it) }
         selectedIndex = if (imageFiles.isNotEmpty()) 0 else -1
+        isLoading = false
+        errorMessage = null
+    }
+
+    /** Loads a single file into the state. */
+    fun loadSingleFile(file: File) {
+        sourcePath = file.absolutePath
+        files = listOf(file)
+        fileConfigs = mapOf(file.absolutePath to BulkEditFileEntry(file))
+        selectedIndex = 0
         isLoading = false
         errorMessage = null
     }
@@ -150,7 +164,7 @@ class BulkEditState {
 
     /** Clears all state. */
     fun clear() {
-        folderPath = ""
+        sourcePath = ""
         files = emptyList()
         fileConfigs = emptyMap()
         selectedIndex = -1
