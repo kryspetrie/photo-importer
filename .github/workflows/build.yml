@@ -16,6 +16,14 @@ jobs:
     name: Test
     runs-on: macos-26
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /Applications/Xcode*.app 2>/dev/null || true
+          sudo rm -rf /Library/Developer/CoreSimulator 2>/dev/null || true
+          sudo rm -rf ~/Library/Developer/CoreSimulator 2>/dev/null || true
+          rm -rf ~/.gradle/caches/transforms-* 2>/dev/null || true
+          df -h /
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
@@ -29,6 +37,13 @@ jobs:
     needs: test
     runs-on: macos-26-intel  # Intel-based macOS runner
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /Applications/Xcode*.app 2>/dev/null || true
+          sudo rm -rf /Library/Developer/CoreSimulator 2>/dev/null || true
+          rm -rf ~/.gradle/caches/transforms-* 2>/dev/null || true
+          df -h /
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
@@ -93,6 +108,13 @@ jobs:
     needs: test
     runs-on: macos-26  # Apple Silicon-based macOS runner
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /Applications/Xcode*.app 2>/dev/null || true
+          sudo rm -rf /Library/Developer/CoreSimulator 2>/dev/null || true
+          rm -rf ~/.gradle/caches/transforms-* 2>/dev/null || true
+          df -h /
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
@@ -157,6 +179,12 @@ jobs:
     needs: test
     runs-on: windows-latest
     steps:
+      - name: Free disk space
+        shell: pwsh
+        run: |
+          Get-PSDrive -PSProvider FileSystem | Format-Table
+          Remove-Item -Recurse -Force "~\.gradle\caches\transforms-*" -ErrorAction SilentlyContinue
+          Get-PSDrive -PSProvider FileSystem | Format-Table
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
@@ -212,6 +240,12 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
+      - name: Free disk space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghcabal 2>/dev/null || true
+          rm -rf ~/.gradle/caches/transforms-* 2>/dev/null || true
+          df -h /
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
