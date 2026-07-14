@@ -1,8 +1,8 @@
 # Camera Device Import Plan
 
-> **Status:** Planning  
+> **Status:** Partially Implemented (domain ports & model exist; UI not yet connected)
 > **Created:** 2026-05-17  
-> **Updated:** 2026-05-21  
+> **Updated:** 2026-07-14  
 > **Scope:** petrie-file-importer — Import from PTP/MTP camera devices that don't mount as USB mass storage (cross-platform: macOS, Linux, Windows)  
 > **Related:** DevicePort, DeviceAdapter, MediaImportScreen, PhotoScanImportScreen, [CAMERA_DEVICE_IMPORT_TEST_PLAN.md](./CAMERA_DEVICE_IMPORT_TEST_PLAN.md)
 

@@ -75,10 +75,8 @@ Native installers bundle a JRE so end users don't need Java installed. `jpackage
 #### Local Build (current platform only)
 
 ```bash
-# Build for your current OS
-./build-all.sh            # macOS .dmg natively + Linux .deb via Docker
-./build-all.sh macos      # macOS .dmg only
-./build-all.sh linux      # Linux .deb only (requires Docker)
+# Build for your current platform
+./build-installers.sh    # Auto-detects OS and builds appropriate installer
 
 # Or use Gradle directly
 ./gradlew packageDmg      # macOS

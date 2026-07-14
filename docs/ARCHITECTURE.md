@@ -60,6 +60,7 @@ org.kryspetrie.fileimport/
 │   ├── PerspectiveCorrectionService.kt  # Homography correction
 │   ├── FaceRegionTransformer.kt    # Face region coordinate mapping
 │   ├── LocationSearchService.kt    # Geocoding search
+│   ├── MetadataWritingService.kt   # Standalone metadata writing (bulk editor)
 │   └── export/                     # Export sub-functions
 │       ├── ExifMetadataWriter.kt
 │       ├── FilenameResolver.kt
@@ -154,7 +155,10 @@ org.kryspetrie.fileimport/
     │   ├── ThumbnailImage.kt       # Async thumbnail loader
     │   ├── ThumbnailCache.kt       # In-memory thumbnail cache
     │   ├── DropTarget.kt           # Drag-and-drop utilities
-    │   ├── FileDialogs.kt         # Cross-platform file dialogs
+    │   ├── FileDialogs.kt         # Cross-platform file dialogs (pickFolder, pickFile, pickImageFile)
+    │   ├── PathSelectionField.kt  # SourcePathField, FolderSelectionField, FileSelectionField
+    │   ├── LoadingIndicator.kt    # Native Compose loading spinners (CubeGrid)
+    │   ├── ChunkyScrollbar.kt     # Custom scrollbar for content panels
     │   └── ...
     └── screens/                    # Full-screen views & wizards
         ├── MediaImportScreen.kt   # Main import flow
@@ -168,6 +172,11 @@ org.kryspetrie.fileimport/
         │   │   ├── MetadataEditState.kt   # Compose state holder
         │   │   └── MetadataField.kt      # Reusable metadata field
         │   └── ...
+        ├── metadataeditor/         # Standalone bulk metadata editor tab
+        │   ├── MetadataEditorScreen.kt  # Main editor with source path, sidebar, preview, panel
+        │   ├── BulkEditState.kt         # Per-file metadata state management
+        │   └── BulkSelectionDialog.kt   # Multi-select thumbnail overlay dialog
+        ├── duplicatescanner/       # Standalone duplicate scanner tab
         ├── scan/                   # Legacy Photo Scan (simple mode)
         └── ...
 ```

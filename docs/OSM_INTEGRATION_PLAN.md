@@ -1,5 +1,9 @@
 # OpenStreetMap Location Search Integration Plan
 
+> **Status:** Implemented  
+> **Updated:** 2026-07-14  
+> **Implementation:** `NominatimGeocodingAdapter`, `LocationSearchService`, `LocationSearchPort`, `GeocodingPort`, and the map-based `LocationPickerOverlay` composable.
+
 ## Overview
 
 Integrate Nominatim (OpenStreetMap's free geocoding API) to let users search for locations by name, then populate the Location & GPS fields (city, state, country, GPS latitude/longitude) from the selected result. This replaces manual coordinate entry with a search-and-pick workflow.

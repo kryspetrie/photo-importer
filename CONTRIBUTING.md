@@ -250,7 +250,7 @@ A few pragmatic exceptions exist (e.g., `AppPaths`, `Platform`, `PhotoScanWizard
 ./gradlew packageDeb       # Linux
 
 # Multi-platform local build (macOS native + Linux via Docker)
-./build-all.sh
+./build-installers.sh
 
 # Uber JAR (requires Java on the target machine)
 ./gradlew packageUberJarForCurrentOS

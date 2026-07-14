@@ -25,7 +25,7 @@
 ./gradlew packageDeb
 
 # All platforms (via scripts)
-./build-all.sh
+./build-installers.sh
 ```
 
 **macOS Architecture Note**: The GitHub Actions workflow builds separate installers for:

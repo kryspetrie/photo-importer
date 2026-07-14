@@ -1,6 +1,6 @@
 # Camera Device Import — Testing Plan
 
-> **Status:** Planning  
+> **Status:** Deferred (awaiting camera device import implementation)
 > **Created:** 2026-05-21  
 > **Scope:** petrie-file-importer — Test suite for PTP/MTP camera device import (cross-platform)  
 > **Related:** [CAMERA_DEVICE_IMPORT_PLAN.md](./CAMERA_DEVICE_IMPORT_PLAN.md)

@@ -1,8 +1,8 @@
 # ML Detection Integration Plan
 
-> **Status:** Planning  
+> **Status:** Implemented  
 > **Created:** 2026-05-08  
-> **Updated:** 2026-05-17  
+> **Updated:** 2026-07-14  
 > **Scope:** petrie-file-importer — ONNX-based photo detection with CV refinement, settings system, training data export  
 > **Related:** photo-pose-detector (Python CLI prototype)  
 > **Supersedes:** DETECTION_MODES_PLAN.md (this plan absorbs and extends it)
