@@ -416,10 +416,12 @@ When adding a new destructive feature, always implement:
 
 ### Navigation Flow
 
-The app uses tab-based navigation with three top-level tabs:
-- **Import** — Main import flow with profiles, source/dest selection
+The app uses tab-based navigation with five top-level tabs:
+- **Media Import** — Main import flow with profiles, source/dest selection
+- **Photo Scan Import** — Extract photos from scanned images with corner detection and metadata
 - **Reorganize** — Library file reorganization with undo journals
 - **Library Duplicates** — Standalone duplicate scanner
+- **Metadata Editor** — Bulk EXIF/IPTC/XMP metadata editing across multiple photos
 
 Within each tab, flow steps are managed via an enum (`FlowStep`, `ReorgStep`, etc.) and dialogs for modal interactions (file selection, duplicate review, import preview).
 

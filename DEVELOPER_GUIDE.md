@@ -679,7 +679,7 @@ Remember: Compose is declarative. Think "UI is a function of state" and you'll b
 
 ## Photo Scan Feature
 
-The Photo Scan feature allows importing physical photographs that have been photographed on a solid background. See [PHOTO_SCAN_FEATURE.md](docs/PHOTO_SCAN_FEATURE.md) for detailed documentation.
+The Photo Scan feature allows importing physical photographs that have been photographed on a solid background. See the Photo Scan section in README.md for documentation.
 
 ### Quick Overview
 

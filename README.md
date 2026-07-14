@@ -15,11 +15,15 @@ A cross-platform Kotlin desktop application for organizing and importing photos 
 - **Camera Auto-Detection**: Automatically selects the right profile when a camera is connected
 - **Library Reorganization**: Reorganize existing libraries with move or copy mode, full undo support to restore original locations and filenames
 - **Standalone Duplicate Scanner**: Find and resolve duplicates across your entire photo library
+- **Bulk Metadata Editor**: Edit EXIF/IPTC/XMP metadata across multiple photos at once with multi-select, batch apply, and interactive map-based location picking
+- **Face Detection**: Automatically detect and tag faces in photos using ONNX models; supports Face, Pet, Body, and Object region types (MWG-RS standard)
+- **Back-of-Photo Scanning**: Assign a "back of photo" image to any photo — append or combine with the front image during export
+- **Photo Scan Import**: Extract individual photos from scanned images with automatic corner detection, perspective correction, and metadata override
+- **Interactive Map Location**: Search locations by name, pick on a map, and auto-fill city, state, country, and GPS coordinates using OpenStreetMap/Nominatim
 - **Watch Folder**: Automatically import new files dropped into a monitored folder
 - **Detailed Import History**: Complete file-by-file tracking with source/destination paths, naming patterns, hash verification, sidecar imports, and per-file status
 - **CLI Mode**: Scriptable command-line interface with dry-run support
 - **Cross-Platform**: Native installers for macOS, Windows, and Linux with bundled JRE
-- **Photo Scan Import**: Extract individual photos from scanned images with automatic corner detection, perspective correction, and metadata override
 
 ## Photo Scan Feature
 
@@ -33,24 +37,41 @@ DETECTING → CORNER_EDITING → METADATA_EDITING → EXPORTING
 
 ### Features
 
-- **Automatic Detection**: Edge detection finds photo boundaries on solid backgrounds
+- **Automatic Detection**: YOLO neural network detects photo boundaries on solid backgrounds, with CV fallback for edge cases
 - **Corner Editing**: Visual preview with draggable corner handles
 - **Perspective Correction**: Bilinear interpolation corrects trapezoidal distortion
-- **Metadata Override**: Set original date, year, month, tags, and notes
+- **Metadata Editing**: Set original date, year, month, tags, subjects, camera settings, and location via interactive map
+- **Face Detection**: ONNX-based face detection auto-tags people in photos (MWG-RS standard)
+- **Back-of-Photo**: Assign a back-of-photo image to any photo; choose append or combine mode
 - **Batch Export**: Extract multiple photos from one scan with automatic naming (`photo_1.jpg`, `photo_2.jpg`)
 
 ### Usage
 
-1. Select **Import Scans** mode in the Import screen
+1. Select **Photo Scan Import** tab in the navigation bar
 2. Choose source folder with scanned images
 3. Review detected photos — drag corners to adjust
 4. Add/remove detected photos as needed
-5. Edit metadata (date, tags, notes)
+5. Edit metadata (date, tags, notes, location, camera settings)
 6. Export to destination folder
 
-### Documentation
+## Metadata Editor
 
-See [docs/PHOTO_SCAN_FEATURE.md](docs/PHOTO_SCAN_FEATURE.md) for detailed documentation.
+A standalone tab for editing EXIF/IPTC/XMP metadata across multiple photos at once. Open a folder of images, select individual photos or use multi-edit mode to batch-apply metadata changes.
+
+### Features
+
+- **Source Selection**: Open a folder of images or a single file via the source path field
+- **Thumbnail Sidebar**: Scrollable sidebar with image thumbnails for quick navigation (keyboard shortcuts: `⌘,` / `⌘.`)
+- **Multi-Edit Mode**: Toggle multi-edit to select multiple photos, then batch-apply metadata changes
+- **Bulk Selection Dialog**: Pop-out thumbnail grid with Select All / Select None checkboxes
+- **Metadata Fields**: Date, title, description, subjects/tags, city, state, country, GPS, camera make/model, lens, focal length, aperture, shutter speed, ISO
+- **Override Controls**: Each field has an override checkbox — when checked, the source EXIF value is preserved; when unchecked, the value is written (or nulled out)
+- **Interactive Map**: Search locations by name or click the map to set GPS coordinates
+- **Face Detection & Tagging**: Auto-detect faces; click on photos to add named face regions
+- **Back-of-Photo**: Assign a back-of-photo image to any photo (append or combine mode)
+- **Source EXIF Display**: Shows original EXIF data alongside your overrides
+- **Output Modes**: Overwrite originals or save to a new output folder
+- **Recent Paths**: Remembers recently used source folders for quick access
 
 ## Quick Start
 
@@ -245,13 +266,15 @@ This application follows **Hexagonal Architecture** (Ports and Adapters):
 
 | Component | Technology |
 |-----------|------------|
-| UI Framework | Jetpack Compose for Desktop 1.6 |
+| UI Framework | Compose Multiplatform 1.11 |
 | Language | Kotlin 2.3 |
 | DI Framework | Koin 4.0 |
 | Metadata | metadata-extractor 2.19 |
 | Image Processing | imgscalr, BoofCV (SURF) |
+| Face Detection | ONNX Runtime (YOLOv8 model) |
+| Map/Location | OpenStreetMap tiles, Nominatim geocoding |
 | Caching | SQLite (xerial) |
-| CLI | Clikt |
+| CLI | Clikt 4.2 |
 | Testing | JUnit 5, AssertJ, Mockito |
 | Build | Gradle (Kotlin DSL) |
 | Formatting | ktfmt |

@@ -37,11 +37,13 @@ import org.kryspetrie.fileimport.ui.theme.PetrieTheme
 /**
  * Defines the available navigation tabs in the Petrie File Importer application.
  *
- * This enumeration represents the three main features/screens accessible through the bottom
- * navigation bar. Each tab corresponds to a distinct use case in the photo import workflow:
- * 1. **Import**: Primary workflow for importing photos from cameras, SD cards, or folders
- * 2. **Reorganize**: Reorganize existing photo libraries with new naming/folder patterns
- * 3. **Library Duplicates**: Scan and resolve duplicate photos across the library
+ * This enumeration represents the main features/screens accessible through the bottom
+ * navigation bar. Each tab corresponds to a distinct use case in the photo management workflow:
+ * 1. **Media Import**: Import photos/videos from cameras, SD cards, or folders
+ * 2. **Photo Scan Import**: Extract individual photos from scanned images
+ * 3. **Reorganize**: Reorganize existing photo libraries with new naming/folder patterns
+ * 4. **Library Duplicates**: Scan and resolve duplicate photos across the library
+ * 5. **Metadata Editor**: Edit EXIF/IPTC/XMP metadata across multiple photos in bulk
  *
  * ## Navigation Pattern
  *
@@ -156,7 +158,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
  * This is the root composable for the entire application UI. It sets up the main application
  * structure including:
  * - Theme configuration (light/dark/system)
- * - Navigation bar with three main tabs
+ * - Navigation bar with five tabs (Import, Photo Scan, Reorganize, Duplicates, Metadata Editor)
  * - Screen content based on selected tab
  * - Settings state management
  *

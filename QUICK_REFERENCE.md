@@ -29,8 +29,8 @@
 ```
 
 **macOS Architecture Note**: The GitHub Actions workflow builds separate installers for:
-- **Intel Macs** (x86_64) - Built on `macos-13` runner
-- **Apple Silicon Macs** (arm64) - Built on `macos-latest` runner
+- **Intel Macs** (x86_64) - Built on `macos-26-intel` runner
+- **Apple Silicon Macs** (arm64) - Built on `macos-26` runner
 
 Download the correct version for your Mac from GitHub Releases.
 
