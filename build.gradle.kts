@@ -109,9 +109,7 @@ dependencies {
     testImplementation("org.junit.vintage:junit-vintage-engine:5.11.4") {
         because("ComposeTestRule requires JUnit 4 rule support within JUnit 5")
     }
-    implementation("com.github.OCNYang.Compose-SpinKit:library:1.0.5") {
-        because("Modern loading animations for Compose Desktop")
-    }
+
 
     tasks.test {
         useJUnitPlatform { excludeTags("UiComponentTest", "integration") }
