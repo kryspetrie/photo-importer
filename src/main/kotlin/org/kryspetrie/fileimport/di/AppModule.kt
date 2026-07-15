@@ -10,6 +10,7 @@ import org.kryspetrie.fileimport.application.LocationSearchService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
 import org.kryspetrie.fileimport.application.metadata.MetadataEditJournalRepository
+import org.kryspetrie.fileimport.application.metadata.MetadataEditService
 import org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.application.ScanService
@@ -176,6 +177,7 @@ val appModule = module {
 
     single { MetadataEditJournalRepository(get()) }
     single { MetadataEditUndoService(get(), get(), get()) }
+    single { MetadataEditService(get(), get(), get(), get()) }
 
     // ── Location Search ─────────────────────────────────────────────
 

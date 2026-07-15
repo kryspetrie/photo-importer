@@ -61,6 +61,10 @@ org.kryspetrie.fileimport/
 │   ├── FaceRegionTransformer.kt    # Face region coordinate mapping
 │   ├── LocationSearchService.kt    # Geocoding search
 │   ├── MetadataWritingService.kt   # Standalone metadata writing (bulk editor)
+│   ├── metadata/                   # Metadata editor application services
+│   │   ├── MetadataEditService.kt        # Save/write orchestration (delegates to MetadataWritingService)
+│   │   ├── MetadataEditUndoService.kt    # Undo/redo backup & restore
+│   │   └── MetadataEditJournalRepository.kt  # Journal persistence (JSON)
 │   └── export/                     # Export sub-functions
 │       ├── ExifMetadataWriter.kt
 │       ├── FilenameResolver.kt
@@ -172,11 +176,13 @@ org.kryspetrie.fileimport/
         │   │   ├── MetadataEditState.kt   # Compose state holder
         │   │   └── MetadataField.kt      # Reusable metadata field
         │   └── ...
-        ├── metadataeditor/         # Standalone bulk metadata editor tab
-        │   ├── MetadataEditorScreen.kt  # Main editor with source path, sidebar, preview, panel
-        │   ├── BulkEditState.kt         # Per-file metadata state management
-        │   └── BulkSelectionDialog.kt   # Multi-select thumbnail overlay dialog
-        ├── duplicatescanner/       # Standalone duplicate scanner tab
+├── metadataeditor/         # Standalone bulk metadata editor tab
+│   ├── MetadataEditorScreen.kt  # Main editor orchestrator (source path, preview, dialogs)
+│   ├── MetadataEditorSidebar.kt # Thumbnail sidebar with modified indicators
+│   ├── MetadataEditorPanel.kt   # Metadata fields panel with override toggles
+│   ├── MetadataEditorActions.kt # OverrideToggle helper and field-updater helpers
+│   ├── BulkEditState.kt         # Per-file metadata state, UiMessage, OutputMode
+│   └── BulkSelectionDialog.kt   # Multi-select thumbnail overlay dialog        ├── duplicatescanner/       # Standalone duplicate scanner tab
         ├── scan/                   # Legacy Photo Scan (simple mode)
         └── ...
 ```

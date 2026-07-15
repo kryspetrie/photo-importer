@@ -15,9 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,9 +26,6 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -58,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -69,49 +64,45 @@ import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
+import org.kryspetrie.fileimport.application.metadata.MetadataEditService
+import org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
-import org.kryspetrie.fileimport.domain.model.MetadataHistory
+import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.model.OverrideState
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.model.RegionType
-import org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService
-import org.kryspetrie.fileimport.domain.model.MetadataEditEntry
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
-import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.components.SourcePathField
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.BackImagePickerDialog
-import org.kryspetrie.fileimport.ui.screens.wizard.edit.CameraSection
+import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerOverlay
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.FaceNameEntryPanel
-import org.kryspetrie.fileimport.ui.screens.wizard.edit.LocationSection
-import org.kryspetrie.fileimport.ui.screens.wizard.edit.QuickEditMetadataFields
-import org.kryspetrie.fileimport.ui.screens.wizard.edit.SubjectsSection
 import org.kryspetrie.fileimport.ui.screens.wizard.isCtrlPressed
-import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerOverlay
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
-import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
 import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 
 private val THUMBNAIL_SIZE = 80
+private const val MESSAGE_AUTO_CLEAR_MS = 5000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -129,10 +120,10 @@ fun MetadataEditorScreen(
     val locationSearchService: LocationSearchPort = koinInject()
     val geocodingPort: GeocodingPort = koinInject()
     val settingsPort: SettingsPort = koinInject()
-    val faceRegionTransformer: org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort =
-        koinInject()
-    val fileSystemAdapter: org.kryspetrie.fileimport.domain.port.FileSystemPort = koinInject()
+    val editService: MetadataEditService = koinInject()
     val undoService: MetadataEditUndoService = koinInject()
+    val faceRegionTransformer: FaceRegionTransformerPort = koinInject()
+    val fileSystemAdapter: FileSystemPort = koinInject()
     val currentSettings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
 
     // Image loading state
@@ -167,6 +158,14 @@ fun MetadataEditorScreen(
     // Metadata history
     val metadataHistory = settings.metadataHistory
 
+    // Auto-clear messages after timeout
+    LaunchedEffect(state.message) {
+        if (state.message != null) {
+            delay(MESSAGE_AUTO_CLEAR_MS)
+            state.clearMessage()
+        }
+    }
+
     // Load image when selection changes
     LaunchedEffect(state.selectedIndex, state.files) {
         val file = state.selectedFile
@@ -175,7 +174,6 @@ fun MetadataEditorScreen(
             try {
                 val img = withContext(dispatcherProvider.io) { ImageIO.read(file) }
                 currentImage = img
-                // Load source EXIF
                 try {
                     val meta =
                         withContext(dispatcherProvider.io) {
@@ -258,14 +256,13 @@ fun MetadataEditorScreen(
 
     val loadSourcePath: (String) -> Unit = { path ->
         state.isLoading = true
-        state.errorMessage = null
+        state.message = null
         coroutineScope.launch {
             try {
                 val source = File(path)
                 if (source.isFile) {
                     if (!isImageFile(source)) {
-                        state.errorMessage = "Not an image file: $path"
-                        state.isLoading = false
+                        state.showError("Not an image file: $path")
                         return@launch
                     }
                     state.loadSingleFile(source)
@@ -280,8 +277,7 @@ fun MetadataEditorScreen(
                                 ?.sortedBy { it.name.lowercase() } ?: emptyList()
                         }
                     if (imageFiles.isEmpty()) {
-                        state.errorMessage = "No image files found in: $path"
-                        state.isLoading = false
+                        state.showError("No image files found in: $path")
                         return@launch
                     }
                     state.sourcePath = path
@@ -289,13 +285,12 @@ fun MetadataEditorScreen(
                     thumbnailCache.clear()
                     onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
                 } else {
-                    state.errorMessage = "Path does not exist: $path"
-                    state.isLoading = false
+                    state.showError("Path does not exist: $path")
                 }
             } catch (_: CancellationException) {
                 // Cancellation must propagate
             } catch (e: Exception) {
-                state.errorMessage = "Error loading: ${e.message}"
+                state.showError("Error loading: ${e.message}")
             } finally {
                 state.isLoading = false
             }
@@ -314,301 +309,77 @@ fun MetadataEditorScreen(
         pickFolder("Select Output Folder")?.let { state.outputDirectory = it }
     }
 
-    // ── Save ──
+    // ── Save current file (delegates to MetadataEditService) ──
     val saveCurrentFile: () -> Unit = {
         val file = state.selectedFile
         if (file != null) {
             val config = state.selectedConfig
             coroutineScope.launch {
                 try {
-                    // Create backup before overwrite (for undo support)
-                    var backupPath: String? = null
-                    if (state.outputMode == OutputMode.OVERWRITE) {
-                        backupPath = undoService.createBackup(file.absolutePath)
-                    }
-
-                    val processedImage =
-                        withContext(dispatcherProvider.io) { imageProcessing.readImage(FilePath(file.absolutePath)) }
-                    if (processedImage != null) {
-                        var backImageBackupPath: String? = null
-                        var backImageOutputPath: String? = null
-                        var entryOutputPath: String? = null
-
-                        when (state.outputMode) {
-                            OutputMode.OVERWRITE -> {
-                                val outputPath = FilePath(file.absolutePath)
-                                // Backup back image before overwrite
-                                val backFile = File(file.parent, file.nameWithoutExtension + "_back.jpg")
-                                if (backFile.exists() && backupPath != null) {
-                                    backImageBackupPath =
-                                        withContext(dispatcherProvider.io) {
-                                            undoService.createBackup(backFile.absolutePath)
-                                        }
-                                }
-                                val metadataService =
-                                    MetadataWritingService(
-                                        faceRegionTransformer = faceRegionTransformer,
-                                        imageProcessing = imageProcessing,
-                                        fileSystem = fileSystemAdapter,
-                                    )
-                                metadataService.writeImageWithMetadata(
-                                    image = processedImage,
-                                    outputPath = outputPath,
-                                    config = config,
-                                    sourcePath = FilePath(file.absolutePath),
-                                    preRotationWidth = processedImage.width,
-                                    preRotationHeight = processedImage.height,
-                                )
-                                if (config.hasBackImage()) {
-                                    val backImageResult =
-                                        imageProcessing.prepareBackImage(
-                                            config,
-                                            maxWidth = processedImage.width,
-                                            maxHeight = processedImage.height,
-                                        )
-                                    if (backImageResult != null) {
-                                        val outDir = file.parent
-                                        val backFileName = file.nameWithoutExtension + "_back.jpg"
-                                        val backOutputFilePath =
-                                            FilePath(File(outDir, backFileName).absolutePath)
-                                        File(outDir).mkdirs()
-                                        imageProcessing.writeJpegImage(
-                                            backImageResult,
-                                            backOutputFilePath,
-                                        )
-                                        backImageOutputPath = backOutputFilePath.path
-                                    }
-                                }
-                            }
-                            OutputMode.SAVE_NEW -> {
-                                val outDir = state.outputDirectory.ifBlank { file.parent }
-                                val outputFileName = file.nameWithoutExtension + ".jpg"
-                                val outputPath = FilePath(File(outDir, outputFileName).absolutePath)
-                                entryOutputPath = outputPath.path
-                                File(outDir).mkdirs()
-                                val metadataService =
-                                    MetadataWritingService(
-                                        faceRegionTransformer = faceRegionTransformer,
-                                        imageProcessing = imageProcessing,
-                                        fileSystem = fileSystemAdapter,
-                                    )
-                                metadataService.writeImageWithMetadata(
-                                    image = processedImage,
-                                    outputPath = outputPath,
-                                    config = config,
-                                    sourcePath = FilePath(file.absolutePath),
-                                    preRotationWidth = processedImage.width,
-                                    preRotationHeight = processedImage.height,
-                                )
-                                if (config.hasBackImage()) {
-                                    val backImageResult =
-                                        imageProcessing.prepareBackImage(
-                                            config,
-                                            maxWidth = processedImage.width,
-                                            maxHeight = processedImage.height,
-                                        )
-                                    if (backImageResult != null) {
-                                        val backOutDir =
-                                            if (state.outputDirectory.isNotBlank())
-                                                state.outputDirectory
-                                            else file.parent
-                                        val backFileName = file.nameWithoutExtension + "_back.jpg"
-                                        val backOutputFilePath =
-                                            FilePath(File(backOutDir, backFileName).absolutePath)
-                                        File(backOutDir).mkdirs()
-                                        imageProcessing.writeJpegImage(
-                                            backImageResult,
-                                            backOutputFilePath,
-                                        )
-                                        backImageOutputPath = backOutputFilePath.path
-                                    }
-                                }
-                            }
-                        }
-
-                        // Save journal entry for undo
-                        val entry =
-                            MetadataEditEntry(
-                                filePath = file.absolutePath,
-                                backupPath = backupPath ?: "",
-                                configSnapshot = config,
-                                wasSavedNew = state.outputMode == OutputMode.SAVE_NEW,
-                                outputFilePath = entryOutputPath ?: "",
-                                backImageBackupPath = backImageBackupPath,
-                                backImageOutputPath = backImageOutputPath,
-                            )
-                        val journalPath =
-                            undoService.saveJournalPath(
-                                sourceFolderPath = state.sourcePath,
-                                outputMode = state.outputMode.name,
-                                entries = listOf(entry),
-                            )
+                    val result = editService.saveFile(
+                        file = file,
+                        config = config,
+                        outputMode = state.outputMode.name,
+                        outputDirectory = state.outputDirectory,
+                    )
+                    if (result != null) {
+                        val journalPath = editService.saveJournal(
+                            sourceFolderPath = state.sourcePath,
+                            outputMode = state.outputMode.name,
+                            entries = listOf(result.entry),
+                        )
                         if (journalPath != null) {
                             state.lastJournalPath = journalPath
                             state.canUndo = true
                             state.canRedo = false
                         }
-
                         state.markSaved(file)
-                        state.statusMessage = "Saved: ${file.name}"
+                        state.showInfo("Saved: ${file.name}")
                     } else {
-                        state.errorMessage = "Could not read image: ${file.name}"
+                        state.showError("Could not read image: ${file.name}")
                     }
                 } catch (_: CancellationException) {
                     // Cancellation must propagate
                 } catch (e: Exception) {
-                    state.errorMessage = "Error saving: ${e.message}"
+                    state.showError("Error saving: ${e.message}")
                 }
             }
         }
     }
 
-    // ── Save All Modified ──
+    // ── Save All Modified (delegates to MetadataEditService) ──
     val saveAllModified: () -> Unit = {
         val modifiedEntries = state.fileConfigs.values.filter { it.isModified }
         if (modifiedEntries.isEmpty()) {
-            state.statusMessage = "No unsaved changes"
+            state.showInfo("No unsaved changes")
         } else
         coroutineScope.launch {
             try {
-                val entries = mutableListOf<MetadataEditEntry>()
+                val entries = mutableListOf<org.kryspetrie.fileimport.domain.model.MetadataEditEntry>()
                 var savedCount = 0
 
                 for (entry in modifiedEntries) {
                     val file = entry.file
                     val config = entry.config
-
-                    // Create backup before overwrite
-                    var backupPath: String? = null
-                    if (state.outputMode == OutputMode.OVERWRITE) {
-                        backupPath = undoService.createBackup(file.absolutePath)
-                    }
-
-                    val processedImage =
-                        withContext(dispatcherProvider.io) { imageProcessing.readImage(FilePath(file.absolutePath)) }
-                    if (processedImage != null) {
-                        // Backup back image before overwrite
-                        var backImageBackupPath: String? = null
-                        var backImageOutputPath: String? = null
-                        var entryOutputPath: String? = null
-
-                        when (state.outputMode) {
-                            OutputMode.OVERWRITE -> {
-                                val outputPath = FilePath(file.absolutePath)
-                                val backFile =
-                                    File(file.parent, file.nameWithoutExtension + "_back.jpg")
-                                if (backFile.exists() && backupPath != null) {
-                                    backImageBackupPath =
-                                        withContext(dispatcherProvider.io) {
-                                            undoService.createBackup(backFile.absolutePath)
-                                        }
-                                }
-                                val metadataService =
-                                    MetadataWritingService(
-                                        faceRegionTransformer = faceRegionTransformer,
-                                        imageProcessing = imageProcessing,
-                                        fileSystem = fileSystemAdapter,
-                                    )
-                                metadataService.writeImageWithMetadata(
-                                    image = processedImage,
-                                    outputPath = outputPath,
-                                    config = config,
-                                    sourcePath = FilePath(file.absolutePath),
-                                    preRotationWidth = processedImage.width,
-                                    preRotationHeight = processedImage.height,
-                                )
-                                if (config.hasBackImage()) {
-                                    val backImageResult =
-                                        imageProcessing.prepareBackImage(
-                                            config,
-                                            maxWidth = processedImage.width,
-                                            maxHeight = processedImage.height,
-                                        )
-                                    if (backImageResult != null) {
-                                        val outDir = file.parent
-                                        val backFileName = file.nameWithoutExtension + "_back.jpg"
-                                        val backOutputFilePath =
-                                            FilePath(File(outDir, backFileName).absolutePath)
-                                        File(outDir).mkdirs()
-                                        imageProcessing.writeJpegImage(
-                                            backImageResult,
-                                            backOutputFilePath,
-                                        )
-                                        backImageOutputPath = backOutputFilePath.path
-                                    }
-                                }
-                            }
-                            OutputMode.SAVE_NEW -> {
-                                val outDir = state.outputDirectory.ifBlank { file.parent }
-                                val outputFileName = file.nameWithoutExtension + ".jpg"
-                                val outputPath =
-                                    FilePath(File(outDir, outputFileName).absolutePath)
-                                entryOutputPath = outputPath.path
-                                File(outDir).mkdirs()
-                                val metadataService =
-                                    MetadataWritingService(
-                                        faceRegionTransformer = faceRegionTransformer,
-                                        imageProcessing = imageProcessing,
-                                        fileSystem = fileSystemAdapter,
-                                    )
-                                metadataService.writeImageWithMetadata(
-                                    image = processedImage,
-                                    outputPath = outputPath,
-                                    config = config,
-                                    sourcePath = FilePath(file.absolutePath),
-                                    preRotationWidth = processedImage.width,
-                                    preRotationHeight = processedImage.height,
-                                )
-                                if (config.hasBackImage()) {
-                                    val backImageResult =
-                                        imageProcessing.prepareBackImage(
-                                            config,
-                                            maxWidth = processedImage.width,
-                                            maxHeight = processedImage.height,
-                                        )
-                                    if (backImageResult != null) {
-                                        val backOutDir =
-                                            if (state.outputDirectory.isNotBlank())
-                                                state.outputDirectory
-                                            else file.parent
-                                        val backFileName = file.nameWithoutExtension + "_back.jpg"
-                                        val backOutputFilePath =
-                                            FilePath(File(backOutDir, backFileName).absolutePath)
-                                        File(backOutDir).mkdirs()
-                                        imageProcessing.writeJpegImage(
-                                            backImageResult,
-                                            backOutputFilePath,
-                                        )
-                                        backImageOutputPath = backOutputFilePath.path
-                                    }
-                                }
-                            }
-                        }
-
-                        entries.add(
-                            MetadataEditEntry(
-                                filePath = file.absolutePath,
-                                backupPath = backupPath ?: "",
-                                configSnapshot = config,
-                                wasSavedNew = state.outputMode == OutputMode.SAVE_NEW,
-                                outputFilePath = entryOutputPath ?: "",
-                                backImageBackupPath = backImageBackupPath,
-                                backImageOutputPath = backImageOutputPath,
-                            )
-                        )
+                    val result = editService.saveFile(
+                        file = file,
+                        config = config,
+                        outputMode = state.outputMode.name,
+                        outputDirectory = state.outputDirectory,
+                    )
+                    if (result != null) {
+                        entries.add(result.entry)
                         state.markSaved(file)
                         savedCount++
                     }
                 }
 
-                // Save collective journal
                 if (entries.isNotEmpty()) {
-                    val journalPath =
-                        undoService.saveJournalPath(
-                            sourceFolderPath = state.sourcePath,
-                            outputMode = state.outputMode.name,
-                            entries = entries,
-                        )
+                    val journalPath = editService.saveJournal(
+                        sourceFolderPath = state.sourcePath,
+                        outputMode = state.outputMode.name,
+                        entries = entries,
+                    )
                     if (journalPath != null) {
                         state.lastJournalPath = journalPath
                         state.canUndo = true
@@ -616,11 +387,11 @@ fun MetadataEditorScreen(
                     }
                 }
 
-                state.statusMessage = "Saved $savedCount file${if (savedCount != 1) "s" else ""}"
+                state.showInfo("Saved $savedCount file${if (savedCount != 1) "s" else ""}")
             } catch (_: CancellationException) {
                 // Cancellation must propagate
             } catch (e: Exception) {
-                state.errorMessage = "Error saving: ${e.message}"
+                state.showError("Error saving: ${e.message}")
             }
         }
     }
@@ -631,21 +402,82 @@ fun MetadataEditorScreen(
         if (journalId != null) {
             coroutineScope.launch {
                 try {
-                    val result = undoService.undo(journalId)
-                    if (result > 0) {
-                        state.statusMessage = "Undone: $result file${if (result != 1) "s" else ""} restored"
+                    val undoResult = undoService.undo(journalId)
+                    if (undoResult > 0) {
+                        state.showInfo("Undone: $undoResult file${if (undoResult != 1) "s" else ""} restored")
                         state.canUndo = false
                         state.canRedo = true
                         // Reload current image
                         state.selectedIndex = state.selectedIndex
                     } else {
-                        state.statusMessage = "Undo failed"
+                        state.showError("Undo failed")
                     }
                 } catch (e: Exception) {
-                    state.errorMessage = "Error undoing: ${e.message}"
+                    state.showError("Error undoing: ${e.message}")
                 }
             }
         }
+    }
+
+    // ── Redo (delegates to MetadataEditUndoService) ──
+    val redoLast: () -> Unit = {
+        val journalId = state.lastJournalPath
+        if (journalId != null && state.canRedo) {
+            val writer = MetadataWritingService(
+                faceRegionTransformer = faceRegionTransformer,
+                imageProcessing = imageProcessing,
+                fileSystem = fileSystemAdapter,
+            )
+            coroutineScope.launch {
+                try {
+                    val redoResult = undoService.redo(journalId) { outputPath, config, sourcePath ->
+                        val processedImage = withContext(dispatcherProvider.io) {
+                            imageProcessing.readImage(outputPath)
+                        }
+                        if (processedImage != null) {
+                            writer.writeImageWithMetadata(
+                                image = processedImage,
+                                outputPath = outputPath,
+                                config = config,
+                                sourcePath = sourcePath ?: outputPath,
+                                preRotationWidth = processedImage.width,
+                                preRotationHeight = processedImage.height,
+                            )
+                        }
+                    }
+                    if (redoResult > 0) {
+                        state.showInfo("Redone: $redoResult file${if (redoResult != 1) "s" else ""}")
+                        state.canUndo = true
+                        state.canRedo = false
+                        state.selectedIndex = state.selectedIndex
+                    } else {
+                        state.showError("Redo failed")
+                    }
+                } catch (e: Exception) {
+                    state.showError("Error redoing: ${e.message}")
+                }
+            }
+        }
+    }
+
+    // ── Clear edit fields ──
+    val clearEditFields: () -> Unit = {
+        editState.clear()
+        if (!isMultiEditMode && state.selectedFile != null) {
+            editState.loadFrom(state.selectedConfig)
+        }
+    }
+
+    // ── Apply multi-edit ──
+    val applyMultiEdit: () -> Unit = {
+        selectedIndices.forEach { idx ->
+            state.updateConfig(idx) { config ->
+                editState.applyNonBlankTo(config)
+            }
+        }
+        onSettingsChange(currentSettings.addMetadataSet(editState.toRecentMetadataSet()))
+        // Clear fields after applying so user can apply different values to another group
+        editState.clear()
     }
 
     // ── Back image picker dialog ──
@@ -799,6 +631,14 @@ fun MetadataEditorScreen(
                             state.nextFile()
                             true
                         }
+                        isMeta && keyEvent.key == Key.Z && !keyEvent.isShiftPressed -> {
+                            undoLast()
+                            true
+                        }
+                        isMeta && keyEvent.key == Key.Z && keyEvent.isShiftPressed -> {
+                            redoLast()
+                            true
+                        }
                         isMeta && keyEvent.key == Key.S -> {
                             saveCurrentFile()
                             true
@@ -865,11 +705,15 @@ fun MetadataEditorScreen(
                         Text("Previous", style = MaterialTheme.typography.labelSmall)
                     }
                     // Status message or file count
-                    if (state.statusMessage != null) {
+                    if (state.message != null) {
                         Text(
-                            state.statusMessage!!,
+                            state.message!!.text,
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color =
+                                when (state.message!!.severity) {
+                                    MessageSeverity.ERROR -> MaterialTheme.colorScheme.error
+                                    MessageSeverity.INFO -> MaterialTheme.colorScheme.primary
+                                },
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f, fill = false).padding(horizontal = 8.dp),
@@ -892,6 +736,16 @@ fun MetadataEditorScreen(
                                 Icon(Icons.AutoMirrored.Filled.RotateLeft, "Undo", Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
                                 Text("Undo", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        if (state.canRedo) {
+                            OutlinedButton(
+                                onClick = { redoLast() },
+                                modifier = Modifier.height(32.dp),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.RotateRight, "Redo", Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Redo", style = MaterialTheme.typography.labelSmall)
                             }
                         }
                         if (state.modifiedCount > 1) {
@@ -965,7 +819,7 @@ fun MetadataEditorScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 label = "Source",
                                 placeholder = "Select file or folder...",
-                                isError = state.errorMessage != null,
+                                isError = state.message?.severity == MessageSeverity.ERROR,
                             )
                             val recentPaths = currentSettings.metadataEditorRecentPaths
                             if (recentPaths.isNotEmpty()) {
@@ -985,13 +839,15 @@ fun MetadataEditorScreen(
                                 }
                             }
                         }
-                        state.errorMessage?.let { error ->
-                            Text(
-                                error,
-                                color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(horizontal = 32.dp),
-                            )
+                        state.message?.let { msg ->
+                            if (msg.severity == MessageSeverity.ERROR) {
+                                Text(
+                                    msg.text,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(horizontal = 32.dp),
+                                )
+                            }
                         }
                     }
                 }
@@ -1013,7 +869,7 @@ fun MetadataEditorScreen(
                         modifier = Modifier.weight(1f),
                         label = "Source",
                         placeholder = "File or folder...",
-                        isError = state.errorMessage != null,
+                        isError = state.message?.severity == MessageSeverity.ERROR,
                     )
                     if (isMultiEditMode) {
                         OutlinedButton(
@@ -1275,611 +1131,12 @@ fun MetadataEditorScreen(
                             locationPickerTargetIndices = indices
                             showLocationPicker = true
                         },
+                        onApply = applyMultiEdit,
+                        onClear = clearEditFields,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                     )
                 }
             }
-        }
-    }
-}
-
-// ── Sidebar ──
-
-@Composable
-private fun MetadataEditorSidebar(
-    state: BulkEditState,
-    thumbnailCache: java.util.concurrent.ConcurrentHashMap<String, BufferedImage>,
-    isMultiEditMode: Boolean,
-    selectedIndices: Set<Int>,
-    onSelect: (Int) -> Unit,
-    onToggleMultiEdit: () -> Unit,
-    onDeselectAll: () -> Unit,
-    onOpenFolder: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val listState = rememberLazyListState()
-
-    Surface(
-        tonalElevation = 2.dp,
-        modifier = modifier.width(120.dp),
-        shape = RoundedCornerShape(0.dp),
-    ) {
-        Column(modifier = Modifier.fillMaxHeight()) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onOpenFolder, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.FolderOpen, "Open folder", modifier = Modifier.size(18.dp))
-                }
-                if (state.fileCount > 1) {
-                    if (isMultiEditMode) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                "${selectedIndices.size}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                            OutlinedButton(
-                                onClick = {
-                                    onDeselectAll()
-                                    onToggleMultiEdit()
-                                },
-                                modifier = Modifier.height(20.dp),
-                                contentPadding = PaddingValues(horizontal = 4.dp),
-                            ) {
-                                Text("Done", style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                    } else {
-                        OutlinedButton(
-                            onClick = onToggleMultiEdit,
-                            modifier = Modifier.height(20.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                        ) {
-                            Text("Multi", style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                }
-            }
-
-            // Scrollable thumbnail list
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                itemsIndexed(state.files) { index, file ->
-                    val isSelected =
-                        if (isMultiEditMode) index in selectedIndices
-                        else index == state.selectedIndex
-                    val config = state.fileConfigs[file.absolutePath]?.config
-
-                    Card(
-                        modifier =
-                            Modifier.width(100.dp).height(80.dp).clickable { onSelect(index) },
-                        shape = RoundedCornerShape(6.dp),
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor =
-                                    if (isSelected) MaterialTheme.colorScheme.primaryContainer
-                                    else MaterialTheme.colorScheme.surfaceVariant
-                            ),
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            val thumb = thumbnailCache[file.absolutePath]
-                            if (thumb != null) {
-                                val bitmap = remember(thumb) { thumb.toComposeImageBitmap() }
-                                Image(
-                                    bitmap = bitmap,
-                                    contentDescription = file.name,
-                                    modifier = Modifier.fillMaxSize().padding(2.dp),
-                                    contentScale = ContentScale.Fit,
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Image,
-                                    "Loading",
-                                    modifier = Modifier.align(Alignment.Center).size(32.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            if (isSelected && isMultiEditMode) {
-                                Checkbox(
-                                    checked = true,
-                                    onCheckedChange = { onSelect(index) },
-                                    modifier = Modifier.align(Alignment.TopStart).size(16.dp),
-                                )
-                            }
-                            Text(
-                                "${index + 1}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.align(Alignment.BottomStart).padding(2.dp),
-                            )
-                            if (config?.hasMetadata() == true) {
-                                Text(
-                                    "✓",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp),
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── Metadata editor panel (adapted for bulk edit) ──
-
-@Composable
-private fun MetadataEditorPanel(
-    state: BulkEditState,
-    editState: MetadataEditState,
-    isMultiEditMode: Boolean,
-    selectedIndices: Set<Int>,
-    sourceExif: SourceExifSummary?,
-    metadataHistory: MetadataHistory,
-    onSettingsChange: (AppSettings) -> Unit,
-    currentSettings: AppSettings,
-    settingsPort: SettingsPort,
-    coroutineScope: kotlinx.coroutines.CoroutineScope,
-    dispatcherProvider: DispatcherProvider,
-    onPickLocation: (List<Int>) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val isMultiSelect = isMultiEditMode && selectedIndices.size > 1
-    val selectedIndex = if (!isMultiSelect && state.selectedIndex >= 0) state.selectedIndex else -1
-    val singleEditConfig: PhotoScanConfiguration? =
-        if (!isMultiSelect) state.selectedConfig else null
-    val singleEditBoxId: String? = state.selectedFile?.absolutePath
-
-    ChunkyScrollbar(modifier = modifier) {
-        Column(
-            modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Header
-            if (isMultiSelect) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        "${selectedIndices.size} photos selected",
-                        style =
-                            MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    Button(
-                        onClick = {
-                            selectedIndices.forEach { idx ->
-                                state.updateConfig(idx) { config ->
-                                    editState.applyNonBlankTo(config)
-                                }
-                            }
-                            onSettingsChange(
-                                currentSettings.addMetadataSet(editState.toRecentMetadataSet())
-                            )
-                        },
-                        modifier = Modifier.height(28.dp),
-                    ) {
-                        Text("Apply", style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-                Text(
-                    "Only filled fields will be applied. Leave blank to keep existing values.",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                Text(
-                    state.selectedFile?.name ?: "No file selected",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            // Recent values (multi-edit only)
-            if (isMultiSelect && metadataHistory.recentSets.isNotEmpty()) {
-                RecentValuesDropdown(
-                    recentSets = metadataHistory.recentSets,
-                    onApplySet = { set ->
-                        editState.loadFromSet(set)
-                        onSettingsChange(currentSettings.addMetadataSet(set))
-                    },
-                )
-            }
-
-            // Metadata sections
-            QuickEditMetadataFields(
-                description = editState.description,
-                onDescriptionChange = { v ->
-                    editState.description = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(description = v) } }
-                },
-                keywords = editState.keywords,
-                onKeywordsChange = { v ->
-                    editState.keywords = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(keywords = v) } }
-                },
-                originalDate = editState.originalDate,
-                onOriginalDateChange = { v ->
-                    editState.originalDate = v
-                    singleEditBoxId?.let {
-                        state.updateSelectedConfig { it.copy(originalDate = v) }
-                    }
-                },
-                year = editState.year,
-                onYearChange = { v ->
-                    val f = v.filter { c -> c.isDigit() }.take(4)
-                    editState.year = f
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(year = f) } }
-                },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = { field, value ->
-                    onSettingsChange(currentSettings.addMetadataHistory(field, value))
-                },
-                onMetadataHistoryRemove = { field, value ->
-                    onSettingsChange(currentSettings.removeMetadataHistory(field, value))
-                },
-                onCommitKeyword =
-                    if (!isMultiSelect) {
-                        { keyword ->
-                            onSettingsChange(
-                                currentSettings.addMetadataHistory("keywords", keyword)
-                            )
-                        }
-                    } else null,
-                boxId = singleEditBoxId,
-                state = null, // Bulk edit doesn't use PhotoScanWizardState
-                overrideDescription =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideDescription != OverrideState.NULL_OUT
-                    else null,
-                onOverrideDescriptionChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideDescription =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideKeywords =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideKeywords != OverrideState.NULL_OUT
-                    else null,
-                onOverrideKeywordsChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideKeywords =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideOriginalDate =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideOriginalDate != OverrideState.NULL_OUT
-                    else null,
-                onOverrideOriginalDateChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideOriginalDate =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideYear =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideYear != OverrideState.NULL_OUT
-                    else null,
-                onOverrideYearChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideYear =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                sourceExif = sourceExif,
-            )
-
-            LocationSection(
-                locationName = editState.locationName,
-                onLocationNameChange = { v ->
-                    editState.locationName = v
-                    singleEditBoxId?.let {
-                        state.updateSelectedConfig { it.copy(locationName = v) }
-                    }
-                },
-                address = editState.address,
-                onAddressChange = { v ->
-                    editState.address = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(address = v) } }
-                },
-                city = editState.city,
-                onCityChange = { v ->
-                    editState.city = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(city = v) } }
-                },
-                stateVal = editState.state,
-                onStateChange = { v ->
-                    editState.state = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(state = v) } }
-                },
-                country = editState.country,
-                onCountryChange = { v ->
-                    editState.country = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(country = v) } }
-                },
-                gpsLatitude = editState.gpsLatitude,
-                onGpsLatitudeChange = { v ->
-                    editState.gpsLatitude = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(gpsLatitude = v) } }
-                },
-                gpsLongitude = editState.gpsLongitude,
-                onGpsLongitudeChange = { v ->
-                    editState.gpsLongitude = v
-                    singleEditBoxId?.let {
-                        state.updateSelectedConfig { it.copy(gpsLongitude = v) }
-                    }
-                },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = { field, value ->
-                    onSettingsChange(currentSettings.addMetadataHistory(field, value))
-                },
-                onApplyRecentLocation =
-                    if (!isMultiSelect) {
-                        { set: RecentMetadataSet ->
-                            singleEditBoxId?.let {
-                                state.updateSelectedConfig { set.mergeLocationInto(it) }
-                            }
-                            editState.loadFromSet(set)
-                            Unit
-                        }
-                    } else {
-                        { set: RecentMetadataSet ->
-                            editState.loadFromSet(set)
-                            Unit
-                        }
-                    },
-                onPickLocation = {
-                    onPickLocation(
-                        if (isMultiSelect) selectedIndices.toList() else listOf(state.selectedIndex)
-                    )
-                },
-                overrideGps =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideGps != OverrideState.NULL_OUT
-                    else null,
-                onOverrideGpsChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideGps =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                sourceGpsHint =
-                    run {
-                        val exif = sourceExif ?: return@run null
-                        val parts = mutableListOf<String>()
-                        exif.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
-                        exif.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
-                        if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
-                    },
-            )
-
-            SubjectsSection(
-                subjects = editState.subjects,
-                onSubjectsChange = { v ->
-                    editState.subjects = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(subjects = v) } }
-                },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = { field, value ->
-                    onSettingsChange(currentSettings.addMetadataHistory(field, value))
-                },
-                onMetadataHistoryRemove = { field, value ->
-                    onSettingsChange(currentSettings.removeMetadataHistory(field, value))
-                },
-                onSelectFaces = null,
-                faceRegions = if (!isMultiSelect) state.selectedConfig.faceRegions else emptyList(),
-                onRemoveFace = null,
-                onClearAllFaces = null,
-            )
-
-            CameraSection(
-                cameraMake = editState.cameraMake,
-                onCameraMakeChange = { v ->
-                    editState.cameraMake = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(cameraMake = v) } }
-                },
-                cameraModel = editState.cameraModel,
-                onCameraModelChange = { v ->
-                    editState.cameraModel = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(cameraModel = v) } }
-                },
-                lensModel = editState.lensModel,
-                onLensModelChange = { v ->
-                    editState.lensModel = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(lensModel = v) } }
-                },
-                focalLength = editState.focalLength,
-                onFocalLengthChange = { v ->
-                    editState.focalLength = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(focalLength = v) } }
-                },
-                aperture = editState.aperture,
-                onApertureChange = { v ->
-                    editState.aperture = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(aperture = v) } }
-                },
-                shutterSpeed = editState.shutterSpeed,
-                onShutterSpeedChange = { v ->
-                    editState.shutterSpeed = v
-                    singleEditBoxId?.let {
-                        state.updateSelectedConfig { it.copy(shutterSpeed = v) }
-                    }
-                },
-                iso = editState.iso,
-                onIsoChange = { v ->
-                    editState.iso = v
-                    singleEditBoxId?.let { state.updateSelectedConfig { it.copy(iso = v) } }
-                },
-                metadataHistory = metadataHistory,
-                onMetadataHistoryUpdate = { field, value ->
-                    onSettingsChange(currentSettings.addMetadataHistory(field, value))
-                },
-                overrideCameraMake =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideCameraMake == OverrideState.KEEP_SOURCE
-                    else null,
-                onOverrideCameraMakeChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideCameraMake =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideCameraModel =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideCameraModel == OverrideState.KEEP_SOURCE
-                    else null,
-                onOverrideCameraModelChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideCameraModel =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideLensModel =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideLensModel == OverrideState.KEEP_SOURCE
-                    else null,
-                onOverrideLensModelChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideLensModel =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideFocalLength =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideFocalLength == OverrideState.KEEP_SOURCE
-                    else null,
-                onOverrideFocalLengthChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideFocalLength =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideAperture =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideAperture == OverrideState.KEEP_SOURCE
-                    else null,
-                onOverrideApertureChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideAperture =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideShutterSpeed =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideShutterSpeed == OverrideState.KEEP_SOURCE
-                    else null,
-                onOverrideShutterSpeedChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideShutterSpeed =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                overrideIso =
-                    if (!isMultiSelect && singleEditConfig != null)
-                        singleEditConfig.overrideIso == OverrideState.KEEP_SOURCE
-                    else null,
-                onOverrideIsoChange =
-                    if (!isMultiSelect) {
-                        { included: Boolean ->
-                            state.updateSelectedConfig {
-                                it.copy(
-                                    overrideIso =
-                                        if (included) OverrideState.KEEP_SOURCE
-                                        else OverrideState.NULL_OUT
-                                )
-                            }
-                        }
-                    } else null,
-                sourceExif = null,
-            )
         }
     }
 }

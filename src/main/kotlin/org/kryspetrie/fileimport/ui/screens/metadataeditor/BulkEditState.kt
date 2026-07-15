@@ -7,6 +7,27 @@ import java.io.File
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 
 /**
+ * Severity level for UI messages in the metadata editor.
+ */
+enum class MessageSeverity {
+    INFO,
+    ERROR,
+}
+
+/**
+ * A transient UI message for status/error feedback.
+ *
+ * @property text The message text.
+ * @property severity Whether this is an info or error message.
+ * @property timestampMs When the message was created (for auto-clear).
+ */
+data class UiMessage(
+    val text: String,
+    val severity: MessageSeverity = MessageSeverity.INFO,
+    val timestampMs: Long = System.currentTimeMillis(),
+)
+
+/**
  * State holder for a single file entry in the bulk metadata editor.
  *
  * Each file tracks its own [PhotoScanConfiguration] for metadata overrides, its loaded
@@ -41,6 +62,7 @@ enum class OutputMode {
  * - The output directory for save-new mode
  * - The source path (file or folder)
  * - Undo journal tracking
+ * - UI messages (unified status and error feedback)
  */
 class BulkEditState {
     /** Current source path being edited (can be a file or folder). */
@@ -66,8 +88,8 @@ class BulkEditState {
     /** Whether currently loading files. */
     var isLoading by mutableStateOf(false)
 
-    /** Error message to display, if any. */
-    var errorMessage by mutableStateOf<String?>(null)
+    /** Unified UI message (status or error), auto-clears after timeout. */
+    var message by mutableStateOf<UiMessage?>(null)
 
     /** Path to the most recent undo journal file (for undo/redo in OVERWRITE mode). */
     var lastJournalPath by mutableStateOf<String?>(null)
@@ -77,9 +99,6 @@ class BulkEditState {
 
     /** Whether a redo operation is available. */
     var canRedo by mutableStateOf(false)
-
-    /** Status message for save/undo/redo feedback. */
-    var statusMessage by mutableStateOf<String?>(null)
 
     /** The currently selected file, or null. */
     val selectedFile: File?
@@ -104,13 +123,28 @@ class BulkEditState {
     val modifiedCount: Int
         get() = fileConfigs.values.count { it.isModified }
 
+    /** Shows an info message (auto-clears after timeout). */
+    fun showInfo(text: String) {
+        message = UiMessage(text, MessageSeverity.INFO)
+    }
+
+    /** Shows an error message (auto-clears after timeout). */
+    fun showError(text: String) {
+        message = UiMessage(text, MessageSeverity.ERROR)
+    }
+
+    /** Clears the current message. */
+    fun clearMessage() {
+        message = null
+    }
+
     /** Loads a list of files into the state. */
     fun loadFiles(imageFiles: List<File>) {
         files = imageFiles
         fileConfigs = imageFiles.associate { it.absolutePath to BulkEditFileEntry(it) }
         selectedIndex = if (imageFiles.isNotEmpty()) 0 else -1
         isLoading = false
-        errorMessage = null
+        message = null
     }
 
     /** Loads a single file into the state. */
@@ -120,7 +154,7 @@ class BulkEditState {
         fileConfigs = mapOf(file.absolutePath to BulkEditFileEntry(file))
         selectedIndex = 0
         isLoading = false
-        errorMessage = null
+        message = null
     }
 
     /** Updates the config for the currently selected file. */
@@ -195,10 +229,9 @@ class BulkEditState {
         files = emptyList()
         fileConfigs = emptyMap()
         selectedIndex = -1
-        errorMessage = null
+        message = null
         lastJournalPath = null
         canUndo = false
         canRedo = false
-        statusMessage = null
     }
 }
