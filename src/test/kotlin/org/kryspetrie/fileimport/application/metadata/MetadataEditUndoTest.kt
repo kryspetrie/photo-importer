@@ -254,7 +254,7 @@ class MetadataEditUndoServiceTest {
     }
 
     @Test
-    fun `saveJournal creates valid journal`() {
+    fun `saveJournalPath creates valid journal`() {
         val undoService =
             MetadataEditUndoService(journalRepository, fileSystem, AwtTestImageProcessing())
 
@@ -266,18 +266,22 @@ class MetadataEditUndoServiceTest {
                 wasSuccessful = true,
             )
 
-        val journal =
-            undoService.saveJournal(
+        val journalPath =
+            undoService.saveJournalPath(
                 sourceFolderPath = "/test/photos",
                 outputMode = "OVERWRITE",
                 entries = listOf(entry),
             )
 
-        assertNotNull(journal)
-        assertEquals("/test/photos", journal!!.sourceFolderPath)
-        assertEquals("OVERWRITE", journal.outputMode)
-        assertEquals(1, journal.entries.size)
-        assertEquals("/test/photo.jpg", journal.entries[0].filePath)
+        assertNotNull(journalPath)
+
+        // Read back the journal and verify
+        val loaded = journalRepository.getJournal(journalPath!!)
+        assertNotNull(loaded)
+        assertEquals("/test/photos", loaded!!.sourceFolderPath)
+        assertEquals("OVERWRITE", loaded.outputMode)
+        assertEquals(1, loaded.entries.size)
+        assertEquals("/test/photo.jpg", loaded.entries[0].filePath)
     }
 }
 

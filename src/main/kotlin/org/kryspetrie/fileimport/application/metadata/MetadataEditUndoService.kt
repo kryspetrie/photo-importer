@@ -72,11 +72,11 @@ class MetadataEditUndoService(
      * @param entries The list of file entries with backup paths.
      * @return The saved journal, or null if saving failed.
      */
-    fun saveJournal(
+    fun saveJournalPath(
         sourceFolderPath: String,
         outputMode: String,
         entries: List<MetadataEditEntry>,
-    ): MetadataEditJournal? {
+    ): String? {
         return try {
             val journal =
                 MetadataEditJournal(
@@ -85,7 +85,6 @@ class MetadataEditUndoService(
                     entries = entries,
                 )
             journalRepository.saveJournal(journal)
-            journal
         } catch (_: Exception) {
             null
         }

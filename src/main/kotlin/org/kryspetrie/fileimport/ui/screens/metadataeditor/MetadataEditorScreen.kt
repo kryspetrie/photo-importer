@@ -83,6 +83,8 @@ import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.model.RegionType
+import org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService
+import org.kryspetrie.fileimport.domain.model.MetadataEditEntry
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
@@ -130,6 +132,7 @@ fun MetadataEditorScreen(
     val faceRegionTransformer: org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort =
         koinInject()
     val fileSystemAdapter: org.kryspetrie.fileimport.domain.port.FileSystemPort = koinInject()
+    val undoService: MetadataEditUndoService = koinInject()
     val currentSettings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
 
     // Image loading state
@@ -318,11 +321,30 @@ fun MetadataEditorScreen(
             val config = state.selectedConfig
             coroutineScope.launch {
                 try {
-                    val processedImage = imageProcessing.readImage(FilePath(file.absolutePath))
+                    // Create backup before overwrite (for undo support)
+                    var backupPath: String? = null
+                    if (state.outputMode == OutputMode.OVERWRITE) {
+                        backupPath = undoService.createBackup(file.absolutePath)
+                    }
+
+                    val processedImage =
+                        withContext(dispatcherProvider.io) { imageProcessing.readImage(FilePath(file.absolutePath)) }
                     if (processedImage != null) {
+                        var backImageBackupPath: String? = null
+                        var backImageOutputPath: String? = null
+                        var entryOutputPath: String? = null
+
                         when (state.outputMode) {
                             OutputMode.OVERWRITE -> {
                                 val outputPath = FilePath(file.absolutePath)
+                                // Backup back image before overwrite
+                                val backFile = File(file.parent, file.nameWithoutExtension + "_back.jpg")
+                                if (backFile.exists() && backupPath != null) {
+                                    backImageBackupPath =
+                                        withContext(dispatcherProvider.io) {
+                                            undoService.createBackup(backFile.absolutePath)
+                                        }
+                                }
                                 val metadataService =
                                     MetadataWritingService(
                                         faceRegionTransformer = faceRegionTransformer,
@@ -347,13 +369,14 @@ fun MetadataEditorScreen(
                                     if (backImageResult != null) {
                                         val outDir = file.parent
                                         val backFileName = file.nameWithoutExtension + "_back.jpg"
-                                        val backOutputPath =
+                                        val backOutputFilePath =
                                             FilePath(File(outDir, backFileName).absolutePath)
                                         File(outDir).mkdirs()
                                         imageProcessing.writeJpegImage(
                                             backImageResult,
-                                            backOutputPath,
+                                            backOutputFilePath,
                                         )
+                                        backImageOutputPath = backOutputFilePath.path
                                     }
                                 }
                             }
@@ -361,6 +384,7 @@ fun MetadataEditorScreen(
                                 val outDir = state.outputDirectory.ifBlank { file.parent }
                                 val outputFileName = file.nameWithoutExtension + ".jpg"
                                 val outputPath = FilePath(File(outDir, outputFileName).absolutePath)
+                                entryOutputPath = outputPath.path
                                 File(outDir).mkdirs()
                                 val metadataService =
                                     MetadataWritingService(
@@ -389,22 +413,236 @@ fun MetadataEditorScreen(
                                                 state.outputDirectory
                                             else file.parent
                                         val backFileName = file.nameWithoutExtension + "_back.jpg"
-                                        val backOutputPath =
+                                        val backOutputFilePath =
                                             FilePath(File(backOutDir, backFileName).absolutePath)
                                         File(backOutDir).mkdirs()
                                         imageProcessing.writeJpegImage(
                                             backImageResult,
-                                            backOutputPath,
+                                            backOutputFilePath,
                                         )
+                                        backImageOutputPath = backOutputFilePath.path
                                     }
                                 }
                             }
                         }
+
+                        // Save journal entry for undo
+                        val entry =
+                            MetadataEditEntry(
+                                filePath = file.absolutePath,
+                                backupPath = backupPath ?: "",
+                                configSnapshot = config,
+                                wasSavedNew = state.outputMode == OutputMode.SAVE_NEW,
+                                outputFilePath = entryOutputPath ?: "",
+                                backImageBackupPath = backImageBackupPath,
+                                backImageOutputPath = backImageOutputPath,
+                            )
+                        val journalPath =
+                            undoService.saveJournalPath(
+                                sourceFolderPath = state.sourcePath,
+                                outputMode = state.outputMode.name,
+                                entries = listOf(entry),
+                            )
+                        if (journalPath != null) {
+                            state.lastJournalPath = journalPath
+                            state.canUndo = true
+                            state.canRedo = false
+                        }
+
+                        state.markSaved(file)
+                        state.statusMessage = "Saved: ${file.name}"
+                    } else {
+                        state.errorMessage = "Could not read image: ${file.name}"
                     }
                 } catch (_: CancellationException) {
                     // Cancellation must propagate
                 } catch (e: Exception) {
                     state.errorMessage = "Error saving: ${e.message}"
+                }
+            }
+        }
+    }
+
+    // ── Save All Modified ──
+    val saveAllModified: () -> Unit = {
+        val modifiedEntries = state.fileConfigs.values.filter { it.isModified }
+        if (modifiedEntries.isEmpty()) {
+            state.statusMessage = "No unsaved changes"
+        } else
+        coroutineScope.launch {
+            try {
+                val entries = mutableListOf<MetadataEditEntry>()
+                var savedCount = 0
+
+                for (entry in modifiedEntries) {
+                    val file = entry.file
+                    val config = entry.config
+
+                    // Create backup before overwrite
+                    var backupPath: String? = null
+                    if (state.outputMode == OutputMode.OVERWRITE) {
+                        backupPath = undoService.createBackup(file.absolutePath)
+                    }
+
+                    val processedImage =
+                        withContext(dispatcherProvider.io) { imageProcessing.readImage(FilePath(file.absolutePath)) }
+                    if (processedImage != null) {
+                        // Backup back image before overwrite
+                        var backImageBackupPath: String? = null
+                        var backImageOutputPath: String? = null
+                        var entryOutputPath: String? = null
+
+                        when (state.outputMode) {
+                            OutputMode.OVERWRITE -> {
+                                val outputPath = FilePath(file.absolutePath)
+                                val backFile =
+                                    File(file.parent, file.nameWithoutExtension + "_back.jpg")
+                                if (backFile.exists() && backupPath != null) {
+                                    backImageBackupPath =
+                                        withContext(dispatcherProvider.io) {
+                                            undoService.createBackup(backFile.absolutePath)
+                                        }
+                                }
+                                val metadataService =
+                                    MetadataWritingService(
+                                        faceRegionTransformer = faceRegionTransformer,
+                                        imageProcessing = imageProcessing,
+                                        fileSystem = fileSystemAdapter,
+                                    )
+                                metadataService.writeImageWithMetadata(
+                                    image = processedImage,
+                                    outputPath = outputPath,
+                                    config = config,
+                                    sourcePath = FilePath(file.absolutePath),
+                                    preRotationWidth = processedImage.width,
+                                    preRotationHeight = processedImage.height,
+                                )
+                                if (config.hasBackImage()) {
+                                    val backImageResult =
+                                        imageProcessing.prepareBackImage(
+                                            config,
+                                            maxWidth = processedImage.width,
+                                            maxHeight = processedImage.height,
+                                        )
+                                    if (backImageResult != null) {
+                                        val outDir = file.parent
+                                        val backFileName = file.nameWithoutExtension + "_back.jpg"
+                                        val backOutputFilePath =
+                                            FilePath(File(outDir, backFileName).absolutePath)
+                                        File(outDir).mkdirs()
+                                        imageProcessing.writeJpegImage(
+                                            backImageResult,
+                                            backOutputFilePath,
+                                        )
+                                        backImageOutputPath = backOutputFilePath.path
+                                    }
+                                }
+                            }
+                            OutputMode.SAVE_NEW -> {
+                                val outDir = state.outputDirectory.ifBlank { file.parent }
+                                val outputFileName = file.nameWithoutExtension + ".jpg"
+                                val outputPath =
+                                    FilePath(File(outDir, outputFileName).absolutePath)
+                                entryOutputPath = outputPath.path
+                                File(outDir).mkdirs()
+                                val metadataService =
+                                    MetadataWritingService(
+                                        faceRegionTransformer = faceRegionTransformer,
+                                        imageProcessing = imageProcessing,
+                                        fileSystem = fileSystemAdapter,
+                                    )
+                                metadataService.writeImageWithMetadata(
+                                    image = processedImage,
+                                    outputPath = outputPath,
+                                    config = config,
+                                    sourcePath = FilePath(file.absolutePath),
+                                    preRotationWidth = processedImage.width,
+                                    preRotationHeight = processedImage.height,
+                                )
+                                if (config.hasBackImage()) {
+                                    val backImageResult =
+                                        imageProcessing.prepareBackImage(
+                                            config,
+                                            maxWidth = processedImage.width,
+                                            maxHeight = processedImage.height,
+                                        )
+                                    if (backImageResult != null) {
+                                        val backOutDir =
+                                            if (state.outputDirectory.isNotBlank())
+                                                state.outputDirectory
+                                            else file.parent
+                                        val backFileName = file.nameWithoutExtension + "_back.jpg"
+                                        val backOutputFilePath =
+                                            FilePath(File(backOutDir, backFileName).absolutePath)
+                                        File(backOutDir).mkdirs()
+                                        imageProcessing.writeJpegImage(
+                                            backImageResult,
+                                            backOutputFilePath,
+                                        )
+                                        backImageOutputPath = backOutputFilePath.path
+                                    }
+                                }
+                            }
+                        }
+
+                        entries.add(
+                            MetadataEditEntry(
+                                filePath = file.absolutePath,
+                                backupPath = backupPath ?: "",
+                                configSnapshot = config,
+                                wasSavedNew = state.outputMode == OutputMode.SAVE_NEW,
+                                outputFilePath = entryOutputPath ?: "",
+                                backImageBackupPath = backImageBackupPath,
+                                backImageOutputPath = backImageOutputPath,
+                            )
+                        )
+                        state.markSaved(file)
+                        savedCount++
+                    }
+                }
+
+                // Save collective journal
+                if (entries.isNotEmpty()) {
+                    val journalPath =
+                        undoService.saveJournalPath(
+                            sourceFolderPath = state.sourcePath,
+                            outputMode = state.outputMode.name,
+                            entries = entries,
+                        )
+                    if (journalPath != null) {
+                        state.lastJournalPath = journalPath
+                        state.canUndo = true
+                        state.canRedo = false
+                    }
+                }
+
+                state.statusMessage = "Saved $savedCount file${if (savedCount != 1) "s" else ""}"
+            } catch (_: CancellationException) {
+                // Cancellation must propagate
+            } catch (e: Exception) {
+                state.errorMessage = "Error saving: ${e.message}"
+            }
+        }
+    }
+
+    // ── Undo ──
+    val undoLast: () -> Unit = {
+        val journalId = state.lastJournalPath
+        if (journalId != null) {
+            coroutineScope.launch {
+                try {
+                    val result = undoService.undo(journalId)
+                    if (result > 0) {
+                        state.statusMessage = "Undone: $result file${if (result != 1) "s" else ""} restored"
+                        state.canUndo = false
+                        state.canRedo = true
+                        // Reload current image
+                        state.selectedIndex = state.selectedIndex
+                    } else {
+                        state.statusMessage = "Undo failed"
+                    }
+                } catch (e: Exception) {
+                    state.errorMessage = "Error undoing: ${e.message}"
                 }
             }
         }
@@ -626,12 +864,46 @@ fun MetadataEditorScreen(
                         Spacer(Modifier.width(4.dp))
                         Text("Previous", style = MaterialTheme.typography.labelSmall)
                     }
-                    Text(
-                        if (state.fileCount == 0) "No files loaded"
-                        else "${state.selectedIndex + 1} of ${state.fileCount}",
-                        style = MaterialTheme.typography.labelSmall,
-                    )
+                    // Status message or file count
+                    if (state.statusMessage != null) {
+                        Text(
+                            state.statusMessage!!,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false).padding(horizontal = 8.dp),
+                        )
+                    } else {
+                        Text(
+                            if (state.fileCount == 0) "No files loaded"
+                            else if (state.modifiedCount > 0)
+                                "${state.selectedIndex + 1} of ${state.fileCount} · ${state.modifiedCount} unsaved"
+                            else "${state.selectedIndex + 1} of ${state.fileCount}",
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (state.canUndo) {
+                            OutlinedButton(
+                                onClick = { undoLast() },
+                                modifier = Modifier.height(32.dp),
+                            ) {
+                                Icon(Icons.AutoMirrored.Filled.RotateLeft, "Undo", Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Undo", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        if (state.modifiedCount > 1) {
+                            Button(
+                                onClick = { saveAllModified() },
+                                modifier = Modifier.height(32.dp),
+                            ) {
+                                Icon(Icons.Default.Save, "Save All", Modifier.size(16.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Save All (${state.modifiedCount})", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
                         Button(
                             onClick = { saveCurrentFile() },
                             enabled = state.selectedFile != null,
