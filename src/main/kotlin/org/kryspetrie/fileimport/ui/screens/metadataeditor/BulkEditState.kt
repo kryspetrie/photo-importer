@@ -22,7 +22,7 @@ data class BulkEditFileEntry(
 
 /**
  * Output mode for the bulk metadata editor.
- * - OVERWRITE: Modify the original file in place (backup first).
+ * - OVERWRITE: Modify the original file in place (backup first, enables undo).
  * - SAVE_NEW: Save to a new file in the specified output directory.
  */
 enum class OutputMode {
@@ -40,6 +40,7 @@ enum class OutputMode {
  * - The output mode (overwrite vs save new)
  * - The output directory for save-new mode
  * - The source path (file or folder)
+ * - Undo journal tracking
  */
 class BulkEditState {
     /** Current source path being edited (can be a file or folder). */
@@ -68,6 +69,18 @@ class BulkEditState {
     /** Error message to display, if any. */
     var errorMessage by mutableStateOf<String?>(null)
 
+    /** Path to the most recent undo journal file (for undo/redo in OVERWRITE mode). */
+    var lastJournalPath by mutableStateOf<String?>(null)
+
+    /** Whether an undo operation is available. */
+    var canUndo by mutableStateOf(false)
+
+    /** Whether a redo operation is available. */
+    var canRedo by mutableStateOf(false)
+
+    /** Status message for save/undo/redo feedback. */
+    var statusMessage by mutableStateOf<String?>(null)
+
     /** The currently selected file, or null. */
     val selectedFile: File?
         get() = if (selectedIndex >= 0 && selectedIndex < files.size) files[selectedIndex] else null
@@ -86,6 +99,10 @@ class BulkEditState {
     /** Whether the source is a single file (vs a folder). */
     val isSingleFile: Boolean
         get() = files.size == 1 && sourcePath.isNotEmpty() && File(sourcePath).isFile
+
+    /** Number of files with unsaved metadata changes. */
+    val modifiedCount: Int
+        get() = fileConfigs.values.count { it.isModified }
 
     /** Loads a list of files into the state. */
     fun loadFiles(imageFiles: List<File>) {
@@ -131,6 +148,16 @@ class BulkEditState {
             }
     }
 
+    /**
+     * Marks a file as saved (no longer modified).
+     * Called after a successful save operation.
+     */
+    fun markSaved(file: File) {
+        val key = file.absolutePath
+        val entry = fileConfigs[key] ?: return
+        fileConfigs = fileConfigs.toMutableMap().apply { this[key] = entry.copy(isModified = false) }
+    }
+
     /** Marks source EXIF as loaded for the specified file. */
     fun markSourceExifLoaded(file: File) {
         val key = file.absolutePath
@@ -169,5 +196,9 @@ class BulkEditState {
         fileConfigs = emptyMap()
         selectedIndex = -1
         errorMessage = null
+        lastJournalPath = null
+        canUndo = false
+        canRedo = false
+        statusMessage = null
     }
 }

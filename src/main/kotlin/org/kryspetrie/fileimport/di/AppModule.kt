@@ -9,6 +9,8 @@ import org.kryspetrie.fileimport.application.ImportService
 import org.kryspetrie.fileimport.application.LocationSearchService
 import org.kryspetrie.fileimport.application.PhotoScanExportService
 import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
+import org.kryspetrie.fileimport.application.metadata.MetadataEditJournalRepository
+import org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.application.WatchFolderService
@@ -169,6 +171,11 @@ val appModule = module {
     }
     single<PhotoScanExportPort> { get<PhotoScanExportService>() }
     single { PhotoScanExportService(get(), get(), get(), get()) }
+
+    // ── Metadata Edit Undo ──────────────────────────────────────────
+
+    single { MetadataEditJournalRepository(get()) }
+    single { MetadataEditUndoService(get(), get(), get()) }
 
     // ── Location Search ─────────────────────────────────────────────
 
