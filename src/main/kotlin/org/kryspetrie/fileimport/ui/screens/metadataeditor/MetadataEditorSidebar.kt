@@ -14,9 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FolderOpen
@@ -37,16 +34,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
+import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 
 /**
  * Sidebar thumbnail strip for the metadata editor.
  *
  * Shows a scrollable list of image thumbnails with selection state and modification indicators.
  * Supports both single-select (click to select) and multi-select (click to toggle, checkbox overlay)
- * modes.
+ * modes. Uses [ChunkyScrollbar] for visible scroll feedback when content overflows.
  *
  * @param state The bulk edit state.
  * @param thumbnailCache Cache of pre-scaled thumbnail images.
@@ -71,8 +68,6 @@ fun MetadataEditorSidebar(
     onOpenFolder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val listState = rememberLazyListState()
-
     Surface(
         tonalElevation = 2.dp,
         modifier = modifier.width(120.dp),
@@ -122,87 +117,87 @@ fun MetadataEditorSidebar(
                 }
             }
 
-            // Scrollable thumbnail list
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(2.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                itemsIndexed(state.files) { index, file ->
-                    val isSelected =
-                        if (isMultiEditMode) index in selectedIndices
-                        else index == state.selectedIndex
-                    val entry = state.fileConfigs[file.absolutePath]
-                    val isModified = entry?.isModified == true
+            // Scrollable thumbnail list with visible scrollbar
+            ChunkyScrollbar(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    state.files.forEachIndexed { index, file ->
+                        val isSelected =
+                            if (isMultiEditMode) index in selectedIndices
+                            else index == state.selectedIndex
+                        val entry = state.fileConfigs[file.absolutePath]
+                        val isModified = entry?.isModified == true
 
-                    Card(
-                        modifier =
-                            Modifier.width(100.dp).height(80.dp).clickable { onSelect(index) },
-                        shape = RoundedCornerShape(6.dp),
-                        colors =
-                            CardDefaults.cardColors(
-                                containerColor =
-                                    when {
-                                        isModified && isSelected ->
-                                            MaterialTheme.colorScheme.tertiaryContainer
-                                        isSelected ->
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        isModified ->
-                                            MaterialTheme.colorScheme.secondaryContainer
-                                        else -> MaterialTheme.colorScheme.surfaceVariant
-                                    }
-                            ),
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            val thumb = thumbnailCache[file.absolutePath]
-                            if (thumb != null) {
-                                val bitmap = remember(thumb) { thumb.toComposeImageBitmap() }
-                                Image(
-                                    bitmap = bitmap,
-                                    contentDescription = file.name,
-                                    modifier = Modifier.fillMaxSize().padding(2.dp),
-                                    contentScale = ContentScale.Fit,
-                                )
-                            } else {
-                                Icon(
-                                    Icons.Default.Image,
-                                    "Loading",
-                                    modifier = Modifier.align(Alignment.Center).size(32.dp),
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            if (isSelected && isMultiEditMode) {
-                                Checkbox(
-                                    checked = true,
-                                    onCheckedChange = { onSelect(index) },
-                                    modifier = Modifier.align(Alignment.TopStart).size(16.dp),
-                                )
-                            }
-                            // Modified indicator dot
-                            if (isModified) {
-                                Surface(
-                                    modifier =
-                                        Modifier.align(Alignment.TopEnd)
-                                            .padding(2.dp)
-                                            .size(8.dp),
-                                    color = MaterialTheme.colorScheme.error,
-                                    shape = RoundedCornerShape(4.dp),
-                                ) {}
-                            }
-                            Text(
-                                "${index + 1}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.align(Alignment.BottomStart).padding(2.dp),
-                            )
-                            if (entry?.config?.hasMetadata() == true) {
+                        Card(
+                            modifier =
+                                Modifier.width(100.dp).height(80.dp).clickable { onSelect(index) },
+                            shape = RoundedCornerShape(6.dp),
+                            colors =
+                                CardDefaults.cardColors(
+                                    containerColor =
+                                        when {
+                                            isModified && isSelected ->
+                                                MaterialTheme.colorScheme.tertiaryContainer
+                                            isSelected ->
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            isModified ->
+                                                MaterialTheme.colorScheme.secondaryContainer
+                                            else -> MaterialTheme.colorScheme.surfaceVariant
+                                        }
+                                ),
+                        ) {
+                            Box(modifier = Modifier.fillMaxSize()) {
+                                val thumb = thumbnailCache[file.absolutePath]
+                                if (thumb != null) {
+                                    val bitmap = remember(thumb) { thumb.toComposeImageBitmap() }
+                                    Image(
+                                        bitmap = bitmap,
+                                        contentDescription = file.name,
+                                        modifier = Modifier.fillMaxSize().padding(2.dp),
+                                        contentScale = ContentScale.Fit,
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.Default.Image,
+                                        "Loading",
+                                        modifier = Modifier.align(Alignment.Center).size(32.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                if (isSelected && isMultiEditMode) {
+                                    Checkbox(
+                                        checked = true,
+                                        onCheckedChange = { onSelect(index) },
+                                        modifier = Modifier.align(Alignment.TopStart).size(16.dp),
+                                    )
+                                }
+                                // Modified indicator dot
+                                if (isModified) {
+                                    Surface(
+                                        modifier =
+                                            Modifier.align(Alignment.TopEnd)
+                                                .padding(2.dp)
+                                                .size(8.dp),
+                                        color = MaterialTheme.colorScheme.error,
+                                        shape = RoundedCornerShape(4.dp),
+                                    ) {}
+                                }
                                 Text(
-                                    "✓",
+                                    "${index + 1}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.align(Alignment.BottomStart).padding(2.dp),
                                 )
+                                if (entry?.config?.hasMetadata() == true) {
+                                    Text(
+                                        "✓",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp),
+                                    )
+                                }
                             }
                         }
                     }

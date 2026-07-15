@@ -49,6 +49,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -933,10 +934,12 @@ fun MetadataEditorScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (previewBitmap != null) {
+                                    val rotationDeg = state.selectedConfig.rotationDegrees.toFloat()
                                     Image(
                                         bitmap = previewBitmap,
                                         contentDescription = "Selected image",
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier = Modifier.fillMaxSize()
+                                            .graphicsLayer { rotationZ = rotationDeg },
                                         contentScale = ContentScale.Fit,
                                     )
 
