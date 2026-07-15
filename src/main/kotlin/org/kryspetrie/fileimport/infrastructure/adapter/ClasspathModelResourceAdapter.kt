@@ -11,11 +11,15 @@ import org.kryspetrie.fileimport.domain.port.ModelResourcePort
  * default strategy — models ship with the application and require no user configuration.
  *
  * ## Model files
- * | File                               | Purpose                                 | Approx. size |
- * |------------------------------------|-----------------------------------------|--------------|
- * | `models/detection_model.onnx`      | YOLO detection — finds bounding boxes   | ~10 MB       |
- * | `models/pose_model.onnx`           | YOLO pose — finds 4-corner keypoints    | ~38 MB       |
- * | `models/face_detection_model.onnx` | YOLO12n face detection — bounding boxes | ~10 MB       |
+ * | File                                  | Purpose                                 | Approx. size |
+ * |---------------------------------------|-----------------------------------------|--------------|
+ * | `models/detection_model.onnx`         | YOLO detection — finds bounding boxes   | ~10 MB       |
+ * | `models/pose_model.onnx`              | YOLO pose — finds 4-corner keypoints    | ~38 MB       |
+ * | `models/face_detection_model.onnx`    | YOLO12n face detection — bounding boxes | ~10 MB       |
+ * | `models/orientation_detection_model.onnx` | ViT orientation — predicts angle   | ~350 MB*     |
+ *
+ * *The orientation detection model is optional and may not be bundled in all builds. Use
+ * [isOrientationDetectionModelAvailable] to check before calling [loadOrientationModel].
  *
  * ## Error handling
  *
@@ -38,6 +42,7 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
         const val POSE_MODEL_PATH = "models/pose_model.onnx"
         const val CORNER_REGRESSION_MODEL_PATH = "models/corner_regression_model.onnx"
         const val FACE_DETECTION_MODEL_PATH = "models/face_detection_model.onnx"
+        const val ORIENTATION_MODEL_PATH = "models/orientation_detection_model.onnx"
         const val BUFFER_SIZE = 8192
     }
 
@@ -55,6 +60,11 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
     /** Cached face detection model bytes, loaded lazily. May not be available. */
     private val faceDetectionModelBytes: ByteArray? by lazy {
         loadResourceOrNull(FACE_DETECTION_MODEL_PATH)
+    }
+
+    /** Cached orientation detection model bytes, loaded lazily. May not be available. */
+    private val orientationModelBytes: ByteArray? by lazy {
+        loadResourceOrNull(ORIENTATION_MODEL_PATH)
     }
 
     override fun loadDetectionModel(): ByteArray = detectionModelBytes
@@ -110,6 +120,19 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
 
     override fun isFaceDetectionModelAvailable(): Boolean =
         javaClass.classLoader.getResource(FACE_DETECTION_MODEL_PATH) != null
+
+    // ── Orientation Detection Model ──────────────────────────────────────
+
+    override fun loadOrientationModel(): ByteArray =
+        orientationModelBytes
+            ?: throw ModelNotFoundException(
+                "Orientation detection model not found on classpath: $ORIENTATION_MODEL_PATH"
+            )
+
+    override fun isOrientationDetectionModelAvailable(): Boolean =
+        javaClass.classLoader.getResource(ORIENTATION_MODEL_PATH) != null
+
+    override fun orientationModelVersion(): String = "orientation_vit_v1"
 
     /**
      * Loads a classpath resource fully into a byte array.

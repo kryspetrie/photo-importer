@@ -1,7 +1,7 @@
 package org.kryspetrie.fileimport.domain.port
 
 import java.io.InputStream
-
+import org.kryspetrie.fileimport.domain.model.RotationAngle
 /**
  * Port interface for loading ML model resources.
  *
@@ -138,7 +138,55 @@ interface ModelResourcePort {
      * classpath or configured location.
      */
     fun isFaceDetectionModelAvailable(): Boolean
+
+    // ── Orientation Detection Model ──────────────────────────────────────
+
+    /**
+     * Loads the orientation detection model bytes.
+     *
+     * The orientation detection model (deep-image-orientation-angle-detection) takes a 224×224
+     * image and predicts a continuous orientation angle in the range [0°, 360°).
+     *
+     * @return Raw model bytes suitable for ONNX Runtime [ai.onnxruntime.OrtSession]
+     * @throws ModelNotFoundException if the model resource cannot be found or read
+     */
+    fun loadOrientationModel(): ByteArray
+
+    /**
+     * Returns whether the orientation detection model is available.
+     *
+     * Orientation detection is optional — the application functions fully without it. Returns true
+     * if the orientation model file exists on the classpath or configured location.
+     */
+    fun isOrientationDetectionModelAvailable(): Boolean
+
+    /**
+     * Returns the version identifier for the bundled orientation detection model.
+     *
+     * Used for cache invalidation and diagnostic info.
+     */
+    fun orientationModelVersion(): String
 }
 
 /** Thrown when a required ML model cannot be found or loaded. */
 class ModelNotFoundException(message: String, cause: Throwable? = null) : Exception(message, cause)
+
+/**
+ * Map a continuous orientation angle (in degrees) to the nearest [RotationAngle].
+ *
+ * The orientation model predicts a continuous angle in [0°, 360°). This function rounds to the
+ * nearest 90° increment:
+ * - 315°–360° and 0°–45° → [RotationAngle.NONE] (image is upright)
+ * - 45°–135° → [RotationAngle.CW_90] (image needs CW rotation to correct)
+ * - 135°–225° → [RotationAngle.CW_180] (image is upside down)
+ * - 225°–315° → [RotationAngle.CCW_90] (image needs CCW rotation to correct)
+ */
+fun Float.toNearestRotationAngle(): RotationAngle {
+    val normalized = ((this % 360f) + 360f) % 360f
+    return when {
+        normalized < 45f || normalized >= 315f -> RotationAngle.NONE
+        normalized < 135f -> RotationAngle.CW_90
+        normalized < 225f -> RotationAngle.CW_180
+        else -> RotationAngle.CCW_90
+    }
+}

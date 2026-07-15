@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.RotateRight
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -37,6 +38,8 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -87,6 +90,8 @@ import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
+import org.kryspetrie.fileimport.application.OrientationCorrectionService
+import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.components.SourcePathField
@@ -125,6 +130,7 @@ fun MetadataEditorScreen(
     val undoService: MetadataEditUndoService = koinInject()
     val faceRegionTransformer: FaceRegionTransformerPort = koinInject()
     val fileSystemAdapter: FileSystemPort = koinInject()
+    val orientationCorrection: OrientationCorrectionService = koinInject()
     val currentSettings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
 
     // Image loading state
@@ -142,6 +148,9 @@ fun MetadataEditorScreen(
     var selectedFaceSize by remember { mutableStateOf(FaceSize.DEFAULT) }
     var showBackImagePicker by remember { mutableStateOf(false) }
     var showBulkSelectionDialog by remember { mutableStateOf(false) }
+    var showAutoRotateDialog by remember { mutableStateOf(false) }
+    var autoRotateResult by remember { mutableStateOf<OrientationCorrectionService.CorrectionResult?>(null) }
+    var isDetectingOrientation by remember { mutableStateOf(false) }
 
     // Location picker
     var showLocationPicker by remember { mutableStateOf(false) }
@@ -1038,51 +1047,229 @@ fun MetadataEditorScreen(
                                     Modifier.fillMaxWidth()
                                         .padding(horizontal = 12.dp, vertical = 6.dp),
                             ) {
-                                Row(
+                                Column(
                                     modifier =
                                         Modifier.fillMaxWidth()
-                                            .padding(horizontal = 16.dp, vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
+                                            .padding(horizontal = 12.dp, vertical = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
-                                    Text("Rotate:", style = MaterialTheme.typography.labelMedium)
-                                    Spacer(Modifier.weight(1f))
-                                    IconButton(
-                                        onClick = {
-                                            state.updateSelectedConfig { it.cycleRotationCCW() }
-                                        },
-                                        modifier = Modifier.size(24.dp),
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.RotateLeft,
-                                            "CCW",
-                                            Modifier.size(16.dp),
+                                        Text("Rotate:", style = MaterialTheme.typography.labelMedium)
+                                        Spacer(Modifier.weight(1f))
+                                        // Auto-rotation button
+                                        val isAutoAvailable =
+                                            orientationCorrection.isAvailable()
+                                        IconButton(
+                                            onClick = {
+                                                val file = state.selectedFile
+                                                if (file != null && isAutoAvailable) {
+                                                    isDetectingOrientation = true
+                                                    coroutineScope.launch {
+                                                        try {
+                                                            val img = withContext(dispatcherProvider.io) {
+                                                                imageProcessing.readImage(
+                                                                    FilePath(file.absolutePath)
+                                                                )
+                                                            }
+                                                            if (img != null) {
+                                                                val result =
+                                                                    orientationCorrection.detectOnly(img)
+                                                                if (result != null) {
+                                                                    autoRotateResult = result
+                                                                    showAutoRotateDialog = true
+                                                                } else {
+                                                                    state.showError("Could not detect orientation")
+                                                                }
+                                                            } else {
+                                                                state.showError("Could not read image")
+                                                            }
+                                                        } catch (_: CancellationException) {
+                                                            // Cancellation must propagate
+                                                        } catch (e: Exception) {
+                                                            state.showError("Orientation detection failed: ${e.message}")
+                                                        } finally {
+                                                            isDetectingOrientation = false
+                                                        }
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier.size(24.dp),
+                                            enabled = isAutoAvailable && !isDetectingOrientation,
+                                        ) {
+                                            if (isDetectingOrientation) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(14.dp),
+                                                    strokeWidth = 2.dp,
+                                                )
+                                            } else {
+                                                Icon(
+                                                    Icons.Default.AutoFixHigh,
+                                                    "Auto-detect rotation",
+                                                    Modifier.size(16.dp),
+                                                )
+                                            }
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                state.updateSelectedConfig { it.cycleRotationCCW() }
+                                            },
+                                            modifier = Modifier.size(24.dp),
+                                        ) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.RotateLeft,
+                                                "CCW",
+                                                Modifier.size(16.dp),
+                                            )
+                                        }
+                                        IconButton(
+                                            onClick = { state.updateSelectedConfig { it.rotate180() } },
+                                            modifier = Modifier.size(24.dp),
+                                        ) {
+                                            Icon(Icons.Default.Refresh, "180°", Modifier.size(16.dp))
+                                        }
+                                        IconButton(
+                                            onClick = {
+                                                state.updateSelectedConfig { it.cycleRotationCW() }
+                                            },
+                                            modifier = Modifier.size(24.dp),
+                                        ) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.RotateRight,
+                                                "CW",
+                                                Modifier.size(16.dp),
+                                            )
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            "${state.selectedConfig.rotationDegrees}°",
+                                            style = MaterialTheme.typography.labelSmall,
                                         )
                                     }
-                                    IconButton(
-                                        onClick = { state.updateSelectedConfig { it.rotate180() } },
-                                        modifier = Modifier.size(24.dp),
-                                    ) {
-                                        Icon(Icons.Default.Refresh, "180°", Modifier.size(16.dp))
-                                    }
-                                    IconButton(
-                                        onClick = {
-                                            state.updateSelectedConfig { it.cycleRotationCW() }
-                                        },
-                                        modifier = Modifier.size(24.dp),
-                                    ) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.RotateRight,
-                                            "CW",
-                                            Modifier.size(16.dp),
+                                    if (!orientationCorrection.isAvailable()) {
+                                        Text(
+                                            "Auto-rotate requires orientation model",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "${state.selectedConfig.rotationDegrees}°",
-                                        style = MaterialTheme.typography.labelSmall,
-                                    )
                                 }
+                            }
+
+                            // Auto-rotation result dialog
+                            if (showAutoRotateDialog && autoRotateResult != null) {
+                                val result = autoRotateResult!!
+                                val filePath = state.selectedFile?.absolutePath ?: ""
+                                val isJpeg = OrientationCorrectionService.isJpegFile(filePath)
+                                val currentRotation = state.selectedConfig.rotationDegrees
+                                // Calculate corrected rotation: apply detected needed correction
+                                val correctedRotation =
+                                    (currentRotation + result.nearestRotation.degrees) % 360
+
+                                AlertDialog(
+                                    onDismissRequest = {
+                                        showAutoRotateDialog = false
+                                        autoRotateResult = null
+                                    },
+                                    title = {
+                                        Text("Auto-Rotation Detected")
+                                    },
+                                    text = {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(
+                                                "Detected orientation: " +
+                                                    "${result.angleDegrees.toInt()}° " +
+                                                    "(confidence: ${(result.confidence * 100).toInt()}%)"
+                                            )
+                                            Text(
+                                                "Nearest correction: " +
+                                                    "${result.nearestRotation.degrees}°"
+                                            )
+                                            if (result.nearestRotation == RotationAngle.NONE) {
+                                                Surface(
+                                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                                    shape = RoundedCornerShape(4.dp),
+                                                ) {
+                                                    Text(
+                                                        "Image appears upright — no rotation needed.",
+                                                        modifier = Modifier.padding(8.dp),
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                    )
+                                                }
+                                            } else {
+                                                Text(
+                                                    "New rotation would be: $currentRotation° → " +
+                                                        "$correctedRotation°"
+                                                )
+                                                if (isJpeg) {
+                                                    Surface(
+                                                        color =
+                                                            MaterialTheme.colorScheme.errorContainer,
+                                                        shape = RoundedCornerShape(4.dp),
+                                                    ) {
+                                                        Text(
+                                                            "⚠ JPEG rotation is lossy — re-encoding " +
+                                                                "degrades image quality. This only " +
+                                                                "updates metadata rotation, not pixels.",
+                                                            modifier = Modifier.padding(8.dp),
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color =
+                                                                MaterialTheme.colorScheme.onErrorContainer,
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    confirmButton = {
+                                        if (result.nearestRotation != RotationAngle.NONE) {
+                                            TextButton(
+                                                onClick = {
+                                                    state.updateSelectedConfig {
+                                                        it.copy(
+                                                            rotationDegrees = correctedRotation,
+                                                            faceRegions = it.faceRegions.map { region ->
+                                                                when (result.nearestRotation) {
+                                                                    RotationAngle.CW_90 -> region.rotate90CW()
+                                                                    RotationAngle.CCW_90 -> region.rotate90CCW()
+                                                                    RotationAngle.CW_180 -> region.rotate180()
+                                                                    RotationAngle.NONE -> region
+                                                                }
+                                                            }
+                                                        )
+                                                    }
+                                                    showAutoRotateDialog = false
+                                                    autoRotateResult = null
+                                                    state.showInfo("Rotation corrected to $correctedRotation°")
+                                                }
+                                            ) {
+                                                Text("Apply Rotation")
+                                            }
+                                        } else {
+                                            TextButton(
+                                                onClick = {
+                                                    showAutoRotateDialog = false
+                                                    autoRotateResult = null
+                                                }
+                                            ) {
+                                                Text("OK")
+                                            }
+                                        }
+                                    },
+                                    dismissButton = {
+                                        TextButton(
+                                            onClick = {
+                                                showAutoRotateDialog = false
+                                                autoRotateResult = null
+                                            }
+                                        ) {
+                                            Text("Cancel")
+                                        }
+                                    },
+                                )
                             }
                         } else if (isMultiEditMode && selectedIndices.isNotEmpty()) {
                             Box(

@@ -20,6 +20,8 @@ import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
+import org.kryspetrie.fileimport.domain.port.OrientationDetectionPort
+import org.kryspetrie.fileimport.application.OrientationCorrectionService
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
@@ -55,6 +57,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceDetectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
+import org.kryspetrie.fileimport.infrastructure.photoscan.OrientationDetectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService
@@ -156,6 +159,15 @@ val appModule = module {
     }
     single<FaceDetectionPort> {
         FaceDetectionService(modelResourcePort = get(), ortSessionFactory = get())
+    }
+    single<OrientationDetectionPort> {
+        OrientationDetectionService(modelResourcePort = get(), ortSessionFactory = get())
+    }
+    single {
+        OrientationCorrectionService(
+            orientationDetection = get<OrientationDetectionPort>(),
+            imageProcessing = get<ImageProcessingPort>(),
+        )
     }
     single<ImageProcessingPort> { AwtImageProcessingAdapter(get()) }
     single { ScanService(photoDetector = get(), fileSystem = get(), imageProcessing = get()) }

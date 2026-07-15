@@ -385,6 +385,7 @@ class HexagonalArchitectureKonsistTest {
             add("org.kryspetrie.fileimport.application.export.MetadataWritingService")
             add("org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService")
             add("org.kryspetrie.fileimport.application.metadata.MetadataEditService")
+            add("org.kryspetrie.fileimport.application.OrientationCorrectionService")
         }
 
         @Test

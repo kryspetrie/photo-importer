@@ -60,6 +60,7 @@ org.kryspetrie.fileimport/
 │   ├── PerspectiveCorrectionService.kt  # Homography correction
 │   ├── FaceRegionTransformer.kt    # Face region coordinate mapping
 │   ├── LocationSearchService.kt    # Geocoding search
+│   ├── OrientationCorrectionService.kt  # Auto-rotation detection & correction
 │   ├── MetadataWritingService.kt   # Standalone metadata writing (bulk editor)
 │   ├── metadata/                   # Metadata editor application services
 │   │   ├── MetadataEditService.kt        # Save/write orchestration (delegates to MetadataWritingService)
@@ -87,6 +88,7 @@ org.kryspetrie.fileimport/
 │   │   ├── PhotoScanConfiguration.kt  # Photo scan metadata overrides
 │   │   ├── PhotoScanModels.kt      # DetectedPhoto, PhotoCorner, RotationAngle
 │   │   ├── PhotoScanExportModels.kt   # Export result types
+│   │   ├── OrientationResult.kt    # Detected orientation angle result
 │   │   ├── ProcessedImage.kt       # Domain image abstraction (no AWT)
 │   │   ├── ScanProgress.kt         # Duplicate scan progress state
 │   │   ├── WatchFolderConfig.kt    # Watch folder configuration
@@ -109,6 +111,7 @@ org.kryspetrie.fileimport/
 │       ├── FaceRegionTransformerPort.kt   # Face region coordinate mapping
 │       ├── LocationSearchPort.kt  # Geocoding search (live results)
 │       ├── ModelResourcePort.kt    # ONNX model loading
+│       ├── OrientationDetectionPort.kt  # ML orientation detection
 │       ├── DispatcherProvider.kt   # Coroutine dispatchers
 │       ├── TimeProvider.kt        # Time operations
 │       └── IdGenerator.kt         # Unique ID generation
@@ -131,6 +134,7 @@ org.kryspetrie.fileimport/
 │   ├── logging/
 │   │   └── LoggingConfig.kt       # AppLogger (SLF4J-based)
 │   ├── photoscan/                  # Photo detection infrastructure
+│   │   ├── OrientationDetectionService.kt  # ViT orientation angle detection (ONNX)
 │   │   ├── HybridCornerDetector.kt # Classical CV + ML hybrid (implements PhotoScanDetectorPort)
 │   │   ├── PhotoScanDetectorService.kt  # YOLO/CV detection with fallbacks
 │   │   ├── RectangleDetector.kt   # Edge-based rectangle detection
@@ -208,6 +212,7 @@ Every port in `domain/port/` has a corresponding adapter in `infrastructure/` (o
 | `FaceRegionTransformerPort` | `FaceRegionTransformer` | Face region coordinate mapping |
 | `LocationSearchPort` | `LocationSearchService` | Geocoding with live results |
 | `ModelResourcePort` | `ClasspathModelResourceAdapter` | ONNX model loading from classpath |
+| `OrientationDetectionPort` | `OrientationDetectionService` | ML-based orientation angle detection |
 | `DispatcherProvider` | `DefaultDispatcherProvider` | Coroutine dispatcher factory |
 | `TimeProvider` | `DefaultTimeProvider` | System time operations |
 | `IdGenerator` | `DefaultIdGenerator` | Unique ID generation |
@@ -263,6 +268,7 @@ The UI directly imports application use-case services for user interaction flows
 | `DuplicateScannerService` | Duplicate finding |
 | `WatchFolderService` | Auto-import from watched folders |
 | `MetadataWritingService` | Write image + EXIF/IPTC/XMP metadata |
+| `OrientationCorrectionService` | Auto-detect & correct image orientation |
 
 ### UI → Application (AWT-Coupled Services)
 
