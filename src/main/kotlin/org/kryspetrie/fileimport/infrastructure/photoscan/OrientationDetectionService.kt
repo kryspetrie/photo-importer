@@ -5,6 +5,7 @@ package org.kryspetrie.fileimport.infrastructure.photoscan
 import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
+import java.awt.RenderingHints
 import java.awt.image.BufferedImage
 import java.nio.FloatBuffer
 import org.kryspetrie.fileimport.domain.model.OrientationResult
@@ -22,20 +23,21 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
  *
  * The model is a Vision Transformer (ViT) fine-tuned from `google/vit-base-patch16-224` that
  * predicts a continuous orientation angle (0°–359.9°). The output is a single float representing
- * the predicted clockwise rotation angle. To correct a misoriented image, it should be rotated by
- * the **negative** (i.e., CCW) of the predicted angle.
+ * the predicted clockwise rotation angle needed to correct the image orientation.
  *
  * ## Preprocessing
  *
- * 1. Resize the input image to 224×224 (maintaining aspect ratio with letterbox padding)
- * 2. Convert to RGB float32 in [0, 1] range
- * 3. Transpose to NCHW format: [1, 3, 224, 224]
+ * Matches the original `ViTImageProcessor` preprocessing from `google/vit-base-patch16-224`:
+ * 1. Resize the input image to 224×224 (bicubic interpolation) — **not** letterbox padding
+ * 2. Convert RGB pixels to float and normalize to **[-1, 1]** using:
+ *    `normalized = (pixel / 255.0 - 0.5) / 0.5`
+ *    This matches `image_mean = (0.5, 0.5, 0.5)` and `image_std = (0.5, 0.5, 0.5)`
+ * 3. Arrange in NCHW format: `[1, 3, 224, 224]` with RGB channel order
  *
  * ## Output
  *
- * The model outputs a single float value: the predicted orientation angle in degrees
- * (0 = upright, 90 = rotated 90° CW from upright, etc.). We map this to the nearest
- * [RotationAngle] for compatibility with the existing rotation system.
+ * The model outputs a single float value: the predicted orientation angle in degrees. We map this
+ * to the nearest [RotationAngle] for compatibility with the existing rotation system.
  *
  * ## GPU acceleration
  *
@@ -59,8 +61,9 @@ class OrientationDetectionService(
         /** ViT input size — the model expects 224×224 images. */
         private const val INPUT_SIZE = 224
 
-        /** Letterbox fill color (mid-gray, matching ViT preprocessing conventions). */
-        private const val PAD_COLOR = 114
+        /** ViT normalization: mean and std for each channel (RGB). */
+        private val IMAGE_MEAN = floatArrayOf(0.5f, 0.5f, 0.5f)
+        private val IMAGE_STD = floatArrayOf(0.5f, 0.5f, 0.5f)
 
         /** Minimum confidence for a detection to be considered reliable. */
         private const val DEFAULT_CONFIDENCE_THRESHOLD = 0.3f
@@ -76,16 +79,24 @@ class OrientationDetectionService(
         confidenceThreshold: Float,
     ): OrientationResult? {
         val onnxSession =
-            session ?: error("Orientation detection model is not available. Call isOrientationDetectionAvailable() first.")
+            session
+                ?: error(
+                    "Orientation detection model is not available. " +
+                        "Call isOrientationDetectionAvailable() first."
+                )
         val bufferedImage = image.toBufferedImage()
-        return detectOrientationFromBufferedImage(bufferedImage, onnxSession, confidenceThreshold)
+        return detectOrientationFromBufferedImage(
+            bufferedImage,
+            onnxSession,
+            confidenceThreshold,
+        )
     }
 
     /**
      * Run orientation detection on a [BufferedImage].
      *
-     * Preprocesses the image to 224×224 NCHW format, runs ONNX inference, and maps the predicted
-     * angle to the nearest [RotationAngle].
+     * Preprocesses the image to 224×224 NCHW format with ViT normalization, runs ONNX inference,
+     * and maps the predicted angle to the nearest [RotationAngle].
      */
     private fun detectOrientationFromBufferedImage(
         image: BufferedImage,
@@ -94,7 +105,7 @@ class OrientationDetectionService(
     ): OrientationResult? {
         val env = OrtEnvironment.getEnvironment()
 
-        // Step 1: Preprocess — resize to 224×224 with letterbox padding
+        // Step 1: Preprocess — resize to 224×224 with ViT normalization
         val inputTensor = preprocessImage(image, env)
 
         // Step 2: Run inference
@@ -102,21 +113,25 @@ class OrientationDetectionService(
         val results = onnxSession.run(mapOf(inputName to inputTensor))
 
         // Step 3: Parse output — single float angle prediction
-        @Suppress("UNCHECKED_CAST") val output = results[0].value as? Array<FloatArray>
-
+        @Suppress("UNCHECKED_CAST")
+        val output = results[0].value as? Array<FloatArray>
 
         if (output == null || output.isEmpty() || output[0].isEmpty()) return null
 
         val predictedAngle = output[0][0]
 
-        // The model outputs the clockwise rotation angle. For orientation correction,
-        // we need to normalize to [0, 360) and map to nearest RotationAngle.
+        // The model predicts the clockwise rotation angle from upright orientation.
+        // To correct the image, rotate it by the negation of this angle (or equivalently,
+        // 360 - angle). We normalize to [0, 360) and map to the nearest RotationAngle.
         val normalizedAngle = ((predictedAngle % 360f) + 360f) % 360f
 
-        // Confidence: the model doesn't output a separate confidence score, so we use
-        // distance from a 90° boundary as a proxy. Closer to a 90° boundary = more ambiguous.
+        // Confidence proxy: measure how close the angle is to a 90° boundary.
+        // Near a boundary (e.g., 45°, 135°) means the model is more uncertain about which
+        // direction the image is rotated. Closer to 0°/90°/180°/270° = higher confidence.
         val distanceToNearest90 = normalizedAngle % 90f
-        val confidence = 1f - (distanceToNearest90.coerceAtMost(90f - distanceToNearest90)) / 45f
+        val distanceFromBoundary =
+            distanceToNearest90.coerceAtMost(90f - distanceToNearest90)
+        val confidence = 1f - (distanceFromBoundary / 45f)
 
         if (confidence < confidenceThreshold) return null
 
@@ -130,45 +145,37 @@ class OrientationDetectionService(
     /**
      * Preprocess an image for ViT orientation detection.
      *
-     * Applies letterbox resize to 224×224 with gray padding, normalizes to [0, 1], and arranges
-     * in NCHW format [1, 3, 224, 224].
+     * Matches the `google/vit-base-patch16-224` `ViTImageProcessor` preprocessing:
+     * 1. Resize to 224×224 using bicubic interpolation (no letterbox padding)
+     * 2. Convert RGB pixels to float, normalize to [-1, 1]:
+     *    `normalized = (pixel / 255.0 - mean) / std` where mean=0.5, std=0.5
+     * 3. Arrange in NCHW format: [1, 3, 224, 224] with RGB channel order
      */
     private fun preprocessImage(image: BufferedImage, env: OrtEnvironment): OnnxTensor {
-        val origW = image.width
-        val origH = image.height
+        // Resize to 224×224 using bicubic interpolation
+        val resized =
+            BufferedImage(INPUT_SIZE, INPUT_SIZE, BufferedImage.TYPE_INT_RGB)
+        val g2d = resized.createGraphics()
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+        g2d.drawImage(image, 0, 0, INPUT_SIZE, INPUT_SIZE, null)
+        g2d.dispose()
 
-        // Letterbox resize: scale to fit 224×224 while maintaining aspect ratio
-        val scale = minOf(
-            INPUT_SIZE.toFloat() / origW,
-            INPUT_SIZE.toFloat() / origH,
-        )
-        val scaledW = (origW * scale).toInt()
-        val scaledH = (origH * scale).toInt()
-        val padW = (INPUT_SIZE - scaledW) / 2
-        val padH = (INPUT_SIZE - scaledH) / 2
-
-        // Create padded image
-        val padded = BufferedImage(INPUT_SIZE, INPUT_SIZE, BufferedImage.TYPE_INT_RGB)
-        val g = padded.createGraphics()
-        g.color = java.awt.Color(PAD_COLOR, PAD_COLOR, PAD_COLOR)
-        g.fillRect(0, 0, INPUT_SIZE, INPUT_SIZE)
-        g.drawImage(image, padW, padH, scaledW, scaledH, null)
-        g.dispose()
-
-        // Convert to NCHW float [1, 3, 224, 224], normalized to [0, 1]
+        // Convert to NCHW float [1, 3, 224, 224] with ViT normalization
         val floatArray = FloatArray(1 * 3 * INPUT_SIZE * INPUT_SIZE)
         var idx = 0
         for (c in 0 until 3) {
             for (y in 0 until INPUT_SIZE) {
                 for (x in 0 until INPUT_SIZE) {
-                    val rgb = padded.getRGB(x, y)
+                    val rgb = resized.getRGB(x, y)
                     val channel = when (c) {
                         0 -> (rgb shr 16) and 0xFF // R
                         1 -> (rgb shr 8) and 0xFF  // G
                         2 -> rgb and 0xFF           // B
                         else -> 0
                     }
-                    floatArray[idx++] = channel / 255.0f
+                    // Normalize: (pixel/255 - mean) / std = (pixel/255 - 0.5) / 0.5
+                    floatArray[idx++] =
+                        (channel / 255.0f - IMAGE_MEAN[c]) / IMAGE_STD[c]
                 }
             }
         }
