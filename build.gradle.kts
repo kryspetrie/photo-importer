@@ -114,6 +114,8 @@ dependencies {
     tasks.test {
         useJUnitPlatform { excludeTags("UiComponentTest", "integration") }
         testLogging { showStandardStreams = true }
+        // ONNX models (orientation detection ~350MB) require additional heap
+        jvmArgs("-Xmx2g")
     }
 
     tasks.register<Test>("uiTest") {

@@ -22,27 +22,31 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
  * deep-image-orientation-angle-detection ONNX model.
  *
  * The model is a Vision Transformer (ViT) fine-tuned from `google/vit-base-patch16-224` that
- * predicts a continuous orientation angle (0°–359.9°). The output is a single float representing
- * the predicted clockwise rotation angle needed to correct the image orientation.
+ * predicts a continuous orientation angle (0°–359.9°). The output represents how much the image is
+ * rotated **clockwise from upright**. To correct the image, rotate it by the negation
+ * (counter-clockwise) of the predicted angle.
+ *
+ * ## Model angle semantics
+ *
+ * The model output `y` represents the **orientation angle** (CW rotation from upright):
+ * - y ≈ 0° → image is upright → no correction needed
+ * - y ≈ 90° → image was rotated 90° CW → correct by rotating 90° CCW (or 270° CW)
+ * - y ≈ 180° → image is upside down → correct by rotating 180°
+ * - y ≈ 270° → image was rotated 270° CW (= 90° CCW) → correct by rotating 90° CW
+ *
+ * The **correction angle** (how much to rotate CW to fix the image) is:
+ * `correction = (360° - y) % 360°`
+ *
+ * This correction maps to the nearest [RotationAngle] for the metadata editor's rotation system.
  *
  * ## Preprocessing
  *
- * Matches the original `ViTImageProcessor` preprocessing from `google/vit-base-patch16-224`:
+ * Matches the `ViTImageProcessor` preprocessing from `google/vit-base-patch16-224`:
  * 1. Resize the input image to 224×224 (bicubic interpolation) — **not** letterbox padding
  * 2. Convert RGB pixels to float and normalize to **[-1, 1]** using:
  *    `normalized = (pixel / 255.0 - 0.5) / 0.5`
  *    This matches `image_mean = (0.5, 0.5, 0.5)` and `image_std = (0.5, 0.5, 0.5)`
  * 3. Arrange in NCHW format: `[1, 3, 224, 224]` with RGB channel order
- *
- * ## Output
- *
- * The model outputs a single float value: the predicted orientation angle in degrees. We map this
- * to the nearest [RotationAngle] for compatibility with the existing rotation system.
- *
- * ## GPU acceleration
- *
- * ONNX sessions are created through [OrtSessionFactory] which enables GPU acceleration (CoreML on
- * macOS, CUDA on Linux, DirectML on Windows) when available.
  *
  * @param modelResourcePort Model loading interface for obtaining the ONNX model bytes
  * @param ortSessionFactory Factory for creating GPU-accelerated ONNX sessions
@@ -120,15 +124,20 @@ class OrientationDetectionService(
 
         val predictedAngle = output[0][0]
 
-        // The model predicts the clockwise rotation angle from upright orientation.
-        // To correct the image, rotate it by the negation of this angle (or equivalently,
-        // 360 - angle). We normalize to [0, 360) and map to the nearest RotationAngle.
-        val normalizedAngle = ((predictedAngle % 360f) + 360f) % 360f
+        // The model predicts the CW correction angle — how much to rotate CW to make the
+        // image upright. For example, y ≈ 270° means "rotate 270° CW (= 90° CCW) to correct".
+        // y ≈ 0° means the image is already upright.
+        // Normalize to [0, 360).
+        val correctionDegrees = ((predictedAngle % 360f) + 360f) % 360f
 
-        // Confidence proxy: measure how close the angle is to a 90° boundary.
+        // The "orientation" angle (how much the image is rotated CW from upright) is the
+        // complement: orientation = (360 - correction) % 360.
+        val orientationDegrees = ((360f - correctionDegrees) + 360f) % 360f
+
+        // Confidence proxy: measure how close the orientation angle is to a 90° boundary.
         // Near a boundary (e.g., 45°, 135°) means the model is more uncertain about which
         // direction the image is rotated. Closer to 0°/90°/180°/270° = higher confidence.
-        val distanceToNearest90 = normalizedAngle % 90f
+        val distanceToNearest90 = orientationDegrees % 90f
         val distanceFromBoundary =
             distanceToNearest90.coerceAtMost(90f - distanceToNearest90)
         val confidence = 1f - (distanceFromBoundary / 45f)
@@ -136,9 +145,10 @@ class OrientationDetectionService(
         if (confidence < confidenceThreshold) return null
 
         return OrientationResult(
-            angleDegrees = normalizedAngle,
+            orientationDegrees = orientationDegrees,
             confidence = confidence,
-            nearestRotation = normalizedAngle.toNearestRotationAngle(),
+            nearestRotation = correctionDegrees.toNearestRotationAngle(),
+            correctionDegrees = correctionDegrees,
         )
     }
 

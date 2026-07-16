@@ -12,25 +12,24 @@ import org.kryspetrie.fileimport.domain.port.OrientationDetectionPort
  * image and provides the corresponding [RotationAngle] needed to correct it. The service delegates
  * to [OrientationDetectionPort] for model inference and [ImageProcessingPort] for pixel rotation.
  *
+ * ## Angle semantics
+ *
+ * The ML model outputs an **orientation angle** (how much the image is rotated CW from upright).
+ * This service converts it to a **correction angle** (how much to rotate CW to fix the image):
+ * - Image oriented 90° CW → correction = 270° CW (= 90° CCW) → [RotationAngle.CCW_90]
+ * - Image oriented 180° → correction = 180° → [RotationAngle.CW_180]
+ * - Image oriented 270° CW → correction = 90° CW → [RotationAngle.CW_90]
+ * - Image upright (0°) → correction = 0° → [RotationAngle.NONE]
+ *
+ * The [CorrectionResult.nearestRotation] field contains the correction rotation, so it can be used
+ * directly to update the metadata rotation field.
+ *
  * ## JPEG lossy rotation warning
  *
  * Rotating a JPEG image involves full re-encoding, which is lossy. This service provides a
  * [isJpegFile] check so that the UI layer can warn users before applying pixel rotation to JPEG
  * files. For lossless orientation, the EXIF orientation tag should be set instead (which this
  * service does NOT do — that is handled by the metadata writing pipeline).
- *
- * ## Usage
- *
- * ```kotlin
- * val result = service.detectAndCorrect(image, "photo.jpg")
- * if (result != null) {
- *     println("Detected angle: ${result.angleDegrees}°")
- *     println("Nearest rotation: ${result.nearestRotation}")
- *     if (result.isJpeg) {
- *         // Warn user about lossy JPEG rotation
- *     }
- * }
- * ```
  *
  * @param orientationDetection The ML model adapter for angle prediction
  * @param imageProcessing The image processing port for pixel rotation
@@ -43,17 +42,20 @@ class OrientationCorrectionService(
     /**
      * Result of orientation detection and correction.
      *
-     * @property angleDegrees The predicted orientation angle (0°–359.9°)
+     * @property orientationDegrees The detected orientation angle (0°–359.9°) — how much the
+     *   image is rotated CW from upright
      * @property confidence Detection confidence (typically 0.5–1.0 for clear detections)
-     * @property nearestRotation The nearest discrete [RotationAngle] that corrects the orientation
+     * @property nearestRotation The nearest discrete [RotationAngle] that would **correct** the
+     *   image orientation (i.e., how much to rotate the image to make it upright)
      * @property isJpeg Whether the file appears to be a JPEG (for lossy rotation warnings)
      * @property correctedImage The pixel-rotated image (only non-null if [correctPixels] was true
      *   and the rotation was not [RotationAngle.NONE])
      */
     data class CorrectionResult(
-        val angleDegrees: Float,
+        val orientationDegrees: Float,
         val confidence: Float,
         val nearestRotation: RotationAngle,
+        val correctionDegrees: Float,
         val isJpeg: Boolean,
         val correctedImage: ProcessedImage? = null,
     )
@@ -86,9 +88,10 @@ class OrientationCorrectionService(
         } else null
 
         return CorrectionResult(
-            angleDegrees = detection.angleDegrees,
+            orientationDegrees = detection.orientationDegrees,
             confidence = detection.confidence,
             nearestRotation = detection.nearestRotation,
+            correctionDegrees = detection.correctionDegrees,
             isJpeg = isJpeg,
             correctedImage = correctedImage,
         )
@@ -98,10 +101,6 @@ class OrientationCorrectionService(
      * Detects the orientation angle of an image without applying any correction.
      *
      * Convenience method for [detectAndCorrect] with `correctPixels = false`.
-     *
-     * @param image The source image to analyze
-     * @param confidenceThreshold Minimum model confidence (default 0.3)
-     * @return The detection result, or null if the model is unavailable or confidence is low
      */
     fun detectOnly(
         image: ProcessedImage,
@@ -115,8 +114,6 @@ class OrientationCorrectionService(
 
     /**
      * Returns whether the orientation detection model is available.
-     *
-     * Use this to enable/disable UI controls before attempting detection.
      */
     fun isAvailable(): Boolean = orientationDetection.isOrientationDetectionAvailable()
 

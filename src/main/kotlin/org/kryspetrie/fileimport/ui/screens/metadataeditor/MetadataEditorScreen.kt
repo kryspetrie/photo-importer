@@ -1164,10 +1164,17 @@ fun MetadataEditorScreen(
                                 val result = autoRotateResult!!
                                 val filePath = state.selectedFile?.absolutePath ?: ""
                                 val isJpeg = OrientationCorrectionService.isJpegFile(filePath)
+                                // Round correction to nearest 90° increment for clean metadata values.
+                                // correctionDegrees is how much to rotate CW to fix the image.
+                                val nearestCorrectionDeg = when (result.nearestRotation) {
+                                    RotationAngle.NONE -> 0
+                                    RotationAngle.CW_90 -> 90
+                                    RotationAngle.CW_180 -> 180
+                                    RotationAngle.CCW_90 -> 270
+                                }
                                 val currentRotation = state.selectedConfig.rotationDegrees
-                                // Calculate corrected rotation: apply detected needed correction
                                 val correctedRotation =
-                                    (currentRotation + result.nearestRotation.degrees) % 360
+                                    (currentRotation + nearestCorrectionDeg) % 360
 
                                 AlertDialog(
                                     onDismissRequest = {
@@ -1181,12 +1188,12 @@ fun MetadataEditorScreen(
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Text(
                                                 "Detected orientation: " +
-                                                    "${result.angleDegrees.toInt()}° " +
+                                                    "${result.orientationDegrees.toInt()}° " +
                                                     "(confidence: ${(result.confidence * 100).toInt()}%)"
                                             )
                                             Text(
-                                                "Nearest correction: " +
-                                                    "${result.nearestRotation.degrees}°"
+                                                "Correction: ${result.correctionDegrees.toInt()}° " +
+                                                    "(${result.nearestRotation.degrees}°)"
                                             )
                                             if (result.nearestRotation == RotationAngle.NONE) {
                                                 Surface(

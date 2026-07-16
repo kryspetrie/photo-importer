@@ -86,9 +86,10 @@ class OrientationCorrectionServiceTest {
         fun returnsResult() {
             val detection = StubOrientationDetectionPort(
                 result = OrientationResult(
-                    angleDegrees = 90f,
+                    orientationDegrees = 90f,
                     confidence = 0.85f,
-                    nearestRotation = RotationAngle.CW_90,
+                    nearestRotation = RotationAngle.CCW_90,
+                    correctionDegrees = 270f,
                 ),
             )
             val service = OrientationCorrectionService(detection, StubImageProcessingPort())
@@ -96,8 +97,8 @@ class OrientationCorrectionServiceTest {
             val result = service.detectOnly(stubImage)
 
             assertThat(result).isNotNull
-            assertThat(result!!.angleDegrees).isEqualTo(90f)
-            assertThat(result.nearestRotation).isEqualTo(RotationAngle.CW_90)
+            assertThat(result!!.orientationDegrees).isEqualTo(90f)
+            assertThat(result.nearestRotation).isEqualTo(RotationAngle.CCW_90)
             assertThat(result.correctedImage).isNull()
         }
 
@@ -118,9 +119,10 @@ class OrientationCorrectionServiceTest {
             val ip = StubImageProcessingPort()
             val detection = StubOrientationDetectionPort(
                 result = OrientationResult(
-                    angleDegrees = 90f,
+                    orientationDegrees = 90f,
                     confidence = 0.85f,
-                    nearestRotation = RotationAngle.CW_90,
+                    nearestRotation = RotationAngle.CCW_90,
+                    correctionDegrees = 270f,
                 ),
             )
             val service = OrientationCorrectionService(detection, ip)
@@ -140,9 +142,10 @@ class OrientationCorrectionServiceTest {
             val ip = StubImageProcessingPort()
             val detection = StubOrientationDetectionPort(
                 result = OrientationResult(
-                    angleDegrees = 90f,
+                    orientationDegrees = 90f,
                     confidence = 0.85f,
-                    nearestRotation = RotationAngle.CW_90,
+                    nearestRotation = RotationAngle.CCW_90,
+                    correctionDegrees = 270f,
                 ),
             )
             val service = OrientationCorrectionService(detection, ip)
@@ -155,7 +158,7 @@ class OrientationCorrectionServiceTest {
 
             assertThat(result).isNotNull
             assertThat(result!!.correctedImage).isNotNull
-            assertThat(ip.lastRotation).isEqualTo(RotationAngle.CW_90)
+            assertThat(ip.lastRotation).isEqualTo(RotationAngle.CCW_90)
         }
 
         @Test
@@ -164,9 +167,10 @@ class OrientationCorrectionServiceTest {
             val ip = StubImageProcessingPort()
             val detection = StubOrientationDetectionPort(
                 result = OrientationResult(
-                    angleDegrees = 0f,
+                    orientationDegrees = 0f,
                     confidence = 0.95f,
                     nearestRotation = RotationAngle.NONE,
+                    correctionDegrees = 0f,
                 ),
             )
             val service = OrientationCorrectionService(detection, ip)
@@ -188,9 +192,10 @@ class OrientationCorrectionServiceTest {
             val ip = StubImageProcessingPort()
             val detection = StubOrientationDetectionPort(
                 result = OrientationResult(
-                    angleDegrees = 90f,
+                    orientationDegrees = 90f,
                     confidence = 0.85f,
-                    nearestRotation = RotationAngle.CW_90,
+                    nearestRotation = RotationAngle.CCW_90,
+                    correctionDegrees = 270f,
                 ),
             )
             val service = OrientationCorrectionService(detection, ip)
@@ -222,9 +227,10 @@ class OrientationCorrectionServiceTest {
         fun setsJpegFlag() {
             val detection = StubOrientationDetectionPort(
                 result = OrientationResult(
-                    angleDegrees = 90f,
+                    orientationDegrees = 90f,
                     confidence = 0.85f,
-                    nearestRotation = RotationAngle.CW_90,
+                    nearestRotation = RotationAngle.CCW_90,
+                    correctionDegrees = 270f,
                 ),
             )
             val service = OrientationCorrectionService(detection, StubImageProcessingPort())
@@ -241,9 +247,10 @@ class OrientationCorrectionServiceTest {
         fun belowConfidenceThreshold() {
             val detection = StubOrientationDetectionPort(
                 result = OrientationResult(
-                    angleDegrees = 90f,
+                    orientationDegrees = 90f,
                     confidence = 0.85f,
-                    nearestRotation = RotationAngle.CW_90,
+                    nearestRotation = RotationAngle.CCW_90,
+                    correctionDegrees = 270f,
                 ),
             )
             val service = OrientationCorrectionService(detection, StubImageProcessingPort())
