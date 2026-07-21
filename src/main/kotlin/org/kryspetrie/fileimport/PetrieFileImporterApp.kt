@@ -24,7 +24,7 @@ import org.kryspetrie.fileimport.ui.PetrieFileImporterApp
 import org.kryspetrie.fileimport.ui.createAppIcon
 
 /**
- * Main entry point for the Petrie Image Importer desktop application.
+ * Main entry point for the PhotoImporter desktop application.
  *
  * This is the application bootstrap that initializes the dependency injection container, loads
  * persisted settings, and launches the Compose Desktop window. It serves as the composition root
@@ -54,7 +54,7 @@ import org.kryspetrie.fileimport.ui.createAppIcon
  * @see org.kryspetrie.fileimport.cli.main CLI entry point for command-line mode
  * @see org.kryspetrie.fileimport.di.appModule Dependency injection configuration
  */
-private const val APP_TITLE = "Petrie Image Importer"
+private const val APP_TITLE = "PhotoImporter"
 
 /**
  * Application entry point.
@@ -93,15 +93,32 @@ private const val APP_TITLE = "Petrie Image Importer"
  * @see application Compose Desktop application lifecycle
  */
 fun main(args: Array<String>) {
-    // Check for CLI mode - allows running headless for automation
-    if (args.isNotEmpty() && args[0] == "--cli") {
-        org.kryspetrie.fileimport.cli.main(args.drop(1).toTypedArray())
+    // Smart CLI dispatch: detect CLI subcommands and delegate to CLI mode
+    // This allows `photo-import scan ./photos/` to just work without --cli prefix
+    val cliCommands = setOf(
+        "import", "check-duplicates", "reorganize", "undo",
+        "check-journals", "scan", "watch", "--version", "-V", "--help", "-h"
+    )
+    if (args.isNotEmpty() && (args[0] in cliCommands || args[0] == "--cli")) {
+        // Initialize Koin before CLI invocation so all services are injectable
+        startKoin { modules(appModule) }
+        val cliArgs = if (args[0] == "--cli") args.drop(1).toTypedArray() else args
+        org.kryspetrie.fileimport.cli.main(cliArgs)
         return
     }
 
     // Initialize dependency injection container
     // This is equivalent to Spring's ApplicationContext initialization
     startKoin { modules(appModule) }
+
+    // Auto-start watch folders that have autoStart enabled
+    try {
+        val watchManager: org.kryspetrie.fileimport.application.WatchFolderManager =
+            org.koin.core.context.GlobalContext.get().get()
+        watchManager.startAllAutoStart()
+    } catch (_: Exception) {
+        // Watch folder auto-start is best-effort; don't block app launch
+    }
 
     // Load persisted application settings
     // Settings include: theme preference, import profiles, window dimensions

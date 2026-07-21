@@ -106,19 +106,46 @@ object ExifValueResolver {
     /**
      * Converts a decimal degree value to GPS rationals (degrees, minutes, seconds). EXIF GPS
      * latitude/longitude fields require 3 RationalNumber values: degrees, minutes, seconds.
+     * All values are non-negative; the caller sets the hemisphere (N/S, E/W) separately.
      *
-     * @param decimalDegrees Absolute value of latitude or longitude in decimal degrees
+     * Seconds are represented to 4 decimal places of precision (denominator of 10000).
+     * For example, 42.2626° → 42° 15' 45.36" → [42/1, 15/1, 453600/10000].
+     *
+     * @param decimalDegrees Latitude or longitude in decimal degrees (negative values are converted to positive)
      * @return Array of 3 RationalNumbers representing [degrees, minutes, seconds]
      */
     fun decimalToGpsRationals(decimalDegrees: Double): Array<RationalNumber> {
-        val degrees = decimalDegrees.toInt()
-        val minutesDecimal = (decimalDegrees - degrees) * 60.0
+        // EXIF GPS rationals must be non-negative; hemisphere is stored separately.
+        val absoluteValue = kotlin.math.abs(decimalDegrees)
+        val degrees = absoluteValue.toInt()
+        val remainingAfterDegrees = absoluteValue - degrees
+        val minutesDecimal = remainingAfterDegrees * 60.0
         val minutes = minutesDecimal.toInt()
-        val seconds = (kotlin.math.round((minutesDecimal - minutes) * 60.0 * 10000.0)).toInt()
+        val remainingAfterMinutes = minutesDecimal - minutes
+        val secondsDecimal = remainingAfterMinutes * 60.0
+        // Round seconds to 4 decimal places (denominator = 10000)
+        val secondsRounded = kotlin.math.round(secondsDecimal * 10000.0).toInt()
+
+        // Handle seconds rounding up to 60.0000 (600000 in our units)
+        if (secondsRounded >= 6000000) {
+            return arrayOf(
+                RationalNumber(degrees, 1),
+                RationalNumber(minutes + 1, 1),
+                RationalNumber(0, 10000),
+            )
+        }
+        // Handle minutes rounding up to 60
+        if (minutes >= 60) {
+            return arrayOf(
+                RationalNumber(degrees + 1, 1),
+                RationalNumber(0, 1),
+                RationalNumber(0, 10000),
+            )
+        }
         return arrayOf(
             RationalNumber(degrees, 1),
             RationalNumber(minutes, 1),
-            RationalNumber(seconds, 10000),
+            RationalNumber(secondsRounded, 10000),
         )
     }
 

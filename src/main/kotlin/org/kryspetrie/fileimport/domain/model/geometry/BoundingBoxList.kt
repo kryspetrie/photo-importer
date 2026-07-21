@@ -65,12 +65,14 @@ data class BoundingBoxList(val boxes: List<BoundingBox> = emptyList()) {
 
     fun nextFrom(index: Int): BoundingBox? {
         if (boxes.isEmpty()) return null
-        return boxes[(index + 1) % boxes.size]
+        val safeIndex = index.coerceIn(0, boxes.size - 1)
+        return boxes[(safeIndex + 1) % boxes.size]
     }
 
     fun previousFrom(index: Int): BoundingBox? {
         if (boxes.isEmpty()) return null
-        return boxes[if (index <= 0) boxes.size - 1 else index - 1]
+        val safeIndex = index.coerceIn(0, boxes.size - 1)
+        return boxes[if (safeIndex <= 0) boxes.size - 1 else safeIndex - 1]
     }
 
     fun size(): Int = boxes.size

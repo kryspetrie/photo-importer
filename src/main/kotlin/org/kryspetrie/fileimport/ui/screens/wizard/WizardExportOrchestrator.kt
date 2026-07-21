@@ -3,7 +3,7 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 import java.awt.image.BufferedImage
 import java.io.File
 import kotlinx.coroutines.withContext
-import org.kryspetrie.fileimport.application.PhotoScanExportService
+import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
@@ -17,7 +17,7 @@ import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /**
  * Orchestrates the photo scan export pipeline: validates destination, iterates through detected
- * boxes, applies configuration, and delegates to [PhotoScanExportService].
+ * boxes, applies configuration, and delegates to [PhotoScanExportPort].
  *
  * Extracted from [WizardContainer] to keep UI composable code separate from orchestration logic.
  */
@@ -69,7 +69,7 @@ suspend fun exportSinglePhoto(
     index: Int,
     totalCount: Int,
     state: PhotoScanWizardState,
-    exportService: PhotoScanExportService,
+    exportService: PhotoScanExportPort,
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
     onProgress: (Float, String) -> Unit,
@@ -151,7 +151,7 @@ suspend fun exportSinglePhoto(
 suspend fun exportPhotos(
     state: PhotoScanWizardState,
     image: BufferedImage,
-    exportService: PhotoScanExportService,
+    exportService: PhotoScanExportPort,
     destinationPath: String,
     appLogger: AppLogger,
     isLoading: (Boolean) -> Unit,

@@ -36,7 +36,7 @@ class NominatimGeocodingAdapter(private val dispatcherProvider: DispatcherProvid
 
     companion object {
         private const val BASE_URL = "https://nominatim.openstreetmap.org"
-        private const val USER_AGENT = "PetrieImageImporter/1.0"
+        private const val USER_AGENT = "PhotoImporter/1.0"
         private const val CACHE_TTL_MS = 10 * 60 * 1000L // 10 minutes
         private const val TAG = "[NominatimGeocodingAdapter]"
     }

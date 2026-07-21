@@ -41,7 +41,7 @@ class XmpFaceRegionExportTest {
     fun setup() {
         perspectiveService = PerspectiveCorrectionService()
         val fileSystem = FileSystemAdapter()
-        val imageProcessing = AwtImageProcessingAdapter(fileSystem)
+        val imageProcessing = AwtImageProcessingAdapter(fileSystem, perspectiveService)
         service =
             PhotoScanExportService(
                 perspectiveService,

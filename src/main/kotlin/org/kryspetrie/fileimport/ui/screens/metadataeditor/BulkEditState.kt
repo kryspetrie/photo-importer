@@ -128,9 +128,10 @@ class BulkEditState {
         message = UiMessage(text, MessageSeverity.INFO)
     }
 
-    /** Shows an error message (auto-clears after timeout). */
+    /** Shows an error message (auto-clears after timeout). Also clears isLoading to prevent stuck spinners. */
     fun showError(text: String) {
         message = UiMessage(text, MessageSeverity.ERROR)
+        isLoading = false
     }
 
     /** Clears the current message. */

@@ -37,6 +37,7 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.ui.components.RotationBadge
 
 /**
  * Vertical sidebar showing photo thumbnails stacked top-to-bottom. Includes the multi-edit toggle
@@ -181,6 +182,12 @@ internal fun PhotoSidebar(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.align(Alignment.BottomStart).padding(2.dp),
                             )
+                            if (config.rotationDegrees != 0) {
+                                RotationBadge(
+                                    rotationDegrees = config.rotationDegrees,
+                                    modifier = Modifier.align(Alignment.TopStart).padding(2.dp),
+                                )
+                            }
                             if (config.hasMetadata()) {
                                 Text(
                                     "✓",

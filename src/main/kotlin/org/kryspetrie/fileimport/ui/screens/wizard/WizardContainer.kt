@@ -39,7 +39,7 @@ import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
-import org.kryspetrie.fileimport.application.PhotoScanExportService
+import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
@@ -47,7 +47,7 @@ import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
-import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
+import org.kryspetrie.fileimport.domain.port.PathsPort
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 import org.kryspetrie.fileimport.ui.components.LoadingIndicator
@@ -71,13 +71,14 @@ fun WizardContainer(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
     detectorService: PhotoScanDetectorPort = koinInject(),
-    exportService: PhotoScanExportService = koinInject(),
+    exportService: PhotoScanExportPort = koinInject(),
     perspectiveService: PerspectiveCorrectionPort = koinInject(),
     appLogger: AppLogger = koinInject(),
     settingsPort: SettingsPort = koinInject(),
     dispatcherProvider: DispatcherProvider = koinInject(),
     faceRegionTransformer: FaceRegionTransformerPort = koinInject(),
     faceDetectionPort: FaceDetectionPort = koinInject(),
+    pathsPort: PathsPort = koinInject(),
 ) {
     val state = remember { PhotoScanWizardState() }
     state.setLogger(appLogger)
@@ -93,7 +94,7 @@ fun WizardContainer(
     var exportDestination by remember {
         mutableStateOf(
             settings.photoScanImportTabSettings.lastDestinationPath.ifBlank {
-                AppPaths.defaultDestination.absolutePath
+                pathsPort.defaultDestination
             }
         )
     }
@@ -200,7 +201,7 @@ private fun WizardStepContent(
     settingsPort: SettingsPort,
     settings: AppSettings,
     detectorService: PhotoScanDetectorPort,
-    exportService: PhotoScanExportService,
+    exportService: PhotoScanExportPort,
     perspectiveService: PerspectiveCorrectionPort,
     previewCache: PreviewCache,
     appLogger: AppLogger,

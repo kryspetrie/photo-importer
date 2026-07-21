@@ -116,12 +116,28 @@ data class BoundingBoxCorners(
         dx: Double,
         dy: Double,
     ): Boolean {
-        fun cross(ax: Double, ay: Double, bx: Double, by: Double): Double = ax * by - ay * bx
+        fun cross(px: Double, py: Double, qx: Double, qy: Double): Double = px * qy - py * qx
         val d1 = cross(bx - ax, by - ay, cx - ax, cy - ay)
         val d2 = cross(bx - ax, by - ay, dx - ax, dy - ay)
         val d3 = cross(dx - cx, dy - cy, ax - cx, ay - cy)
         val d4 = cross(dx - cx, dy - cy, bx - cx, by - cy)
-        return (d1 * d2 < 0) && (d3 * d4 < 0)
+
+        // Proper intersection: both pairs of endpoints straddle each other's lines
+        if (d1 * d2 < 0 && d3 * d4 < 0) return true
+
+        // Boundary / collinear cases: check if an endpoint lies ON the other segment
+        // These represent T-junctions or overlapping collinear edges,
+        // both of which are invalid for a convex quadrilateral boundary.
+        fun onSegment(px: Double, py: Double, qx: Double, qy: Double, rx: Double, ry: Double): Boolean {
+            return rx <= maxOf(px, qx) && rx >= minOf(px, qx) &&
+                   ry <= maxOf(py, qy) && ry >= minOf(py, qy)
+        }
+        if (d1 == 0.0 && onSegment(ax, ay, bx, by, cx, cy)) return true
+        if (d2 == 0.0 && onSegment(ax, ay, bx, by, dx, dy)) return true
+        if (d3 == 0.0 && onSegment(cx, cy, dx, dy, ax, ay)) return true
+        if (d4 == 0.0 && onSegment(cx, cy, dx, dy, bx, by)) return true
+
+        return false
     }
 
     fun isPortrait(): Boolean = height() > width()

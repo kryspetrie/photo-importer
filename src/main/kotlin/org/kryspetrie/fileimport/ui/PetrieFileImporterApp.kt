@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -21,21 +22,29 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import org.kryspetrie.fileimport.domain.model.AppSettings
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
+import org.kryspetrie.fileimport.domain.port.ModelDownloadPort
+import org.kryspetrie.fileimport.domain.port.ModelDownloadState
 import org.kryspetrie.fileimport.ui.screens.DuplicateScannerScreen
 import org.kryspetrie.fileimport.ui.screens.MediaImportScreen
 import org.kryspetrie.fileimport.ui.screens.ReorganizeScreen
 import org.kryspetrie.fileimport.ui.screens.metadataeditor.MetadataEditorScreen
+import org.kryspetrie.fileimport.ui.screens.people.PeopleScreen
+import org.kryspetrie.fileimport.ui.screens.metadataeditor.ModelDownloadDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.WizardContainer
-import org.kryspetrie.fileimport.ui.theme.PetrieTheme
+import org.kryspetrie.fileimport.ui.i18n.StringsProvider
+import org.kryspetrie.fileimport.ui.theme.ImporterTheme
 
 /**
- * Defines the available navigation tabs in the Petrie File Importer application.
+ * Defines the available navigation tabs in the PhotoImporter application.
  *
  * This enumeration represents the main features/screens accessible through the bottom
  * navigation bar. Each tab corresponds to a distinct use case in the photo management workflow:
@@ -150,10 +159,26 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
      * @see MetadataEditorScreen The composable that implements this tab
      */
     METADATA_EDITOR("Metadata Editor", Icons.Default.Edit),
+
+    /**
+     * People tab - find images by face name or face similarity.
+     *
+     * Enables users to:
+     * - Browse the person directory with face crops and photo counts
+     * - Search photos by tagged person name (face name search)
+     * - Browse matching photos using face similarity (face gallery search)
+     * - Open the folder containing a person's photos in the system file manager
+     * - Export/import the person database as a zip bundle
+     * - Merge, rename, and delete persons
+     * - Toggle auto-detect and auto-identify settings per import method
+     *
+     * @see PeopleScreen The composable that implements this tab
+     */
+    PEOPLE("People", Icons.Default.People),
 }
 
 /**
- * Main application composable that renders the Petrie File Importer user interface.
+ * Main application composable that renders the PhotoImporter user interface.
  *
  * This is the root composable for the entire application UI. It sets up the main application
  * structure including:
@@ -197,7 +222,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
  *
  * ## Theming
  *
- * Wraps all content in [PetrieTheme] which applies:
+ * Wraps all content in [ImporterTheme] which applies:
  * - Color scheme (light or dark based on settings)
  * - Typography (font sizes, weights for desktop)
  * - Shapes (corner radius for buttons, cards)
@@ -227,7 +252,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
  *   management operations.
  * @param modifier Optional [Modifier] for customizing layout behavior. Defaults to [Modifier] (no
  *   modifications).
- * @see PetrieTheme Application theme configuration
+ * @see ImporterTheme Application theme configuration
  * @see ImportScreen Import workflow screen
  * @see ReorganizeScreen Library reorganization screen
  * @see DuplicateScannerScreen Duplicate detection screen
@@ -297,7 +322,55 @@ fun PetrieFileImporterApp(
     // Apply application theme
     // Theme provides colors, typography, and shapes to all child composables
     // Theme changes trigger recomposition of entire UI tree
-    PetrieTheme(settings.theme) {
+    ImporterTheme(settings.theme) {
+        StringsProvider {
+        // ── Orientation model download prompt ──────────────────────────
+        // On first start, if the orientation detection model is not available,
+        // prompt the user to download it. Auto-rotate features require this model.
+        val modelDownloadPort: ModelDownloadPort = koinInject()
+        val scope = rememberCoroutineScope()
+        var showModelDownloadPrompt by remember {
+            mutableStateOf(!modelDownloadPort.isModelDownloaded(ModelDownloadPort.ORIENTATION_MODEL_ID))
+        }
+        var modelDownloadState by remember { mutableStateOf<ModelDownloadState?>(null) }
+
+        if (showModelDownloadPrompt) {
+            ModelDownloadDialog(
+                downloadState = modelDownloadState,
+                onDownload = {
+                    modelDownloadState = ModelDownloadState.Connecting
+                    scope.launch {
+                        modelDownloadPort.downloadModel(ModelDownloadPort.ORIENTATION_MODEL_ID)
+                            .collect { state ->
+                                modelDownloadState = state
+                                if (state is ModelDownloadState.Completed) {
+                                    showModelDownloadPrompt = false
+                                    modelDownloadState = null
+                                }
+                            }
+                    }
+                },
+                onCancel = {
+                    modelDownloadPort.cancelDownload(ModelDownloadPort.ORIENTATION_MODEL_ID)
+                    showModelDownloadPrompt = false
+                    modelDownloadState = null
+                },
+                onRetry = {
+                    modelDownloadState = ModelDownloadState.Connecting
+                    scope.launch {
+                        modelDownloadPort.downloadModel(ModelDownloadPort.ORIENTATION_MODEL_ID)
+                            .collect { state ->
+                                modelDownloadState = state
+                                if (state is ModelDownloadState.Completed) {
+                                    showModelDownloadPrompt = false
+                                    modelDownloadState = null
+                                }
+                            }
+                    }
+                },
+            )
+        }
+
         // State: Currently selected navigation tab
         // remember{} ensures state survives recomposition
         // mutableStateOf{} makes it observable - changes trigger recomposition
@@ -395,9 +468,14 @@ fun PetrieFileImporterApp(
                                 settings = settings,
                                 onSettingsChange = onSettingsChange,
                             )
+
+                        // People tab: find images by face name or face similarity
+                        AppTab.PEOPLE ->
+                            PeopleScreen()
                     }
                 }
             }
         }
+    }
     }
 }

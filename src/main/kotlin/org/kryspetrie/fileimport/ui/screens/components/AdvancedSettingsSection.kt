@@ -26,7 +26,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.RawJpegPairMode
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
@@ -41,7 +40,7 @@ fun AdvancedSettingsSection(
     onClearCache: () -> Unit,
     sourcePath: String,
     destinationPath: String,
-    watchFolderService: WatchFolderService,
+    onStartWatchFolder: (WatchFolderConfig) -> Unit,
     watchStatus: WatchFolderStatus,
     scope: CoroutineScope,
 ) {
@@ -52,6 +51,8 @@ fun AdvancedSettingsSection(
         expanded = advancedExpanded,
         onToggle = { advancedExpanded = !advancedExpanded },
     ) {
+        AutoOrientSection(configuration, onConfigChange)
+        Spacer(Modifier.height(6.dp))
         RawJpegPairSection(configuration, onConfigChange)
         Spacer(Modifier.height(6.dp))
         SidecarSection(configuration, onConfigChange)
@@ -60,12 +61,34 @@ fun AdvancedSettingsSection(
             configuration,
             sourcePath,
             destinationPath,
-            watchFolderService,
+            onStartWatchFolder,
             watchStatus,
             scope,
         )
         Spacer(Modifier.height(6.dp))
         CacheManagementSection(onClearCache)
+    }
+}
+
+@Composable
+private fun AutoOrientSection(
+    configuration: ImportConfiguration,
+    onConfigChange: (ImportConfiguration) -> Unit,
+) {
+    SectionLabel("Orientation")
+    SettingsToggle(
+        checked = configuration.autoOrientEnabled,
+        onCheckedChange = { onConfigChange(configuration.copy(autoOrientEnabled = it)) },
+        label = "Auto-orient photos on import",
+        description = "Detect and correct rotation using ML (requires orientation model)",
+    )
+    if (configuration.autoOrientEnabled) {
+        Text(
+            "Photos will be automatically rotated to upright orientation during import. " +
+                "JPEG rotation is metadata-only (lossless).",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -151,7 +174,7 @@ private fun WatchFolderSection(
     configuration: ImportConfiguration,
     sourcePath: String,
     destinationPath: String,
-    watchFolderService: WatchFolderService,
+    onStartWatchFolder: (WatchFolderConfig) -> Unit,
     watchStatus: WatchFolderStatus,
     scope: CoroutineScope,
 ) {
@@ -160,14 +183,13 @@ private fun WatchFolderSection(
         val canWatch = sourcePath.isNotBlank() && destinationPath.isNotBlank()
         OutlinedButton(
             onClick = {
-                watchFolderService.startWatching(
+                onStartWatchFolder(
                     WatchFolderConfig(
                         watchPath = sourcePath,
                         destinationPath = destinationPath,
                         configuration = configuration,
                         profileName = "Import",
-                    ),
-                    scope,
+                    )
                 )
             },
             enabled = canWatch,

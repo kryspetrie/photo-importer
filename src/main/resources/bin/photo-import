@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# photo-import — Cross-platform wrapper for Petrie File Importer CLI
+#
+# This script detects the platform and invokes the appropriate binary,
+# passing all arguments through to the JVM application.
+#
+# Installation:
+#   1. Build the distribution:  ./gradlew packageDistributable
+#   2. Copy this script to a directory on your PATH
+#   3. Edit PHOTO_IMPORTER_HOME below to point to your installation
+#
+# Usage:
+#   photo-import import /source /destination
+#   photo-import scan ./scans/ -o ./crops/
+#   photo-import watch ~/Incoming ~/Library --cooldown 3000
+#   photo-import --version
+
+set -euo pipefail
+
+# ── Configuration ────────────────────────────────────────────────────
+# Set this to the directory containing the photo-import binary.
+# On macOS this is typically inside the .app bundle at:
+#   PhotoImporter.app/Contents/app/photo-import
+# On Linux/Windows it's the bin/ directory of the distribution.
+
+if [ -z "${PHOTO_IMPORTER_HOME:-}" ]; then
+    # Auto-detect: look for the binary relative to this script's location
+    SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+    if [ -x "$SCRIPT_DIR/PhotoImporter" ]; then
+        PHOTO_IMPORTER_HOME="$SCRIPT_DIR"
+    elif [ -x "$SCRIPT_DIR/bin/PhotoImporter" ]; then
+        PHOTO_IMPORTER_HOME="$SCRIPT_DIR/bin"
+    elif [ -x "$SCRIPT_DIR/Contents/app/photo-import" ]; then
+        # macOS .app bundle
+        PHOTO_IMPORTER_HOME="$SCRIPT_DIR/Contents/app"
+    else
+        # Default: assume the binary is on PATH or in a well-known location
+        PHOTO_IMPORTER_HOME=""
+    fi
+fi
+
+# ── Platform Detection ───────────────────────────────────────────────
+OS="$(uname -s 2>/dev/null || echo unknown)"
+ARCH="$(uname -m 2>/dev/null || echo unknown)"
+
+case "$OS" in
+    Darwin)
+        # macOS: look inside .app bundle or use direct binary
+        if [ -n "$PHOTO_IMPORTER_HOME" ] && [ -x "$PHOTO_IMPORTER_HOME/PhotoImporter" ]; then
+            BINARY="$PHOTO_IMPORTER_HOME/PhotoImporter"
+        elif [ -n "$PHOTO_IMPORTER_HOME" ] && [ -x "$PHOTO_IMPORTER_HOME/photo-import" ]; then
+            BINARY="$PHOTO_IMPORTER_HOME/photo-import"
+        else
+            # Try to find on PATH
+            BINARY="$(command -v PhotoImporter 2>/dev/null || echo "")"
+        fi
+        ;;
+    Linux)
+        if [ -n "$PHOTO_IMPORTER_HOME" ] && [ -x "$PHOTO_IMPORTER_HOME/PhotoImporter" ]; then
+            BINARY="$PHOTO_IMPORTER_HOME/PhotoImporter"
+        else
+            BINARY="$(command -v PhotoImporter 2>/dev/null || echo "")"
+        fi
+        ;;
+    MINGW*|MSYS*|CYGWIN*)
+        # Windows: use the .exe binary
+        if [ -n "$PHOTO_IMPORTER_HOME" ] && [ -x "$PHOTO_IMPORTER_HOME/PhotoImporter.exe" ]; then
+            BINARY="$PHOTO_IMPORTER_HOME/PhotoImporter.exe"
+        else
+            BINARY="$(command -v PhotoImporter.exe 2>/dev/null || echo "")"
+        fi
+        ;;
+    *)
+        echo "Error: Unsupported platform: $OS" >&2
+        exit 1
+        ;;
+esac
+
+if [ -z "$BINARY" ] || [ ! -x "$BINARY" ]; then
+    echo "Error: Could not find PhotoImporter binary." >&2
+    echo "Set PHOTO_IMPORTER_HOME to the directory containing the binary," >&2
+    echo "or ensure 'PhotoImporter' is on your PATH." >&2
+    exit 1
+fi
+
+# ── CLI Dispatch ─────────────────────────────────────────────────────
+# The JVM app's main() detects known CLI subcommands automatically.
+# We just forward arguments directly — no --cli prefix needed.
+
+exec "$BINARY" "$@"

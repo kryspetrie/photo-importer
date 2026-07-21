@@ -61,6 +61,12 @@ data class PhotoScanConfiguration(
      */
     val detectionMode: DetectionMode? = null,
 
+    /**
+     * Crop margin as a fraction of the detected photo dimensions (0.0–0.1). Applied during export
+     * to add a small border around detected photos. Default 0.02 (2% margin).
+     */
+    val cropMarginFraction: Float = 0.02f,
+
     // -- EXIF metadata overrides (empty string = preserve original, non-blank = override) --
 
     /** Image description (EXIF tag 0x010E ImageDescription). Empty = preserve original. */
@@ -296,6 +302,34 @@ data class PhotoScanConfiguration(
 
     /** Returns true if this photo has a back-of-photo image assigned. */
     fun hasBackImage(): Boolean = backImageMode != null && backImageSourcePath != null
+
+    /**
+     * Validates configuration fields and returns a list of error messages.
+     * Empty list means valid configuration.
+     */
+    fun validate(): List<String> {
+        val errors = mutableListOf<String>()
+        if (rotationDegrees !in setOf(0, 90, 180, 270)) {
+            errors.add("Rotation must be 0, 90, 180, or 270 degrees (got $rotationDegrees)")
+        }
+        if (gpsLatitude.isNotBlank()) {
+            val lat = gpsLatitude.toDoubleOrNull()
+            if (lat == null) {
+                errors.add("GPS latitude is not a valid number: \"$gpsLatitude\"")
+            } else if (lat < -90.0 || lat > 90.0) {
+                errors.add("GPS latitude must be between -90 and 90 (got $lat)")
+            }
+        }
+        if (gpsLongitude.isNotBlank()) {
+            val lon = gpsLongitude.toDoubleOrNull()
+            if (lon == null) {
+                errors.add("GPS longitude is not a valid number: \"$gpsLongitude\"")
+            } else if (lon < -180.0 || lon > 180.0) {
+                errors.add("GPS longitude must be between -180 and 180 (got $lon)")
+            }
+        }
+        return errors
+    }
 }
 
 /**

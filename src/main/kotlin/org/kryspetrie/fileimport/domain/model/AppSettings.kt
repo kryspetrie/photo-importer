@@ -26,6 +26,9 @@ data class AppSettings(
     /** Theme preference (light/dark/system). */
     val theme: AppTheme = AppTheme.SYSTEM,
 
+    /** Locale preference for UI language (e.g., "en", "de", "ja"). Falls back to "en" if unset or invalid. */
+    val locale: String = "en",
+
     /** User-saved folder pattern presets. */
     val savedFolderPresets: List<PatternPreset> = emptyList(),
 
@@ -77,6 +80,31 @@ data class AppSettings(
 
     /** Recent folder paths used in the Bulk Metadata Editor. Maximum 5 entries. */
     val metadataEditorRecentPaths: List<String> = emptyList(),
+
+    /**
+     * When true, automatically detect and correct photo orientation (rotation) when importing photos.
+     * Uses the deep-image-orientation-angle-detection model. Requires the orientation model to be
+     * available on the classpath.
+     */
+    val autoOrientOnImport: Boolean = false,
+
+    /** Watch folder configurations for automatic import. Persisted across app restarts. */
+    val watchConfigs: List<WatchFolderConfig> = emptyList(),
+
+    /**
+     * When true, show the auto-rotate button in the Metadata Editor. The button appears next to
+     * manual rotation controls and triggers ML-based orientation detection.
+     */
+    val autoOrientInMetadataEditor: Boolean = true,
+
+    /** Whether to automatically detect faces when importing images. */
+    val autoDetectFacesOnImport: Boolean = false,
+
+    /** Whether to automatically identify/tag detected faces using the person directory. */
+    val autoIdentifyFaces: Boolean = false,
+
+    /** Configurable face matching thresholds and limits. See [FaceMatchingConfig]. */
+    val faceMatchingConfig: FaceMatchingConfig = FaceMatchingConfig(),
 ) {
     /** Returns the currently active Photo Scan profile, or the default if none is selected. */
     val activePhotoScanProfile: PhotoScanProfile
@@ -143,4 +171,17 @@ data class AppSettings(
             val updated = metadataEditorRecentPaths.filter { it != path }.take(4)
             copy(metadataEditorRecentPaths = listOf(path) + updated)
         }
+
+    /** Updates the locale setting. */
+    fun withLocale(localeCode: String): AppSettings = copy(locale = localeCode)
+
+    /** Adds or updates a watch folder config. Replaces any existing config with the same [id]. */
+    fun withWatchConfig(config: WatchFolderConfig): AppSettings {
+        val updated = watchConfigs.map { if (it.id == config.id) config else it }
+        return copy(watchConfigs = if (updated.any { it.id == config.id }) updated else updated + config)
+    }
+
+    /** Removes a watch folder config by ID. */
+    fun withoutWatchConfig(configId: String): AppSettings =
+        copy(watchConfigs = watchConfigs.filter { it.id != configId })
 }

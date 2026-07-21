@@ -14,8 +14,10 @@ class NamingAdapter : NamingPort {
         configuration: ImportConfiguration,
         counter: Int,
     ): String {
-        return "${generateFolderPath(imageFile, destinationRoot, configuration)}/" +
+        val path = "${generateFolderPath(imageFile, destinationRoot, configuration)}/" +
             "${generateFileName(imageFile, configuration, counter)}"
+        validatePathTraversal(path, destinationRoot)
+        return path
     }
 
     override fun generateFolderPath(
@@ -151,5 +153,13 @@ class NamingAdapter : NamingPort {
             .replace("{ss}", date.format(DateTimeFormatter.ofPattern("ss")))
 
     private fun sanitizeFileName(name: String): String =
-        name.replace(Regex("[\\\\/:*?\"<>|]"), "_").replace(Regex("\\s+"), "_").take(50)
+        name.replace(Regex("[\\\\/:*?\"<>|]"), "_").replace(Regex("\\s+"), "_").replace("..", "").take(50)
+
+    private fun validatePathTraversal(path: String, destinationRoot: String) {
+        val canonicalPath = File(path).canonicalPath
+        val canonicalRoot = File(destinationRoot).canonicalPath
+        if (!canonicalPath.startsWith(canonicalRoot)) {
+            throw IllegalStateException("Generated path escapes destination root: $path")
+        }
+    }
 }

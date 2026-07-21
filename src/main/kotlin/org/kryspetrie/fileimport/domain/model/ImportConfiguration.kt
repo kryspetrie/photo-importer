@@ -54,4 +54,7 @@ data class ImportConfiguration(
     val importSidecars: Boolean = true,
     val verifyAfterCopy: Boolean = true,
     val deleteAfterImport: Boolean = false,
+
+    /** When true, automatically detect and correct photo orientation during import. */
+    val autoOrientEnabled: Boolean = false,
 )

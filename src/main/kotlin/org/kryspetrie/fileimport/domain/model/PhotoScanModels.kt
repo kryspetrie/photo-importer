@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.domain.model
 
+import kotlin.math.roundToInt
 import kotlinx.serialization.Serializable
 
 /**
@@ -182,29 +183,29 @@ data class DetectedPhoto(
 
     /** Get the width of the detected photo in pixels. */
     fun getWidth(): Int {
-        return kotlin.math.abs(topRight.x.toInt() - topLeft.x.toInt())
+        return kotlin.math.abs(topRight.x.roundToInt() - topLeft.x.roundToInt())
     }
 
     /** Get the height of the detected photo in pixels. */
     fun getHeight(): Int {
-        return kotlin.math.abs(bottomLeft.y.toInt() - topLeft.y.toInt())
+        return kotlin.math.abs(bottomLeft.y.roundToInt() - topLeft.y.roundToInt())
     }
 
     /** Get the bounding rectangle of the detected photo. */
     fun getBounds(): PhotoBounds {
         val xCoords =
             listOf(
-                topLeft.x.toInt(),
-                topRight.x.toInt(),
-                bottomLeft.x.toInt(),
-                bottomRight.x.toInt(),
+                topLeft.x.roundToInt(),
+                topRight.x.roundToInt(),
+                bottomLeft.x.roundToInt(),
+                bottomRight.x.roundToInt(),
             )
         val yCoords =
             listOf(
-                topLeft.y.toInt(),
-                topRight.y.toInt(),
-                bottomLeft.y.toInt(),
-                bottomRight.y.toInt(),
+                topLeft.y.roundToInt(),
+                topRight.y.roundToInt(),
+                bottomLeft.y.roundToInt(),
+                bottomRight.y.roundToInt(),
             )
 
         return PhotoBounds(

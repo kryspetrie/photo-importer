@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.FolderCopy
@@ -72,6 +73,15 @@ fun PhotoScanSettingsSection(
                         Modifier.padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        var orientationExpanded by remember { mutableStateOf(false) }
+                        PhotoScanCollapsibleSubsection(
+                            title = "Orientation",
+                            icon = Icons.Default.AutoFixHigh,
+                            expanded = orientationExpanded,
+                            onToggle = { orientationExpanded = !orientationExpanded },
+                        ) {
+                            OrientationSection(config = config, onConfigChange = onConfigChange)
+                        }
                         var orgExpanded by remember { mutableStateOf(true) }
                         PhotoScanCollapsibleSubsection(
                             title = "Organization",
@@ -126,6 +136,28 @@ private fun SettingsCardHeader(
             if (settingsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
             "Toggle",
             Modifier.size(16.dp),
+        )
+    }
+}
+
+@Composable
+private fun OrientationSection(
+    config: ImportConfiguration,
+    onConfigChange: (ImportConfiguration) -> Unit,
+) {
+    SectionLabel("Auto-Orient on Import")
+    SettingsToggle(
+        checked = config.autoOrientEnabled,
+        onCheckedChange = { onConfigChange(config.copy(autoOrientEnabled = it)) },
+        label = "Auto-orient photos on import",
+        description = "Detect and correct rotation using ML (requires orientation model)",
+    )
+    if (config.autoOrientEnabled) {
+        Text(
+            "Photos will be automatically rotated upright during import. " +
+                "JPEG rotation is metadata-only (lossless).",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

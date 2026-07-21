@@ -97,7 +97,17 @@ data class BoundingBox(
                 }
                 current = next
             } while (current != start && hull.size < uniquePoints.size)
-            while (hull.size < 4 && hull.isNotEmpty()) break
+            // Pad hull to 4 points if fewer were found by repeating hull points cyclically.
+            // This ensures quadrilateral operations always have 4 corners to work with.
+            if (hull.size < 4 && hull.isNotEmpty()) {
+                val padded = hull.toMutableList()
+                var idx = 0
+                while (padded.size < 4) {
+                    padded.add(hull[idx % hull.size])
+                    idx++
+                }
+                return padded
+            }
             if (hull.size == 4) return hull
             if (hull.size >= 4) {
                 val c = Point(hull.map { it.x }.average(), hull.map { it.y }.average())

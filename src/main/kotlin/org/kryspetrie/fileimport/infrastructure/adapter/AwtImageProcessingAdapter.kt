@@ -17,6 +17,7 @@ import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
+import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 
 /**
  * JVM/AWT implementation of [ImageProcessingPort].
@@ -25,7 +26,10 @@ import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
  * `java.awt.image.BufferedImage`. This adapter converts between [ProcessedImage] and
  * `BufferedImage` at the boundary, keeping the application layer free of AWT imports.
  */
-class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageProcessingPort {
+class AwtImageProcessingAdapter(
+    private val fileSystem: FileSystemPort,
+    private val perspectiveCorrection: PerspectiveCorrectionPort,
+) : ImageProcessingPort {
 
     // ── Image I/O ──────────────────────────────────────────────────────────
 
@@ -262,10 +266,11 @@ class AwtImageProcessingAdapter(private val fileSystem: FileSystemPort) : ImageP
                         bottomLeft =
                             PhotoCorner(n[6] * rotatedBuffered.width, n[7] * rotatedBuffered.height),
                     )
-                val perspectiveService =
-                    org.kryspetrie.fileimport.infrastructure.photoscan
-                        .PerspectiveCorrectionService()
-                perspectiveService.correctPerspective(rotatedBuffered, detectedPhoto)
+                val corrected = perspectiveCorrection.correctPerspective(
+                    rotatedBuffered.toProcessedImage(),
+                    detectedPhoto,
+                )
+                corrected.toBufferedImage()
             } else if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
                 // 4 values = rectangular crop: [left, top, right, bottom]
                 val cropNorm = config.backCropNormalized

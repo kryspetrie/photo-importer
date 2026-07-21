@@ -11,13 +11,14 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -201,6 +202,8 @@ fun FaceSelectorOverlay(
     inheritedFaceRegions: List<FaceRegion>,
     onAutoDetectFaces: (() -> Unit)? = null,
     autoStartNaming: Boolean = false,
+    nameSuggestions: Map<Int, String> = emptyMap(),
+    onNameConfirmed: ((faceIndex: Int, name: String) -> Unit)? = null,
 ) {
     // Cache the image bitmap to avoid recomputing on every recomposition (e.g. hover, drag)
     val imageBitmap = remember(fullPreview) { fullPreview.toComposeImageBitmap() }
@@ -217,6 +220,18 @@ fun FaceSelectorOverlay(
     // Which face is currently selected for naming (-1 = none)
     var namingFaceIndex by remember { mutableStateOf(-1) }
     var namingInput by remember { mutableStateOf("") }
+
+    /**
+     * Commit the current name for the face being named, and notify the parent
+     * via [onNameConfirmed] so progressive gallery enrichment can save embeddings.
+     */
+    fun commitName() {
+        if (namingFaceIndex in faceRegions.indices && namingInput.isNotBlank()) {
+            val name = namingInput.trim()
+            state.faceRegions.updateFaceRegionName(idx, namingFaceIndex, name)
+            onNameConfirmed?.invoke(namingFaceIndex, name)
+        }
+    }
 
     // ── Refs that stay current inside pointerInput(Unit) blocks ──
     // faceRegions is a val captured at composition time. pointerInput(Unit) never re-launches,
@@ -257,9 +272,7 @@ fun FaceSelectorOverlay(
             return false
         }
         // Commit current name before advancing
-        if (namingFaceIndex in faceRegions.indices && namingInput.isNotBlank()) {
-            state.faceRegions.updateFaceRegionName(idx, namingFaceIndex, namingInput.trim())
-        }
+        commitName()
         // Find next unnamed face after current, skipping any that appear blank in the stale
         // snapshot but were just named. Use namingInput as a proxy: if we just committed
         // a non-blank name, the face should be considered named even if faceRegions[i].name
@@ -337,9 +350,7 @@ fun FaceSelectorOverlay(
             return
         }
         // Commit current name first
-        if (namingFaceIndex in faceRegions.indices && namingInput.isNotBlank()) {
-            state.faceRegions.updateFaceRegionName(idx, namingFaceIndex, namingInput.trim())
-        }
+        commitName()
         val prevIdx = if (namingFaceIndex <= 0) faceRegions.size - 1 else namingFaceIndex - 1
         namingFaceIndex = prevIdx.coerceIn(0, faceRegions.size - 1)
         namingInput = faceRegions.getOrNull(namingFaceIndex)?.name ?: ""
@@ -399,8 +410,12 @@ fun FaceSelectorOverlay(
                                 ),
                         )
                         Spacer(Modifier.weight(1f))
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
-                            Icon(Icons.Default.Close, "Close", modifier = Modifier.size(16.dp))
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            modifier = Modifier.height(24.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                        ) {
+                            Text("Done", style = MaterialTheme.typography.labelSmall)
                         }
                     }
 
@@ -879,16 +894,7 @@ fun FaceSelectorOverlay(
                                         Key.Escape -> {
                                             if (namingFaceIndex >= 0) {
                                                 // Commit name if non-empty, close naming
-                                                if (
-                                                    namingFaceIndex in faceRegions.indices &&
-                                                        namingInput.isNotBlank()
-                                                ) {
-                                                    state.faceRegions.updateFaceRegionName(
-                                                        idx,
-                                                        namingFaceIndex,
-                                                        namingInput.trim(),
-                                                    )
-                                                }
+                                                commitName()
                                                 namingFaceIndex = -1
                                                 namingInput = ""
                                                 true
@@ -1270,13 +1276,7 @@ fun FaceSelectorOverlay(
                                                 // (Only handled here — global handler doesn't
                                                 // handle Enter)
                                                 Key.Enter -> {
-                                                    if (namingInput.isNotBlank()) {
-                                                        state.faceRegions.updateFaceRegionName(
-                                                            idx,
-                                                            namingFaceIndex,
-                                                            namingInput.trim(),
-                                                        )
-                                                    }
+                                                    commitName()
                                                     advanceToNextUnnamedFace()
                                                     true
                                                 }
@@ -1340,11 +1340,15 @@ fun FaceSelectorOverlay(
                                         fontWeight = FontWeight.Bold
                                     ),
                             )
+                            val currentSuggestion = nameSuggestions[namingFaceIndex]
                             OutlinedTextField(
                                 value = namingInput,
                                 onValueChange = { namingInput = it },
                                 placeholder = {
-                                    Text("Name...", style = MaterialTheme.typography.labelSmall)
+                                    Text(
+                                        currentSuggestion ?: "Name...",
+                                        style = MaterialTheme.typography.labelSmall
+                                    )
                                 },
                                 modifier =
                                     Modifier.width(120.dp).focusRequester(namingFocusRequester),
@@ -1353,13 +1357,7 @@ fun FaceSelectorOverlay(
                             )
                             Button(
                                 onClick = {
-                                    if (namingInput.isNotBlank()) {
-                                        state.faceRegions.updateFaceRegionName(
-                                            idx,
-                                            namingFaceIndex,
-                                            namingInput.trim(),
-                                        )
-                                    }
+                                    commitName()
                                     advanceToNextUnnamedFace()
                                 },
                                 enabled = namingInput.isNotBlank(),
@@ -1383,7 +1381,7 @@ fun FaceSelectorOverlay(
                                 }
                             }
                             Text(
-                                "Enter→save ${if (hasMoreUnnamedFaces) "• Tab→next" else ""} • Esc→done",
+                                "Enter→save ${if (hasMoreUnnamedFaces) "• Tab→next" else ""} • Esc→close",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 10.sp,

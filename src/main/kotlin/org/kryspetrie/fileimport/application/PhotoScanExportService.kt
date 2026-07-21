@@ -73,7 +73,7 @@ class PhotoScanExportService(
         for ((index, photo) in detectedPhotos.withIndex()) {
             try {
                 val result =
-                    processPhoto(sourceImage = image, detectedPhoto = photo, marginFraction = 0.02)
+                    processPhoto(sourceImage = image, detectedPhoto = photo, marginFraction = photo.configuration.cropMarginFraction.toDouble())
 
                 val fileName =
                     if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}.jpg"
@@ -88,7 +88,7 @@ class PhotoScanExportService(
                     config = photo.configuration,
                     sourcePath = sourceFile,
                     detectedPhoto = result.marginedPhoto,
-                    marginFraction = 0.02,
+                    marginFraction = photo.configuration.cropMarginFraction.toDouble(),
                     sourceImage = image,
                     preRotationWidth = result.preRotationWidth,
                     preRotationHeight = result.preRotationHeight,
@@ -161,7 +161,7 @@ class PhotoScanExportService(
                 processPhoto(
                     sourceImage = sourceImage,
                     detectedPhoto = detectedPhoto,
-                    marginFraction = 0.02,
+                    marginFraction = detectedPhoto.configuration.cropMarginFraction.toDouble(),
                 )
 
             val destDir = FilePath(destinationPath)
@@ -176,7 +176,7 @@ class PhotoScanExportService(
                 config = detectedPhoto.configuration,
                 sourcePath = sourceFile,
                 detectedPhoto = result.marginedPhoto,
-                marginFraction = 0.02,
+                marginFraction = detectedPhoto.configuration.cropMarginFraction.toDouble(),
                 sourceImage = sourceImage,
                 preRotationWidth = result.preRotationWidth,
                 preRotationHeight = result.preRotationHeight,

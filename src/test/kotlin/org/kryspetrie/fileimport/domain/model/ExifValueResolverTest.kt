@@ -254,6 +254,9 @@ class ExifValueResolverTest {
             assertEquals(1, result[0].divisor)
             assertEquals(15, result[1].numerator) // 0.2626 * 60 = 15.756 → 15
             assertEquals(1, result[1].divisor)
+            // 15.756 - 15 = 0.756, 0.756 * 60 = 45.36, round(45.36 * 10000) = 453600
+            assertEquals(453600, result[2].numerator)
+            assertEquals(10000, result[2].divisor)
         }
 
         @Test
@@ -351,6 +354,60 @@ class ExifValueResolverTest {
                 legacyAction = { legacyCalled = true },
             )
             assertTrue(legacyCalled)
+        }
+    }
+
+    @Nested
+    @DisplayName("decimalToGpsRationals - edge cases")
+    inner class DecimalToGpsRationalsEdgeCases {
+
+        @Test
+        fun `converts negative longitude to absolute values`() {
+            // -73.9857° (western hemisphere) should produce 73° 59' 8.52"
+            val result = resolver.decimalToGpsRationals(-73.9857)
+            assertEquals(73, result[0].numerator)
+            assertEquals(1, result[0].divisor)
+            // abs = 73.9857, fractional = 0.9857, 0.9857*60 = 59.142
+            assertEquals(59, result[1].numerator)
+            assertEquals(1, result[1].divisor)
+        }
+
+        @Test
+        fun `converts negative latitude to absolute values`() {
+            // -33.8688° (southern hemisphere)
+            val result = resolver.decimalToGpsRationals(-33.8688)
+            assertEquals(33, result[0].numerator)
+            assertEquals(1, result[0].divisor)
+            // abs = 33.8688, fractional = 0.8688, 0.8688*60 = 52.128
+            assertEquals(52, result[1].numerator)
+        }
+
+        @Test
+        fun `seconds never negative`() {
+            val result = resolver.decimalToGpsRationals(-0.5)
+            // abs = 0.5, degrees=0, minutes=30, seconds=0
+            assertEquals(0, result[0].numerator)
+            assertEquals(30, result[1].numerator)
+            assertTrue(result[2].numerator >= 0)
+        }
+
+        @Test
+        fun `all rationals are non-negative for negative coordinates`() {
+            val testValues = listOf(-122.4194, -73.9857, -33.8688, -0.001, -179.9999)
+            for (v in testValues) {
+                val result = resolver.decimalToGpsRationals(v)
+                assertTrue(result[0].numerator >= 0, "Degrees should be non-negative for $v")
+                assertTrue(result[1].numerator >= 0, "Minutes should be non-negative for $v")
+                assertTrue(result[2].numerator >= 0, "Seconds should be non-negative for $v")
+            }
+        }
+
+        @Test
+        fun `degrees and minutes never overflow 60`() {
+            // Test a value close to 60 minutes: 89.9999
+            val result = resolver.decimalToGpsRationals(89.9999)
+            assertTrue(result[0].numerator < 180, "Degrees should be < 180")
+            assertTrue(result[1].numerator < 60, "Minutes should be < 60")
         }
     }
 }

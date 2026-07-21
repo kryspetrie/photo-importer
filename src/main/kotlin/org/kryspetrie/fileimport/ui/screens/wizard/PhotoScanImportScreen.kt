@@ -38,7 +38,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.port.SettingsPort
-import org.kryspetrie.fileimport.infrastructure.adapter.AppPaths
+import org.kryspetrie.fileimport.ui.components.AutoOrientIndicator
+import org.kryspetrie.fileimport.domain.port.PathsPort
+import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.ScanModeCard
@@ -57,6 +59,7 @@ fun PhotoScanImportScreen(
     modifier: Modifier = Modifier,
 ) {
     val settings by settingsPort.observeSettings().collectAsState()
+    val pathsPort: PathsPort = koinInject()
     val scope = rememberCoroutineScope()
 
     val cvAutoDetectEnabled by state.importSettings.cvAutoDetectEnabled.collectAsState()
@@ -77,7 +80,7 @@ fun PhotoScanImportScreen(
     var destinationPath by remember {
         mutableStateOf(
             settings.photoScanImportTabSettings.lastDestinationPath.ifBlank {
-                AppPaths.defaultDestination.absolutePath
+                pathsPort.defaultDestination
             }
         )
     }
@@ -264,6 +267,9 @@ fun PhotoScanImportScreen(
                         settingsExpanded = settingsExpanded,
                         onSettingsExpandedChange = { settingsExpanded = it },
                     )
+                    if (customConfig.autoOrientEnabled) {
+                        AutoOrientIndicator()
+                    }
                 }
             }
         },

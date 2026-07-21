@@ -75,6 +75,7 @@ import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.ui.components.RotationBadge
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.BulkActionButtons
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
@@ -536,13 +537,7 @@ private fun SidebarInfoColumn(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text("Photo ${index + 1}", style = MaterialTheme.typography.labelMedium)
-            if (config.rotationDegrees != 0) {
-                Text(
-                    "${config.rotationDegrees}°",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
+            RotationBadge(rotationDegrees = config.rotationDegrees)
             if (config.aspectRatio != 0.0) {
                 val ratioLabel =
                     AspectRatio.entries.find { it.value == config.aspectRatio }?.displayName
@@ -749,13 +744,7 @@ private fun DetailLabelAndRotation(
             IconButton(onClick = onNext, enabled = index < totalPhotos - 1) {
                 Icon(Icons.AutoMirrored.Filled.ArrowRight, "Next photo")
             }
-            if (config.rotationDegrees != 0) {
-                Text(
-                    "${config.rotationDegrees}°",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-            }
+            RotationBadge(rotationDegrees = config.rotationDegrees)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             IconButton(onClick = onRotateCCW) {

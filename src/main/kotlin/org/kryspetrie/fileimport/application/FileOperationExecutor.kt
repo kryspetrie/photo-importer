@@ -82,7 +82,7 @@ class FileOperationExecutor(
                                         newParent = destParentStr.orEmpty(),
                                         operationType = ReorganizeMode.MOVE,
                                         wasSuccessful = true,
-                                        fileSize = fileSystem.length(source),
+                                        fileSize = fileSystem.length(dest),
                                         patternUsed = "",
                                         changeType = changeType,
                                     ),
@@ -199,8 +199,8 @@ class FileOperationExecutor(
      *
      * Walks the directory tree bottom-up and removes empty directories.
      */
-    suspend fun cleanEmptyDirs(root: FilePath) {
-        if (!fileSystem.isDirectory(root)) return
+    suspend fun cleanEmptyDirs(root: FilePath) = withContext(dispatcherProvider.io) {
+        if (!fileSystem.isDirectory(root)) return@withContext
         fileSystem.walkBottomUp(root).forEach { dirPath ->
             val isDir = fileSystem.isDirectory(dirPath)
             val isNotRoot = dirPath != root

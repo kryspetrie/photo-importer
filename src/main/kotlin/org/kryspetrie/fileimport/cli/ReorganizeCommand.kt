@@ -57,7 +57,7 @@ class ReorganizeCommand(private val reorganizeService: ReorganizeService) :
 
     override fun run() = runBlocking {
         echo("=".repeat(50))
-        echo("Petrie File Importer - Reorganize")
+        echo("PhotoImporter - Reorganize")
         echo("=".repeat(50))
         echo("Source: $source")
         val dest = destination ?: source
@@ -184,7 +184,7 @@ class UndoReorganizeCommand(private val reorganizeService: ReorganizeService) :
 
     override fun run() = runBlocking {
         echo("=".repeat(50))
-        echo("Petrie File Importer - Undo Reorganization")
+        echo("PhotoImporter - Undo Reorganization")
         echo("=".repeat(50))
         echo("Journal: $journalPath")
         echo()
@@ -219,7 +219,7 @@ class CheckReorganizeJournalsCommand(private val reorganizeService: ReorganizeSe
     ) {
     override fun run() = runBlocking {
         echo("=".repeat(50))
-        echo("Petrie File Importer - Reorganization Journals")
+        echo("PhotoImporter - Reorganization Journals")
         echo("=".repeat(50))
         echo()
 

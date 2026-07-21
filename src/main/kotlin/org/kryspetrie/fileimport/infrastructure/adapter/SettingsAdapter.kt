@@ -3,6 +3,8 @@ package org.kryspetrie.fileimport.infrastructure.adapter
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.kryspetrie.fileimport.domain.model.AppSettings
@@ -46,6 +48,7 @@ class SettingsAdapter(
     private val settingsDir: File = AppPaths.settingsDir,
     private val timeProvider: TimeProvider = DefaultTimeProvider(),
 ) : SettingsPort {
+    private val mutex = Mutex()
     private val json = Json {
         prettyPrint = true
         ignoreUnknownKeys = true
@@ -67,17 +70,17 @@ class SettingsAdapter(
         }
     }
 
-    override suspend fun loadSettings(): AppSettings =
+    override suspend fun loadSettings(): AppSettings = mutex.withLock {
         try {
-                if (settingsFile.exists())
-                    json.decodeFromString<AppSettings>(settingsFile.readText())
-                else AppSettings()
-            } catch (_: Exception) {
-                AppSettings()
-            }
-            .also { _settings.value = it }
+            if (settingsFile.exists())
+                json.decodeFromString<AppSettings>(settingsFile.readText())
+            else AppSettings()
+        } catch (_: Exception) {
+            AppSettings()
+        }
+    }.also { _settings.value = it }
 
-    override suspend fun saveSettings(settings: AppSettings) {
+    override suspend fun saveSettings(settings: AppSettings) = mutex.withLock {
         try {
             settingsFile.writeText(json.encodeToString(settings))
             _settings.value = settings

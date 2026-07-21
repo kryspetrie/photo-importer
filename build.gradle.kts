@@ -88,9 +88,8 @@ dependencies {
     implementation("org.apache.commons:commons-imaging:1.0-alpha3")
     implementation("javax.inject:javax.inject:1")
     implementation("org.slf4j:slf4j-simple:2.0.16")
-    implementation("org.slf4j:slf4j-simple:2.0.16")
-    implementation("io.insert-koin:koin-core:3.5.6")
-    implementation("io.insert-koin:koin-core-coroutines:3.5.6")
+    implementation("io.insert-koin:koin-core:4.0.0")
+    implementation("io.insert-koin:koin-core-coroutines:4.0.0")
     implementation("io.insert-koin:koin-compose:4.0.0")
     implementation("org.jline:jline:3.27.1")
 

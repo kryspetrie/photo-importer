@@ -2,6 +2,8 @@ package org.kryspetrie.fileimport.application
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.kryspetrie.fileimport.domain.model.CameraDevice
 import org.kryspetrie.fileimport.domain.model.DeduplicationSettings
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
@@ -52,6 +54,13 @@ class ImportService(
     private val namingPort: NamingPort,
     private val devicePort: DevicePort? = null,
 ) {
+    /**
+     * Mutex preventing concurrent imports from corrupting [importProgress].
+     * Without this, two overlapping `executeImport` calls would both write to the same
+     * [MutableStateFlow], causing one import's progress to overwrite the other's.
+     */
+    private val importMutex = Mutex()
+
     private val _importProgress = MutableStateFlow(ImportProgress())
     val importProgress: StateFlow<ImportProgress> = _importProgress
 
@@ -128,13 +137,18 @@ class ImportService(
     ): List<FileStructurePreview> =
         namingPort.previewFileStructure(images, destinationPath, configuration)
 
-    /** Executes the import operation. Delegates to [ImportExecutor.executeImport]. */
+    /** Executes the import operation. Delegates to [ImportExecutor.executeImport].
+     *
+     * Protected by [importMutex] to prevent concurrent imports from corrupting
+     * [importProgress] — two overlapping imports would both write to the same
+     * [MutableStateFlow], causing one import's progress to overwrite the other's.
+     */
     suspend fun executeImport(
         images: List<ImageFile>,
         destinationPath: String,
         configuration: ImportConfiguration,
         onProgress: (ImportProgress) -> Unit = {},
-    ): ImportResult =
+    ): ImportResult = importMutex.withLock {
         importExecutor.executeImport(
             images,
             destinationPath,
@@ -142,6 +156,7 @@ class ImportService(
             _importProgress,
             onProgress,
         )
+    }
 
     /** Detect RAW+JPEG pairs by matching base filename and timestamp. */
     fun detectRawJpegPairs(images: List<ImageFile>): List<Pair<ImageFile, ImageFile>> {

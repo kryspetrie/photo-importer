@@ -23,9 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 
 @Composable
@@ -39,7 +39,7 @@ fun SettingsSection(
     onClearCache: () -> Unit,
     sourcePath: String,
     destinationPath: String,
-    watchFolderService: WatchFolderService,
+    onStartWatchFolder: (WatchFolderConfig) -> Unit,
     watchStatus: WatchFolderStatus,
     scope: CoroutineScope,
 ) {
@@ -95,7 +95,7 @@ fun SettingsSection(
                             onClearCache = onClearCache,
                             sourcePath = sourcePath,
                             destinationPath = destinationPath,
-                            watchFolderService = watchFolderService,
+                            onStartWatchFolder = onStartWatchFolder,
                             watchStatus = watchStatus,
                             scope = scope,
                         )

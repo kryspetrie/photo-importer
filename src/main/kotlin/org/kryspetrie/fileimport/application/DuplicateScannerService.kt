@@ -31,6 +31,7 @@ class DuplicateScannerService(
     private val hashCache: HashCachePort? = null,
     private val timeProvider: TimeProvider,
     private val dispatcherProvider: DispatcherProvider,
+    private val onError: (String) -> Unit = {},
 ) {
 
     suspend fun scanForDuplicates(
@@ -113,6 +114,7 @@ class DuplicateScannerService(
             val toRemove = allImages.filter { it.id != keepId }
 
             var removed = 0
+            var errors = mutableListOf<String>()
             for (image in toRemove) {
                 try {
                     if (moveToTrashFolder != null) {
@@ -127,10 +129,17 @@ class DuplicateScannerService(
                                 )
                             } else destPath
                         if (fileSystem.renameTo(image.path, target)) removed++
+                        else errors.add("Failed to move ${image.path.name}")
                     } else {
                         if (fileSystem.delete(image.path)) removed++
+                        else errors.add("Failed to delete ${image.path.name}")
                     }
-                } catch (_: Exception) {}
+                } catch (e: Exception) {
+                    errors.add("${image.path.name}: ${e.message}")
+                }
+            }
+            if (errors.isNotEmpty()) {
+                onError("Duplicate resolution errors: ${errors.joinToString()}")
             }
             removed
         }

@@ -15,7 +15,7 @@ data class ImportResult(
     val historyEntry: ImportHistoryEntry? = null,
 ) {
     val duration: Long
-        get() = endTime - startTime
+        get() = if (endTime > 0) endTime - startTime else 0L
 
     val isComplete: Boolean
         get() = endTime > 0

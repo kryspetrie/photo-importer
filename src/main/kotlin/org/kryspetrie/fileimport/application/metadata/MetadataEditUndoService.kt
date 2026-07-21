@@ -177,14 +177,24 @@ class MetadataEditUndoService(
             if (!entry.wasSuccessful) continue
 
             try {
+                // Use the original backup as the EXIF source for KEEP_SOURCE fields.
+                // The backup contains the pre-edit EXIF data, which is needed so that
+                // KEEP_SOURCE fields read the original values rather than the current
+                // (possibly already-written) values.
+                // Falls back to the current file if the backup no longer exists.
+                val exifSourcePath = if (entry.backupPath != null && File(entry.backupPath).exists()) {
+                    FilePath(entry.backupPath)
+                } else {
+                    FilePath(entry.filePath)
+                }
+
                 // Create fresh backup before re-writing (for OVERWRITE mode)
                 val newBackupPath = createBackup(entry.filePath)
 
                 val originalPath = FilePath(entry.filePath)
                 val config = entry.configSnapshot
-                val sourcePath = FilePath(entry.filePath)
 
-                metadataWriter(originalPath, config, sourcePath)
+                metadataWriter(originalPath, config, exifSourcePath)
                 redoneCount++
             } catch (_: Exception) {
                 // Skip failed entries

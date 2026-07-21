@@ -58,7 +58,8 @@ class ImportExecutor(
 
         val errors = mutableListOf<ImportError>()
         var successCount = 0
-        val duplicateCount = 0
+        // TODO: Compute actual duplicate count from scan results (currently always 0)
+        var duplicateCount = 0
         var skippedCount = 0
         var deletedCount = 0
 
@@ -219,6 +220,7 @@ class ImportExecutor(
                     )
                 )
 
+                val sidecarErrors = mutableListOf<String>()
                 val sidecarFiles = mutableListOf<String>()
                 if (configuration.importSidecars && image.sidecars.isNotEmpty()) {
                     for (sidecar in image.sidecars) {
@@ -235,7 +237,9 @@ class ImportExecutor(
                                     )
                             fileSystem.copy(sidecar, sidecarDestPath)
                             sidecarFiles.add(fileSystem.absolutePath(sidecarDestPath))
-                        } catch (_: Exception) {}
+                        } catch (e: Exception) {
+                            sidecarErrors.add("Sidecar ${sidecar.path}: ${e.message}")
+                        }
                     }
                 }
 
@@ -245,12 +249,25 @@ class ImportExecutor(
                         sourceDeleted = true
                         deletedCount++
                     }
+                    // Only delete sidecars that were successfully copied.
+                    // Keep failed sidecars to prevent data loss.
                     if (configuration.importSidecars) {
-                        image.sidecars.forEach { sidecar -> fileSystem.delete(sidecar) }
+                        val importedSidecarPaths = sidecarFiles.toSet()
+                        image.sidecars.forEach { sidecar ->
+                            // Only delete the source sidecar if its destination was successfully created
+                            val wasImported = importedSidecarPaths.any { importedPath ->
+                                importedPath.endsWith(sidecar.extension)
+                            }
+                            if (wasImported || sidecarErrors.isEmpty()) {
+                                fileSystem.delete(sidecar)
+                            }
+                        }
                     }
                 }
 
                 successCount++
+                // Mark import as failed if sidecar copies failed, even though primary file succeeded
+                val importSuccess = sidecarErrors.isEmpty()
                 copiedBytes += image.fileSize
 
                 fileDetails.add(
@@ -267,13 +284,15 @@ class ImportExecutor(
                         fileHash = image.hash,
                         hashVerified = hashVerified,
                         hashMatches = hashMatches,
-                        success = true,
+                        success = importSuccess,
                         conflictResolution = conflictResolution,
                         sidecarsImported = sidecarFiles.isNotEmpty(),
                         sidecarFiles = sidecarFiles,
+                        sidecarErrors = sidecarErrors,
                         sourceDeleted = sourceDeleted,
                         exifDate = image.metadata?.dateTimeOriginal?.toString().orEmpty(),
                         cameraModel = image.metadata?.cameraModel.orEmpty(),
+                        errorMessage = if (sidecarErrors.isNotEmpty()) sidecarErrors.joinToString("; ") else null,
                         sequenceNumber = counter,
                     )
                 )

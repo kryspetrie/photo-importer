@@ -71,7 +71,7 @@ import org.jetbrains.skia.Image as SkiaImage
 import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.Platform
-import org.kryspetrie.fileimport.ui.components.LoadingIndicator
+
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Map preset views — predefined locations for quick navigation
@@ -523,7 +523,7 @@ class TileLoader(
             val conn =
                 (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
-                    setRequestProperty("User-Agent", "PetrieImageImporter/1.0")
+                    setRequestProperty("User-Agent", "PhotoImporter/1.0")
                     connectTimeout = 5_000
                     readTimeout = 5_000
                 }
@@ -1328,10 +1328,6 @@ fun OsmMapView(
                 (maxX - minX + 1) * (maxY - minY + 1)
             }
 
-            // Track loading state: show indicator when current-zoom tiles are incomplete
-            // and no fallback layer provides coverage
-            sizeTracker.showLoading = currentDrawn < totalBaseTiles && !hadFallbackCoverage
-
             // ── Search result markers ───────────────────────────────────────
             for (result in searchResults) {
                 val (px, py) =
@@ -1422,11 +1418,6 @@ fun OsmMapView(
             )
         }
 
-        // ── Loading indicator ─────────────────────────────────────────────
-        if (sizeTracker.showLoading) {
-            LoadingIndicator(modifier = Modifier.align(Alignment.Center), color = Color(0xFF2196F3))
-        }
-
         // ── Floating zoom + style overlay ────────────────────────────────
         Column(
             modifier = Modifier.align(Alignment.TopEnd).padding(end = 8.dp, top = 8.dp),
@@ -1501,8 +1492,7 @@ fun OsmMapView(
  * [snapshotFlow] can react to size changes.
  *
  * Also provides [invalidate] which increments an internal counter, forcing a recomposition when
- * tiles finish loading, and [showLoading] which signals whether a loading indicator should be
- * displayed (current-zoom tiles incomplete, no fallback).
+ * tiles finish loading.
  */
 @Stable
 private class SizeTracker {
@@ -1519,9 +1509,6 @@ private class SizeTracker {
     /** Increment to force a recomposition (e.g. when a new tile finishes loading). */
     var revision by mutableStateOf(0)
         private set
-
-    /** True when current-zoom tiles are missing and there's no fallback coverage. */
-    var showLoading by mutableStateOf(false)
 
     fun invalidate() {
         revision++

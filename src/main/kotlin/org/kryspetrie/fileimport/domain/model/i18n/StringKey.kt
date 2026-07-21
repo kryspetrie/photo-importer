@@ -1,0 +1,215 @@
+package org.kryspetrie.fileimport.domain.model.i18n
+
+/**
+ * Keys for all user-facing strings in the application.
+ *
+ * Each key corresponds to an entry in the locale JSON files (e.g., `resources/i18n/en.json`).
+ * Adding a new user-visible string requires:
+ * 1. Adding a key to this enum
+ * 2. Adding the English translation to `en.json`
+ *
+ * The fallback chain is: requested locale → English → key name with underscores replaced by spaces.
+ * This ensures the app never crashes due to a missing translation.
+ *
+ * Keys are organized by screen/feature. Common actions and errors are grouped at the end.
+ */
+enum class StringKey {
+    // ── App ──────────────────────────────────────────────────────────────
+    APP_NAME,
+    APP_SHORT_DESCRIPTION,
+
+    // ── Navigation ───────────────────────────────────────────────────────
+    NAV_IMPORT,
+    NAV_PHOTO_SCAN,
+    NAV_METADATA_EDITOR,
+    NAV_REORGANIZE,
+    NAV_DUPLICATES,
+
+    // ── Import Screen ────────────────────────────────────────────────────
+    IMPORT_TITLE,
+    IMPORT_SOURCE_LABEL,
+    IMPORT_DESTINATION_LABEL,
+    IMPORT_START_BUTTON,
+    IMPORT_CANCEL_BUTTON,
+    IMPORT_STOP_BUTTON,
+    IMPORT_PROGRESS_SCANNING,
+    IMPORT_PROGRESS_INDEXING,
+    IMPORT_PROGRESS_IMPORTING,
+    IMPORT_PROGRESS_COMPLETE,
+    IMPORT_PROGRESS_FILES_IMPORTED,
+    IMPORT_SETTINGS_LABEL,
+    IMPORT_SETTINGS_SUMMARY,
+    IMPORT_SETTINGS_AUTO_ORIENT,
+    IMPORT_SETTINGS_AUTO_ORIENT_DESC,
+    IMPORT_SETTINGS_AUTO_ORIENT_ENABLED_NOTE,
+    IMPORT_SETTINGS_DEDUPE,
+    IMPORT_SETTINGS_VERIFY,
+    IMPORT_SETTINGS_DELETE_SOURCE,
+
+    // ── Photo Scan ───────────────────────────────────────────────────────
+    SCAN_TITLE,
+    SCAN_DETECTED_PHOTOS,
+    SCAN_DETECTED_PHOTOS_ONE,
+    SCAN_ROTATE_ALL_CW,
+    SCAN_ROTATE_ALL_CCW,
+    SCAN_RESET_ALL,
+    SCAN_RESET_CONFIRM_TITLE,
+    SCAN_RESET_CONFIRM_MESSAGE,
+    SCAN_PHOTO_LABEL,
+    SCAN_PREVIEW_LABEL,
+    SCAN_NO_PHOTOS_DETECTED,
+    SCAN_ASPECT_RATIO_LABEL,
+    SCAN_CORRECTION_STRATEGY_LABEL,
+
+    // ── Metadata Editor ──────────────────────────────────────────────────
+    META_TITLE,
+    META_ROTATE_LABEL,
+    META_AUTO_DETECT_ROTATION,
+    META_ROTATION_DEGREES,
+    META_AUTO_ROTATE_DIALOG_TITLE,
+    META_AUTO_ROTATE_DIALOG_DETECTED,
+    META_AUTO_ROTATE_DIALOG_CORRECTION,
+    META_AUTO_ROTATE_DIALOG_JPEG_WARNING,
+    META_AUTO_ROTATE_DIALOG_APPLY,
+    META_AUTO_ROTATE_DIALOG_UPRIGHT,
+    META_AUTO_ROTATE_REQUIRES_MODEL,
+    META_LOCATION_PICKER_TITLE,
+    META_FACE_REGIONS_LABEL,
+    META_SUBJECTS_LABEL,
+    META_SAVE_BUTTON,
+
+    // ── Rotation / Orientation ────────────────────────────────────────────
+    ROTATION_BADGE_AUTO,
+    ORIENTATION_INDICATOR_LABEL,
+    ORIENTATION_DETECTING,
+    ORIENTATION_DIALOG_TITLE,
+    ORIENTATION_DIALOG_DETECTED_ANGLE,
+    ORIENTATION_DIALOG_CONFIDENCE,
+    ORIENTATION_DIALOG_CORRECTION,
+    ORIENTATION_DIALOG_NEW_ROTATION,
+    ORIENTATION_DIALOG_JPEG_WARNING,
+    ORIENTATION_DIALOG_APPLY,
+    ORIENTATION_DIALOG_UPRIGHT,
+    ORIENTATION_MODEL_REQUIRED,
+
+    // ── Settings ─────────────────────────────────────────────────────────
+    SETTINGS_TITLE,
+    SETTINGS_THEME,
+    SETTINGS_LANGUAGE,
+    SETTINGS_SKIP_CROP_AND_ROTATE,
+    SETTINGS_AUTO_SKIP_BACK_FILES,
+
+    // ── Advanced Settings ─────────────────────────────────────────────────
+    SETTINGS_ADVANCED,
+    SETTINGS_ORIENTATION,
+    SETTINGS_ORIENTATION_AUTO_ORIENT,
+    SETTINGS_ORIENTATION_AUTO_ORIENT_DESC,
+    SETTINGS_ORIENTATION_AUTO_ORIENT_ENABLED_NOTE,
+    SETTINGS_RAW_JPEG_PAIRS,
+    SETTINGS_RAW_JPEG_IMPORT_BOTH,
+    SETTINGS_RAW_JPEG_RAW_ONLY,
+    SETTINGS_RAW_JPEG_JPEG_ONLY,
+    SETTINGS_RAW_JPEG_KEEP_TOGETHER,
+    SETTINGS_SIDECARS,
+    SETTINGS_IMPORT_SIDECARS,
+    SETTINGS_VERIFY_COPIES,
+    SETTINGS_DELETE_SOURCE,
+    SETTINGS_DELETE_SOURCE_WARNING,
+    SETTINGS_WATCH_FOLDER,
+    SETTINGS_WATCH_FOLDER_START,
+    SETTINGS_WATCH_FOLDER_DESC,
+    SETTINGS_WATCHING,
+    SETTINGS_INDEX_CACHE,
+    SETTINGS_CLEAR_CACHE,
+
+    // ── Deduplication ────────────────────────────────────────────────────
+    SETTINGS_DEDUPE,
+    SETTINGS_DEDUPE_TRANSFERRED,
+    SETTINGS_DEDUPE_HASH,
+    SETTINGS_DEDUPE_HASH_DESC,
+    SETTINGS_DEDUPE_EXIF,
+    SETTINGS_DEDUPE_EXIF_DESC,
+    SETTINGS_DEDUPE_VISUAL,
+    SETTINGS_DEDUPE_VISUAL_DESC,
+    SETTINGS_DEDUPE_SURF,
+    SETTINGS_DEDUPE_SURF_DESC,
+    SETTINGS_DEDUPE_SURF_WARNING,
+
+    // ── Organization Settings ─────────────────────────────────────────────
+    SETTINGS_ORG,
+    SETTINGS_ORG_SUBFOLDERS,
+    SETTINGS_ORG_FOLDER_PATTERN,
+    SETTINGS_ORG_FILENAME,
+    SETTINGS_ORG_PRESERVE_NAMES,
+    SETTINGS_ORG_FILENAME_PATTERN,
+    SETTINGS_ORG_CONFLICT_RENAME,
+    SETTINGS_ORG_CONFLICT_SKIP,
+    SETTINGS_ORG_CONFLICT_REPLACE,
+    SETTINGS_ORG_CONFLICT_ASK,
+    SETTINGS_ORG_DATE_EXIF,
+    SETTINGS_ORG_DATE_MODIFIED,
+    SETTINGS_ORG_DATE_CREATED,
+    SETTINGS_ORG_DATE_EXIF_DESC,
+    SETTINGS_ORG_DATE_MODIFIED_DESC,
+    SETTINGS_ORG_DATE_CREATED_DESC,
+
+    // ── Common Actions ───────────────────────────────────────────────────
+    ACTION_OK,
+    ACTION_CANCEL,
+    ACTION_APPLY,
+    ACTION_SAVE,
+    ACTION_DELETE,
+    ACTION_RESET,
+    ACTION_CLOSE,
+    ACTION_BACK,
+    ACTION_NEXT,
+    ACTION_PREV,
+    ACTION_EXPORT,
+    ACTION_SELECT_FOLDER,
+    ACTION_SELECT_FILE,
+    ACTION_BROWSE,
+    ACTION_SELECT_ALL,
+    ACTION_DESELECT_ALL,
+
+    // ── Errors ────────────────────────────────────────────────────────────
+    ERROR_GENERIC,
+    ERROR_ORIENT_DETECT_FAILED,
+    ERROR_IMAGE_READ_FAILED,
+    ERROR_EXPORT_FAILED,
+    ERROR_IMPORT_FAILED,
+    ERROR_FOLDER_READ_FAILED,
+    ERROR_FOLDER_WRITE_FAILED,
+    ERROR_NO_FILES_FOUND,
+
+    // ── Plural Forms ──────────────────────────────────────────────────────
+    PLURAL_FILES_ONE,
+    PLURAL_FILES_OTHER,
+    PLURAL_PHOTOS_ONE,
+    PLURAL_PHOTOS_OTHER,
+    PLURAL_DUPLICATES_ONE,
+    PLURAL_DUPLICATES_OTHER,
+
+    // ── Accessibility ────────────────────────────────────────────────────
+    ACC_THUMBNAIL,
+    ACC_THUMBNAIL_AUTO_ROTATED,
+    ACC_THUMBNAIL_SELECTED,
+    ACC_PREVIEW_IMAGE,
+    ACC_ROTATE_CW,
+    ACC_ROTATE_CCW,
+    ACC_AUTO_ROTATE,
+    ACC_ZOOM_IN,
+    ACC_ZOOM_OUT,
+
+    // ── Model Download ────────────────────────────────────────────────────
+    MODEL_DOWNLOAD_TITLE,
+    MODEL_DOWNLOAD_DESCRIPTION,
+    MODEL_DOWNLOAD_SIZE,
+    MODEL_DOWNLOAD_START,
+    MODEL_DOWNLOAD_CANCEL,
+    MODEL_DOWNLOAD_PROGRESS,
+    MODEL_DOWNLOAD_COMPLETE,
+    MODEL_DOWNLOAD_FAILED,
+    MODEL_DOWNLOAD_RETRY,
+
+    ;
+}

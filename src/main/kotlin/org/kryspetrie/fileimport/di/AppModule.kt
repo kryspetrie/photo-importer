@@ -2,6 +2,8 @@ package org.kryspetrie.fileimport.di
 
 import org.koin.dsl.module
 import org.kryspetrie.fileimport.application.DuplicateScannerService
+import org.kryspetrie.fileimport.application.FaceGroupingService
+import org.kryspetrie.fileimport.application.PersonService
 import org.kryspetrie.fileimport.application.FileOperationExecutor
 import org.kryspetrie.fileimport.application.ImportExecutor
 import org.kryspetrie.fileimport.application.ImportScanner
@@ -14,12 +16,16 @@ import org.kryspetrie.fileimport.application.metadata.MetadataEditService
 import org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService
 import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.application.ScanService
+import org.kryspetrie.fileimport.application.WatchFolderManager
 import org.kryspetrie.fileimport.application.WatchFolderService
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.port.DeduplicationPort
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
+
+import org.kryspetrie.fileimport.domain.port.FaceEmbeddingPort
+import org.kryspetrie.fileimport.domain.port.PersonDirectoryPort
 import org.kryspetrie.fileimport.domain.port.OrientationDetectionPort
 import org.kryspetrie.fileimport.application.OrientationCorrectionService
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
@@ -31,11 +37,15 @@ import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.ImportHistoryPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
+import org.kryspetrie.fileimport.domain.port.LocalePort
+import org.kryspetrie.fileimport.domain.port.ModelDownloadPort
 import org.kryspetrie.fileimport.domain.port.ModelResourcePort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
+import org.kryspetrie.fileimport.domain.port.PathsPort
+import org.kryspetrie.fileimport.domain.port.PlatformPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
@@ -46,22 +56,31 @@ import org.kryspetrie.fileimport.infrastructure.adapter.DefaultIdGenerator
 import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.DeviceAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.JsonPersonDirectoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.HashCacheAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ImportHistoryAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.NamingAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.PathsAdapter
+import org.kryspetrie.fileimport.infrastructure.adapter.PlatformInfoAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.NominatimGeocodingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
+import org.kryspetrie.fileimport.infrastructure.download.HuggingFaceModelDownloadAdapter
+import org.kryspetrie.fileimport.infrastructure.i18n.JsonLocaleAdapter
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceDetectionService
+
+import org.kryspetrie.fileimport.infrastructure.photoscan.FaceEmbeddingAdapter
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
 import org.kryspetrie.fileimport.infrastructure.photoscan.OrientationDetectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.HybridCornerDetector
 import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
+import org.kryspetrie.fileimport.ui.screens.metadataeditor.MetadataEditorViewModel
+import org.kryspetrie.fileimport.ui.screens.MediaImportViewModel
 
 /**
  * Koin DI module for the Petrie File Importer application.
@@ -84,9 +103,19 @@ val appModule = module {
     single<FileSystemPort> { FileSystemAdapter() }
     single<DevicePort> { DeviceAdapter(dispatcherProvider = get()) }
     single<ModelResourcePort> { ClasspathModelResourceAdapter() }
+
+    // ── Model Download ────────────────────────────────────────────────────
+
+    single<ModelDownloadPort> {
+        HuggingFaceModelDownloadAdapter(dispatcherProvider = get(), appLogger = getOrNull())
+    }
     single<TimeProvider> { DefaultTimeProvider() }
     single<IdGenerator> { DefaultIdGenerator() }
     single<DispatcherProvider> { DefaultDispatcherProvider() }
+
+    // ── Localization ────────────────────────────────────────────────────
+
+    single<LocalePort> { JsonLocaleAdapter(dispatchers = get(), appLogger = getOrNull()) }
 
     // ── Infrastructure ──────────────────────────────────────────────
 
@@ -141,8 +170,44 @@ val appModule = module {
             timeProvider = get(),
             dispatcherProvider = get(),
             fileSystem = get(),
+            faceGroupingService = get(),
+            settingsPort = get(),
         )
     }
+    single {
+        WatchFolderManager(
+            importService = get(),
+            timeProvider = get(),
+            dispatcherProvider = get(),
+            fileSystem = get(),
+            settingsPort = get(),
+        )
+    }
+
+    // ── Person Directory ────────────────────────────────────────────
+    single<PersonDirectoryPort> {
+        JsonPersonDirectoryAdapter(
+            fileSystem = get(),
+            dispatcherProvider = get(),
+        )
+    }
+    single {
+        PersonService(
+            personDirectoryPort = get(),
+            settingsPort = get(),
+            fileSystem = get(),
+            dispatcherProvider = get(),
+            platformPort = get(),
+        )
+    }
+
+    // ── Face Grouping ──────────────────────────────────────────────
+    // Note: FaceAlignmentAdapter is NOT registered here — FaceEmbeddingAdapter handles its own
+    // alignment internally. FaceAlignmentPort/Adapter are kept for future Phase 2 landmark-based
+    // alignment, at which point FaceAlignmentAdapter should be refactored to use a separate
+    // alignment model and registered here as a FaceAlignmentPort singleton.
+    single<FaceEmbeddingPort> { FaceEmbeddingAdapter(modelResourcePort = get(), ortSessionFactory = get(), appLogger = get()) }
+    single { FaceGroupingService(faceDetectionPort = get(), faceEmbeddingPort = get(), personService = get(), imageProcessingPort = get()) }
 
     // ── Photo Scan Pipeline ─────────────────────────────────────────
 
@@ -169,12 +234,10 @@ val appModule = module {
             imageProcessing = get<ImageProcessingPort>(),
         )
     }
-    single<ImageProcessingPort> { AwtImageProcessingAdapter(get()) }
+    single<ImageProcessingPort> { AwtImageProcessingAdapter(get(), get()) }
     single { ScanService(photoDetector = get(), fileSystem = get(), imageProcessing = get()) }
     single<PerspectiveCorrectionPort> { PerspectiveCorrectionService() }
-    single { PerspectiveCorrectionService() }
     single<FaceRegionTransformerPort> { FaceRegionTransformer() }
-    single { FaceRegionTransformer() }
     single {
         MetadataWritingService(
             faceRegionTransformer = get<FaceRegionTransformerPort>(),
@@ -182,8 +245,7 @@ val appModule = module {
             fileSystem = get<FileSystemPort>(),
         )
     }
-    single<PhotoScanExportPort> { get<PhotoScanExportService>() }
-    single { PhotoScanExportService(get(), get(), get(), get()) }
+    single<PhotoScanExportPort> { PhotoScanExportService(get(), get(), get(), get()) }
 
     // ── Metadata Edit Undo ──────────────────────────────────────────
 
@@ -196,5 +258,40 @@ val appModule = module {
     single<LocationSearchPort> {
         LocationSearchService(geocodingPort = get(), dispatcherProvider = get())
     }
-    single { LocationSearchService(geocodingPort = get(), dispatcherProvider = get()) }
+
+    // ── Platform & Paths ────────────────────────────────────────────
+
+    single<PathsPort> { PathsAdapter() }
+    single<PlatformPort> { PlatformInfoAdapter() }
+
+    // ── ViewModels ──────────────────────────────────────────────────
+
+    single {
+        MetadataEditorViewModel(
+            dispatcherProvider = get(),
+            imageRepository = get(),
+            imageProcessing = get(),
+            locationSearchService = get(),
+            geocodingPort = get(),
+            settingsPort = get(),
+            editService = get(),
+            undoService = get(),
+            faceRegionTransformer = get(),
+            fileSystemAdapter = get(),
+            orientationCorrection = get(),
+            modelDownloadPort = get(),
+        )
+    }
+    single {
+        MediaImportViewModel(
+            importService = get(),
+            devicePort = get(),
+            historyPort = get(),
+            settingsPort = get(),
+            watchFolderManager = get(),
+            timeProvider = get(),
+            pathsPort = get(),
+            faceGroupingService = get(),
+        )
+    }
 }

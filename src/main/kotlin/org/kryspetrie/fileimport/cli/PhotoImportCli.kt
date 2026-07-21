@@ -6,43 +6,109 @@ import com.github.ajalt.clikt.parameters.arguments.argument
 import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
+import com.github.ajalt.clikt.parameters.options.versionOption
+import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.file
 import kotlinx.coroutines.runBlocking
-import org.kryspetrie.fileimport.application.FileOperationExecutor
-import org.kryspetrie.fileimport.application.ImportExecutor
-import org.kryspetrie.fileimport.application.ImportScanner
+import org.koin.core.context.GlobalContext
 import org.kryspetrie.fileimport.application.ImportService
-import org.kryspetrie.fileimport.application.ReorganizeJournalRepository
 import org.kryspetrie.fileimport.application.ReorganizeService
+import org.kryspetrie.fileimport.application.ScanService
+import org.kryspetrie.fileimport.application.WatchFolderManager
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
-import org.kryspetrie.fileimport.infrastructure.adapter.DeduplicationAdapter
-import org.kryspetrie.fileimport.infrastructure.adapter.DefaultDispatcherProvider
-import org.kryspetrie.fileimport.infrastructure.adapter.DefaultTimeProvider
-import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
-import org.kryspetrie.fileimport.infrastructure.adapter.ImageRepositoryAdapter
-import org.kryspetrie.fileimport.infrastructure.adapter.NamingAdapter
-import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
+import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
+import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 
+/**
+ * Top-level CLI entry point for PhotoImporter.
+ *
+ * Provides `--version`, `--verbose`, `--quiet` flags and delegates to subcommands:
+ * - **import**: Copy images from source to destination with dedup and naming patterns
+ * - **check-duplicates**: Find duplicate images (hash or visual similarity)
+ * - **scan**: Detect and extract individual photos from scanned images
+ * - **watch**: Monitor a folder and auto-import new images (headless)
+ * - **reorganize**: Reorganize an existing library with new naming patterns
+ * - **undo**: Undo a previous reorganization
+ * - **check-journals**: List reorganization journals
+ */
 class PhotoImportCli(
     private val importService: ImportService,
     private val reorganizeService: ReorganizeService,
+    private val scanService: ScanService,
+    private val exportPort: PhotoScanExportPort,
+    private val imageProcessing: ImageProcessingPort,
+    private val watchFolderManager: WatchFolderManager,
+    private val version: String = "1.0.0",
 ) :
     CliktCommand(
         name = "photo-import",
-        help = "Petrie File Importer - Command line photo organizer",
+        help = "PhotoImporter - Command line photo organizer",
         epilog =
             """
             Examples:
               photo-import import /source /destination
               photo-import import /source /destination --dry-run
+              photo-import import /source /destination --no-recursive --no-verify-hash
               photo-import check-duplicates /source
+              photo-import check-duplicates /source --method visual
+              photo-import scan /scans/ -o /crops/ --preset corner_refine
+              photo-import scan photo.jpg --coords json --no-image
+              photo-import watch ~/Incoming ~/Library --cooldown 3000
               photo-import reorganize /library/path
+              photo-import reorganize /library/path --dry-run
             """
                 .trimIndent(),
     ) {
-    override fun run() {
-        echo("Petrie File Importer CLI\nUse --help for usage information")
+    init {
+        versionOption(version, names = setOf("--version", "-V"))
     }
+
+    private val verbose by option("-v", "--verbose", help = "Enable verbose output").flag()
+    private val quiet by option("-q", "--quiet", help = "Suppress non-error output").flag()
+
+    override fun run() {
+        if (verbose && quiet) {
+            echo("Cannot use --verbose and --quiet together.", err = true)
+            return
+        }
+    }
+}
+
+/**
+ * Standalone CLI entry point.
+ *
+ * Called from [org.kryspetrie.fileimport.main] when CLI mode is detected.
+ * Expects Koin to already be initialized so all services are available via DI.
+ *
+ * @see org.kryspetrie.fileimport.main
+ */
+@Suppress("SpreadOperator")
+fun main(args: Array<String>) {
+    val koin = GlobalContext.get()
+
+    val importService: ImportService = koin.get()
+    val reorganizeService: ReorganizeService = koin.get()
+    val scanService: ScanService = koin.get()
+    val exportPort: PhotoScanExportPort = koin.get()
+    val imageProcessing: ImageProcessingPort = koin.get()
+    val watchFolderManager: WatchFolderManager = koin.get()
+
+    val cli = PhotoImportCli(
+        importService = importService,
+        reorganizeService = reorganizeService,
+        scanService = scanService,
+        exportPort = exportPort,
+        imageProcessing = imageProcessing,
+        watchFolderManager = watchFolderManager,
+    )
+    cli.subcommands(
+            ImportCommand(importService),
+            CheckDuplicatesCommand(importService),
+            ScanCommand(scanService, exportPort, imageProcessing),
+            WatchCommand(watchFolderManager),
+            *getReorganizeCommands(reorganizeService).toTypedArray(),
+        )
+        .main(args)
 }
 
 class ImportCommand(private val importService: ImportService) :
@@ -52,28 +118,40 @@ class ImportCommand(private val importService: ImportService) :
     private val destination by argument(help = "Destination folder").file(canBeDir = true)
     private val dryRun by
         option("--dry-run", help = "Preview without copying").flag(default = false)
-    private val recursive by
-        option("--recursive", "-r", help = "Scan subdirectories").flag(default = true)
+    private val noRecursive by
+        option("--no-recursive", help = "Do not scan subdirectories").flag(default = false)
     private val folderPattern by
-        option("--folder-pattern", help = "Folder hierarchy pattern").default("{yyyy-MM-dd}")
+        option("--folder-pattern", help = "Folder hierarchy pattern (default: {yyyy-MM-dd})")
+            .default("{yyyy-MM-dd}")
     private val filenamePattern by
-        option("--filename-pattern", help = "Filename pattern").default("{original}")
-    private val verifyHash by
-        option("--verify-hash", help = "Verify files after copy").flag(default = true)
+        option("--filename-pattern", help = "Filename pattern (default: {original})")
+            .default("{original}")
+    private val noVerifyHash by
+        option("--no-verify-hash", help = "Skip file verification after copy").flag(default = false)
     private val deleteSource by
-        option("--delete-source", help = "Delete source after copy").flag(default = false)
+        option("--delete-source", help = "Delete source files after copy").flag(default = false)
 
     override fun run() = runBlocking {
+        val recursive = !noRecursive
+        val verifyHash = !noVerifyHash
+
         echo("=".repeat(50))
-        echo("Petrie File Importer - Import")
+        echo("PhotoImporter - Import")
         echo("=".repeat(50))
         echo("Source: ${source.absolutePath}")
         echo("Destination: ${destination.absolutePath}")
+        echo("Recursive: $recursive")
+        echo("Verify: $verifyHash")
         echo("Mode: ${if (dryRun) "DRY RUN (no files will be copied)" else "LIVE IMPORT"}")
         echo()
 
         echo("Scanning for images...")
-        val images = importService.scanSource(source.absolutePath, recursive)
+        val images = try {
+            importService.scanSource(source.absolutePath, recursive)
+        } catch (e: Exception) {
+            echo("Error scanning source: ${e.message}", err = true)
+            return@runBlocking
+        }
 
         if (images.isEmpty()) {
             echo("No images found in source directory.", err = true)
@@ -104,52 +182,84 @@ class ImportCommand(private val importService: ImportService) :
             echo("No files have been copied.")
         } else {
             echo("Starting import...")
-            val result = importService.executeImport(images, destination.absolutePath, config)
+            try {
+                val result =
+                    importService.executeImport(images, destination.absolutePath, config)
 
-            echo()
-            echo("=".repeat(50))
-            echo("IMPORT RESULTS")
-            echo("=".repeat(50))
-            echo("Total files: ${result.totalFiles}")
-            echo("Successfully copied: ${result.successCount}")
-            echo("Duplicates skipped: ${result.duplicateCount}")
-            echo("Errors: ${result.errorCount}")
-            echo("Duration: ${result.duration / 1000}s")
-
-            if (result.errors.isNotEmpty()) {
                 echo()
-                echo("Errors:")
-                result.errors.forEach { error ->
-                    echo("  ${error.file.fileName}: ${error.message}")
+                echo("=".repeat(50))
+                echo("IMPORT RESULTS")
+                echo("=".repeat(50))
+                echo("Total files: ${result.totalFiles}")
+                echo("Successfully copied: ${result.successCount}")
+                echo("Duplicates skipped: ${result.duplicateCount}")
+                echo("Errors: ${result.errorCount}")
+                echo("Duration: ${result.duration / 1000}s")
+
+                if (result.errors.isNotEmpty()) {
+                    echo()
+                    echo("Errors:")
+                    result.errors.forEach { error ->
+                        echo("  ${error.file.fileName}: ${error.message}")
+                    }
                 }
+            } catch (e: Exception) {
+                echo("Import failed: ${e.message}", err = true)
             }
         }
     }
 }
 
 class CheckDuplicatesCommand(private val importService: ImportService) :
-    CliktCommand(name = "check-duplicates", help = "Check for duplicate images") {
+    CliktCommand(
+        name = "check-duplicates",
+        help = "Check for duplicate images using hash-based or visual similarity detection",
+    ) {
     private val source by
         argument(help = "Source folder to check").file(mustExist = true, canBeDir = true)
-    private val recursive by
-        option("--recursive", "-r", help = "Check subdirectories").flag(default = true)
-    private val useVisual by
-        option("--visual", help = "Use visual similarity detection").flag(default = false)
+    private val noRecursive by
+        option("--no-recursive", help = "Do not check subdirectories").flag(default = false)
+    private val method by
+        option(
+                "--method",
+                help = "Detection method: hash (fast, exact matches) or visual (slower, perceptual matches)",
+            )
+            .choice("hash", "visual")
+            .default("hash")
 
     override fun run() = runBlocking {
+        val recursive = !noRecursive
+        val useVisual = method == "visual"
+
         echo("Scanning for images...")
-        val images = importService.scanSource(source.absolutePath, recursive)
+        val images = try {
+            importService.scanSource(source.absolutePath, recursive)
+        } catch (e: Exception) {
+            echo("Error scanning source: ${e.message}", err = true)
+            return@runBlocking
+        }
 
         if (images.isEmpty()) {
             echo("No images found")
             return@runBlocking
         }
 
+        echo("Found ${images.size} image(s)")
+        echo("Detection method: ${if (useVisual) "visual similarity" else "file hash (exact)"}")
+
         val config =
-            ImportConfiguration(detectVisualDuplicates = useVisual, perceptualHashThreshold = 0.95f)
+            ImportConfiguration(
+                detectVisualDuplicates = useVisual,
+                perceptualHashThreshold = 0.95f,
+            )
 
         echo("Checking for duplicates...")
-        val duplicates = importService.findVisualDuplicates(images, config)
+        val duplicates = try {
+            importService.findVisualDuplicates(images, config)
+        } catch (e: Exception) {
+            echo("Error checking duplicates: ${e.message}", err = true)
+            return@runBlocking
+        }
 
         if (duplicates.isEmpty()) {
             echo("No duplicates found!")
@@ -180,39 +290,4 @@ class CheckDuplicatesCommand(private val importService: ImportService) :
             )
         }
     }
-}
-
-@Suppress("SpreadOperator")
-fun main(args: Array<String>) {
-    val dispatcherProvider = DefaultDispatcherProvider()
-    val imageRepo = ImageRepositoryAdapter(dispatcherProvider)
-    val timeProvider = DefaultTimeProvider()
-    val fileSystem = FileSystemAdapter()
-    val scanner = ImportScanner(imageRepo, null, dispatcherProvider, fileSystem)
-    val executor = ImportExecutor(imageRepo, NamingAdapter(), timeProvider, fileSystem)
-    val surfService = SurfDeduplicationService(dispatcherProvider)
-    val importService =
-        ImportService(
-            scanner,
-            executor,
-            DeduplicationAdapter(surfService, dispatcherProvider),
-            NamingAdapter(),
-        )
-    val reorganizeService =
-        ReorganizeService(
-            imageRepo,
-            NamingAdapter(),
-            timeProvider,
-            dispatcherProvider,
-            ReorganizeJournalRepository(fileSystem),
-            FileOperationExecutor(dispatcherProvider, fileSystem),
-            fileSystem,
-        )
-    val cli = PhotoImportCli(importService, reorganizeService)
-    cli.subcommands(
-            ImportCommand(importService),
-            CheckDuplicatesCommand(importService),
-            *getReorganizeCommands(reorganizeService).toTypedArray(),
-        )
-        .main(args)
 }

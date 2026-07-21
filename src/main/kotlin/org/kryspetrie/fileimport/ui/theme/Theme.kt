@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.sp
 import org.kryspetrie.fileimport.domain.model.AppTheme
 
 /**
- * Light theme color scheme for the Petrie File Importer application.
+ * Light theme color scheme for the PhotoImporter application.
  *
  * Defines a cohesive set of colors following Material Design 3 guidelines optimized for desktop
  * applications. The color scheme uses a blue primary color with complementary secondary and
@@ -82,7 +82,7 @@ private val LightColorScheme =
     )
 
 /**
- * Dark theme color scheme for the Petrie File Importer application.
+ * Dark theme color scheme for the PhotoImporter application.
  *
  * Defines colors optimized for dark mode, reducing eye strain in low-light environments while
  * maintaining brand identity and accessibility. Dark theme uses lighter versions of the brand
@@ -254,7 +254,7 @@ private val DesktopShapes =
     )
 
 /**
- * Application theme composable that applies the Petrie File Importer theme.
+ * Application theme composable that applies the PhotoImporter theme.
  *
  * This is the root theme wrapper that should surround all UI content. It applies:
  * - Color scheme (light or dark based on user preference)
@@ -275,7 +275,7 @@ private val DesktopShapes =
  * ```kotlin
  * @Composable
  * fun App() {
- *     PetrieTheme(AppTheme.DARK) {
+ *     ImporterTheme(AppTheme.DARK) {
  *         // All UI content here
  *         Surface {
  *             Text("Themed content")
@@ -307,7 +307,7 @@ private val DesktopShapes =
  * @see isSystemInDarkTheme System theme detection
  */
 @Composable
-fun PetrieTheme(
+fun ImporterTheme(
     /**
      * Theme preference setting.
      *
@@ -328,7 +328,7 @@ fun PetrieTheme(
      *
      * Example:
      * ```kotlin
-     * PetrieTheme {
+     * ImporterTheme {
      *     Surface {
      *         Column {
      *             Text("Themed content")

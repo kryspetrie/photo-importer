@@ -1,6 +1,8 @@
 package org.kryspetrie.fileimport.infrastructure.adapter
 
 import java.io.File
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,6 +15,7 @@ class ImportHistoryAdapter(
     private val historyDir: File = File(System.getProperty("user.home"), ".petrie-importer"),
     private val dispatcherProvider: DispatcherProvider,
 ) : ImportHistoryPort {
+    private val mutex = Mutex()
     private val json = Json {
         prettyPrint = true
         ignoreUnknownKeys = true
@@ -38,10 +41,10 @@ class ImportHistoryAdapter(
     override suspend fun addEntry(
         entry: ImportHistoryEntry,
         fileDetails: List<ImportFileDetail>?,
-    ): Unit =
+    ): Unit = mutex.withLock {
         withContext(dispatcherProvider.io) {
             try {
-                val history = loadHistory().toMutableList()
+                val history = loadHistoryInternal().toMutableList()
                 val enrichedEntry =
                     if (fileDetails != null && fileDetails.isNotEmpty()) {
                         entry.copy(fileDetails = fileDetails)
@@ -50,6 +53,22 @@ class ImportHistoryAdapter(
                 val trimmed = history.take(500)
                 historyFile.writeText(json.encodeToString(trimmed))
             } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * Internal load that reads from file without the mutex.
+     * Callers must hold [mutex] when using this within a read-modify-write sequence.
+     */
+    private suspend fun loadHistoryInternal(): List<ImportHistoryEntry> =
+        withContext(dispatcherProvider.io) {
+            try {
+                if (historyFile.exists()) {
+                    json.decodeFromString<List<ImportHistoryEntry>>(historyFile.readText())
+                } else emptyList()
+            } catch (_: Exception) {
+                emptyList()
+            }
         }
 
     override suspend fun clearHistory(): Unit =

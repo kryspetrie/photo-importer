@@ -206,15 +206,16 @@ class PerspectiveCorrectionService : PerspectiveCorrectionPort {
                     detectedPhoto.bottomLeft.x.toDouble(),
                     detectedPhoto.bottomLeft.y.toDouble(),
                 ),
-                Point2D_F64(detectedPhoto.topLeft.x.toDouble(), detectedPhoto.topLeft.y.toDouble()),
             )
 
         var sign: Int? = null
         for (i in 0 until 4) {
-            val ax = corners[i + 1].x - corners[i].x
-            val ay = corners[i + 1].y - corners[i].y
-            val bx = corners[(i + 2) % 5].x - corners[i + 1].x
-            val by = corners[(i + 2) % 5].y - corners[i + 1].y
+            val next = (i + 1) % 4
+            val next2 = (i + 2) % 4
+            val ax = corners[next].x - corners[i].x
+            val ay = corners[next].y - corners[i].y
+            val bx = corners[next2].x - corners[next].x
+            val by = corners[next2].y - corners[next].y
             val cross = ax * by - ay * bx
             val currentSign = if (cross > 0) 1 else if (cross < 0) -1 else 0
             if (currentSign != 0) {

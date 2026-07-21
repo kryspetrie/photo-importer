@@ -123,7 +123,12 @@ class HashCacheAdapter(
 
     override suspend fun clearAllIndexes() =
         withContext(dispatcherProvider.io) {
-            indexDir.listFiles()?.forEach { it.delete() }
+            val allowedExtensions = setOf(".db", ".db-wal", ".db-shm")
+            indexDir.listFiles()?.forEach { file ->
+                if (allowedExtensions.any { file.name.endsWith(it) } && file.isFile && !java.nio.file.Files.isSymbolicLink(file.toPath())) {
+                    file.delete()
+                }
+            }
             Unit
         }
 
@@ -217,14 +222,16 @@ class HashCacheAdapter(
                                                 DigestUtils.md5Hex(it)
                                             }
                                         } catch (_: Exception) {
-                                            ""
+                                            null
                                         }
-                                    hashResults[file.absolutePath] =
-                                        HashCacheEntry(
-                                            hash = hash,
-                                            fileSize = file.length(),
-                                            lastModified = file.lastModified(),
-                                        )
+                                    if (hash != null) {
+                                        hashResults[file.absolutePath] =
+                                            HashCacheEntry(
+                                                hash = hash,
+                                                fileSize = file.length(),
+                                                lastModified = file.lastModified(),
+                                            )
+                                    }
                                     val done = counter.incrementAndGet()
                                     if (done % 100 == 0 || done == needsHash.size) {
                                         onProgress(

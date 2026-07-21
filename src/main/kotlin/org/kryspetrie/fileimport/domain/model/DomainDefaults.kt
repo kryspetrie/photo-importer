@@ -123,21 +123,9 @@ object DomainDefaults {
         override fun formattedTimestamp(): String = formatTimestamp(currentTimeMillis())
 
         override fun formatTimestamp(timestamp: Long): String {
-            // Simple ISO-8601-like format without java.text.SimpleDateFormat
-            val seconds = timestamp / 1000
-            val minutes = seconds / 60
-            val hours = minutes / 60
-            val result =
-                "%04d-%02d-%02d %02d:%02d:%02d"
-                    .format(
-                        hours / 24 / 365 + 1970,
-                        (hours / 24 % 365) / 30 + 1,
-                        (hours % 24) / 24 + 1,
-                        hours % 24,
-                        minutes % 60,
-                        seconds % 60,
-                    )
-            return result
+            return java.time.Instant.ofEpochMilli(timestamp)
+                .atZone(java.time.ZoneId.systemDefault())
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
         }
     }
 }

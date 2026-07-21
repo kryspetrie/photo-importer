@@ -354,7 +354,7 @@ class HexagonalArchitectureKonsistTest {
         private val allowedInfrastructureImportsInUI: Set<String> = buildSet {
             // Adapter utilities & AWT bridge extensions
             add("org.kryspetrie.fileimport.infrastructure.adapter.Platform")
-            add("org.kryspetrie.fileimport.infrastructure.adapter.AppPaths")
+            // AppPaths removed — now accessed via PathsPort domain interface
             add("org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage")
             add("org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage")
             add("org.kryspetrie.fileimport.infrastructure.adapter.ThumbnailExtractorAdapter")
@@ -380,12 +380,15 @@ class HexagonalArchitectureKonsistTest {
             add("org.kryspetrie.fileimport.application.ReorganizeService")
             add("org.kryspetrie.fileimport.application.DuplicateScannerService")
             add("org.kryspetrie.fileimport.application.WatchFolderService")
-            add("org.kryspetrie.fileimport.application.PhotoScanExportService")
+            add("org.kryspetrie.fileimport.application.WatchFolderManager")
+            // PhotoScanExportService removed — UI now uses PhotoScanExportPort domain interface
             add("org.kryspetrie.fileimport.application.ScanService")
             add("org.kryspetrie.fileimport.application.export.MetadataWritingService")
             add("org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService")
             add("org.kryspetrie.fileimport.application.metadata.MetadataEditService")
             add("org.kryspetrie.fileimport.application.OrientationCorrectionService")
+            add("org.kryspetrie.fileimport.application.PersonService")
+            add("org.kryspetrie.fileimport.application.FaceGroupingService")
         }
 
         @Test

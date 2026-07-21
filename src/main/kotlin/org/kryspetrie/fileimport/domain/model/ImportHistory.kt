@@ -47,7 +47,7 @@ data class ImportFileDetail(
     val hashVerified: Boolean = false,
 
     /** Whether hash verification passed (if performed) */
-    val hashMatches: Boolean = true,
+    val hashMatches: Boolean = false,
 
     /** Whether the file was successfully imported */
     val success: Boolean = true,
@@ -69,6 +69,9 @@ data class ImportFileDetail(
 
     /** List of sidecar files imported */
     val sidecarFiles: List<String> = emptyList(),
+
+    /** Error messages from sidecar import failures */
+    val sidecarErrors: List<String> = emptyList(),
 
     /** Whether source file was deleted after import */
     val sourceDeleted: Boolean = false,
