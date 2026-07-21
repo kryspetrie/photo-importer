@@ -10,10 +10,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +26,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 
 /**
@@ -44,7 +43,9 @@ fun WatchFolderConfigDialog(
 ) {
     var watchPath by remember { mutableStateOf(existingConfig?.watchPath ?: "") }
     var destinationPath by remember { mutableStateOf(existingConfig?.destinationPath ?: "") }
-    var cooldownSeconds by remember { mutableStateOf((existingConfig?.cooldownMs ?: 5000L) / 1000f) }
+    var cooldownSeconds by remember {
+        mutableStateOf((existingConfig?.cooldownMs ?: 5000L) / 1000f)
+    }
     var recursive by remember { mutableStateOf(existingConfig?.recursive ?: true) }
     var autoStart by remember { mutableStateOf(existingConfig?.autoStart ?: false) }
     var enabled by remember { mutableStateOf(existingConfig?.enabled ?: true) }
@@ -117,10 +118,7 @@ fun WatchFolderConfigDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Switch(
-                        checked = recursive,
-                        onCheckedChange = { recursive = it },
-                    )
+                    Switch(checked = recursive, onCheckedChange = { recursive = it })
                     Spacer(Modifier.width(8.dp))
                     Text("Watch subdirectories recursively")
                 }
@@ -129,10 +127,7 @@ fun WatchFolderConfigDialog(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Switch(
-                        checked = autoStart,
-                        onCheckedChange = { autoStart = it },
-                    )
+                    Switch(checked = autoStart, onCheckedChange = { autoStart = it })
                     Spacer(Modifier.width(8.dp))
                     Text("Auto-start on app launch")
                 }
@@ -142,10 +137,7 @@ fun WatchFolderConfigDialog(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Switch(
-                            checked = enabled,
-                            onCheckedChange = { enabled = it },
-                        )
+                        Switch(checked = enabled, onCheckedChange = { enabled = it })
                         Spacer(Modifier.width(8.dp))
                         Text("Enabled")
                     }
@@ -153,29 +145,26 @@ fun WatchFolderConfigDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                ) {
-                    OutlinedButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    OutlinedButton(onClick = onDismiss) { Text("Cancel") }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
                             onSave(
-                                (existingConfig ?: WatchFolderConfig(
-                                    watchPath = watchPath,
-                                    destinationPath = destinationPath,
-                                )).copy(
-                                    watchPath = watchPath,
-                                    destinationPath = destinationPath,
-                                    profileName = profileName,
-                                    cooldownMs = (cooldownSeconds * 1000).toLong(),
-                                    recursive = recursive,
-                                    autoStart = autoStart,
-                                    enabled = enabled,
-                                )
+                                (existingConfig
+                                        ?: WatchFolderConfig(
+                                            watchPath = watchPath,
+                                            destinationPath = destinationPath,
+                                        ))
+                                    .copy(
+                                        watchPath = watchPath,
+                                        destinationPath = destinationPath,
+                                        profileName = profileName,
+                                        cooldownMs = (cooldownSeconds * 1000).toLong(),
+                                        recursive = recursive,
+                                        autoStart = autoStart,
+                                        enabled = enabled,
+                                    )
                             )
                         },
                         enabled = isValid,

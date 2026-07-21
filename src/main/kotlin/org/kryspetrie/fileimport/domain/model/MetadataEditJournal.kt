@@ -5,13 +5,13 @@ import kotlinx.serialization.Serializable
 /**
  * A single file entry in a metadata edit journal.
  *
- * Records the before/after state for a single file's metadata edit, enabling undo
- * (restore backup) and redo (re-apply metadata) operations.
+ * Records the before/after state for a single file's metadata edit, enabling undo (restore backup)
+ * and redo (re-apply metadata) operations.
  *
  * @property filePath Absolute path of the original file that was edited.
  * @property backupPath Absolute path of the backup copy made before editing.
- * @property configSnapshot The [PhotoScanConfiguration] that was applied during the edit.
- *   Stored for redo support — re-applying the same config produces the same result.
+ * @property configSnapshot The [PhotoScanConfiguration] that was applied during the edit. Stored
+ *   for redo support — re-applying the same config produces the same result.
  * @property wasSavedNew If true, this was a SAVE_NEW operation (output in a different directory).
  *   For SAVE_NEW entries, undo means deleting the output file; redo means re-running the write.
  * @property outputFilePath For SAVE_NEW mode, the path of the created output file.
@@ -71,9 +71,7 @@ data class MetadataEditJournal(
         get() = entries.size
 }
 
-/**
- * Summary of a metadata edit journal for display in a list.
- */
+/** Summary of a metadata edit journal for display in a list. */
 data class MetadataEditJournalSummary(
     val id: String,
     val timestamp: Long,

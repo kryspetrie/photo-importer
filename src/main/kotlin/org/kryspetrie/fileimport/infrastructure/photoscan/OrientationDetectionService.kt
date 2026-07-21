@@ -34,8 +34,8 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
  * - y ≈ 180° → image is upside down → correct by rotating 180°
  * - y ≈ 270° → image was rotated 270° CW (= 90° CCW) → correct by rotating 90° CW
  *
- * The **correction angle** (how much to rotate CW to fix the image) is:
- * `correction = (360° - y) % 360°`
+ * The **correction angle** (how much to rotate CW to fix the image) is: `correction = (360° - y) %
+ * 360°`
  *
  * This correction maps to the nearest [RotationAngle] for the metadata editor's rotation system.
  *
@@ -43,9 +43,8 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toBufferedImage
  *
  * Matches the `ViTImageProcessor` preprocessing from `google/vit-base-patch16-224`:
  * 1. Resize the input image to 224×224 (bicubic interpolation) — **not** letterbox padding
- * 2. Convert RGB pixels to float and normalize to **[-1, 1]** using:
- *    `normalized = (pixel / 255.0 - 0.5) / 0.5`
- *    This matches `image_mean = (0.5, 0.5, 0.5)` and `image_std = (0.5, 0.5, 0.5)`
+ * 2. Convert RGB pixels to float and normalize to **[-1, 1]** using: `normalized = (pixel / 255.0 -
+ *    0.5) / 0.5` This matches `image_mean = (0.5, 0.5, 0.5)` and `image_std = (0.5, 0.5, 0.5)`
  * 3. Arrange in NCHW format: `[1, 3, 224, 224]` with RGB channel order
  *
  * @param modelResourcePort Model loading interface for obtaining the ONNX model bytes
@@ -89,11 +88,7 @@ class OrientationDetectionService(
                         "Call isOrientationDetectionAvailable() first."
                 )
         val bufferedImage = image.toBufferedImage()
-        return detectOrientationFromBufferedImage(
-            bufferedImage,
-            onnxSession,
-            confidenceThreshold,
-        )
+        return detectOrientationFromBufferedImage(bufferedImage, onnxSession, confidenceThreshold)
     }
 
     /**
@@ -117,8 +112,7 @@ class OrientationDetectionService(
         val results = onnxSession.run(mapOf(inputName to inputTensor))
 
         // Step 3: Parse output — single float angle prediction
-        @Suppress("UNCHECKED_CAST")
-        val output = results[0].value as? Array<FloatArray>
+        @Suppress("UNCHECKED_CAST") val output = results[0].value as? Array<FloatArray>
 
         if (output == null || output.isEmpty() || output[0].isEmpty()) return null
 
@@ -138,8 +132,7 @@ class OrientationDetectionService(
         // Near a boundary (e.g., 45°, 135°) means the model is more uncertain about which
         // direction the image is rotated. Closer to 0°/90°/180°/270° = higher confidence.
         val distanceToNearest90 = orientationDegrees % 90f
-        val distanceFromBoundary =
-            distanceToNearest90.coerceAtMost(90f - distanceToNearest90)
+        val distanceFromBoundary = distanceToNearest90.coerceAtMost(90f - distanceToNearest90)
         val confidence = 1f - (distanceFromBoundary / 45f)
 
         if (confidence < confidenceThreshold) return null
@@ -157,16 +150,18 @@ class OrientationDetectionService(
      *
      * Matches the `google/vit-base-patch16-224` `ViTImageProcessor` preprocessing:
      * 1. Resize to 224×224 using bicubic interpolation (no letterbox padding)
-     * 2. Convert RGB pixels to float, normalize to [-1, 1]:
-     *    `normalized = (pixel / 255.0 - mean) / std` where mean=0.5, std=0.5
+     * 2. Convert RGB pixels to float, normalize to [-1, 1]: `normalized = (pixel / 255.0 - mean) /
+     *    std` where mean=0.5, std=0.5
      * 3. Arrange in NCHW format: [1, 3, 224, 224] with RGB channel order
      */
     private fun preprocessImage(image: BufferedImage, env: OrtEnvironment): OnnxTensor {
         // Resize to 224×224 using bicubic interpolation
-        val resized =
-            BufferedImage(INPUT_SIZE, INPUT_SIZE, BufferedImage.TYPE_INT_RGB)
+        val resized = BufferedImage(INPUT_SIZE, INPUT_SIZE, BufferedImage.TYPE_INT_RGB)
         val g2d = resized.createGraphics()
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC)
+        g2d.setRenderingHint(
+            RenderingHints.KEY_INTERPOLATION,
+            RenderingHints.VALUE_INTERPOLATION_BICUBIC,
+        )
         g2d.drawImage(image, 0, 0, INPUT_SIZE, INPUT_SIZE, null)
         g2d.dispose()
 
@@ -177,15 +172,15 @@ class OrientationDetectionService(
             for (y in 0 until INPUT_SIZE) {
                 for (x in 0 until INPUT_SIZE) {
                     val rgb = resized.getRGB(x, y)
-                    val channel = when (c) {
-                        0 -> (rgb shr 16) and 0xFF // R
-                        1 -> (rgb shr 8) and 0xFF  // G
-                        2 -> rgb and 0xFF           // B
-                        else -> 0
-                    }
+                    val channel =
+                        when (c) {
+                            0 -> (rgb shr 16) and 0xFF // R
+                            1 -> (rgb shr 8) and 0xFF // G
+                            2 -> rgb and 0xFF // B
+                            else -> 0
+                        }
                     // Normalize: (pixel/255 - mean) / std = (pixel/255 - 0.5) / 0.5
-                    floatArray[idx++] =
-                        (channel / 255.0f - IMAGE_MEAN[c]) / IMAGE_STD[c]
+                    floatArray[idx++] = (channel / 255.0f - IMAGE_MEAN[c]) / IMAGE_STD[c]
                 }
             }
         }

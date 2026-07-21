@@ -42,8 +42,8 @@ class OrientationCorrectionService(
     /**
      * Result of orientation detection and correction.
      *
-     * @property orientationDegrees The detected orientation angle (0°–359.9°) — how much the
-     *   image is rotated CW from upright
+     * @property orientationDegrees The detected orientation angle (0°–359.9°) — how much the image
+     *   is rotated CW from upright
      * @property confidence Detection confidence (typically 0.5–1.0 for clear detections)
      * @property nearestRotation The nearest discrete [RotationAngle] that would **correct** the
      *   image orientation (i.e., how much to rotate the image to make it upright)
@@ -77,15 +77,15 @@ class OrientationCorrectionService(
         correctPixels: Boolean = false,
         confidenceThreshold: Float = 0.3f,
     ): CorrectionResult? {
-        val detection = orientationDetection.detectOrientation(image, confidenceThreshold)
-            ?: return null
+        val detection =
+            orientationDetection.detectOrientation(image, confidenceThreshold) ?: return null
 
-        val isJpeg = filePath.lowercase().endsWith(".jpg") ||
-            filePath.lowercase().endsWith(".jpeg")
+        val isJpeg = filePath.lowercase().endsWith(".jpg") || filePath.lowercase().endsWith(".jpeg")
 
-        val correctedImage = if (correctPixels && detection.nearestRotation != RotationAngle.NONE) {
-            imageProcessing.rotateImage(image, detection.nearestRotation)
-        } else null
+        val correctedImage =
+            if (correctPixels && detection.nearestRotation != RotationAngle.NONE) {
+                imageProcessing.rotateImage(image, detection.nearestRotation)
+            } else null
 
         return CorrectionResult(
             orientationDegrees = detection.orientationDegrees,
@@ -102,19 +102,15 @@ class OrientationCorrectionService(
      *
      * Convenience method for [detectAndCorrect] with `correctPixels = false`.
      */
-    fun detectOnly(
-        image: ProcessedImage,
-        confidenceThreshold: Float = 0.3f,
-    ): CorrectionResult? = detectAndCorrect(
-        image = image,
-        filePath = "",
-        correctPixels = false,
-        confidenceThreshold = confidenceThreshold,
-    )
+    fun detectOnly(image: ProcessedImage, confidenceThreshold: Float = 0.3f): CorrectionResult? =
+        detectAndCorrect(
+            image = image,
+            filePath = "",
+            correctPixels = false,
+            confidenceThreshold = confidenceThreshold,
+        )
 
-    /**
-     * Returns whether the orientation detection model is available.
-     */
+    /** Returns whether the orientation detection model is available. */
     fun isAvailable(): Boolean = orientationDetection.isOrientationDetectionAvailable()
 
     companion object {

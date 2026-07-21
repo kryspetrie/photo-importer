@@ -10,7 +10,4 @@ import kotlinx.serialization.Serializable
  *   Always defaults to "en" since English translations are the canonical source.
  */
 @Serializable
-data class LocaleConfig(
-    val currentLocale: String = "en",
-    val fallbackLocale: String = "en",
-)
+data class LocaleConfig(val currentLocale: String = "en", val fallbackLocale: String = "en")

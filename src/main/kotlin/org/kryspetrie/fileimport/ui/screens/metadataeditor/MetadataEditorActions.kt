@@ -29,10 +29,7 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
  * @property isChecked Whether the override is active (KEEP_SOURCE).
  * @property onToggle Callback to flip the override, or null if disabled (multi-edit).
  */
-data class OverrideToggle(
-    val isChecked: Boolean?,
-    val onToggle: ((Boolean) -> Unit)?,
-)
+data class OverrideToggle(val isChecked: Boolean?, val onToggle: ((Boolean) -> Unit)?)
 
 /**
  * Reads an override state from a config and returns a toggle for the UI.
@@ -66,8 +63,8 @@ fun overrideToggle(
 }
 
 /**
- * Like [overrideToggle] but for camera fields that use KEEP_SOURCE == true semantics
- * (camera overrides are "on" when they KEEP_SOURCE, off when NULL_OUT).
+ * Like [overrideToggle] but for camera fields that use KEEP_SOURCE == true semantics (camera
+ * overrides are "on" when they KEEP_SOURCE, off when NULL_OUT).
  */
 fun overrideCameraToggle(
     config: PhotoScanConfiguration?,

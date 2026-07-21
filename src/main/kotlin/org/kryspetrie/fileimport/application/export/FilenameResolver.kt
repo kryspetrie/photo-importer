@@ -25,7 +25,8 @@ object FilenameResolver {
      * @param directory Destination directory path
      * @param fileName Proposed filename
      * @return Resolved absolute path that doesn't conflict
-     * @throws IllegalStateException if no unique filename can be found after [MAX_RENAME_ATTEMPTS] tries
+     * @throws IllegalStateException if no unique filename can be found after [MAX_RENAME_ATTEMPTS]
+     *   tries
      */
     suspend fun resolveFilenameConflict(
         fileSystem: FileSystemPort,
@@ -40,7 +41,9 @@ object FilenameResolver {
 
         while (fileSystem.exists(candidate)) {
             if (counter > MAX_RENAME_ATTEMPTS) {
-                throw IllegalStateException("Cannot resolve filename conflict for $fileName after $MAX_RENAME_ATTEMPTS attempts")
+                throw IllegalStateException(
+                    "Cannot resolve filename conflict for $fileName after $MAX_RENAME_ATTEMPTS attempts"
+                )
             }
             candidate = directory.resolve("${baseName}_$counter.$extension")
             counter++
@@ -59,7 +62,8 @@ object FilenameResolver {
      * @param extension File extension
      * @param existingExports Set of filenames already used in this export batch
      * @return Unique filename (without path)
-     * @throws IllegalStateException if no unique filename can be found after [MAX_RENAME_ATTEMPTS] tries
+     * @throws IllegalStateException if no unique filename can be found after [MAX_RENAME_ATTEMPTS]
+     *   tries
      */
     suspend fun generateUniqueFileName(
         fileSystem: FileSystemPort,
@@ -73,7 +77,9 @@ object FilenameResolver {
 
         while (true) {
             if (counter > MAX_RENAME_ATTEMPTS) {
-                throw IllegalStateException("Cannot generate unique filename for $baseName.$extension after $MAX_RENAME_ATTEMPTS attempts")
+                throw IllegalStateException(
+                    "Cannot generate unique filename for $baseName.$extension after $MAX_RENAME_ATTEMPTS attempts"
+                )
             }
             val exists =
                 fileSystem.exists(destinationPath.resolve(candidate)) ||

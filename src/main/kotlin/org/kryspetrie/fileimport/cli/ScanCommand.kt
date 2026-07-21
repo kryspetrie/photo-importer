@@ -14,16 +14,15 @@ import kotlinx.coroutines.runBlocking
 import org.kryspetrie.fileimport.application.ScanService
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.FilePath
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 
 /**
  * CLI command for photo scan: detect and extract individual photos from scanned images.
  *
- * Supports presets for common workflows and fine-grained control over detection,
- * correction, and export parameters. All diagnostic output goes to stderr;
- * coordinate output (--coords) goes to stdout for piping.
+ * Supports presets for common workflows and fine-grained control over detection, correction, and
+ * export parameters. All diagnostic output goes to stderr; coordinate output (--coords) goes to
+ * stdout for piping.
  *
  * Usage:
  * ```
@@ -40,17 +39,16 @@ class ScanCommand(
 ) :
     CliktCommand(
         name = "scan",
-        help =
-            "Detect and extract individual photos from scanned images (Photo Scan mode)",
+        help = "Detect and extract individual photos from scanned images (Photo Scan mode)",
     ) {
 
     // ── Input/Output ────────────────────────────────────────────────
 
     private val sources by
         argument(
-            help =
-                "Source image file(s) or directory. A directory scans all image files recursively."
-        )
+                help =
+                    "Source image file(s) or directory. A directory scans all image files recursively."
+            )
             .file(mustExist = true)
             .multiple()
 
@@ -62,8 +60,7 @@ class ScanCommand(
         option("-r", "--recursive", help = "Scan directories recursively").flag(default = true)
 
     private val noRecursive by
-        option("--no-recursive", help = "Do not scan directories recursively")
-            .flag(default = false)
+        option("--no-recursive", help = "Do not scan directories recursively").flag(default = false)
 
     // ── Detection ───────────────────────────────────────────────────
 
@@ -85,9 +82,7 @@ class ScanCommand(
             .default(0.02f)
 
     private val rotation by
-        option("--rotation", help = "Output rotation in degrees: 0, 90, 180, 270")
-            .int()
-            .default(0)
+        option("--rotation", help = "Output rotation in degrees: 0, 90, 180, 270").int().default(0)
 
     // ── Utility ─────────────────────────────────────────────────────
 
@@ -128,22 +123,20 @@ class ScanCommand(
         echo("", err = true)
 
         // Build configuration from preset + overrides
-        val correctionStrategy = when (crop) {
-            "simple" -> CorrectionStrategy.CROP
-            "warp" -> CorrectionStrategy.CROP_AND_ROTATE
-            "warp-stretch" -> CorrectionStrategy.PERSPECTIVE
-            else -> CorrectionStrategy.PERSPECTIVE
-        }
+        val correctionStrategy =
+            when (crop) {
+                "simple" -> CorrectionStrategy.CROP
+                "warp" -> CorrectionStrategy.CROP_AND_ROTATE
+                "warp-stretch" -> CorrectionStrategy.PERSPECTIVE
+                else -> CorrectionStrategy.PERSPECTIVE
+            }
 
         val allResults = mutableListOf<ScanResult>()
         val allCoords = mutableListOf<Pair<String, List<CoordinateOutput>>>()
 
         for ((index, sourceFile) in limitedFiles.withIndex()) {
             val fileName = sourceFile.name
-            echo(
-                "[${index + 1}/${limitedFiles.size}] $fileName: Detecting...",
-                err = true,
-            )
+            echo("[${index + 1}/${limitedFiles.size}] $fileName: Detecting...", err = true)
 
             val detectedPhotos = scanService.detectPhotos(sourceFile.path)
             if (detectedPhotos.isEmpty()) {
@@ -164,22 +157,29 @@ class ScanCommand(
             val configuredPhotos =
                 detectedPhotos.map { photo ->
                     photo.copy(
-                        configuration = photo.configuration.copy(
-                            correctionStrategy = correctionStrategy,
-                            rotationDegrees = rotation,
-                        ),
-                        applyPerspectiveCorrection =
-                            correctionStrategy != CorrectionStrategy.CROP,
+                        configuration =
+                            photo.configuration.copy(
+                                correctionStrategy = correctionStrategy,
+                                rotationDegrees = rotation,
+                            ),
+                        applyPerspectiveCorrection = correctionStrategy != CorrectionStrategy.CROP,
                     )
                 }
 
             // Coordinate output
-            val coordOutputs = configuredPhotos.map { photo ->
-                CoordinateOutput(
-                    id = photo.id,
-                    corners = listOf(photo.topLeft, photo.topRight, photo.bottomRight, photo.bottomLeft),
-                )
-            }
+            val coordOutputs =
+                configuredPhotos.map { photo ->
+                    CoordinateOutput(
+                        id = photo.id,
+                        corners =
+                            listOf(
+                                photo.topLeft,
+                                photo.topRight,
+                                photo.bottomRight,
+                                photo.bottomLeft,
+                            ),
+                    )
+                }
             allCoords.add(fileName to coordOutputs)
 
             // Export images unless --no-image or --dry-run
@@ -201,9 +201,7 @@ class ScanCommand(
                             "[${index + 1}/${limitedFiles.size}] $fileName: Done (${configuredPhotos.size} photos exported)",
                             err = true,
                         )
-                        allResults.add(
-                            ScanResult(fileName, configuredPhotos.size, result.errors)
-                        )
+                        allResults.add(ScanResult(fileName, configuredPhotos.size, result.errors))
                     } catch (e: Exception) {
                         echo(
                             "[${index + 1}/${limitedFiles.size}] $fileName: Error - ${e.message}",
@@ -250,11 +248,12 @@ class ScanCommand(
         // Coordinate output on stdout (for piping)
         if (coords != null) {
             for ((sourcePath, photoCoords) in allCoords) {
-                val formatted = if (coords == "json") {
-                    OutputFormatter.formatCoordsJson(sourcePath, photoCoords)
-                } else {
-                    OutputFormatter.formatCoordsText(sourcePath, photoCoords)
-                }
+                val formatted =
+                    if (coords == "json") {
+                        OutputFormatter.formatCoordsJson(sourcePath, photoCoords)
+                    } else {
+                        OutputFormatter.formatCoordsText(sourcePath, photoCoords)
+                    }
                 echo(formatted)
             }
         }
@@ -289,8 +288,4 @@ class ScanCommand(
 }
 
 /** Simple result tracker for summary output. */
-private data class ScanResult(
-    val fileName: String,
-    val photoCount: Int,
-    val errors: List<String>,
-)
+private data class ScanResult(val fileName: String, val photoCount: Int, val errors: List<String>)

@@ -2,7 +2,6 @@ package org.kryspetrie.fileimport.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -16,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -71,10 +69,11 @@ fun RotationBadge(
         }
         Text(
             "${rotationDegrees}°",
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.Bold,
-                fontSize = 10.sp,
-            ),
+            style =
+                MaterialTheme.typography.labelSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 10.sp,
+                ),
             color = textColor,
         )
     }
@@ -83,13 +82,11 @@ fun RotationBadge(
 /**
  * A compact badge indicating that auto-orientation detection is enabled for an import.
  *
- * Displayed in import screens to give users a visual indication that photos will be
- * automatically rotated on import.
+ * Displayed in import screens to give users a visual indication that photos will be automatically
+ * rotated on import.
  */
 @Composable
-fun AutoOrientIndicator(
-    modifier: Modifier = Modifier,
-) {
+fun AutoOrientIndicator(modifier: Modifier = Modifier) {
     Row(
         modifier =
             modifier

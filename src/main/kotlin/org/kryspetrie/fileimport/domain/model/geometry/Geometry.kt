@@ -128,9 +128,18 @@ data class BoundingBoxCorners(
         // Boundary / collinear cases: check if an endpoint lies ON the other segment
         // These represent T-junctions or overlapping collinear edges,
         // both of which are invalid for a convex quadrilateral boundary.
-        fun onSegment(px: Double, py: Double, qx: Double, qy: Double, rx: Double, ry: Double): Boolean {
-            return rx <= maxOf(px, qx) && rx >= minOf(px, qx) &&
-                   ry <= maxOf(py, qy) && ry >= minOf(py, qy)
+        fun onSegment(
+            px: Double,
+            py: Double,
+            qx: Double,
+            qy: Double,
+            rx: Double,
+            ry: Double,
+        ): Boolean {
+            return rx <= maxOf(px, qx) &&
+                rx >= minOf(px, qx) &&
+                ry <= maxOf(py, qy) &&
+                ry >= minOf(py, qy)
         }
         if (d1 == 0.0 && onSegment(ax, ay, bx, by, cx, cy)) return true
         if (d2 == 0.0 && onSegment(ax, ay, bx, by, dx, dy)) return true

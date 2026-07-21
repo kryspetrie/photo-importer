@@ -105,13 +105,14 @@ object ExifValueResolver {
 
     /**
      * Converts a decimal degree value to GPS rationals (degrees, minutes, seconds). EXIF GPS
-     * latitude/longitude fields require 3 RationalNumber values: degrees, minutes, seconds.
-     * All values are non-negative; the caller sets the hemisphere (N/S, E/W) separately.
+     * latitude/longitude fields require 3 RationalNumber values: degrees, minutes, seconds. All
+     * values are non-negative; the caller sets the hemisphere (N/S, E/W) separately.
      *
-     * Seconds are represented to 4 decimal places of precision (denominator of 10000).
-     * For example, 42.2626° → 42° 15' 45.36" → [42/1, 15/1, 453600/10000].
+     * Seconds are represented to 4 decimal places of precision (denominator of 10000). For example,
+     * 42.2626° → 42° 15' 45.36" → [42/1, 15/1, 453600/10000].
      *
-     * @param decimalDegrees Latitude or longitude in decimal degrees (negative values are converted to positive)
+     * @param decimalDegrees Latitude or longitude in decimal degrees (negative values are converted
+     *   to positive)
      * @return Array of 3 RationalNumbers representing [degrees, minutes, seconds]
      */
     fun decimalToGpsRationals(decimalDegrees: Double): Array<RationalNumber> {

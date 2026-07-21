@@ -73,7 +73,11 @@ class PhotoScanExportService(
         for ((index, photo) in detectedPhotos.withIndex()) {
             try {
                 val result =
-                    processPhoto(sourceImage = image, detectedPhoto = photo, marginFraction = photo.configuration.cropMarginFraction.toDouble())
+                    processPhoto(
+                        sourceImage = image,
+                        detectedPhoto = photo,
+                        marginFraction = photo.configuration.cropMarginFraction.toDouble(),
+                    )
 
                 val fileName =
                     if (detectedPhotos.size > 1) "${baseFileName}_${index + 1}.jpg"

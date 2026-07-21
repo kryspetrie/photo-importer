@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
@@ -30,7 +31,6 @@ import org.kryspetrie.fileimport.ui.screens.wizard.edit.SubjectsSection
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
-import kotlinx.coroutines.CoroutineScope
 
 /**
  * Right-hand metadata editor panel for the bulk metadata editor.
@@ -103,16 +103,10 @@ fun MetadataEditorPanel(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    OutlinedButton(
-                        onClick = onClear,
-                        modifier = Modifier.height(28.dp),
-                    ) {
+                    OutlinedButton(onClick = onClear, modifier = Modifier.height(28.dp)) {
                         Text("Clear", style = MaterialTheme.typography.labelSmall)
                     }
-                    Button(
-                        onClick = onApply,
-                        modifier = Modifier.height(28.dp),
-                    ) {
+                    Button(onClick = onApply, modifier = Modifier.height(28.dp)) {
                         Text("Apply", style = MaterialTheme.typography.labelSmall)
                     }
                 }
@@ -136,10 +130,7 @@ fun MetadataEditorPanel(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
-                    OutlinedButton(
-                        onClick = onClear,
-                        modifier = Modifier.height(28.dp),
-                    ) {
+                    OutlinedButton(onClick = onClear, modifier = Modifier.height(28.dp)) {
                         Text("Clear", style = MaterialTheme.typography.labelSmall)
                     }
                 }
@@ -371,8 +362,8 @@ fun MetadataEditorPanel(
 /**
  * Holds all override toggles computed for the metadata editor panel.
  *
- * Using this data class eliminates the 12x repeated pattern of checking isMultiSelect
- * and constructing override toggle callbacks inline.
+ * Using this data class eliminates the 12x repeated pattern of checking isMultiSelect and
+ * constructing override toggle callbacks inline.
  */
 data class OverrideToggles(
     val description: OverrideToggle,
@@ -392,8 +383,8 @@ data class OverrideToggles(
 /**
  * Computes all override toggles for the metadata editor panel.
  *
- * In single-edit mode, each toggle reads from the config and updates it.
- * In multi-edit mode, all toggles are null (disabled).
+ * In single-edit mode, each toggle reads from the config and updates it. In multi-edit mode, all
+ * toggles are null (disabled).
  */
 private fun computeOverrideToggles(
     config: PhotoScanConfiguration?,
@@ -402,41 +393,101 @@ private fun computeOverrideToggles(
 ): OverrideToggles {
     val update = state::updateSelectedConfig
     return OverrideToggles(
-        description = overrideToggle(
-            config, { c -> c.overrideDescription }, { c, v -> c.copy(overrideDescription = v) }, isMultiSelect, update
-        ),
-        keywords = overrideToggle(
-            config, { c -> c.overrideKeywords }, { c, v -> c.copy(overrideKeywords = v) }, isMultiSelect, update
-        ),
-        originalDate = overrideToggle(
-            config, { c -> c.overrideOriginalDate }, { c, v -> c.copy(overrideOriginalDate = v) }, isMultiSelect, update
-        ),
-        year = overrideToggle(
-            config, { c -> c.overrideYear }, { c, v -> c.copy(overrideYear = v) }, isMultiSelect, update
-        ),
-        gps = overrideToggle(
-            config, { c -> c.overrideGps }, { c, v -> c.copy(overrideGps = v) }, isMultiSelect, update
-        ),
-        cameraMake = overrideCameraToggle(
-            config, { c -> c.overrideCameraMake }, { c, v -> c.copy(overrideCameraMake = v) }, isMultiSelect, update
-        ),
-        cameraModel = overrideCameraToggle(
-            config, { c -> c.overrideCameraModel }, { c, v -> c.copy(overrideCameraModel = v) }, isMultiSelect, update
-        ),
-        lensModel = overrideCameraToggle(
-            config, { c -> c.overrideLensModel }, { c, v -> c.copy(overrideLensModel = v) }, isMultiSelect, update
-        ),
-        focalLength = overrideCameraToggle(
-            config, { c -> c.overrideFocalLength }, { c, v -> c.copy(overrideFocalLength = v) }, isMultiSelect, update
-        ),
-        aperture = overrideCameraToggle(
-            config, { c -> c.overrideAperture }, { c, v -> c.copy(overrideAperture = v) }, isMultiSelect, update
-        ),
-        shutterSpeed = overrideCameraToggle(
-            config, { c -> c.overrideShutterSpeed }, { c, v -> c.copy(overrideShutterSpeed = v) }, isMultiSelect, update
-        ),
-        iso = overrideCameraToggle(
-            config, { c -> c.overrideIso }, { c, v -> c.copy(overrideIso = v) }, isMultiSelect, update
-        ),
+        description =
+            overrideToggle(
+                config,
+                { c -> c.overrideDescription },
+                { c, v -> c.copy(overrideDescription = v) },
+                isMultiSelect,
+                update,
+            ),
+        keywords =
+            overrideToggle(
+                config,
+                { c -> c.overrideKeywords },
+                { c, v -> c.copy(overrideKeywords = v) },
+                isMultiSelect,
+                update,
+            ),
+        originalDate =
+            overrideToggle(
+                config,
+                { c -> c.overrideOriginalDate },
+                { c, v -> c.copy(overrideOriginalDate = v) },
+                isMultiSelect,
+                update,
+            ),
+        year =
+            overrideToggle(
+                config,
+                { c -> c.overrideYear },
+                { c, v -> c.copy(overrideYear = v) },
+                isMultiSelect,
+                update,
+            ),
+        gps =
+            overrideToggle(
+                config,
+                { c -> c.overrideGps },
+                { c, v -> c.copy(overrideGps = v) },
+                isMultiSelect,
+                update,
+            ),
+        cameraMake =
+            overrideCameraToggle(
+                config,
+                { c -> c.overrideCameraMake },
+                { c, v -> c.copy(overrideCameraMake = v) },
+                isMultiSelect,
+                update,
+            ),
+        cameraModel =
+            overrideCameraToggle(
+                config,
+                { c -> c.overrideCameraModel },
+                { c, v -> c.copy(overrideCameraModel = v) },
+                isMultiSelect,
+                update,
+            ),
+        lensModel =
+            overrideCameraToggle(
+                config,
+                { c -> c.overrideLensModel },
+                { c, v -> c.copy(overrideLensModel = v) },
+                isMultiSelect,
+                update,
+            ),
+        focalLength =
+            overrideCameraToggle(
+                config,
+                { c -> c.overrideFocalLength },
+                { c, v -> c.copy(overrideFocalLength = v) },
+                isMultiSelect,
+                update,
+            ),
+        aperture =
+            overrideCameraToggle(
+                config,
+                { c -> c.overrideAperture },
+                { c, v -> c.copy(overrideAperture = v) },
+                isMultiSelect,
+                update,
+            ),
+        shutterSpeed =
+            overrideCameraToggle(
+                config,
+                { c -> c.overrideShutterSpeed },
+                { c, v -> c.copy(overrideShutterSpeed = v) },
+                isMultiSelect,
+                update,
+            ),
+        iso =
+            overrideCameraToggle(
+                config,
+                { c -> c.overrideIso },
+                { c, v -> c.copy(overrideIso = v) },
+                isMultiSelect,
+                update,
+            ),
     )
 }

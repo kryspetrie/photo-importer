@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Icon
@@ -27,8 +26,8 @@ import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 /**
  * Status card shown when a folder is being watched for automatic imports.
  *
- * Displays the watched path, number of detected files, auto-import count, last import time,
- * and any errors. Provides a "Stop" button to cancel the watch.
+ * Displays the watched path, number of detected files, auto-import count, last import time, and any
+ * errors. Provides a "Stop" button to cancel the watch.
  */
 @Composable
 fun WatchFolderStatusCard(
@@ -53,11 +52,12 @@ fun WatchFolderStatusCard(
                     },
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = if (watchStatus.lastError != null && !watchStatus.isWatching) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        MaterialTheme.colorScheme.primary
-                    },
+                    tint =
+                        if (watchStatus.lastError != null && !watchStatus.isWatching) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
                 )
                 Column(Modifier.weight(1f)) {
                     Text(

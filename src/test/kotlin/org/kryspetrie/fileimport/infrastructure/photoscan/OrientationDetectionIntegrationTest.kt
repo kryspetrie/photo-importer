@@ -19,9 +19,9 @@ import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
 /**
  * Integration tests for orientation detection using the real ONNX model.
  *
- * Uses the existing test images (`faces-01.jpg`, `faces-02.jpg`) rotated at known angles
- * (0°, 90°, 180°, 270°) to verify that [OrientationDetectionService] correctly identifies the
- * orientation and computes the appropriate correction rotation.
+ * Uses the existing test images (`faces-01.jpg`, `faces-02.jpg`) rotated at known angles (0°, 90°,
+ * 180°, 270°) to verify that [OrientationDetectionService] correctly identifies the orientation and
+ * computes the appropriate correction rotation.
  *
  * **Angle semantics:**
  * - The model outputs the **correction angle** (how much to rotate CW to make upright)
@@ -34,7 +34,8 @@ import org.kryspetrie.fileimport.infrastructure.adapter.OrtSessionFactory
  * - 180° rotated → correction ≈ 180° → CW_180 (rotate 180°)
  * - 270° CW (= 90° CCW) → correction ≈ 90° → CW_90 (rotate 90° CW)
  *
- * The test is gated behind [orientationModelAvailable] — it only runs when the ONNX model is present.
+ * The test is gated behind [orientationModelAvailable] — it only runs when the ONNX model is
+ * present.
  */
 @DisplayName("Orientation Detection Integration")
 @EnabledIf("orientationModelAvailable")
@@ -61,7 +62,8 @@ class OrientationDetectionIntegrationTest {
             val newWidth: Int
             val newHeight: Int
             when (rotation) {
-                RotationAngle.CW_90, RotationAngle.CCW_90 -> {
+                RotationAngle.CW_90,
+                RotationAngle.CCW_90 -> {
                     newWidth = image.height
                     newHeight = image.width
                 }
@@ -71,7 +73,11 @@ class OrientationDetectionIntegrationTest {
                 }
             }
             val rotated =
-                BufferedImage(newWidth.coerceAtLeast(1), newHeight.coerceAtLeast(1), BufferedImage.TYPE_INT_RGB)
+                BufferedImage(
+                    newWidth.coerceAtLeast(1),
+                    newHeight.coerceAtLeast(1),
+                    BufferedImage.TYPE_INT_RGB,
+                )
             val graphics = rotated.createGraphics() as Graphics2D
             graphics.background = java.awt.Color.BLACK
             when (rotation) {
@@ -88,7 +94,7 @@ class OrientationDetectionIntegrationTest {
                     graphics.rotate(Math.PI)
                     graphics.translate(-image.width / 2.0, -image.height / 2.0)
                 }
-                RotationAngle.NONE -> { }
+                RotationAngle.NONE -> {}
             }
             graphics.drawImage(image, 0, 0, null)
             graphics.dispose()
@@ -124,7 +130,9 @@ class OrientationDetectionIntegrationTest {
             val image = loadImage("faces-01") ?: return
             val result = service!!.detectOrientation(AwtProcessedImage(image)) ?: return
             assertThat(result.nearestRotation)
-                .`as`("Upright faces-01 should need no correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°")
+                .`as`(
+                    "Upright faces-01 should need no correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°"
+                )
                 .isEqualTo(RotationAngle.NONE)
         }
 
@@ -134,7 +142,9 @@ class OrientationDetectionIntegrationTest {
             val image = loadImage("faces-02") ?: return
             val result = service!!.detectOrientation(AwtProcessedImage(image)) ?: return
             assertThat(result.nearestRotation)
-                .`as`("Upright faces-02 should need no correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°")
+                .`as`(
+                    "Upright faces-02 should need no correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°"
+                )
                 .isEqualTo(RotationAngle.NONE)
         }
     }
@@ -152,7 +162,9 @@ class OrientationDetectionIntegrationTest {
             val rotated = rotateImage(original, RotationAngle.CW_90)
             val result = service!!.detectOrientation(AwtProcessedImage(rotated)) ?: return
             assertThat(result.nearestRotation)
-                .`as`("90° CW rotated faces-01 should need CCW_90 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°")
+                .`as`(
+                    "90° CW rotated faces-01 should need CCW_90 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°"
+                )
                 .isEqualTo(RotationAngle.CCW_90)
         }
 
@@ -163,7 +175,9 @@ class OrientationDetectionIntegrationTest {
             val rotated = rotateImage(original, RotationAngle.CW_90)
             val result = service!!.detectOrientation(AwtProcessedImage(rotated)) ?: return
             assertThat(result.nearestRotation)
-                .`as`("90° CW rotated faces-02 should need CCW_90 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°")
+                .`as`(
+                    "90° CW rotated faces-02 should need CCW_90 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°"
+                )
                 .isEqualTo(RotationAngle.CCW_90)
         }
     }
@@ -181,7 +195,9 @@ class OrientationDetectionIntegrationTest {
             val rotated = rotateImage(original, RotationAngle.CW_180)
             val result = service!!.detectOrientation(AwtProcessedImage(rotated)) ?: return
             assertThat(result.nearestRotation)
-                .`as`("180° rotated faces-01 should need CW_180 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°")
+                .`as`(
+                    "180° rotated faces-01 should need CW_180 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°"
+                )
                 .isEqualTo(RotationAngle.CW_180)
         }
 
@@ -192,7 +208,9 @@ class OrientationDetectionIntegrationTest {
             val rotated = rotateImage(original, RotationAngle.CW_180)
             val result = service!!.detectOrientation(AwtProcessedImage(rotated)) ?: return
             assertThat(result.nearestRotation)
-                .`as`("180° rotated faces-02 should need CW_180 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°")
+                .`as`(
+                    "180° rotated faces-02 should need CW_180 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°"
+                )
                 .isEqualTo(RotationAngle.CW_180)
         }
     }
@@ -210,7 +228,9 @@ class OrientationDetectionIntegrationTest {
             val rotated = rotateImage(original, RotationAngle.CCW_90)
             val result = service!!.detectOrientation(AwtProcessedImage(rotated)) ?: return
             assertThat(result.nearestRotation)
-                .`as`("270° CW rotated faces-01 should need CW_90 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°")
+                .`as`(
+                    "270° CW rotated faces-01 should need CW_90 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°"
+                )
                 .isEqualTo(RotationAngle.CW_90)
         }
 
@@ -221,7 +241,9 @@ class OrientationDetectionIntegrationTest {
             val rotated = rotateImage(original, RotationAngle.CCW_90)
             val result = service!!.detectOrientation(AwtProcessedImage(rotated)) ?: return
             assertThat(result.nearestRotation)
-                .`as`("270° CW rotated faces-02 should need CW_90 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°")
+                .`as`(
+                    "270° CW rotated faces-02 should need CW_90 correction, got orientation=${result.orientationDegrees}°, correction=${result.correctionDegrees}°"
+                )
                 .isEqualTo(RotationAngle.CW_90)
         }
     }
@@ -285,7 +307,8 @@ class OrientationDetectionIntegrationTest {
         @DisplayName("Correction + orientation ≈ 360° for non-zero orientations")
         fun correctionComplementaryToOrientation() {
             val image = loadImage("faces-01") ?: return
-            for (rotation in listOf(RotationAngle.CW_90, RotationAngle.CW_180, RotationAngle.CCW_90)) {
+            for (rotation in
+                listOf(RotationAngle.CW_90, RotationAngle.CW_180, RotationAngle.CCW_90)) {
                 val rotated = rotateImage(image, rotation)
                 val result = service!!.detectOrientation(AwtProcessedImage(rotated)) ?: continue
                 if (result.nearestRotation == RotationAngle.NONE) continue
@@ -293,10 +316,10 @@ class OrientationDetectionIntegrationTest {
                 val sum = result.correctionDegrees + result.orientationDegrees
                 val normalized = sum % 360f
                 assertThat(normalized)
-                    .`as`("correction(${result.correctionDegrees}°) + orientation(${result.orientationDegrees}°) ≈ 360° for rotation ${rotation.degrees}°, sum=$sum, normalized=$normalized")
-                    .satisfies({
-                        assertThat(it < 2f || it > 358f).isTrue
-                    })
+                    .`as`(
+                        "correction(${result.correctionDegrees}°) + orientation(${result.orientationDegrees}°) ≈ 360° for rotation ${rotation.degrees}°, sum=$sum, normalized=$normalized"
+                    )
+                    .satisfies({ assertThat(it < 2f || it > 358f).isTrue })
             }
         }
 
@@ -307,14 +330,10 @@ class OrientationDetectionIntegrationTest {
             val result = service!!.detectOrientation(AwtProcessedImage(image)) ?: return
             assertThat(result.correctionDegrees)
                 .`as`("Upright image correction should be near 0° or 360°")
-                .satisfies({
-                    assertThat(it < 10f || it > 350f).isTrue
-                })
+                .satisfies({ assertThat(it < 10f || it > 350f).isTrue })
             assertThat(result.orientationDegrees)
                 .`as`("Upright image orientation should be near 0° or 360°")
-                .satisfies({
-                    assertThat(it < 10f || it > 350f).isTrue
-                })
+                .satisfies({ assertThat(it < 10f || it > 350f).isTrue })
         }
     }
 }

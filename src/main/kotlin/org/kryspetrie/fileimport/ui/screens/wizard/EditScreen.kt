@@ -29,7 +29,6 @@ import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,9 +73,6 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
-import org.kryspetrie.fileimport.application.FaceGroupingService
-import org.kryspetrie.fileimport.domain.model.FaceSuggestion
-import org.kryspetrie.fileimport.application.PersonService
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
@@ -129,8 +125,6 @@ fun EditScreen(
     val dispatcherProvider: DispatcherProvider = koinInject()
     val imageRepository: ImageRepositoryPort = koinInject()
     val faceDetectionPort: FaceDetectionPort = koinInject()
-    val faceGroupingService: FaceGroupingService = koinInject()
-    val personService: PersonService = koinInject()
     val appLogger: AppLogger = koinInject()
     val settingsPort: SettingsPort = koinInject()
     val settings by settingsPort.observeSettings().collectAsState(initial = AppSettings())
@@ -157,8 +151,6 @@ fun EditScreen(
     var inheritedFaceRegions by remember { mutableStateOf<List<FaceRegion>>(emptyList()) }
     var autoStartNaming by remember { mutableStateOf(false) }
     var nameSuggestions by remember { mutableStateOf<Map<Int, String>>(emptyMap()) }
-    var faceSuggestions by remember { mutableStateOf<List<FaceSuggestion>>(emptyList()) }
-    var isDetectingFaces by remember { mutableStateOf(false) }
 
     // Back-of-photo selection state
     var showBackImagePicker by remember { mutableStateOf(false) }
@@ -287,46 +279,10 @@ fun EditScreen(
                 inheritedFaceRegions = inheritedFaceRegions,
                 autoStartNaming = autoStartNaming,
                 nameSuggestions = nameSuggestions,
-                onNameConfirmed = { faceIndex, name ->
-                    // Progressive gallery enrichment: when user confirms a face name,
-                    // save the embedding to the person directory for future auto-suggestions.
-                    val suggestion = faceSuggestions.getOrNull(faceIndex)
-                    if (suggestion != null && suggestion.embedding != null) {
-                        coroutineScope.launch {
-                            try {
-                                val suggestedPerson = suggestion.suggestedPerson
-                                // Only use suggestedPerson if the user confirmed the exact name.
-                                // If the user typed a different name (even if a suggestion was shown),
-                                // create a new person or find an existing one by name.
-                                val confirmedName = name.trim()
-                                if (suggestedPerson != null &&
-                                    suggestedPerson.name.equals(confirmedName, ignoreCase = true)
-                                ) {
-                                    // User confirmed the suggested name — add embedding to existing person
-                                    faceGroupingService.confirmIdentification(
-                                        suggestedPerson.id,
-                                        suggestion.embedding,
-                                        currentImageFile?.absolutePath ?: "",
-                                    )
-                                } else {
-                                    // User typed a different name — create new person or add to existing by name
-                                    faceGroupingService.createPersonFromFace(
-                                        confirmedName,
-                                        suggestion.embedding,
-                                        currentImageFile?.absolutePath ?: "",
-                                    )
-                                }
-                            } catch (e: Exception) {
-                                // Gallery enrichment failed — face name is still saved locally
-                                appLogger.warn("Face gallery enrichment failed: ${e.message}")
-                            }
-                        }
-                    }
-                },
+                onNameConfirmed = { _, _ -> },
                 onAutoDetectFaces =
                     if (faceDetectionPort.isFaceDetectionAvailable()) {
                         {
-                            isDetectingFaces = true
                             try {
                                 val detections =
                                     faceDetectionPort.detectFaces(fullPreview.toProcessedImage())
@@ -352,81 +308,14 @@ fun EditScreen(
                                         }
                                     state.faceRegions.addDetectedFaceRegions(idx, detectedRegions)
                                     autoStartNaming = true
-
-                                    // Auto-identify faces using the person directory + embedding model
-                                    // Use the same ProcessedImage for both detection and embedding
-                                    // to avoid index misalignment and redundant disk I/O
-                                    if (settings.autoIdentifyFaces && faceGroupingService.isEmbeddingAvailable()) {
-                                        val sourcePath = currentImageFile?.absolutePath ?: ""
-                                        val processedImage = fullPreview.toProcessedImage()
-                                        coroutineScope.launch {
-                                            try {
-                                                val suggestions =
-                                                    faceGroupingService.detectAndSuggest(processedImage, sourcePath)
-                                                if (suggestions.isNotEmpty()) {
-                                                    // Map suggestions by detection index (aligned with detectedRegions)
-                                                    val suggestionMap = mutableMapOf<Int, String>()
-                                                    suggestions.forEachIndexed { i, suggestion ->
-                                                        val name = suggestion.suggestedPerson?.name
-                                                        if (name != null && suggestion.isConfident) {
-                                                            // Confident match (>= autoTagThreshold): auto-fill name directly
-                                                            if (i < detectedRegions.size) {
-                                                                state.faceRegions.updateFaceRegionName(idx, i, name)
-                                                            }
-                                                        } else if (name != null && suggestion.isPotential) {
-                                                            // Potential match (>= matchThreshold): offer as suggestion with confidence
-                                                            val confidencePercent = (suggestion.confidence * 100).toInt()
-                                                            suggestionMap[i] = "$name ($confidencePercent%)"
-                                                        }
-                                                    }
-                                                    nameSuggestions = suggestionMap
-                                                    faceSuggestions = suggestions
-                                                }
-                                            } catch (e: CancellationException) {
-                                                throw e
-                                            } catch (ex: Exception) {
-                                                // Embedding suggestion failed — names stay empty but log for diagnosis
-                                                appLogger.warn("Face embedding suggestion failed: ${ex.message}")
-                                            }
-                                        }
-                                    }
                                 }
-                            } catch (e: CancellationException) {
-                                // Cancellation must propagate to preserve coroutine lifecycle
-                                throw e
                             } catch (ex: Exception) {
                                 // Detection failed — user can still place faces manually
                                 appLogger.warn("Face detection failed: ${ex.message}")
-                            } finally {
-                                isDetectingFaces = false
                             }
                         }
                     } else null,
             )
-        }
-    }
-
-    // ── Face detection progress indicator ──
-    if (isDetectingFaces) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Surface(
-                shape = MaterialTheme.shapes.medium,
-                tonalElevation = 8.dp,
-                shadowElevation = 8.dp,
-                modifier = Modifier.padding(24.dp),
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(24.dp),
-                ) {
-                    CircularProgressIndicator(modifier = Modifier.size(32.dp))
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Detecting faces…", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
         }
     }
 

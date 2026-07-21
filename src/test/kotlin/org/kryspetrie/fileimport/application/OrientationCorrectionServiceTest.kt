@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.application
 
+import java.awt.image.BufferedImage
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
@@ -10,7 +11,6 @@ import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.OrientationDetectionPort
 import org.kryspetrie.fileimport.infrastructure.adapter.AwtProcessedImage
-import java.awt.image.BufferedImage
 
 /**
  * Tests for [OrientationCorrectionService].
@@ -43,8 +43,9 @@ class OrientationCorrectionServiceTest {
         var lastRotation: RotationAngle? = null
             private set
 
-        override fun readImage(path: org.kryspetrie.fileimport.domain.model.FilePath): ProcessedImage? =
-            null
+        override fun readImage(
+            path: org.kryspetrie.fileimport.domain.model.FilePath
+        ): ProcessedImage? = null
 
         override fun writeJpegImage(
             image: ProcessedImage,
@@ -84,14 +85,16 @@ class OrientationCorrectionServiceTest {
         @Test
         @DisplayName("returns result when model detects orientation")
         fun returnsResult() {
-            val detection = StubOrientationDetectionPort(
-                result = OrientationResult(
-                    orientationDegrees = 90f,
-                    confidence = 0.85f,
-                    nearestRotation = RotationAngle.CCW_90,
-                    correctionDegrees = 270f,
-                ),
-            )
+            val detection =
+                StubOrientationDetectionPort(
+                    result =
+                        OrientationResult(
+                            orientationDegrees = 90f,
+                            confidence = 0.85f,
+                            nearestRotation = RotationAngle.CCW_90,
+                            correctionDegrees = 270f,
+                        )
+                )
             val service = OrientationCorrectionService(detection, StubImageProcessingPort())
 
             val result = service.detectOnly(stubImage)
@@ -117,14 +120,16 @@ class OrientationCorrectionServiceTest {
         @DisplayName("detectOnly does not rotate pixels")
         fun doesNotRotatePixels() {
             val ip = StubImageProcessingPort()
-            val detection = StubOrientationDetectionPort(
-                result = OrientationResult(
-                    orientationDegrees = 90f,
-                    confidence = 0.85f,
-                    nearestRotation = RotationAngle.CCW_90,
-                    correctionDegrees = 270f,
-                ),
-            )
+            val detection =
+                StubOrientationDetectionPort(
+                    result =
+                        OrientationResult(
+                            orientationDegrees = 90f,
+                            confidence = 0.85f,
+                            nearestRotation = RotationAngle.CCW_90,
+                            correctionDegrees = 270f,
+                        )
+                )
             val service = OrientationCorrectionService(detection, ip)
 
             service.detectOnly(stubImage)
@@ -140,21 +145,24 @@ class OrientationCorrectionServiceTest {
         @DisplayName("corrects pixels when correctPixels is true")
         fun correctsPixelsWhenFlagSet() {
             val ip = StubImageProcessingPort()
-            val detection = StubOrientationDetectionPort(
-                result = OrientationResult(
-                    orientationDegrees = 90f,
-                    confidence = 0.85f,
-                    nearestRotation = RotationAngle.CCW_90,
-                    correctionDegrees = 270f,
-                ),
-            )
+            val detection =
+                StubOrientationDetectionPort(
+                    result =
+                        OrientationResult(
+                            orientationDegrees = 90f,
+                            confidence = 0.85f,
+                            nearestRotation = RotationAngle.CCW_90,
+                            correctionDegrees = 270f,
+                        )
+                )
             val service = OrientationCorrectionService(detection, ip)
 
-            val result = service.detectAndCorrect(
-                image = stubImage,
-                filePath = "photo.jpg",
-                correctPixels = true,
-            )
+            val result =
+                service.detectAndCorrect(
+                    image = stubImage,
+                    filePath = "photo.jpg",
+                    correctPixels = true,
+                )
 
             assertThat(result).isNotNull
             assertThat(result!!.correctedImage).isNotNull
@@ -165,21 +173,24 @@ class OrientationCorrectionServiceTest {
         @DisplayName("does not rotate pixels when NONE rotation detected")
         fun noRotationForUpright() {
             val ip = StubImageProcessingPort()
-            val detection = StubOrientationDetectionPort(
-                result = OrientationResult(
-                    orientationDegrees = 0f,
-                    confidence = 0.95f,
-                    nearestRotation = RotationAngle.NONE,
-                    correctionDegrees = 0f,
-                ),
-            )
+            val detection =
+                StubOrientationDetectionPort(
+                    result =
+                        OrientationResult(
+                            orientationDegrees = 0f,
+                            confidence = 0.95f,
+                            nearestRotation = RotationAngle.NONE,
+                            correctionDegrees = 0f,
+                        )
+                )
             val service = OrientationCorrectionService(detection, ip)
 
-            val result = service.detectAndCorrect(
-                image = stubImage,
-                filePath = "photo.jpg",
-                correctPixels = true,
-            )
+            val result =
+                service.detectAndCorrect(
+                    image = stubImage,
+                    filePath = "photo.jpg",
+                    correctPixels = true,
+                )
 
             assertThat(result).isNotNull
             assertThat(result!!.correctedImage).isNull()
@@ -190,21 +201,24 @@ class OrientationCorrectionServiceTest {
         @DisplayName("does not rotate pixels when correctPixels is false")
         fun noRotationWhenFlagUnset() {
             val ip = StubImageProcessingPort()
-            val detection = StubOrientationDetectionPort(
-                result = OrientationResult(
-                    orientationDegrees = 90f,
-                    confidence = 0.85f,
-                    nearestRotation = RotationAngle.CCW_90,
-                    correctionDegrees = 270f,
-                ),
-            )
+            val detection =
+                StubOrientationDetectionPort(
+                    result =
+                        OrientationResult(
+                            orientationDegrees = 90f,
+                            confidence = 0.85f,
+                            nearestRotation = RotationAngle.CCW_90,
+                            correctionDegrees = 270f,
+                        )
+                )
             val service = OrientationCorrectionService(detection, ip)
 
-            val result = service.detectAndCorrect(
-                image = stubImage,
-                filePath = "photo.jpg",
-                correctPixels = false,
-            )
+            val result =
+                service.detectAndCorrect(
+                    image = stubImage,
+                    filePath = "photo.jpg",
+                    correctPixels = false,
+                )
 
             assertThat(result).isNotNull
             assertThat(result!!.correctedImage).isNull()
@@ -225,14 +239,16 @@ class OrientationCorrectionServiceTest {
         @Test
         @DisplayName("sets isJpeg flag in result")
         fun setsJpegFlag() {
-            val detection = StubOrientationDetectionPort(
-                result = OrientationResult(
-                    orientationDegrees = 90f,
-                    confidence = 0.85f,
-                    nearestRotation = RotationAngle.CCW_90,
-                    correctionDegrees = 270f,
-                ),
-            )
+            val detection =
+                StubOrientationDetectionPort(
+                    result =
+                        OrientationResult(
+                            orientationDegrees = 90f,
+                            confidence = 0.85f,
+                            nearestRotation = RotationAngle.CCW_90,
+                            correctionDegrees = 270f,
+                        )
+                )
             val service = OrientationCorrectionService(detection, StubImageProcessingPort())
 
             val jpegResult = service.detectAndCorrect(stubImage, "photo.jpg", correctPixels = false)
@@ -245,23 +261,26 @@ class OrientationCorrectionServiceTest {
         @Test
         @DisplayName("returns null when confidence is below threshold")
         fun belowConfidenceThreshold() {
-            val detection = StubOrientationDetectionPort(
-                result = OrientationResult(
-                    orientationDegrees = 90f,
-                    confidence = 0.85f,
-                    nearestRotation = RotationAngle.CCW_90,
-                    correctionDegrees = 270f,
-                ),
-            )
+            val detection =
+                StubOrientationDetectionPort(
+                    result =
+                        OrientationResult(
+                            orientationDegrees = 90f,
+                            confidence = 0.85f,
+                            nearestRotation = RotationAngle.CCW_90,
+                            correctionDegrees = 270f,
+                        )
+                )
             val service = OrientationCorrectionService(detection, StubImageProcessingPort())
 
             // The port returns result, but if we set threshold high enough, port may filter
             // The service delegates to the port which handles thresholding
-            val result = service.detectAndCorrect(
-                image = stubImage,
-                correctPixels = false,
-                confidenceThreshold = 0.99f,
-            )
+            val result =
+                service.detectAndCorrect(
+                    image = stubImage,
+                    correctPixels = false,
+                    confidenceThreshold = 0.99f,
+                )
             // The stub port ignores threshold, so result is still returned
             assertThat(result).isNotNull
         }

@@ -12,14 +12,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
@@ -42,14 +38,11 @@ import org.kryspetrie.fileimport.ui.components.SectionLabel
 /**
  * Management panel for watch folder configurations.
  *
- * Lists all configured watch folders with their status, and provides
- * add/edit/remove/start/stop controls.
+ * Lists all configured watch folders with their status, and provides add/edit/remove/start/stop
+ * controls.
  */
 @Composable
-fun WatchFolderManagement(
-    watchFolderManager: WatchFolderManager,
-    modifier: Modifier = Modifier,
-) {
+fun WatchFolderManagement(watchFolderManager: WatchFolderManager, modifier: Modifier = Modifier) {
     val statuses by watchFolderManager.statuses.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingConfig by remember { mutableStateOf<WatchFolderConfig?>(null) }
@@ -66,16 +59,10 @@ fun WatchFolderManagement(
         }
 
         statuses.forEach { (configId, status) ->
-            WatchFolderCard(
-                status = status,
-                onStop = { watchFolderManager.stopWatching(configId) },
-            )
+            WatchFolderCard(status = status, onStop = { watchFolderManager.stopWatching(configId) })
         }
 
-        OutlinedButton(
-            onClick = { showAddDialog = true },
-            modifier = Modifier.fillMaxWidth(),
-        ) {
+        OutlinedButton(onClick = { showAddDialog = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
             Text("Add Watch Folder")
@@ -106,16 +93,14 @@ fun WatchFolderManagement(
     }
 }
 
-/**
- * Card showing the status of a single watch folder.
- */
+/** Card showing the status of a single watch folder. */
 @Composable
-private fun WatchFolderCard(
-    status: WatchFolderStatus,
-    onStop: () -> Unit,
-) {
+private fun WatchFolderCard(status: WatchFolderStatus, onStop: () -> Unit) {
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Column(
+            modifier = Modifier.padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -129,11 +114,13 @@ private fun WatchFolderCard(
                     },
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
-                    tint = when {
-                        status.lastError != null && !status.isWatching -> MaterialTheme.colorScheme.error
-                        status.isWatching -> MaterialTheme.colorScheme.primary
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    },
+                    tint =
+                        when {
+                            status.lastError != null && !status.isWatching ->
+                                MaterialTheme.colorScheme.error
+                            status.isWatching -> MaterialTheme.colorScheme.primary
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        },
                 )
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -144,11 +131,11 @@ private fun WatchFolderCard(
                     )
                     Text(
                         buildString {
-                            if (status.isWatching) append("Watching")
-                            else append("Stopped")
+                            if (status.isWatching) append("Watching") else append("Stopped")
                             append(" · ${status.filesDetected} detected")
                             if (status.importCount > 0) append(" · ${status.importCount} imported")
-                            if (status.autoImportsPending > 0) append(" · ${status.autoImportsPending} pending")
+                            if (status.autoImportsPending > 0)
+                                append(" · ${status.autoImportsPending} pending")
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -162,10 +149,7 @@ private fun WatchFolderCard(
                     }
                 }
                 if (status.isWatching) {
-                    OutlinedButton(
-                        onClick = onStop,
-                        modifier = Modifier.height(28.dp),
-                    ) {
+                    OutlinedButton(onClick = onStop, modifier = Modifier.height(28.dp)) {
                         Text("Stop", style = MaterialTheme.typography.labelSmall)
                     }
                 }

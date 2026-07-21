@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.domain.port
 
 import java.io.InputStream
 import org.kryspetrie.fileimport.domain.model.RotationAngle
+
 /**
  * Port interface for loading ML model resources.
  *
@@ -166,37 +167,6 @@ interface ModelResourcePort {
      * Used for cache invalidation and diagnostic info.
      */
     fun orientationModelVersion(): String
-
-    // ── Face Embedding Model ──────────────────────────────────────────────
-
-    /**
-     * Loads the face embedding model bytes.
-     *
-     * The face embedding model (MobileFaceNet) takes a 112×112 RGB face crop and outputs a
-     * 128-dimensional embedding vector used for face identification and similarity comparison.
-     *
-     * This model is optional — the application functions fully without it, but face
-     * identification features will be unavailable.
-     *
-     * @return Raw model bytes suitable for ONNX Runtime [ai.onnxruntime.OrtSession]
-     * @throws ModelNotFoundException if the model resource cannot be found or read
-     */
-    fun loadFaceEmbeddingModel(): ByteArray
-
-    /**
-     * Returns whether the face embedding model is available.
-     *
-     * Face embedding is optional — the application functions without it (face detection still works).
-     * Returns true if the face embedding model file exists on the classpath or in the download directory.
-     */
-    fun isFaceEmbeddingModelAvailable(): Boolean
-
-    /**
-     * Returns the version identifier for the face embedding model.
-     *
-     * Used for cache invalidation and diagnostic info.
-     */
-    fun faceEmbeddingModelVersion(): String
 }
 
 /** Thrown when a required ML model cannot be found or loaded. */

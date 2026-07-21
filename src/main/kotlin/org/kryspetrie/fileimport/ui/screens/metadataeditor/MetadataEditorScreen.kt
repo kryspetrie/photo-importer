@@ -63,8 +63,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
+import org.kryspetrie.fileimport.application.OrientationCorrectionService
 import org.kryspetrie.fileimport.domain.model.AppSettings
-import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.components.RotationBadge
@@ -76,8 +76,6 @@ import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.FaceNameEntryPanel
 import org.kryspetrie.fileimport.ui.screens.wizard.isCtrlPressed
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerOverlay
-import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
-import org.kryspetrie.fileimport.application.OrientationCorrectionService
 
 private const val MESSAGE_AUTO_CLEAR_MS = 5000L
 
@@ -107,14 +105,10 @@ fun MetadataEditorScreen(
     }
 
     // Load image when selection changes
-    LaunchedEffect(vm.state.selectedIndex, vm.state.files) {
-        vm.loadSelectedImage()
-    }
+    LaunchedEffect(vm.state.selectedIndex, vm.state.files) { vm.loadSelectedImage() }
 
     // Load thumbnails for sidebar
-    LaunchedEffect(vm.state.files) {
-        vm.loadThumbnails()
-    }
+    LaunchedEffect(vm.state.files) { vm.loadThumbnails() }
 
     // Sync editState from current config when selection changes (single-edit mode)
     LaunchedEffect(vm.state.selectedIndex, vm.state.selectedConfig) {
@@ -152,9 +146,7 @@ fun MetadataEditorScreen(
 
     // Face name entry popup
     if (vm.showFaceNamePopup && vm.pendingFaceCoords != null) {
-        EditDialog(
-            onDismissRequest = { vm.dismissFaceNamePopup() },
-        ) {
+        EditDialog(onDismissRequest = { vm.dismissFaceNamePopup() }) {
             FaceNameEntryPanel(
                 faceNameInput = vm.faceNameInput,
                 onFaceNameInputChange = { vm.faceNameInput = it },
@@ -267,19 +259,13 @@ fun MetadataEditorScreen(
             },
             confirmButton = {
                 if (result.nearestRotation != RotationAngle.NONE) {
-                    TextButton(onClick = { vm.applyAutoRotation() }) {
-                        Text("Apply Rotation")
-                    }
+                    TextButton(onClick = { vm.applyAutoRotation() }) { Text("Apply Rotation") }
                 } else {
-                    TextButton(onClick = { vm.dismissAutoRotateDialog() }) {
-                        Text("OK")
-                    }
+                    TextButton(onClick = { vm.dismissAutoRotateDialog() }) { Text("OK") }
                 }
             },
             dismissButton = {
-                TextButton(onClick = { vm.dismissAutoRotateDialog() }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { vm.dismissAutoRotateDialog() }) { Text("Cancel") }
             },
         )
     }
@@ -331,7 +317,8 @@ fun MetadataEditorScreen(
                 title = {
                     Text(
                         "Bulk Metadata Editor",
-                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        style =
+                            MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     )
                 },
                 actions = {
@@ -410,7 +397,11 @@ fun MetadataEditorScreen(
                                 onClick = { vm.undoLast(coroutineScope) },
                                 modifier = Modifier.height(32.dp),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.RotateLeft, "Undo", Modifier.size(16.dp))
+                                Icon(
+                                    Icons.AutoMirrored.Filled.RotateLeft,
+                                    "Undo",
+                                    Modifier.size(16.dp),
+                                )
                                 Spacer(Modifier.width(4.dp))
                                 Text("Undo", style = MaterialTheme.typography.labelSmall)
                             }
@@ -420,7 +411,11 @@ fun MetadataEditorScreen(
                                 onClick = { vm.redoLast(coroutineScope) },
                                 modifier = Modifier.height(32.dp),
                             ) {
-                                Icon(Icons.AutoMirrored.Filled.RotateRight, "Redo", Modifier.size(16.dp))
+                                Icon(
+                                    Icons.AutoMirrored.Filled.RotateRight,
+                                    "Redo",
+                                    Modifier.size(16.dp),
+                                )
                                 Spacer(Modifier.width(4.dp))
                                 Text("Redo", style = MaterialTheme.typography.labelSmall)
                             }
@@ -432,7 +427,10 @@ fun MetadataEditorScreen(
                             ) {
                                 Icon(Icons.Default.Save, "Save All", Modifier.size(16.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text("Save All (${vm.state.modifiedCount})", style = MaterialTheme.typography.labelSmall)
+                                Text(
+                                    "Save All (${vm.state.modifiedCount})",
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
                             }
                         }
                         Button(
@@ -583,7 +581,9 @@ fun MetadataEditorScreen(
                             }
                         } else if (vm.currentImage != null && !vm.isMultiEditMode) {
                             val previewBitmap =
-                                remember(vm.currentImage) { vm.currentImage?.toComposeImageBitmap() }
+                                remember(vm.currentImage) {
+                                    vm.currentImage?.toComposeImageBitmap()
+                                }
                             Box(
                                 modifier =
                                     Modifier.weight(1f)
@@ -592,12 +592,15 @@ fun MetadataEditorScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (previewBitmap != null) {
-                                    val rotationDeg = vm.state.selectedConfig.rotationDegrees.toFloat()
+                                    val rotationDeg =
+                                        vm.state.selectedConfig.rotationDegrees.toFloat()
                                     Image(
                                         bitmap = previewBitmap,
                                         contentDescription = "Selected image",
-                                        modifier = Modifier.fillMaxSize()
-                                            .graphicsLayer { rotationZ = rotationDeg },
+                                        modifier =
+                                            Modifier.fillMaxSize().graphicsLayer {
+                                                rotationZ = rotationDeg
+                                            },
                                         contentScale = ContentScale.Fit,
                                     )
 
@@ -698,14 +701,17 @@ fun MetadataEditorScreen(
                                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
-                                        Text("Rotate:", style = MaterialTheme.typography.labelMedium)
+                                        Text(
+                                            "Rotate:",
+                                            style = MaterialTheme.typography.labelMedium,
+                                        )
                                         Spacer(Modifier.weight(1f))
-                                        // Auto-rotation button (only visible when auto-orient setting is enabled)
+                                        // Auto-rotation button (only visible when auto-orient
+                                        // setting is enabled)
                                         if (vm.currentSettings.autoOrientInMetadataEditor) {
                                             val isAutoAvailable =
                                                 vm.orientationCorrection.isAvailable()
-                                            val modelDownloaded =
-                                                vm.isOrientationModelAvailable
+                                            val modelDownloaded = vm.isOrientationModelAvailable
                                             IconButton(
                                                 onClick = {
                                                     if (!modelDownloaded && !isAutoAvailable) {
@@ -715,7 +721,9 @@ fun MetadataEditorScreen(
                                                     }
                                                 },
                                                 modifier = Modifier.size(24.dp),
-                                                enabled = (isAutoAvailable || !modelDownloaded) && !vm.isDetectingOrientation,
+                                                enabled =
+                                                    (isAutoAvailable || !modelDownloaded) &&
+                                                        !vm.isDetectingOrientation,
                                             ) {
                                                 if (vm.isDetectingOrientation) {
                                                     CircularProgressIndicator(
@@ -739,7 +747,9 @@ fun MetadataEditorScreen(
                                         }
                                         IconButton(
                                             onClick = {
-                                                vm.state.updateSelectedConfig { it.cycleRotationCCW() }
+                                                vm.state.updateSelectedConfig {
+                                                    it.cycleRotationCCW()
+                                                }
                                             },
                                             modifier = Modifier.size(24.dp),
                                         ) {
@@ -750,14 +760,22 @@ fun MetadataEditorScreen(
                                             )
                                         }
                                         IconButton(
-                                            onClick = { vm.state.updateSelectedConfig { it.rotate180() } },
+                                            onClick = {
+                                                vm.state.updateSelectedConfig { it.rotate180() }
+                                            },
                                             modifier = Modifier.size(24.dp),
                                         ) {
-                                            Icon(Icons.Default.Refresh, "180°", Modifier.size(16.dp))
+                                            Icon(
+                                                Icons.Default.Refresh,
+                                                "180°",
+                                                Modifier.size(16.dp),
+                                            )
                                         }
                                         IconButton(
                                             onClick = {
-                                                vm.state.updateSelectedConfig { it.cycleRotationCW() }
+                                                vm.state.updateSelectedConfig {
+                                                    it.cycleRotationCW()
+                                                }
                                             },
                                             modifier = Modifier.size(24.dp),
                                         ) {
@@ -769,13 +787,19 @@ fun MetadataEditorScreen(
                                         }
                                         Spacer(Modifier.width(8.dp))
                                         RotationBadge(
-                                            rotationDegrees = vm.state.selectedConfig.rotationDegrees,
+                                            rotationDegrees =
+                                                vm.state.selectedConfig.rotationDegrees
                                         )
                                     }
-                                    if (!vm.isOrientationModelAvailable && !vm.orientationCorrection.isAvailable() && vm.currentSettings.autoOrientInMetadataEditor) {
+                                    if (
+                                        !vm.isOrientationModelAvailable &&
+                                            !vm.orientationCorrection.isAvailable() &&
+                                            vm.currentSettings.autoOrientInMetadataEditor
+                                    ) {
                                         TextButton(
                                             onClick = { vm.requestModelDownload() },
-                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                            contentPadding =
+                                                PaddingValues(horizontal = 4.dp, vertical = 0.dp),
                                         ) {
                                             Text(
                                                 "Download orientation model to enable auto-rotate",
@@ -832,9 +856,7 @@ fun MetadataEditorScreen(
                         settingsPort = vm.settingsPort,
                         coroutineScope = coroutineScope,
                         dispatcherProvider = vm.dispatcherProvider,
-                        onPickLocation = { indices ->
-                            vm.requestLocationPicker(indices)
-                        },
+                        onPickLocation = { indices -> vm.requestLocationPicker(indices) },
                         onApply = { vm.applyMultiEdit(onSettingsChange) },
                         onClear = { vm.clearEditFields() },
                         modifier = Modifier.weight(1f).fillMaxHeight(),

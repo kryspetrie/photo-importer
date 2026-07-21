@@ -14,8 +14,8 @@ private val json = Json { prettyPrint = true }
 /**
  * Handles all journal file I/O for metadata edit operations.
  *
- * Responsible for listing, reading, and writing journal files that enable undo functionality
- * after metadata edits in the bulk metadata editor.
+ * Responsible for listing, reading, and writing journal files that enable undo functionality after
+ * metadata edits in the bulk metadata editor.
  *
  * Journals are stored as JSON files in `~/.petrie-importer/metadata-journals/`.
  */
@@ -74,8 +74,7 @@ class MetadataEditJournalRepository(private val fileSystem: FileSystemPort) {
     /** Saves a journal to disk and returns the file path. */
     fun saveJournal(journal: MetadataEditJournal): String {
         runBlocking { fileSystem.mkdirs(journalDir) }
-        val journalFile =
-            journalDir.resolve("metadata_edit_${journal.timestamp}.json")
+        val journalFile = journalDir.resolve("metadata_edit_${journal.timestamp}.json")
         fileSystem.writeText(journalFile, json.encodeToString(journal))
         return fileSystem.absolutePath(journalFile)
     }

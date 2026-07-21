@@ -77,8 +77,8 @@ class PhotoImportCli(
 /**
  * Standalone CLI entry point.
  *
- * Called from [org.kryspetrie.fileimport.main] when CLI mode is detected.
- * Expects Koin to already be initialized so all services are available via DI.
+ * Called from [org.kryspetrie.fileimport.main] when CLI mode is detected. Expects Koin to already
+ * be initialized so all services are available via DI.
  *
  * @see org.kryspetrie.fileimport.main
  */
@@ -93,14 +93,15 @@ fun main(args: Array<String>) {
     val imageProcessing: ImageProcessingPort = koin.get()
     val watchFolderManager: WatchFolderManager = koin.get()
 
-    val cli = PhotoImportCli(
-        importService = importService,
-        reorganizeService = reorganizeService,
-        scanService = scanService,
-        exportPort = exportPort,
-        imageProcessing = imageProcessing,
-        watchFolderManager = watchFolderManager,
-    )
+    val cli =
+        PhotoImportCli(
+            importService = importService,
+            reorganizeService = reorganizeService,
+            scanService = scanService,
+            exportPort = exportPort,
+            imageProcessing = imageProcessing,
+            watchFolderManager = watchFolderManager,
+        )
     cli.subcommands(
             ImportCommand(importService),
             CheckDuplicatesCommand(importService),
@@ -146,12 +147,13 @@ class ImportCommand(private val importService: ImportService) :
         echo()
 
         echo("Scanning for images...")
-        val images = try {
-            importService.scanSource(source.absolutePath, recursive)
-        } catch (e: Exception) {
-            echo("Error scanning source: ${e.message}", err = true)
-            return@runBlocking
-        }
+        val images =
+            try {
+                importService.scanSource(source.absolutePath, recursive)
+            } catch (e: Exception) {
+                echo("Error scanning source: ${e.message}", err = true)
+                return@runBlocking
+            }
 
         if (images.isEmpty()) {
             echo("No images found in source directory.", err = true)
@@ -183,8 +185,7 @@ class ImportCommand(private val importService: ImportService) :
         } else {
             echo("Starting import...")
             try {
-                val result =
-                    importService.executeImport(images, destination.absolutePath, config)
+                val result = importService.executeImport(images, destination.absolutePath, config)
 
                 echo()
                 echo("=".repeat(50))
@@ -222,7 +223,8 @@ class CheckDuplicatesCommand(private val importService: ImportService) :
     private val method by
         option(
                 "--method",
-                help = "Detection method: hash (fast, exact matches) or visual (slower, perceptual matches)",
+                help =
+                    "Detection method: hash (fast, exact matches) or visual (slower, perceptual matches)",
             )
             .choice("hash", "visual")
             .default("hash")
@@ -232,12 +234,13 @@ class CheckDuplicatesCommand(private val importService: ImportService) :
         val useVisual = method == "visual"
 
         echo("Scanning for images...")
-        val images = try {
-            importService.scanSource(source.absolutePath, recursive)
-        } catch (e: Exception) {
-            echo("Error scanning source: ${e.message}", err = true)
-            return@runBlocking
-        }
+        val images =
+            try {
+                importService.scanSource(source.absolutePath, recursive)
+            } catch (e: Exception) {
+                echo("Error scanning source: ${e.message}", err = true)
+                return@runBlocking
+            }
 
         if (images.isEmpty()) {
             echo("No images found")
@@ -248,18 +251,16 @@ class CheckDuplicatesCommand(private val importService: ImportService) :
         echo("Detection method: ${if (useVisual) "visual similarity" else "file hash (exact)"}")
 
         val config =
-            ImportConfiguration(
-                detectVisualDuplicates = useVisual,
-                perceptualHashThreshold = 0.95f,
-            )
+            ImportConfiguration(detectVisualDuplicates = useVisual, perceptualHashThreshold = 0.95f)
 
         echo("Checking for duplicates...")
-        val duplicates = try {
-            importService.findVisualDuplicates(images, config)
-        } catch (e: Exception) {
-            echo("Error checking duplicates: ${e.message}", err = true)
-            return@runBlocking
-        }
+        val duplicates =
+            try {
+                importService.findVisualDuplicates(images, config)
+            } catch (e: Exception) {
+                echo("Error checking duplicates: ${e.message}", err = true)
+                return@runBlocking
+            }
 
         if (duplicates.isEmpty()) {
             echo("No duplicates found!")

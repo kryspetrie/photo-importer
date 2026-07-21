@@ -70,24 +70,28 @@ class SettingsAdapter(
         }
     }
 
-    override suspend fun loadSettings(): AppSettings = mutex.withLock {
-        try {
-            if (settingsFile.exists())
-                json.decodeFromString<AppSettings>(settingsFile.readText())
-            else AppSettings()
-        } catch (_: Exception) {
-            AppSettings()
-        }
-    }.also { _settings.value = it }
+    override suspend fun loadSettings(): AppSettings =
+        mutex
+            .withLock {
+                try {
+                    if (settingsFile.exists())
+                        json.decodeFromString<AppSettings>(settingsFile.readText())
+                    else AppSettings()
+                } catch (_: Exception) {
+                    AppSettings()
+                }
+            }
+            .also { _settings.value = it }
 
-    override suspend fun saveSettings(settings: AppSettings) = mutex.withLock {
-        try {
-            settingsFile.writeText(json.encodeToString(settings))
-            _settings.value = settings
-        } catch (_: Exception) {
-            /* Settings file write failed — non-critical */
+    override suspend fun saveSettings(settings: AppSettings) =
+        mutex.withLock {
+            try {
+                settingsFile.writeText(json.encodeToString(settings))
+                _settings.value = settings
+            } catch (_: Exception) {
+                /* Settings file write failed — non-critical */
+            }
         }
-    }
 
     override fun observeSettings(): StateFlow<AppSettings> = _settings
 

@@ -266,10 +266,11 @@ class AwtImageProcessingAdapter(
                         bottomLeft =
                             PhotoCorner(n[6] * rotatedBuffered.width, n[7] * rotatedBuffered.height),
                     )
-                val corrected = perspectiveCorrection.correctPerspective(
-                    rotatedBuffered.toProcessedImage(),
-                    detectedPhoto,
-                )
+                val corrected =
+                    perspectiveCorrection.correctPerspective(
+                        rotatedBuffered.toProcessedImage(),
+                        detectedPhoto,
+                    )
                 corrected.toBufferedImage()
             } else if (config.backCropNormalized != null && config.backCropNormalized.size == 4) {
                 // 4 values = rectangular crop: [left, top, right, bottom]

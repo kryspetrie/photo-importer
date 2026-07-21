@@ -4,8 +4,8 @@ import java.io.File
 import java.io.FileInputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import java.util.zip.ZipInputStream
 import java.util.concurrent.ConcurrentHashMap
+import java.util.zip.ZipInputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -14,10 +14,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.ModelDownloadPort
 import org.kryspetrie.fileimport.domain.port.ModelDownloadState
 import org.kryspetrie.fileimport.domain.port.ModelInfo
-import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 
 /**
@@ -30,16 +30,9 @@ import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
  * Each model has a known download URL:
  * - `orientation_detection`: Chuckame/deep-image-orientation-angle-detection ONNX model (~330 MB)
  *   from HuggingFace
- * - `face_embedding`: ArcFace MobileFaceNet ONNX model (~8 MB) from Hailo Model Zoo
  *
  * Small models (face detection, pose, corner regression) are bundled in the JAR and don't need
  * downloading.
- *
- * ## Zip Extraction
- *
- * Some models are distributed as `.zip` archives (marked by [ModelMetadata.isZip]). After
- * downloading, the archive is extracted and the specified [ModelMetadata.zipEntryName] file
- * is saved as the final model file.
  *
  * ## Thread Safety
  *
@@ -65,29 +58,20 @@ class HuggingFaceModelDownloadAdapter(
     private val downloadScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     /** Known model metadata. */
-    private val modelMetadata = mapOf(
-        ModelDownloadPort.ORIENTATION_MODEL_ID to ModelMetadata(
-            id = ModelDownloadPort.ORIENTATION_MODEL_ID,
-            name = "Orientation Detection Model",
-            description = "Deep image orientation angle detection model (~330 MB). " +
-                "Automatically detects and corrects photo rotation.",
-            downloadUrl = ORIENTATION_MODEL_URL,
-            fileName = "orientation_detection_model.onnx",
-            downloadSize = 346L * 1024 * 1024, // ~346 MB (actual file size)
-            isZip = false,
-        ),
-        ModelDownloadPort.FACE_EMBEDDING_MODEL_ID to ModelMetadata(
-            id = ModelDownloadPort.FACE_EMBEDDING_MODEL_ID,
-            name = "Face Embedding Model (ArcFace MobileFaceNet)",
-            description = "ArcFace MobileFaceNet face recognition model (~8 MB). " +
-                "Extracts 512-dimensional face embeddings for person identification and grouping.",
-            downloadUrl = FACE_EMBEDDING_MODEL_URL,
-            fileName = "face_embedding_model.onnx",
-            downloadSize = 8L * 1024 * 1024, // ~8 MB (zip archive)
-            isZip = true,
-            zipEntryName = "mbf.onnx",
-        ),
-    )
+    private val modelMetadata =
+        mapOf(
+            ModelDownloadPort.ORIENTATION_MODEL_ID to
+                ModelMetadata(
+                    id = ModelDownloadPort.ORIENTATION_MODEL_ID,
+                    name = "Orientation Detection Model",
+                    description =
+                        "Deep image orientation angle detection model (~330 MB). " +
+                            "Automatically detects and corrects photo rotation.",
+                    downloadUrl = ORIENTATION_MODEL_URL,
+                    fileName = "orientation_detection_model.onnx",
+                    downloadSize = 346L * 1024 * 1024, // ~346 MB (actual file size)
+                )
+        )
 
     init {
         // Ensure model directory exists
@@ -113,21 +97,20 @@ class HuggingFaceModelDownloadAdapter(
 
     override fun modelName(modelId: String): String {
         val metadata = modelMetadata[modelId] ?: return modelId
-        val sizeStr = metadata.downloadSize?.let {
-            String.format("~%.0f MB", it / (1024.0 * 1024.0))
-        } ?: ""
+        val sizeStr =
+            metadata.downloadSize?.let { String.format("~%.0f MB", it / (1024.0 * 1024.0)) } ?: ""
         return "${metadata.name} ($sizeStr)"
     }
 
     override fun downloadModel(modelId: String): StateFlow<ModelDownloadState> {
-        val stateFlow = downloadStates.getOrPut(modelId) {
-            MutableStateFlow(ModelDownloadState.Idle)
-        }
+        val stateFlow =
+            downloadStates.getOrPut(modelId) { MutableStateFlow(ModelDownloadState.Idle) }
 
         // If already downloading or completed, just return the existing flow
         val currentState = stateFlow.value
-        if (currentState is ModelDownloadState.Downloading ||
-            currentState is ModelDownloadState.Connecting
+        if (
+            currentState is ModelDownloadState.Downloading ||
+                currentState is ModelDownloadState.Connecting
         ) {
             return stateFlow
         }
@@ -145,9 +128,7 @@ class HuggingFaceModelDownloadAdapter(
         stateFlow.value = ModelDownloadState.Connecting
 
         // Launch the download in the background and update the state flow as it progresses
-        val job = downloadScope.launch {
-            performDownload(modelId, stateFlow)
-        }
+        val job = downloadScope.launch { performDownload(modelId, stateFlow) }
         activeJobs[modelId] = job
 
         return stateFlow
@@ -156,11 +137,11 @@ class HuggingFaceModelDownloadAdapter(
     /**
      * Performs the actual download of a model file.
      *
-     * Updates [stateFlow] as the download progresses through
-     * [Connecting] → [Downloading] → [Completed]/[Failed]/[Cancelled] states.
+     * Updates [stateFlow] as the download progresses through [Connecting] → [Downloading] →
+     * [Completed]/[Failed]/[Cancelled] states.
      *
-     * If [ModelMetadata.isZip] is true, the downloaded archive is extracted and the
-     * entry matching [ModelMetadata.zipEntryName] is saved as the final model file.
+     * If [ModelMetadata.isZip] is true, the downloaded archive is extracted and the entry matching
+     * [ModelMetadata.zipEntryName] is saved as the final model file.
      */
     private suspend fun performDownload(
         modelId: String,
@@ -186,16 +167,17 @@ class HuggingFaceModelDownloadAdapter(
 
                 val responseCode = connection.responseCode
                 if (responseCode != HttpURLConnection.HTTP_OK) {
-                    val errorMsg = when (responseCode) {
-                        HttpURLConnection.HTTP_NOT_FOUND ->
-                            "Model file not found (HTTP 404). The download URL may be outdated — " +
-                                "please check for app updates."
-                        HttpURLConnection.HTTP_FORBIDDEN, HttpURLConnection.HTTP_UNAUTHORIZED ->
-                            "Model repository is private or unavailable (HTTP $responseCode). " +
-                                "Place the model file manually at: ${targetFile.absolutePath}"
-                        else ->
-                            "Server returned HTTP $responseCode"
-                    }
+                    val errorMsg =
+                        when (responseCode) {
+                            HttpURLConnection.HTTP_NOT_FOUND ->
+                                "Model file not found (HTTP 404). The download URL may be outdated — " +
+                                    "please check for app updates."
+                            HttpURLConnection.HTTP_FORBIDDEN,
+                            HttpURLConnection.HTTP_UNAUTHORIZED ->
+                                "Model repository is private or unavailable (HTTP $responseCode). " +
+                                    "Place the model file manually at: ${targetFile.absolutePath}"
+                            else -> "Server returned HTTP $responseCode"
+                        }
                     stateFlow.value = ModelDownloadState.Failed(errorMsg, canRetry = true)
                     return@withContext
                 }
@@ -219,15 +201,17 @@ class HuggingFaceModelDownloadAdapter(
                             // Update progress at most every 500ms
                             val now = System.currentTimeMillis()
                             if (now - lastProgressTime > 500) {
-                                val percent = if (totalBytes != null && totalBytes > 0) {
-                                    (bytesReadTotal.toFloat() / totalBytes.toFloat()) * 100f
-                                } else null
+                                val percent =
+                                    if (totalBytes != null && totalBytes > 0) {
+                                        (bytesReadTotal.toFloat() / totalBytes.toFloat()) * 100f
+                                    } else null
 
-                                stateFlow.value = ModelDownloadState.Downloading(
-                                    bytesDownloaded = bytesReadTotal,
-                                    totalBytes = totalBytes,
-                                    progressPercent = percent,
-                                )
+                                stateFlow.value =
+                                    ModelDownloadState.Downloading(
+                                        bytesDownloaded = bytesReadTotal,
+                                        totalBytes = totalBytes,
+                                        progressPercent = percent,
+                                    )
                                 lastProgressTime = now
                             }
                         }
@@ -253,25 +237,26 @@ class HuggingFaceModelDownloadAdapter(
                 }
 
                 if (!targetFile.exists() || targetFile.length() == 0L) {
-                    stateFlow.value = ModelDownloadState.Failed(
-                        "Downloaded file is empty or missing after extraction",
-                        canRetry = true,
-                    )
+                    stateFlow.value =
+                        ModelDownloadState.Failed(
+                            "Downloaded file is empty or missing after extraction",
+                            canRetry = true,
+                        )
                     return@withContext
                 }
 
                 stateFlow.value = ModelDownloadState.Completed(targetFile.absolutePath)
-                appLogger?.info("Downloaded model: $modelId → ${targetFile.absolutePath} " +
-                    "(${targetFile.length()} bytes)")
+                appLogger?.info(
+                    "Downloaded model: $modelId → ${targetFile.absolutePath} " +
+                        "(${targetFile.length()} bytes)"
+                )
             }
         } catch (e: CancellationException) {
             stateFlow.value = ModelDownloadState.Cancelled
             tempFile.delete()
         } catch (e: Exception) {
-            stateFlow.value = ModelDownloadState.Failed(
-                "Download failed: ${e.message}",
-                canRetry = true,
-            )
+            stateFlow.value =
+                ModelDownloadState.Failed("Download failed: ${e.message}", canRetry = true)
             tempFile.delete()
             appLogger?.error("Model download failed: $modelId", e)
         }
@@ -286,8 +271,9 @@ class HuggingFaceModelDownloadAdapter(
      * @throws IllegalStateException if the entry is not found in the zip archive.
      */
     internal fun extractZipEntry(zipFile: File, entryName: String?, targetFile: File) {
-        val entryToFind = entryName
-            ?: throw IllegalStateException("zipEntryName must be specified for zip downloads")
+        val entryToFind =
+            entryName
+                ?: throw IllegalStateException("zipEntryName must be specified for zip downloads")
 
         ZipInputStream(FileInputStream(zipFile)).use { zipIn ->
             var entry = zipIn.nextEntry
@@ -379,9 +365,7 @@ class HuggingFaceModelDownloadAdapter(
 
     companion object {
         /** Set of model IDs that are bundled in the JAR (don't need downloading). */
-        private val BUNDLED_MODELS = setOf(
-            ModelDownloadPort.FACE_MODEL_ID,
-        )
+        private val BUNDLED_MODELS = setOf(ModelDownloadPort.FACE_MODEL_ID)
 
         /**
          * HuggingFace download URL for the orientation detection model.
@@ -392,23 +376,5 @@ class HuggingFaceModelDownloadAdapter(
          */
         private const val ORIENTATION_MODEL_URL =
             "https://huggingface.co/Chuckame/deep-image-orientation-angle-detection/resolve/main/deep-image-orientation-angle-detection.onnx"
-
-        /**
-         * Download URL for the ArcFace MobileFaceNet face embedding model.
-         *
-         * The model is distributed as a zip archive from the Hailo Model Zoo on S3.
-         * The archive contains `mbf.onnx` which is extracted and saved as
-         * `face_embedding_model.onnx`. This model produces 512-dimensional embeddings from
-         * 112×112 face crops, using ArcFace loss and trained on MS1MV3.
-         *
-         * Model specs:
-         * - Input: 1×3×112×112 (NCHW, float32, normalized to [-1, 1])
-         * - Output: 1×512 (float32, L2-normalized embedding)
-         * - LFW verification accuracy: 99.43%
-         * - Parameters: 2.04M
-         * - License: MIT
-         */
-        private const val FACE_EMBEDDING_MODEL_URL =
-            "https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/FaceRecognition/arcface/arcface_mobilefacenet/pretrained/2022-08-24/arcface_mobilefacenet.zip"
     }
 }

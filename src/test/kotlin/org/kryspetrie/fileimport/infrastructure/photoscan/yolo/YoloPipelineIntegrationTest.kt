@@ -56,16 +56,17 @@ class YoloPipelineIntegrationTest {
 
         assert(service.isYoloAvailable()) { "YOLO models should be available" }
 
-        val results = try {
-            service.detectPhotos(image)
-        } catch (e: Exception) {
-            if (isCi) {
-                println("WARN: YOLO inference failed on CI: ${e.message}")
-                return
-            } else {
-                throw e
+        val results =
+            try {
+                service.detectPhotos(image)
+            } catch (e: Exception) {
+                if (isCi) {
+                    println("WARN: YOLO inference failed on CI: ${e.message}")
+                    return
+                } else {
+                    throw e
+                }
             }
-        }
         println("Pipeline detected ${results.size} photos via YOLO")
 
         if (results.isEmpty() && isCi) {
@@ -115,16 +116,17 @@ class YoloPipelineIntegrationTest {
                 ortSessionFactory = OrtSessionFactory(),
             )
 
-        val results = try {
-            service.detectPhotos(image)
-        } catch (e: Exception) {
-            if (isCi) {
-                println("WARN: YOLO inference failed on CI: ${e.message}")
-                return
-            } else {
-                throw e
+        val results =
+            try {
+                service.detectPhotos(image)
+            } catch (e: Exception) {
+                if (isCi) {
+                    println("WARN: YOLO inference failed on CI: ${e.message}")
+                    return
+                } else {
+                    throw e
+                }
             }
-        }
         println("Pipeline detected ${results.size} photos")
 
         // Reference from photocrop.py corner_refine preset on real_world_example_01.jpg

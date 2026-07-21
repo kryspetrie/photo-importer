@@ -199,15 +199,16 @@ class FileOperationExecutor(
      *
      * Walks the directory tree bottom-up and removes empty directories.
      */
-    suspend fun cleanEmptyDirs(root: FilePath) = withContext(dispatcherProvider.io) {
-        if (!fileSystem.isDirectory(root)) return@withContext
-        fileSystem.walkBottomUp(root).forEach { dirPath ->
-            val isDir = fileSystem.isDirectory(dirPath)
-            val isNotRoot = dirPath != root
-            val isEmpty = fileSystem.listFiles(dirPath).isEmpty()
-            if (isDir && isNotRoot && isEmpty) {
-                fileSystem.delete(dirPath)
+    suspend fun cleanEmptyDirs(root: FilePath) =
+        withContext(dispatcherProvider.io) {
+            if (!fileSystem.isDirectory(root)) return@withContext
+            fileSystem.walkBottomUp(root).forEach { dirPath ->
+                val isDir = fileSystem.isDirectory(dirPath)
+                val isNotRoot = dirPath != root
+                val isEmpty = fileSystem.listFiles(dirPath).isEmpty()
+                if (isDir && isNotRoot && isEmpty) {
+                    fileSystem.delete(dirPath)
+                }
             }
         }
-    }
 }

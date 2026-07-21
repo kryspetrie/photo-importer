@@ -1,15 +1,15 @@
 package org.kryspetrie.fileimport.application
 
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.util.concurrent.ConcurrentHashMap
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
@@ -20,9 +20,9 @@ import org.kryspetrie.fileimport.domain.port.TimeProvider
 /**
  * Manages multiple [WatchFolderService] instances for simultaneous folder watching.
  *
- * Provides CRUD operations on watch configs, lifecycle management (start/stop individual
- * watches or all at once), and automatic startup of configs marked [WatchFolderConfig.autoStart].
- * Config changes are persisted through [SettingsPort].
+ * Provides CRUD operations on watch configs, lifecycle management (start/stop individual watches or
+ * all at once), and automatic startup of configs marked [WatchFolderConfig.autoStart]. Config
+ * changes are persisted through [SettingsPort].
  *
  * @see WatchFolderConfig
  * @see WatchFolderService
@@ -42,13 +42,12 @@ class WatchFolderManager(
 
     private val managerScope = CoroutineScope(SupervisorJob() + dispatcherProvider.default)
 
-    /**
-     * Starts watching a folder using the given config.
-     */
+    /** Starts watching a folder using the given config. */
     fun startWatching(config: WatchFolderConfig) {
         stopWatching(config.id)
 
-        val service = WatchFolderService(importService, timeProvider, dispatcherProvider, fileSystem)
+        val service =
+            WatchFolderService(importService, timeProvider, dispatcherProvider, fileSystem)
         services[config.id] = service
         val job = SupervisorJob()
         scopeJobs[config.id] = job
@@ -56,17 +55,13 @@ class WatchFolderManager(
 
         // Observe status changes from the service
         managerScope.launch {
-            service.status.collect { status ->
-                _statuses.update { it + (config.id to status) }
-            }
+            service.status.collect { status -> _statuses.update { it + (config.id to status) } }
         }
 
         service.startWatching(config, scope)
     }
 
-    /**
-     * Stops watching a folder by config ID.
-     */
+    /** Stops watching a folder by config ID. */
     fun stopWatching(configId: String) {
         services[configId]?.stopWatching()
         services.remove(configId)
@@ -98,9 +93,7 @@ class WatchFolderManager(
         }
     }
 
-    /**
-     * Updates a watch config. Restarts the watch if currently active.
-     */
+    /** Updates a watch config. Restarts the watch if currently active. */
     fun updateConfig(config: WatchFolderConfig) {
         val wasWatching = services.containsKey(config.id)
         if (wasWatching) {

@@ -95,10 +95,20 @@ private const val APP_TITLE = "PhotoImporter"
 fun main(args: Array<String>) {
     // Smart CLI dispatch: detect CLI subcommands and delegate to CLI mode
     // This allows `photo-import scan ./photos/` to just work without --cli prefix
-    val cliCommands = setOf(
-        "import", "check-duplicates", "reorganize", "undo",
-        "check-journals", "scan", "watch", "--version", "-V", "--help", "-h"
-    )
+    val cliCommands =
+        setOf(
+            "import",
+            "check-duplicates",
+            "reorganize",
+            "undo",
+            "check-journals",
+            "scan",
+            "watch",
+            "--version",
+            "-V",
+            "--help",
+            "-h",
+        )
     if (args.isNotEmpty() && (args[0] in cliCommands || args[0] == "--cli")) {
         // Initialize Koin before CLI invocation so all services are injectable
         startKoin { modules(appModule) }

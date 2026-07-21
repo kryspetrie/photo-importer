@@ -210,6 +210,4 @@ enum class StringKey {
     MODEL_DOWNLOAD_COMPLETE,
     MODEL_DOWNLOAD_FAILED,
     MODEL_DOWNLOAD_RETRY,
-
-    ;
 }

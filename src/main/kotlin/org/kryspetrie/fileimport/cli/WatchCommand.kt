@@ -14,8 +14,8 @@ import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 /**
  * CLI command for headless watch folder mode.
  *
- * Monitors a source directory for new/modified image files and automatically
- * imports them to a destination directory. Prints status updates to stderr.
+ * Monitors a source directory for new/modified image files and automatically imports them to a
+ * destination directory. Prints status updates to stderr.
  *
  * Usage:
  * ```
@@ -35,11 +35,13 @@ class WatchCommand(private val watchFolderManager: WatchFolderManager) :
             .file(mustExist = true, canBeDir = true)
 
     private val destination by
-        argument(help = "Destination folder for imported images")
-            .file(canBeDir = true)
+        argument(help = "Destination folder for imported images").file(canBeDir = true)
 
     private val cooldown by
-        option("--cooldown", help = "Cooldown in milliseconds between import batches (default: 5000)")
+        option(
+                "--cooldown",
+                help = "Cooldown in milliseconds between import batches (default: 5000)",
+            )
             .default("5000")
 
     private val noRecursive by
@@ -53,7 +55,8 @@ class WatchCommand(private val watchFolderManager: WatchFolderManager) :
             .flag(default = false)
 
     private val profileName by
-        option("--profile", help = "Import profile name (uses default if not specified)").default("")
+        option("--profile", help = "Import profile name (uses default if not specified)")
+            .default("")
 
     override fun run() {
         val cooldownMs = cooldown.toLongOrNull() ?: 5000L
@@ -92,13 +95,16 @@ class WatchCommand(private val watchFolderManager: WatchFolderManager) :
         echo("", err = true)
 
         // Register shutdown hook for cleanup
-        Runtime.getRuntime().addShutdownHook(Thread {
-            echo("", err = true)
-            echo("Stopping watch folder...", err = true)
-            watchFolderManager.stopWatching(config.id)
-            watchFolderManager.removeConfig(config.id)
-            echo("Watch folder stopped.", err = true)
-        })
+        Runtime.getRuntime()
+            .addShutdownHook(
+                Thread {
+                    echo("", err = true)
+                    echo("Stopping watch folder...", err = true)
+                    watchFolderManager.stopWatching(config.id)
+                    watchFolderManager.removeConfig(config.id)
+                    echo("Watch folder stopped.", err = true)
+                }
+            )
 
         // Block and print status updates until interrupted
         try {

@@ -53,9 +53,8 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
 
     // Initialize paths from settings
     LaunchedEffect(Unit) {
-        val initialDest = settings.importTabSettings.lastDestinationPath.ifBlank {
-            vm.getDefaultDestination()
-        }
+        val initialDest =
+            settings.importTabSettings.lastDestinationPath.ifBlank { vm.getDefaultDestination() }
         vm.initializeFromSettings(settings.importTabSettings.lastSourcePath, initialDest)
     }
 
@@ -71,14 +70,10 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
     }
 
     // Persist sourcePath when changed
-    LaunchedEffect(vm.sourcePath) {
-        vm.persistSourcePath(scope)
-    }
+    LaunchedEffect(vm.sourcePath) { vm.persistSourcePath(scope) }
 
     // Persist destinationPath when changed
-    LaunchedEffect(vm.destinationPath) {
-        vm.persistDestinationPath(scope)
-    }
+    LaunchedEffect(vm.destinationPath) { vm.persistDestinationPath(scope) }
 
     // Detect cameras on launch, then monitor for hot-plug events
     LaunchedEffect(Unit) {
@@ -87,9 +82,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
     }
 
     // Load history when step changes
-    LaunchedEffect(vm.flowStep) {
-        vm.loadHistory()
-    }
+    LaunchedEffect(vm.flowStep) { vm.loadHistory() }
 
     // ── Dialogs ──
 
@@ -192,12 +185,11 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                     onClearCache = { vm.showClearCacheConfirm = true },
                     sourcePath = vm.sourcePath,
                     destinationPath = vm.destinationPath,
-                    onStartWatchFolder = { config ->
-                        vm.startWatching(config)
-                    },
-                    watchStatus = activeWatchStatus
-                        ?: watchStatuses.values.firstOrNull()
-                        ?: org.kryspetrie.fileimport.domain.model.WatchFolderStatus(),
+                    onStartWatchFolder = { config -> vm.startWatching(config) },
+                    watchStatus =
+                        activeWatchStatus
+                            ?: watchStatuses.values.firstOrNull()
+                            ?: org.kryspetrie.fileimport.domain.model.WatchFolderStatus(),
                     scope = scope,
                 )
                 // Full watch folder management (add/remove/configure watches)
@@ -215,9 +207,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                         canStart = vm.canStart,
                         importMode = vm.importMode,
                         onImportModeChange = {},
-                        onStartFlow = { withReview, mode ->
-                            vm.startFlow(scope, withReview, mode)
-                        },
+                        onStartFlow = { withReview, mode -> vm.startFlow(scope, withReview, mode) },
                     )
                 }
             }

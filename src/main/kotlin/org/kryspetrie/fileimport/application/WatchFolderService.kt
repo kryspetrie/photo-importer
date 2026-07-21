@@ -1,6 +1,5 @@
 package org.kryspetrie.fileimport.application
 
-import org.kryspetrie.fileimport.domain.port.SettingsPort
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -25,9 +24,9 @@ import org.kryspetrie.fileimport.domain.port.TimeProvider
 /**
  * Watches a folder for new/modified image files and automatically imports them.
  *
- * Uses the Java [WatchService] API to monitor filesystem events (ENTRY_CREATE, ENTRY_MODIFY).
- * When an image file is detected, it accumulates the change and triggers an import after a
- * cooldown period to avoid rapid-fire imports during bulk file copies.
+ * Uses the Java [WatchService] API to monitor filesystem events (ENTRY_CREATE, ENTRY_MODIFY). When
+ * an image file is detected, it accumulates the change and triggers an import after a cooldown
+ * period to avoid rapid-fire imports during bulk file copies.
  *
  * ## Lifecycle
  * - Call [startWatching] to begin monitoring a folder
@@ -47,8 +46,6 @@ class WatchFolderService(
     private val timeProvider: TimeProvider,
     private val dispatcherProvider: DispatcherProvider,
     private val fileSystem: FileSystemPort,
-    private val faceGroupingService: FaceGroupingService? = null,
-    private val settingsPort: SettingsPort? = null,
 ) {
     companion object {
         /** Maximum number of consecutive errors before pausing the watch. */
@@ -57,20 +54,20 @@ class WatchFolderService(
         /** Maximum backoff delay in milliseconds (1 minute). */
         private const val MAX_BACKOFF_MS = 60_000L
     }
+
     private val _status = MutableStateFlow(WatchFolderStatus())
     val status: StateFlow<WatchFolderStatus> = _status
 
     private var watchJob: Job? = null
-    @Volatile
-    private var currentConfig: WatchFolderConfig? = null
+    @Volatile private var currentConfig: WatchFolderConfig? = null
     private val supportedExtensions = ImageFileType.supportedExtensions()
 
     /**
      * Starts watching the specified folder for new/modified image files.
      *
-     * Any previous watch is stopped first. The watch runs on the IO dispatcher within the
-     * provided [scope]. When new images are detected (after a cooldown period to batch
-     * rapid changes), they are automatically imported to the configured destination.
+     * Any previous watch is stopped first. The watch runs on the IO dispatcher within the provided
+     * [scope]. When new images are detected (after a cooldown period to batch rapid changes), they
+     * are automatically imported to the configured destination.
      *
      * @param config The watch folder configuration (paths, cooldown, etc.)
      * @param scope The coroutine scope to run the watch loop in
@@ -78,11 +75,8 @@ class WatchFolderService(
     fun startWatching(config: WatchFolderConfig, scope: CoroutineScope) {
         stopWatching()
         currentConfig = config
-        _status.value = WatchFolderStatus(
-            configId = config.id,
-            isWatching = true,
-            watchPath = config.watchPath,
-        )
+        _status.value =
+            WatchFolderStatus(configId = config.id, isWatching = true, watchPath = config.watchPath)
 
         watchJob =
             scope.launch(dispatcherProvider.io) {
@@ -92,10 +86,12 @@ class WatchFolderService(
                     val watchPath = Paths.get(config.watchPath)
 
                     if (!fileSystem.exists(FilePath(config.watchPath))) {
-                        _status.update { it.copy(
-                            isWatching = false,
-                            lastError = "Watch path does not exist: ${config.watchPath}",
-                        ) }
+                        _status.update {
+                            it.copy(
+                                isWatching = false,
+                                lastError = "Watch path does not exist: ${config.watchPath}",
+                            )
+                        }
                         return@launch
                     }
 
@@ -119,7 +115,8 @@ class WatchFolderService(
                                         StandardWatchEventKinds.ENTRY_MODIFY,
                                     )
                             } catch (_: Exception) {
-                                // Skip directories that can't be registered (e.g. permission denied)
+                                // Skip directories that can't be registered (e.g. permission
+                                // denied)
                             }
                         }
                     }
@@ -150,7 +147,9 @@ class WatchFolderService(
                                 val fullPath = parentDir.resolve(fileName)
 
                                 // Register new subdirectories for recursive watching
-                                if (config.recursive && kind == StandardWatchEventKinds.ENTRY_CREATE) {
+                                if (
+                                    config.recursive && kind == StandardWatchEventKinds.ENTRY_CREATE
+                                ) {
                                     try {
                                         if (fileSystem.isDirectory(FilePath(fullPath.toString()))) {
                                             fullPath.register(
@@ -167,11 +166,13 @@ class WatchFolderService(
                                 val ext = fileName.substringAfterLast('.', "").lowercase()
                                 if (supportedExtensions.contains(ext)) {
                                     pendingFiles.add(fileName)
-                                    _status.update { it.copy(
-                                        lastEventTime = timeProvider.currentTimeMillis(),
-                                        filesDetected = it.filesDetected + 1,
-                                        autoImportsPending = pendingFiles.size,
-                                    ) }
+                                    _status.update {
+                                        it.copy(
+                                            lastEventTime = timeProvider.currentTimeMillis(),
+                                            filesDetected = it.filesDetected + 1,
+                                            autoImportsPending = pendingFiles.size,
+                                        )
+                                    }
                                 }
                             }
                             key.reset()
@@ -188,63 +189,63 @@ class WatchFolderService(
                             pendingFiles = mutableSetOf()
                             importCount++
 
-                            _status.update { it.copy(
-                                autoImportsPending = 0,
-                                lastError = null, // Clear previous errors on new attempt
-                            ) }
+                            _status.update {
+                                it.copy(
+                                    autoImportsPending = 0,
+                                    lastError = null, // Clear previous errors on new attempt
+                                )
+                            }
 
                             try {
                                 val scanned =
                                     importService.scanSource(config.watchPath, config.recursive)
                                 if (scanned.isNotEmpty()) {
-                                    val result = importService.executeImport(
-                                        scanned,
-                                        config.destinationPath,
-                                        config.configuration,
-                                    )
+                                    val result =
+                                        importService.executeImport(
+                                            scanned,
+                                            config.destinationPath,
+                                            config.configuration,
+                                        )
 
-                                    // Auto-detect faces on import if enabled
-                                    val shouldAutoDetect = settingsPort?.let { sp ->
-                                        sp.observeSettings().value.autoDetectFacesOnImport
-                                    } ?: false
-                                    if (shouldAutoDetect && faceGroupingService?.isDetectionAvailable() == true) {
-                                        try {
-                                            val importedPaths = result.copiedFiles.map { it.destinationPath }
-                                            if (importedPaths.isNotEmpty()) {
-                                                faceGroupingService.autoDetectFacesForImports(importedPaths)
-                                            }
-                                        } catch (_: Exception) {
-                                            // Face detection failure should not affect import status
-                                        }
+                                    _status.update {
+                                        it.copy(
+                                            lastEventTime = now,
+                                            importCount = it.importCount + 1,
+                                            lastImportTime = now,
+                                            lastImportFileCount = scanned.size,
+                                        )
                                     }
-
-                                    _status.update { it.copy(
-                                        lastEventTime = now,
-                                        importCount = it.importCount + 1,
-                                        lastImportTime = now,
-                                        lastImportFileCount = scanned.size,
-                                    ) }
                                     consecutiveErrors = 0
                                 }
                             } catch (e: Exception) {
                                 consecutiveErrors++
-                                _status.update { it.copy(
-                                    lastError = "Import failed (attempt $consecutiveErrors): ${e.message}",
-                                ) }
+                                _status.update {
+                                    it.copy(
+                                        lastError =
+                                            "Import failed (attempt $consecutiveErrors): ${e.message}"
+                                    )
+                                }
 
-                                // Exponential backoff: wait before retrying to avoid rapid error loops
-                                val backoffMs = minOf(
-                                    config.cooldownMs * (1L shl minOf(consecutiveErrors - 1, 5)),
-                                    MAX_BACKOFF_MS,
-                                )
+                                // Exponential backoff: wait before retrying to avoid rapid error
+                                // loops
+                                val backoffMs =
+                                    minOf(
+                                        config.cooldownMs *
+                                            (1L shl minOf(consecutiveErrors - 1, 5)),
+                                        MAX_BACKOFF_MS,
+                                    )
                                 kotlinx.coroutines.delay(backoffMs)
 
-                                // Pause after 5 consecutive errors (increased from 3 for resilience)
+                                // Pause after 5 consecutive errors (increased from 3 for
+                                // resilience)
                                 if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                                    _status.update { it.copy(
-                                        isWatching = false,
-                                        lastError = "Paused after $MAX_CONSECUTIVE_ERRORS consecutive errors. Last error: ${e.message}. Restart watch to retry.",
-                                    ) }
+                                    _status.update {
+                                        it.copy(
+                                            isWatching = false,
+                                            lastError =
+                                                "Paused after $MAX_CONSECUTIVE_ERRORS consecutive errors. Last error: ${e.message}. Restart watch to retry.",
+                                        )
+                                    }
                                     return@launch
                                 }
                             }
@@ -278,5 +279,5 @@ class WatchFolderService(
     fun isWatching(): Boolean = _status.value.isWatching
 
     /** Returns the current watch configuration, or null if not watching. */
-    fun currentConfig(): WatchFolderConfig? = currentConfig
+    fun getCurrentConfig(): WatchFolderConfig? = currentConfig
 }

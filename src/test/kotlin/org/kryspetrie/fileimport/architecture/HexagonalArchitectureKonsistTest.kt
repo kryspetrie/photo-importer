@@ -387,8 +387,6 @@ class HexagonalArchitectureKonsistTest {
             add("org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService")
             add("org.kryspetrie.fileimport.application.metadata.MetadataEditService")
             add("org.kryspetrie.fileimport.application.OrientationCorrectionService")
-            add("org.kryspetrie.fileimport.application.PersonService")
-            add("org.kryspetrie.fileimport.application.FaceGroupingService")
         }
 
         @Test

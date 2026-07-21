@@ -2,10 +2,11 @@ package org.kryspetrie.fileimport.domain.model
 
 import kotlinx.serialization.Serializable
 
-/** Status of a watched folder for automatic imports.
+/**
+ * Status of a watched folder for automatic imports.
  *
- * Updated in real-time by [WatchFolderService] as files are detected and imported.
- * Each status is tied to a [WatchFolderConfig] via [configId].
+ * Updated in real-time by [WatchFolderService] as files are detected and imported. Each status is
+ * tied to a [WatchFolderConfig] via [configId].
  *
  * @property configId The ID of the [WatchFolderConfig] this status belongs to.
  * @property isWatching Whether the folder is currently being watched.

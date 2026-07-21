@@ -41,24 +41,25 @@ class ImportHistoryAdapter(
     override suspend fun addEntry(
         entry: ImportHistoryEntry,
         fileDetails: List<ImportFileDetail>?,
-    ): Unit = mutex.withLock {
-        withContext(dispatcherProvider.io) {
-            try {
-                val history = loadHistoryInternal().toMutableList()
-                val enrichedEntry =
-                    if (fileDetails != null && fileDetails.isNotEmpty()) {
-                        entry.copy(fileDetails = fileDetails)
-                    } else entry
-                history.add(0, enrichedEntry)
-                val trimmed = history.take(500)
-                historyFile.writeText(json.encodeToString(trimmed))
-            } catch (_: Exception) {}
+    ): Unit =
+        mutex.withLock {
+            withContext(dispatcherProvider.io) {
+                try {
+                    val history = loadHistoryInternal().toMutableList()
+                    val enrichedEntry =
+                        if (fileDetails != null && fileDetails.isNotEmpty()) {
+                            entry.copy(fileDetails = fileDetails)
+                        } else entry
+                    history.add(0, enrichedEntry)
+                    val trimmed = history.take(500)
+                    historyFile.writeText(json.encodeToString(trimmed))
+                } catch (_: Exception) {}
+            }
         }
-    }
 
     /**
-     * Internal load that reads from file without the mutex.
-     * Callers must hold [mutex] when using this within a read-modify-write sequence.
+     * Internal load that reads from file without the mutex. Callers must hold [mutex] when using
+     * this within a read-modify-write sequence.
      */
     private suspend fun loadHistoryInternal(): List<ImportHistoryEntry> =
         withContext(dispatcherProvider.io) {

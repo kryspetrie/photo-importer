@@ -20,17 +20,16 @@ import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.MetadataEditEntry
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
-import org.kryspetrie.fileimport.domain.port.ModelDownloadPort
-import org.kryspetrie.fileimport.domain.port.ModelDownloadState
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
+import org.kryspetrie.fileimport.domain.port.ModelDownloadPort
+import org.kryspetrie.fileimport.domain.port.ModelDownloadState
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
@@ -108,7 +107,8 @@ class MetadataEditorViewModel(
     var selectedRegionType by mutableStateOf(org.kryspetrie.fileimport.domain.model.RegionType.FACE)
 
     /** Selected face size in the name entry popup. */
-    var selectedFaceSize by mutableStateOf(org.kryspetrie.fileimport.ui.wizard.state.FaceSize.DEFAULT)
+    var selectedFaceSize by
+        mutableStateOf(org.kryspetrie.fileimport.ui.wizard.state.FaceSize.DEFAULT)
 
     /** Whether the back-of-photo image picker dialog is visible. */
     var showBackImagePicker by mutableStateOf(false)
@@ -163,9 +163,7 @@ class MetadataEditorViewModel(
 
     /** Start observing settings from the settings port. Call once in a LaunchedEffect. */
     fun observeSettings(scope: CoroutineScope) {
-        scope.launch {
-            settingsPort.observeSettings().collect { currentSettings = it }
-        }
+        scope.launch { settingsPort.observeSettings().collect { currentSettings = it } }
     }
 
     /** Load a source path (file or folder). */
@@ -182,11 +180,14 @@ class MetadataEditorViewModel(
             thumbnailCache.clear()
             onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
         } else if (source.isDirectory) {
-            val imageFiles = runCatching {
-                source.listFiles()
-                    ?.filter { it.isFile && isImageFile(it) }
-                    ?.sortedBy { it.name.lowercase() } ?: emptyList()
-            }.getOrDefault(emptyList())
+            val imageFiles =
+                runCatching {
+                        source
+                            .listFiles()
+                            ?.filter { it.isFile && isImageFile(it) }
+                            ?.sortedBy { it.name.lowercase() } ?: emptyList()
+                    }
+                    .getOrDefault(emptyList())
             if (imageFiles.isEmpty()) {
                 state.showError("No image files found in: $path")
                 return
@@ -221,11 +222,13 @@ class MetadataEditorViewModel(
                     thumbnailCache.clear()
                     onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
                 } else if (source.isDirectory) {
-                    val imageFiles = withContext(dispatcherProvider.io) {
-                        source.listFiles()
-                            ?.filter { it.isFile && isImageFile(it) }
-                            ?.sortedBy { it.name.lowercase() } ?: emptyList()
-                    }
+                    val imageFiles =
+                        withContext(dispatcherProvider.io) {
+                            source
+                                .listFiles()
+                                ?.filter { it.isFile && isImageFile(it) }
+                                ?.sortedBy { it.name.lowercase() } ?: emptyList()
+                        }
                     if (imageFiles.isEmpty()) {
                         state.showError("No image files found in: $path")
                         return@launch
@@ -256,29 +259,31 @@ class MetadataEditorViewModel(
                 val img = withContext(dispatcherProvider.io) { ImageIO.read(file) }
                 currentImage = img
                 try {
-                    val meta = withContext(dispatcherProvider.io) {
-                        imageRepository.getMetadata(
-                            ImageFile(
-                                path = FilePath(file.absolutePath),
-                                fileSize = file.length(),
+                    val meta =
+                        withContext(dispatcherProvider.io) {
+                            imageRepository.getMetadata(
+                                ImageFile(
+                                    path = FilePath(file.absolutePath),
+                                    fileSize = file.length(),
+                                )
                             )
-                        )
-                    }
-                    sourceExif = meta?.let {
-                        SourceExifSummary(
-                            cameraMake = it.make,
-                            cameraModel = it.model,
-                            lensModel = it.lensModel,
-                            focalLength = it.focalLength?.let { f -> "${f}mm" },
-                            aperture = it.aperture?.let { a -> "f/$a" },
-                            shutterSpeed = it.shutterSpeed,
-                            iso = it.iso?.toString(),
-                            description = it.description,
-                            dateOriginal = it.dateTimeOriginal?.toString(),
-                            gpsLatitude = it.latitude?.toString(),
-                            gpsLongitude = it.longitude?.toString(),
-                        )
-                    }
+                        }
+                    sourceExif =
+                        meta?.let {
+                            SourceExifSummary(
+                                cameraMake = it.make,
+                                cameraModel = it.model,
+                                lensModel = it.lensModel,
+                                focalLength = it.focalLength?.let { f -> "${f}mm" },
+                                aperture = it.aperture?.let { a -> "f/$a" },
+                                shutterSpeed = it.shutterSpeed,
+                                iso = it.iso?.toString(),
+                                description = it.description,
+                                dateOriginal = it.dateTimeOriginal?.toString(),
+                                gpsLatitude = it.latitude?.toString(),
+                                gpsLongitude = it.longitude?.toString(),
+                            )
+                        }
                     state.markSourceExifLoaded(file)
                 } catch (_: Exception) {
                     sourceExif = null
@@ -302,10 +307,11 @@ class MetadataEditorViewModel(
         for (file in state.files) {
             if (!thumbnailCache.containsKey(file.absolutePath)) {
                 try {
-                    val thumb = withContext(dispatcherProvider.io) {
-                        val img = ImageIO.read(file) ?: return@withContext null
-                        scaleToThumbnail(img)
-                    }
+                    val thumb =
+                        withContext(dispatcherProvider.io) {
+                            val img = ImageIO.read(file) ?: return@withContext null
+                            scaleToThumbnail(img)
+                        }
                     if (thumb != null) {
                         thumbnailCache[file.absolutePath] = thumb
                     }
@@ -322,18 +328,20 @@ class MetadataEditorViewModel(
         val config = state.selectedConfig
         scope.launch {
             try {
-                val result = editService.saveFile(
-                    file = file,
-                    config = config,
-                    outputMode = state.outputMode.name,
-                    outputDirectory = state.outputDirectory,
-                )
-                if (result != null) {
-                    val journalPath = editService.saveJournal(
-                        sourceFolderPath = state.sourcePath,
+                val result =
+                    editService.saveFile(
+                        file = file,
+                        config = config,
                         outputMode = state.outputMode.name,
-                        entries = listOf(result.entry),
+                        outputDirectory = state.outputDirectory,
                     )
+                if (result != null) {
+                    val journalPath =
+                        editService.saveJournal(
+                            sourceFolderPath = state.sourcePath,
+                            outputMode = state.outputMode.name,
+                            entries = listOf(result.entry),
+                        )
                     if (journalPath != null) {
                         state.lastJournalPath = journalPath
                         state.canUndo = true
@@ -366,12 +374,13 @@ class MetadataEditorViewModel(
                 for (entry in modifiedEntries) {
                     val file = entry.file
                     val config = entry.config
-                    val result = editService.saveFile(
-                        file = file,
-                        config = config,
-                        outputMode = state.outputMode.name,
-                        outputDirectory = state.outputDirectory,
-                    )
+                    val result =
+                        editService.saveFile(
+                            file = file,
+                            config = config,
+                            outputMode = state.outputMode.name,
+                            outputDirectory = state.outputDirectory,
+                        )
                     if (result != null) {
                         entries.add(result.entry)
                         state.markSaved(file)
@@ -379,11 +388,12 @@ class MetadataEditorViewModel(
                     }
                 }
                 if (entries.isNotEmpty()) {
-                    val journalPath = editService.saveJournal(
-                        sourceFolderPath = state.sourcePath,
-                        outputMode = state.outputMode.name,
-                        entries = entries,
-                    )
+                    val journalPath =
+                        editService.saveJournal(
+                            sourceFolderPath = state.sourcePath,
+                            outputMode = state.outputMode.name,
+                            entries = entries,
+                        )
                     if (journalPath != null) {
                         state.lastJournalPath = journalPath
                         state.canUndo = true
@@ -406,7 +416,9 @@ class MetadataEditorViewModel(
             try {
                 val undoResult = undoService.undo(journalId)
                 if (undoResult > 0) {
-                    state.showInfo("Undone: $undoResult file${if (undoResult != 1) "s" else ""} restored")
+                    state.showInfo(
+                        "Undone: $undoResult file${if (undoResult != 1) "s" else ""} restored"
+                    )
                     state.canUndo = false
                     state.canRedo = true
                     // Reload current image
@@ -424,28 +436,31 @@ class MetadataEditorViewModel(
     fun redoLast(scope: CoroutineScope) {
         val journalId = state.lastJournalPath ?: return
         if (!state.canRedo) return
-        val writer = MetadataWritingService(
-            faceRegionTransformer = faceRegionTransformer,
-            imageProcessing = imageProcessing,
-            fileSystem = fileSystemAdapter,
-        )
+        val writer =
+            MetadataWritingService(
+                faceRegionTransformer = faceRegionTransformer,
+                imageProcessing = imageProcessing,
+                fileSystem = fileSystemAdapter,
+            )
         scope.launch {
             try {
-                val redoResult = undoService.redo(journalId) { outputPath, config, sourcePath ->
-                    val processedImage = withContext(dispatcherProvider.io) {
-                        imageProcessing.readImage(outputPath)
+                val redoResult =
+                    undoService.redo(journalId) { outputPath, config, sourcePath ->
+                        val processedImage =
+                            withContext(dispatcherProvider.io) {
+                                imageProcessing.readImage(outputPath)
+                            }
+                        if (processedImage != null) {
+                            writer.writeImageWithMetadata(
+                                image = processedImage,
+                                outputPath = outputPath,
+                                config = config,
+                                sourcePath = sourcePath ?: outputPath,
+                                preRotationWidth = processedImage.width,
+                                preRotationHeight = processedImage.height,
+                            )
+                        }
                     }
-                    if (processedImage != null) {
-                        writer.writeImageWithMetadata(
-                            image = processedImage,
-                            outputPath = outputPath,
-                            config = config,
-                            sourcePath = sourcePath ?: outputPath,
-                            preRotationWidth = processedImage.width,
-                            preRotationHeight = processedImage.height,
-                        )
-                    }
-                }
                 if (redoResult > 0) {
                     state.showInfo("Redone: $redoResult file${if (redoResult != 1) "s" else ""}")
                     state.canUndo = true
@@ -471,9 +486,7 @@ class MetadataEditorViewModel(
     /** Apply multi-edit fields to all selected indices. */
     fun applyMultiEdit(onSettingsChange: (AppSettings) -> Unit) {
         selectedIndices.forEach { idx ->
-            state.updateConfig(idx) { config ->
-                editState.applyNonBlankTo(config)
-            }
+            state.updateConfig(idx) { config -> editState.applyNonBlankTo(config) }
         }
         onSettingsChange(currentSettings.addMetadataSet(editState.toRecentMetadataSet()))
         editState.clear()
@@ -486,9 +499,10 @@ class MetadataEditorViewModel(
         isDetectingOrientation = true
         scope.launch {
             try {
-                val img = withContext(dispatcherProvider.io) {
-                    imageProcessing.readImage(FilePath(file.absolutePath))
-                }
+                val img =
+                    withContext(dispatcherProvider.io) {
+                        imageProcessing.readImage(FilePath(file.absolutePath))
+                    }
                 if (img != null) {
                     val result = orientationCorrection.detectOnly(img)
                     if (result != null) {
@@ -513,25 +527,27 @@ class MetadataEditorViewModel(
     /** Apply the detected auto-rotation result. */
     fun applyAutoRotation() {
         val result = autoRotateResult ?: return
-        val nearestCorrectionDeg = when (result.nearestRotation) {
-            RotationAngle.NONE -> 0
-            RotationAngle.CW_90 -> 90
-            RotationAngle.CW_180 -> 180
-            RotationAngle.CCW_90 -> 270
-        }
+        val nearestCorrectionDeg =
+            when (result.nearestRotation) {
+                RotationAngle.NONE -> 0
+                RotationAngle.CW_90 -> 90
+                RotationAngle.CW_180 -> 180
+                RotationAngle.CCW_90 -> 270
+            }
         val currentRotation = state.selectedConfig.rotationDegrees
         val correctedRotation = (currentRotation + nearestCorrectionDeg) % 360
         state.updateSelectedConfig {
             it.copy(
                 rotationDegrees = correctedRotation,
-                faceRegions = it.faceRegions.map { region ->
-                    when (result.nearestRotation) {
-                        RotationAngle.CW_90 -> region.rotate90CW()
-                        RotationAngle.CCW_90 -> region.rotate90CCW()
-                        RotationAngle.CW_180 -> region.rotate180()
-                        RotationAngle.NONE -> region
-                    }
-                },
+                faceRegions =
+                    it.faceRegions.map { region ->
+                        when (result.nearestRotation) {
+                            RotationAngle.CW_90 -> region.rotate90CW()
+                            RotationAngle.CCW_90 -> region.rotate90CCW()
+                            RotationAngle.CW_180 -> region.rotate180()
+                            RotationAngle.NONE -> region
+                        }
+                    },
             )
         }
         dismissAutoRotateDialog()
@@ -550,7 +566,8 @@ class MetadataEditorViewModel(
     fun downloadOrientationModel(scope: CoroutineScope) {
         modelDownloadState = ModelDownloadState.Connecting
         scope.launch {
-            modelDownloadPort.downloadModel(ModelDownloadPort.ORIENTATION_MODEL_ID).collect { state ->
+            modelDownloadPort.downloadModel(ModelDownloadPort.ORIENTATION_MODEL_ID).collect { state
+                ->
                 modelDownloadState = state
                 if (state is ModelDownloadState.Completed) {
                     showModelDownloadDialog = false
@@ -566,8 +583,9 @@ class MetadataEditorViewModel(
     /** Cancel the orientation model download, or dismiss if no download is active. */
     fun cancelModelDownload() {
         val currentState = modelDownloadState
-        if (currentState is ModelDownloadState.Downloading ||
-            currentState is ModelDownloadState.Connecting
+        if (
+            currentState is ModelDownloadState.Downloading ||
+                currentState is ModelDownloadState.Connecting
         ) {
             modelDownloadPort.cancelDownload(ModelDownloadPort.ORIENTATION_MODEL_ID)
             modelDownloadState = ModelDownloadState.Cancelled
@@ -600,15 +618,16 @@ class MetadataEditorViewModel(
             val (_, normX, normY) = pendingFaceCoords!!
             state.updateSelectedConfig { config ->
                 config.copy(
-                    faceRegions = config.faceRegions +
-                        FaceRegion(
-                            name = faceNameInput.trim(),
-                            type = selectedRegionType.mwgRsValue,
-                            x = normX,
-                            y = normY,
-                            w = 0.1,
-                            h = 0.1,
-                        )
+                    faceRegions =
+                        config.faceRegions +
+                            FaceRegion(
+                                name = faceNameInput.trim(),
+                                type = selectedRegionType.mwgRsValue,
+                                x = normX,
+                                y = normY,
+                                w = 0.1,
+                                h = 0.1,
+                            )
                 )
             }
         }
@@ -719,8 +738,8 @@ class MetadataEditorViewModel(
 
     fun toggleSelection(index: Int) {
         if (isMultiEditMode) {
-            selectedIndices = if (index in selectedIndices) selectedIndices - index
-            else selectedIndices + index
+            selectedIndices =
+                if (index in selectedIndices) selectedIndices - index else selectedIndices + index
         } else {
             state.selectFile(index)
         }
@@ -754,15 +773,17 @@ class MetadataEditorViewModel(
     /** Get pre-selected back image path (next file in sequence, or current back image). */
     fun getPreSelectedBackPath(): String? {
         val currentImageFile = state.selectedFile
-        val preSelected = state.selectedConfig.backImageSourcePath ?: run {
-            val currentPath = currentImageFile?.absolutePath
-            if (currentPath != null) {
-                val currentIdx = state.files.indexOfFirst { it.absolutePath == currentPath }
-                if (currentIdx >= 0 && currentIdx + 1 < state.files.size) {
-                    state.files[currentIdx + 1].absolutePath
-                } else null
-            } else null
-        }
+        val preSelected =
+            state.selectedConfig.backImageSourcePath
+                ?: run {
+                    val currentPath = currentImageFile?.absolutePath
+                    if (currentPath != null) {
+                        val currentIdx = state.files.indexOfFirst { it.absolutePath == currentPath }
+                        if (currentIdx >= 0 && currentIdx + 1 < state.files.size) {
+                            state.files[currentIdx + 1].absolutePath
+                        } else null
+                    } else null
+                }
         return preSelected
     }
 }

@@ -3,8 +3,8 @@ package org.kryspetrie.fileimport.domain.port
 /**
  * Domain port for accessing application paths.
  *
- * Provides access to default directories and path resolution without coupling
- * the UI or application layers to the infrastructure's [AppPaths] utility.
+ * Provides access to default directories and path resolution without coupling the UI or application
+ * layers to the infrastructure's [AppPaths] utility.
  *
  * Implementations should provide OS-appropriate default locations for:
  * - Destination: where imported files are saved by default

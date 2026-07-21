@@ -15,8 +15,8 @@ import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
  * Service for performing undo/redo operations on metadata edits.
  *
  * ## Undo (Overwrite mode)
- * Restores original file bytes from backup copies. Each backup was created before the metadata
- * was written. After restoring, the journal is marked as undone.
+ * Restores original file bytes from backup copies. Each backup was created before the metadata was
+ * written. After restoring, the journal is marked as undone.
  *
  * ## Undo (Save New mode)
  * Deletes the output files that were created. The originals were never modified.
@@ -28,8 +28,8 @@ import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
  * ## Redo (Save New mode)
  * Re-runs the write operation to create new output files.
  *
- * Backup files are stored in `~/.petrie-importer/metadata-backups/` with a naming convention
- * of `{timestamp}_{originalFilename}` to avoid collisions.
+ * Backup files are stored in `~/.petrie-importer/metadata-backups/` with a naming convention of
+ * `{timestamp}_{originalFilename}` to avoid collisions.
  */
 class MetadataEditUndoService(
     private val journalRepository: MetadataEditJournalRepository,
@@ -93,8 +93,8 @@ class MetadataEditUndoService(
     /**
      * Undoes a metadata edit journal.
      *
-     * For OVERWRITE mode: restores original files from backups.
-     * For SAVE_NEW mode: deletes the output files.
+     * For OVERWRITE mode: restores original files from backups. For SAVE_NEW mode: deletes the
+     * output files.
      *
      * @return The number of files successfully restored/deleted, or -1 on error.
      */
@@ -182,11 +182,12 @@ class MetadataEditUndoService(
                 // KEEP_SOURCE fields read the original values rather than the current
                 // (possibly already-written) values.
                 // Falls back to the current file if the backup no longer exists.
-                val exifSourcePath = if (entry.backupPath != null && File(entry.backupPath).exists()) {
-                    FilePath(entry.backupPath)
-                } else {
-                    FilePath(entry.filePath)
-                }
+                val exifSourcePath =
+                    if (entry.backupPath != null && File(entry.backupPath).exists()) {
+                        FilePath(entry.backupPath)
+                    } else {
+                        FilePath(entry.filePath)
+                    }
 
                 // Create fresh backup before re-writing (for OVERWRITE mode)
                 val newBackupPath = createBackup(entry.filePath)

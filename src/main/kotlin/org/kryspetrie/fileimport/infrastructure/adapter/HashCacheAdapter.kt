@@ -125,7 +125,11 @@ class HashCacheAdapter(
         withContext(dispatcherProvider.io) {
             val allowedExtensions = setOf(".db", ".db-wal", ".db-shm")
             indexDir.listFiles()?.forEach { file ->
-                if (allowedExtensions.any { file.name.endsWith(it) } && file.isFile && !java.nio.file.Files.isSymbolicLink(file.toPath())) {
+                if (
+                    allowedExtensions.any { file.name.endsWith(it) } &&
+                        file.isFile &&
+                        !java.nio.file.Files.isSymbolicLink(file.toPath())
+                ) {
                     file.delete()
                 }
             }

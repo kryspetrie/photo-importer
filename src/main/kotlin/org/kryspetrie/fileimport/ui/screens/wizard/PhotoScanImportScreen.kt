@@ -36,11 +36,11 @@ import androidx.compose.ui.unit.dp
 import java.io.File
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.port.PathsPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.ui.components.AutoOrientIndicator
-import org.kryspetrie.fileimport.domain.port.PathsPort
-import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.ScanModeCard

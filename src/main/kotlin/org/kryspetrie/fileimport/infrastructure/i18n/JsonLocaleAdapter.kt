@@ -8,8 +8,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.kryspetrie.fileimport.domain.model.i18n.LocaleConfig
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
-import org.kryspetrie.fileimport.domain.port.LocalePort
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.LocalePort
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 
 /**
@@ -39,22 +39,23 @@ class JsonLocaleAdapter(
     private val strings = ConcurrentHashMap<String, Map<StringKey, String>>()
 
     /** Native display names for locales. */
-    private val nativeNames = mutableMapOf<String, String>(
-        "en" to "English",
-        "de" to "Deutsch",
-        "fr" to "Français",
-        "ja" to "日本語",
-        "es" to "Español",
-        "ar" to "العربية",
-        "zh" to "中文",
-        "ko" to "한국어",
-        "pt" to "Português",
-        "it" to "Italiano",
-        "nl" to "Nederlands",
-        "ru" to "Русский",
-        "pl" to "Polski",
-        "sv" to "Svenska",
-    )
+    private val nativeNames =
+        mutableMapOf<String, String>(
+            "en" to "English",
+            "de" to "Deutsch",
+            "fr" to "Français",
+            "ja" to "日本語",
+            "es" to "Español",
+            "ar" to "العربية",
+            "zh" to "中文",
+            "ko" to "한국어",
+            "pt" to "Português",
+            "it" to "Italiano",
+            "nl" to "Nederlands",
+            "ru" to "Русский",
+            "pl" to "Polski",
+            "sv" to "Svenska",
+        )
 
     private val localeFlow = MutableStateFlow("en")
 
@@ -62,9 +63,8 @@ class JsonLocaleAdapter(
 
     init {
         // Eagerly load English (fallback locale)
-        runCatching { loadLocale("en") }.onFailure {
-            appLogger?.warn("Failed to load English locale: ${it.message}")
-        }
+        runCatching { loadLocale("en") }
+            .onFailure { appLogger?.warn("Failed to load English locale: ${it.message}") }
     }
 
     override fun t(key: StringKey, vararg params: Pair<String, String>): String {
@@ -72,9 +72,8 @@ class JsonLocaleAdapter(
         val localeStrings = strings[currentLocale] ?: strings[config.fallbackLocale] ?: emptyMap()
         val fallbackStrings = strings[config.fallbackLocale] ?: emptyMap()
 
-        var result = localeStrings[key]
-            ?: fallbackStrings[key]
-            ?: key.name.lowercase().replace('_', ' ')
+        var result =
+            localeStrings[key] ?: fallbackStrings[key] ?: key.name.lowercase().replace('_', ' ')
 
         for ((paramName, paramValue) in params) {
             result = result.replace("{$paramName}", paramValue)
@@ -90,11 +89,15 @@ class JsonLocaleAdapter(
         val builtin = setOf("en", "de", "fr", "ja", "es")
         // User override locales from ~/.petrie-importer/i18n/
         val userDir = java.io.File(System.getProperty("user.home"), ".petrie-importer/i18n")
-        val userLocales = userDir.listFiles()
-            ?.filter { it.name.endsWith(".json") && java.nio.file.Files.isRegularFile(it.toPath()) }
-            ?.map { it.name.removeSuffix(".json") }
-            ?.filter { isValidLocaleCode(it) }
-            ?.toSet() ?: emptySet()
+        val userLocales =
+            userDir
+                .listFiles()
+                ?.filter {
+                    it.name.endsWith(".json") && java.nio.file.Files.isRegularFile(it.toPath())
+                }
+                ?.map { it.name.removeSuffix(".json") }
+                ?.filter { isValidLocaleCode(it) }
+                ?.toSet() ?: emptySet()
         return builtin + userLocales
     }
 
@@ -124,9 +127,9 @@ class JsonLocaleAdapter(
     /**
      * Validates a locale code to prevent path traversal attacks.
      *
-     * Locale codes must consist of 2-3 lowercase letters, optionally followed by a hyphen
-     * and 2-3 uppercase letters (e.g., "en", "pt-BR"). Rejects any code containing
-     * path separators, parent directory references, or other suspicious characters.
+     * Locale codes must consist of 2-3 lowercase letters, optionally followed by a hyphen and 2-3
+     * uppercase letters (e.g., "en", "pt-BR"). Rejects any code containing path separators, parent
+     * directory references, or other suspicious characters.
      */
     private fun isValidLocaleCode(code: String): Boolean {
         return code.matches(Regex("^[a-z]{2,3}(-[A-Z]{2,3})?$"))
@@ -153,15 +156,21 @@ class JsonLocaleAdapter(
         }
 
         // 2. Load from user override directory (takes precedence)
-        val userFile = java.io.File(
-            System.getProperty("user.home"),
-            ".petrie-importer/i18n/$localeCode.json"
-        )
+        val userFile =
+            java.io.File(System.getProperty("user.home"), ".petrie-importer/i18n/$localeCode.json")
         // Validate the file is a regular file (not a symlink) and within the expected directory
-        if (userFile.exists() && java.nio.file.Files.isRegularFile(userFile.toPath()) &&
-            userFile.toPath().normalize().startsWith(
-                java.io.File(System.getProperty("user.home"), ".petrie-importer/i18n").toPath().normalize()
-            )
+        if (
+            userFile.exists() &&
+                java.nio.file.Files.isRegularFile(userFile.toPath()) &&
+                userFile
+                    .toPath()
+                    .normalize()
+                    .startsWith(
+                        java.io
+                            .File(System.getProperty("user.home"), ".petrie-importer/i18n")
+                            .toPath()
+                            .normalize()
+                    )
         ) {
             val userContent = userFile.readText()
             parseAndMerge(userContent, loadedStrings)

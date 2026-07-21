@@ -7,23 +7,22 @@ import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.MetadataEditEntry
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
+import org.kryspetrie.fileimport.domain.model.ProcessedImage
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
-import org.kryspetrie.fileimport.domain.model.ProcessedImage
 
 /**
  * Application service for saving metadata edits in the bulk metadata editor.
  *
- * Extracts the save/write logic from the UI layer so that the composable only orchestrates
- * UI state transitions. This service handles:
+ * Extracts the save/write logic from the UI layer so that the composable only orchestrates UI state
+ * transitions. This service handles:
  * - Creating backups before overwrite
  * - Writing metadata (EXIF/IPTC/XMP) via [MetadataWritingService]
  * - Writing back-of-photo images
  * - Recording journal entries for undo/redo
  *
- * Follows the hexagonal architecture: application layer depends only on domain ports and
- * domain models, never on UI or infrastructure adapters.
+ * Follows the hexagonal architecture: application layer depends only on domain ports and domain
+ * models, never on UI or infrastructure adapters.
  */
 class MetadataEditService(
     private val metadataWritingService: MetadataWritingService,
@@ -100,7 +99,13 @@ class MetadataEditService(
                     preRotationHeight = processedImage.height,
                 )
                 if (config.hasBackImage()) {
-                    val backResult = writeBackImage(processedImage, config, file.parent, file.nameWithoutExtension)
+                    val backResult =
+                        writeBackImage(
+                            processedImage,
+                            config,
+                            file.parent,
+                            file.nameWithoutExtension,
+                        )
                     backImageOutputPath = backResult
                 }
             }
@@ -121,21 +126,28 @@ class MetadataEditService(
                 if (config.hasBackImage()) {
                     val backOutDir =
                         if (outputDirectory.isNotBlank()) outputDirectory else file.parent
-                    val backResult = writeBackImage(processedImage, config, backOutDir, file.nameWithoutExtension)
+                    val backResult =
+                        writeBackImage(
+                            processedImage,
+                            config,
+                            backOutDir,
+                            file.nameWithoutExtension,
+                        )
                     backImageOutputPath = backResult
                 }
             }
         }
 
-        val entry = MetadataEditEntry(
-            filePath = file.absolutePath,
-            backupPath = backupPath ?: "",
-            configSnapshot = config,
-            wasSavedNew = outputMode == "SAVE_NEW",
-            outputFilePath = entryOutputPath ?: "",
-            backImageBackupPath = backImageBackupPath,
-            backImageOutputPath = backImageOutputPath,
-        )
+        val entry =
+            MetadataEditEntry(
+                filePath = file.absolutePath,
+                backupPath = backupPath ?: "",
+                configSnapshot = config,
+                wasSavedNew = outputMode == "SAVE_NEW",
+                outputFilePath = entryOutputPath ?: "",
+                backImageBackupPath = backImageBackupPath,
+                backImageOutputPath = backImageOutputPath,
+            )
 
         return SaveResult(
             entry = entry,
@@ -164,8 +176,7 @@ class MetadataEditService(
                 config,
                 maxWidth = processedImage.width,
                 maxHeight = processedImage.height,
-            )
-                ?: return null
+            ) ?: return null
 
         val backFileName = "${baseName}_back.jpg"
         val backOutputFilePath = FilePath(File(outputDir, backFileName).absolutePath)

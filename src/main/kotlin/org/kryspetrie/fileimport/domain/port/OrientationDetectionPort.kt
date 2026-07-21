@@ -11,8 +11,8 @@ import org.kryspetrie.fileimport.domain.model.ProcessedImage
  * preprocessing, and inference.
  *
  * The orientation model predicts a continuous angle (0°–359°) indicating how the image is rotated
- * from its correct upright orientation. To correct the image, rotate it by the **negative** of
- * the predicted angle (or equivalently, apply [OrientationResult.nearestRotation]).
+ * from its correct upright orientation. To correct the image, rotate it by the **negative** of the
+ * predicted angle (or equivalently, apply [OrientationResult.nearestRotation]).
  *
  * ## Classification mapping
  *

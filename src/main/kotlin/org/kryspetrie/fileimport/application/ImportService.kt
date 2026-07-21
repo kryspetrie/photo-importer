@@ -55,9 +55,9 @@ class ImportService(
     private val devicePort: DevicePort? = null,
 ) {
     /**
-     * Mutex preventing concurrent imports from corrupting [importProgress].
-     * Without this, two overlapping `executeImport` calls would both write to the same
-     * [MutableStateFlow], causing one import's progress to overwrite the other's.
+     * Mutex preventing concurrent imports from corrupting [importProgress]. Without this, two
+     * overlapping `executeImport` calls would both write to the same [MutableStateFlow], causing
+     * one import's progress to overwrite the other's.
      */
     private val importMutex = Mutex()
 
@@ -137,26 +137,28 @@ class ImportService(
     ): List<FileStructurePreview> =
         namingPort.previewFileStructure(images, destinationPath, configuration)
 
-    /** Executes the import operation. Delegates to [ImportExecutor.executeImport].
+    /**
+     * Executes the import operation. Delegates to [ImportExecutor.executeImport].
      *
-     * Protected by [importMutex] to prevent concurrent imports from corrupting
-     * [importProgress] — two overlapping imports would both write to the same
-     * [MutableStateFlow], causing one import's progress to overwrite the other's.
+     * Protected by [importMutex] to prevent concurrent imports from corrupting [importProgress] —
+     * two overlapping imports would both write to the same [MutableStateFlow], causing one import's
+     * progress to overwrite the other's.
      */
     suspend fun executeImport(
         images: List<ImageFile>,
         destinationPath: String,
         configuration: ImportConfiguration,
         onProgress: (ImportProgress) -> Unit = {},
-    ): ImportResult = importMutex.withLock {
-        importExecutor.executeImport(
-            images,
-            destinationPath,
-            configuration,
-            _importProgress,
-            onProgress,
-        )
-    }
+    ): ImportResult =
+        importMutex.withLock {
+            importExecutor.executeImport(
+                images,
+                destinationPath,
+                configuration,
+                _importProgress,
+                onProgress,
+            )
+        }
 
     /** Detect RAW+JPEG pairs by matching base filename and timestamp. */
     fun detectRawJpegPairs(images: List<ImageFile>): List<Pair<ImageFile, ImageFile>> {

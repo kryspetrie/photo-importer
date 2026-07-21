@@ -109,7 +109,6 @@ dependencies {
         because("ComposeTestRule requires JUnit 4 rule support within JUnit 5")
     }
 
-
     tasks.test {
         useJUnitPlatform { excludeTags("UiComponentTest", "integration") }
         testLogging { showStandardStreams = true }

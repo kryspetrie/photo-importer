@@ -6,9 +6,7 @@ import androidx.compose.runtime.setValue
 import java.io.File
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 
-/**
- * Severity level for UI messages in the metadata editor.
- */
+/** Severity level for UI messages in the metadata editor. */
 enum class MessageSeverity {
     INFO,
     ERROR,
@@ -128,7 +126,10 @@ class BulkEditState {
         message = UiMessage(text, MessageSeverity.INFO)
     }
 
-    /** Shows an error message (auto-clears after timeout). Also clears isLoading to prevent stuck spinners. */
+    /**
+     * Shows an error message (auto-clears after timeout). Also clears isLoading to prevent stuck
+     * spinners.
+     */
     fun showError(text: String) {
         message = UiMessage(text, MessageSeverity.ERROR)
         isLoading = false
@@ -183,14 +184,12 @@ class BulkEditState {
             }
     }
 
-    /**
-     * Marks a file as saved (no longer modified).
-     * Called after a successful save operation.
-     */
+    /** Marks a file as saved (no longer modified). Called after a successful save operation. */
     fun markSaved(file: File) {
         val key = file.absolutePath
         val entry = fileConfigs[key] ?: return
-        fileConfigs = fileConfigs.toMutableMap().apply { this[key] = entry.copy(isModified = false) }
+        fileConfigs =
+            fileConfigs.toMutableMap().apply { this[key] = entry.copy(isModified = false) }
     }
 
     /** Marks source EXIF as loaded for the specified file. */

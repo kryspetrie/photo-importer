@@ -1,6 +1,8 @@
 # Model Management
 
-Petrie uses ONNX machine learning models for photo scanning, face detection, face recognition, and orientation detection. This document covers how models are loaded, where they're stored, and how to manually install them if automatic download fails.
+Petrie uses ONNX machine learning models for photo scanning, face detection, and orientation detection. This document covers how models are loaded, where they're stored, and how to manually install them if automatic download fails.
+
+> **Note:** The face embedding model (ArcFace MobileFaceNet) and all People/face-grouping features have been extracted to the `feature/face-grouping` branch for future development.
 
 ---
 
@@ -13,9 +15,6 @@ Petrie uses ONNX machine learning models for photo scanning, face detection, fac
 | YOLO12n Face Detection | `face_detection_model.onnx` | ~10 MB | Bundled in JAR | Classpath |
 | Corner Regression | `corner_regression_model.onnx` | ~9.5 MB | Bundled in JAR | Classpath |
 | Orientation Detection | `orientation_detection_model.onnx` | ~346 MB | **Lazy download** | `~/.petrie-importer/models/` |
-| ArcFace MobileFaceNet | `face_embedding_model.onnx` | ~8 MB² | **Lazy download** | `~/.petrie-importer/models/` |
-
-> ² The face embedding model is downloaded as a zip archive (~7.7 MB) and automatically extracted.
 
 ### Bundled vs. Downloaded
 
@@ -29,11 +28,6 @@ Petrie uses ONNX machine learning models for photo scanning, face detection, fac
 | Model | URL |
 |-------|-----|
 | Orientation Detection | `https://huggingface.co/Chuckame/deep-image-orientation-angle-detection/resolve/main/deep-image-orientation-angle-detection.onnx` |
-| Face Embedding | `https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/FaceRecognition/arcface/arcface_mobilefacenet/pretrained/2022-08-24/arcface_mobilefacenet.zip` |
-
-### Why Zip for the Face Embedding Model?
-
-The ArcFace MobileFaceNet model from the Hailo Model Zoo is distributed as a `.zip` archive containing `mbf.onnx`. The download adapter automatically extracts this file and saves it as `face_embedding_model.onnx`. If you're manually installing, you'll need to extract it yourself (see instructions below).
 
 ---
 
@@ -75,36 +69,6 @@ mkdir -p ~/.petrie-importer/models
 
 3. Restart Petrie if it was running. The orientation detection feature will automatically detect the model.
 
-### Installing the Face Embedding Model
-
-The face embedding model is distributed as a zip archive. You have two options:
-
-#### Option A: Download and Extract Automatically (Recommended)
-
-```bash
-# Download the zip archive
-curl -L -o /tmp/arcface_mobilefacenet.zip \
-  "https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/FaceRecognition/arcface/arcface_mobilefacenet/pretrained/2022-08-24/arcface_mobilefacenet.zip"
-
-# Extract mbf.onnx and rename to face_embedding_model.onnx
-unzip -j /tmp/arcface_mobilefacenet.zip mbf.onnx -d ~/.petrie-importer/models/
-mv ~/.petrie-importer/models/mbf.onnx ~/.petrie-importer/models/face_embedding_model.onnx
-
-# Clean up
-rm /tmp/arcface_mobilefacenet.zip
-```
-
-#### Option B: Download via Browser
-
-1. Open this URL in your browser:  
-   `https://hailo-model-zoo.s3.eu-west-2.amazonaws.com/FaceRecognition/arcface/arcface_mobilefacenet/pretrained/2022-08-24/arcface_mobilefacenet.zip`
-
-2. Extract the zip file and find `mbf.onnx` inside.
-
-3. Copy `mbf.onnx` to `~/.petrie-importer/models/face_embedding_model.onnx`
-
-4. Restart Petrie.
-
 ### Verification
 
 To verify models are correctly installed:
@@ -116,7 +80,6 @@ ls -lh ~/.petrie-importer/models/
 Expected output:
 ```
 orientation_detection_model.onnx  ~346MB
-face_embedding_model.onnx          ~8MB
 ```
 
 The application will automatically detect models on startup. No configuration needed.
@@ -134,19 +97,6 @@ The application will automatically detect models on startup. No configuration ne
 | **Input** | 1×3×224×224 (NCHW, float32) |
 | **Output** | 1×4 (probabilities for 0°, 90°, 180°, 270°) |
 | **File size** | ~346 MB |
-| **License** | MIT |
-
-### Face Embedding Model (ArcFace MobileFaceNet)
-
-| Property | Value |
-|----------|-------|
-| **Architecture** | MobileFaceNet with ArcFace loss |
-| **Source** | [Hailo Model Zoo — arcface_mobilefacenet](https://github.com/hailo-ai/hailo_model_zoo) |
-| **Input** | 1×3×112×112 (NCHW, float32, normalized to [-1, 1]) |
-| **Output** | 1×512 (L2-normalized embedding vector) |
-| **File size** | ~7.8 MB (zip), ~8 MB (extracted ONNX) |
-| **Parameters** | 2.04M |
-| **LFW accuracy** | 99.43% |
 | **License** | MIT |
 
 ### Face Detection Model (Bundled)
@@ -212,16 +162,3 @@ The model hosting may require authentication or may have been moved. Manually in
 1. Check if the model file exists: `ls -lh ~/.petrie-importer/models/orientation_detection_model.onnx`
 2. If missing, follow "Installing the Orientation Detection Model" above.
 3. Check the file size — it should be ~346 MB. A smaller file may be corrupted.
-
-### Face grouping/identification doesn't work
-
-1. Check if the model file exists: `ls -lh ~/.petrie-importer/models/face_embedding_model.onnx`
-2. If missing, follow "Installing the Face Embedding Model" above.
-3. The file should be ~8 MB. If you see `mbf.onnx` instead of `face_embedding_model.onnx`, rename it:
-   ```bash
-   mv ~/.petrie-importer/models/mbf.onnx ~/.petrie-importer/models/face_embedding_model.onnx
-   ```
-
-### Embedding dimension mismatch
-
-The ArcFace MobileFaceNet model produces **512-dimensional** embeddings. Classic MobileFaceNet produced 128-dimensional embeddings. If you see "invalid dimension" errors, ensure you're using the correct model version (`arcface_mobilefacenet`, not an older 128-dim model). Old embeddings with 128 dimensions are still supported for reading, but new extractions will use 512 dimensions.

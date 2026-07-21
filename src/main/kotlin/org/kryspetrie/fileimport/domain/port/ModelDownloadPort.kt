@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.StateFlow
  * 330 MB orientation detection model) can be downloaded on first use instead.
  *
  * ## Download Flow
- *
  * 1. User enables a feature that requires a model (e.g., auto-orientation)
  * 2. UI checks [ModelDownloadPort.isModelDownloaded] → `false`
  * 3. UI prompts user to download the model
@@ -18,8 +17,8 @@ import kotlinx.coroutines.flow.StateFlow
  *
  * ## User Cancellation
  *
- * If the user chooses "Later", the download is not initiated. The feature remains unavailable
- * until the model is downloaded manually or the user is prompted again on next feature access.
+ * If the user chooses "Later", the download is not initiated. The feature remains unavailable until
+ * the model is downloaded manually or the user is prompted again on next feature access.
  */
 interface ModelDownloadPort {
 
@@ -75,9 +74,7 @@ interface ModelDownloadPort {
      */
     fun deleteModel(modelId: String): Boolean
 
-    /**
-     * Returns all models that are available for download (not yet on disk).
-     */
+    /** Returns all models that are available for download (not yet on disk). */
     fun availableForDownload(): List<ModelInfo>
 
     companion object {
@@ -86,9 +83,6 @@ interface ModelDownloadPort {
 
         /** Model ID for the face detection model. */
         const val FACE_MODEL_ID = "face_detection"
-
-        /** Model ID for the face embedding model (MobileFaceNet). */
-        const val FACE_EMBEDDING_MODEL_ID = "face_embedding"
     }
 }
 
@@ -100,7 +94,9 @@ sealed class ModelDownloadState {
     /** Download is connecting to the server. */
     data object Connecting : ModelDownloadState()
 
-    /** Download is in progress.
+    /**
+     * Download is in progress.
+     *
      * @property bytesDownloaded Bytes downloaded so far.
      * @property totalBytes Total bytes to download (null if unknown).
      * @property progressPercent Download progress as a percentage (0–100), or null if total is
@@ -112,12 +108,16 @@ sealed class ModelDownloadState {
         val progressPercent: Float?,
     ) : ModelDownloadState()
 
-    /** Download completed successfully.
+    /**
+     * Download completed successfully.
+     *
      * @property modelPath Local file path where the model was saved.
      */
     data class Completed(val modelPath: String) : ModelDownloadState()
 
-    /** Download failed.
+    /**
+     * Download failed.
+     *
      * @property error Error message describing the failure.
      * @property canRetry Whether the download can be retried.
      */

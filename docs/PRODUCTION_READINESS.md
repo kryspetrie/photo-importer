@@ -321,27 +321,28 @@ Multiple composables exceed the 6-8 level maximum for readable, testable code:
 
 ### 4.2 Model Size — 🔴 Critical
 
-**397 MB of ONNX models** in the distributable (only ~67 MB bundled, the rest lazy-downloaded):
+**389 MB of ONNX models** in the distributable (only ~67 MB bundled, the rest lazy-downloaded):
 
 | Model | Size | Recommendation |
 |-------|------|----------------|
 | `orientation_detection_model.onnx` | 346 MB | **Lazy-download + INT8 quantize** (→ ~80 MB) |
-| `face_embedding_model.onnx` | 8 MB | **Lazy-download** (zip archive from Hailo Model Zoo) |
 | `pose_model.onnx` | 38 MB | Bundle (acceptable) |
 | `face_detection_model.onnx` | 10 MB | Bundle (acceptable) |
 | `corner_regression_model.onnx` | 9.5 MB | Bundle (acceptable) |
 | `detection_model.onnx` | 9.4 MB | Bundle (acceptable) |
 
-The orientation and face embedding models are lazy-downloaded on first use via
+The orientation model is lazy-downloaded on first use via
 [HuggingFaceModelDownloadAdapter](../src/main/kotlin/org/kryspetrie/fileimport/infrastructure/download/HuggingFaceModelDownloadAdapter.kt).
 See [MODEL_MANAGEMENT.md](./MODEL_MANAGEMENT.md) for URL details and manual installation instructions.
 
-The orientation model alone accounts for **89.6%** of the total model size. It is a ViT-based model that:
+The orientation model alone accounts for **89%** of the total model size. It is a ViT-based model that:
 - Is only needed when auto-orient is enabled
 - Can be INT8 quantized from ~346 MB → ~80 MB with **<1% accuracy loss**
 - Is lazy-downloaded on first use with a progress indicator
 
-The face/pose/corner/detection models total ~67 MB — reasonable to bundle.
+The pose/corner/detection models total ~67 MB — reasonable to bundle.
+
+> **Note:** The face embedding model (ArcFace MobileFaceNet) and all People/face-grouping features have been extracted to the `feature/face-grouping` branch for future development.
 
 **Impact**: 368 MB download for a photo import tool will face **download abandonment**. Users on slow connections or with limited storage will not tolerate this.
 

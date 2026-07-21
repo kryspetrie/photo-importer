@@ -254,10 +254,12 @@ class ImportExecutor(
                     if (configuration.importSidecars) {
                         val importedSidecarPaths = sidecarFiles.toSet()
                         image.sidecars.forEach { sidecar ->
-                            // Only delete the source sidecar if its destination was successfully created
-                            val wasImported = importedSidecarPaths.any { importedPath ->
-                                importedPath.endsWith(sidecar.extension)
-                            }
+                            // Only delete the source sidecar if its destination was successfully
+                            // created
+                            val wasImported =
+                                importedSidecarPaths.any { importedPath ->
+                                    importedPath.endsWith(sidecar.extension)
+                                }
                             if (wasImported || sidecarErrors.isEmpty()) {
                                 fileSystem.delete(sidecar)
                             }
@@ -266,7 +268,8 @@ class ImportExecutor(
                 }
 
                 successCount++
-                // Mark import as failed if sidecar copies failed, even though primary file succeeded
+                // Mark import as failed if sidecar copies failed, even though primary file
+                // succeeded
                 val importSuccess = sidecarErrors.isEmpty()
                 copiedBytes += image.fileSize
 
@@ -292,7 +295,9 @@ class ImportExecutor(
                         sourceDeleted = sourceDeleted,
                         exifDate = image.metadata?.dateTimeOriginal?.toString().orEmpty(),
                         cameraModel = image.metadata?.cameraModel.orEmpty(),
-                        errorMessage = if (sidecarErrors.isNotEmpty()) sidecarErrors.joinToString("; ") else null,
+                        errorMessage =
+                            if (sidecarErrors.isNotEmpty()) sidecarErrors.joinToString("; ")
+                            else null,
                         sequenceNumber = counter,
                     )
                 )

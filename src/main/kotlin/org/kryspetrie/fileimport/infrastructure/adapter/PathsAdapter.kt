@@ -6,8 +6,8 @@ import org.kryspetrie.fileimport.domain.port.PathsPort
 /**
  * Infrastructure adapter that provides application paths via [Platform] utilities.
  *
- * Implements [PathsPort] so the UI and application layers can access default paths
- * without importing infrastructure directly.
+ * Implements [PathsPort] so the UI and application layers can access default paths without
+ * importing infrastructure directly.
  */
 class PathsAdapter : PathsPort {
 

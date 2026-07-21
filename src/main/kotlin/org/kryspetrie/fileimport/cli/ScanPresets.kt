@@ -19,7 +19,8 @@ enum class ScanPreset(
 ) {
     FAST(
         displayName = "Fast",
-        description = "Simple axis-aligned crop — best for flat scans with clearly separated photos",
+        description =
+            "Simple axis-aligned crop — best for flat scans with clearly separated photos",
         configuration =
             PhotoScanConfiguration(
                 correctionStrategy = CorrectionStrategy.CROP,

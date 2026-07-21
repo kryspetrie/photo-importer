@@ -17,10 +17,11 @@ import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 class JsonLocaleAdapterTest {
 
     private lateinit var adapter: JsonLocaleAdapter
-    private val testDispatcher = object : DispatcherProvider {
-        override val io = Dispatchers.Unconfined
-        override val default = Dispatchers.Unconfined
-    }
+    private val testDispatcher =
+        object : DispatcherProvider {
+            override val io = Dispatchers.Unconfined
+            override val default = Dispatchers.Unconfined
+        }
 
     @BeforeEach
     fun setup() {
@@ -127,7 +128,8 @@ class JsonLocaleAdapterTest {
         @DisplayName("Key entries exist for navigation and common actions")
         fun keyEntriesExistForNavigationAndCommonActions() {
             // Navigation keys
-            assertThat(StringKey.entries.map { it.name }).contains("NAV_IMPORT", "NAV_PHOTO_SCAN", "NAV_METADATA_EDITOR")
+            assertThat(StringKey.entries.map { it.name })
+                .contains("NAV_IMPORT", "NAV_PHOTO_SCAN", "NAV_METADATA_EDITOR")
             // Common action keys
             assertThat(StringKey.entries.map { it.name }).contains("ACTION_OK", "ACTION_CANCEL")
         }

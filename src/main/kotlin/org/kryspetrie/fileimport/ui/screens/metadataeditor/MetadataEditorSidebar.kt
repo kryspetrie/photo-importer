@@ -42,8 +42,8 @@ import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
  * Sidebar thumbnail strip for the metadata editor.
  *
  * Shows a scrollable list of image thumbnails with selection state and modification indicators.
- * Supports both single-select (click to select) and multi-select (click to toggle, checkbox overlay)
- * modes. Uses [ChunkyScrollbar] for visible scroll feedback when content overflows.
+ * Supports both single-select (click to select) and multi-select (click to toggle, checkbox
+ * overlay) modes. Uses [ChunkyScrollbar] for visible scroll feedback when content overflows.
  *
  * @param state The bulk edit state.
  * @param thumbnailCache Cache of pre-scaled thumbnail images.
@@ -140,8 +140,7 @@ fun MetadataEditorSidebar(
                                         when {
                                             isModified && isSelected ->
                                                 MaterialTheme.colorScheme.tertiaryContainer
-                                            isSelected ->
-                                                MaterialTheme.colorScheme.primaryContainer
+                                            isSelected -> MaterialTheme.colorScheme.primaryContainer
                                             isModified ->
                                                 MaterialTheme.colorScheme.secondaryContainer
                                             else -> MaterialTheme.colorScheme.surfaceVariant

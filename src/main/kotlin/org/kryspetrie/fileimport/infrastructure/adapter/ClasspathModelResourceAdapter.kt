@@ -12,22 +12,17 @@ import org.kryspetrie.fileimport.domain.port.ModelResourcePort
  * default strategy — models ship with the application and require no user configuration.
  *
  * ## Model files
- * | File                                  | Purpose                                 | Approx. size | Source     |
- * |---------------------------------------|-----------------------------------------|--------------|------------|
- * | `models/detection_model.onnx`         | YOLO detection — finds bounding boxes   | ~10 MB       | Bundled    |
- * | `models/pose_model.onnx`              | YOLO pose — finds 4-corner keypoints    | ~38 MB       | Bundled    |
- * | `models/face_detection_model.onnx`    | YOLO12n face detection — bounding boxes | ~10 MB       | Bundled    |
- * | `models/corner_regression_model.onnx` | Corner regression — refines keypoints  | ~9.5 MB      | Bundled    |
- * | `models/orientation_detection_model.onnx` | ViT orientation — predicts angle   | ~346 MB      | Download*  |
- * | `models/face_embedding_model.onnx`   | ArcFace MobileFaceNet — face embeddings | ~8 MB       | Download** |
+ * |File                                     |Purpose                                |Approx. size|Source   |
+ * |-----------------------------------------|---------------------------------------|------------|---------|
+ * |`models/detection_model.onnx`            |YOLO detection — finds bounding boxes  |~10 MB      |Bundled  |
+ * |`models/pose_model.onnx`                 |YOLO pose — finds 4-corner keypoints   |~38 MB      |Bundled  |
+ * |`models/face_detection_model.onnx`       |YOLO12n face detection — bounding boxes|~10 MB      |Bundled  |
+ * |`models/corner_regression_model.onnx`    |Corner regression — refines keypoints  |~9.5 MB     |Bundled  |
+ * |`models/orientation_detection_model.onnx`|ViT orientation — predicts angle       |~346 MB     |Download*|
  *
- * *The orientation detection model is lazy-downloaded from HuggingFace on first use.
- * Use [isOrientationDetectionModelAvailable] to check before calling [loadOrientationModel].
- * See [MODEL_MANAGEMENT.md](../../../../../docs/MODEL_MANAGEMENT.md) for manual installation.
- *
- * **The face embedding model is lazy-downloaded from the Hailo Model Zoo as a zip archive.
- * Use [isFaceEmbeddingModelAvailable] to check before calling [loadFaceEmbeddingModel].
- * See [MODEL_MANAGEMENT.md](../../../../../docs/MODEL_MANAGEMENT.md) for manual installation.
+ * *The orientation detection model is lazy-downloaded from HuggingFace on first use. Use
+ * [isOrientationDetectionModelAvailable] to check before calling [loadOrientationModel]. See
+ * [MODEL_MANAGEMENT.md](../../../../../docs/MODEL_MANAGEMENT.md) for manual installation.
  *
  * ## Error handling
  *
@@ -52,8 +47,7 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
         const val FACE_DETECTION_MODEL_PATH = "models/face_detection_model.onnx"
         const val ORIENTATION_MODEL_PATH = "models/orientation_detection_model.onnx"
         const val ORIENTATION_MODEL_FILENAME = "orientation_detection_model.onnx"
-        const val FACE_EMBEDDING_MODEL_PATH = "models/face_embedding_model.onnx"
-        const val FACE_EMBEDDING_MODEL_FILENAME = "face_embedding_model.onnx"
+
         val DOWNLOADED_MODEL_DIR = File(System.getProperty("user.home"), ".petrie-importer/models")
         const val BUFFER_SIZE = 8192
     }
@@ -148,26 +142,6 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
 
     override fun orientationModelVersion(): String = "orientation_vit_v1"
 
-    // ── Face Embedding Model ──────────────────────────────────────────────
-
-    /** Cached face embedding model bytes, loaded lazily. May not be available. */
-    private val faceEmbeddingModelBytes: ByteArray? by lazy {
-        loadResourceOrNull(FACE_EMBEDDING_MODEL_PATH)
-            ?: loadDownloadedModel(FACE_EMBEDDING_MODEL_FILENAME)
-    }
-
-    override fun loadFaceEmbeddingModel(): ByteArray =
-        faceEmbeddingModelBytes
-            ?: throw ModelNotFoundException(
-                "Face embedding model not found on classpath: $FACE_EMBEDDING_MODEL_PATH"
-            )
-
-    override fun isFaceEmbeddingModelAvailable(): Boolean =
-        javaClass.classLoader.getResource(FACE_EMBEDDING_MODEL_PATH) != null ||
-            File(DOWNLOADED_MODEL_DIR, FACE_EMBEDDING_MODEL_FILENAME).exists()
-
-    override fun faceEmbeddingModelVersion(): String = "arcface_mobilefacenet"
-
     /**
      * Loads a classpath resource fully into a byte array.
      *
@@ -202,8 +176,8 @@ class ClasspathModelResourceAdapter : ModelResourcePort {
     /**
      * Loads a model from the downloaded model directory (`~/.petrie-importer/models/`).
      *
-     * Returns null if the file doesn't exist or can't be read. This is used as a fallback when
-     * the model is not bundled on the classpath (e.g., the orientation model is lazy-downloaded).
+     * Returns null if the file doesn't exist or can't be read. This is used as a fallback when the
+     * model is not bundled on the classpath (e.g., the orientation model is lazy-downloaded).
      */
     private fun loadDownloadedModel(fileName: String): ByteArray? {
         val file = File(DOWNLOADED_MODEL_DIR, fileName)

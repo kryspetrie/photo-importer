@@ -72,7 +72,6 @@ import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.Platform
 
-
 // ──────────────────────────────────────────────────────────────────────────────
 // Map preset views — predefined locations for quick navigation
 // ──────────────────────────────────────────────────────────────────────────────

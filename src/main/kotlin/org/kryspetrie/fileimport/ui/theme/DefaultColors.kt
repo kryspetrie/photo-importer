@@ -7,20 +7,21 @@ import androidx.compose.ui.graphics.Color
 /**
  * Semantic color tokens for the PhotoImporter application.
  *
- * Defines named color tokens that map to roles in the app, not raw color values.
- * Light and dark mode variants are provided. Use these tokens instead of
- * `Color(0xFF...)` or `MaterialTheme.colorScheme.*` directly in most cases,
- * as they carry semantic meaning and are easier to theme.
+ * Defines named color tokens that map to roles in the app, not raw color values. Light and dark
+ * mode variants are provided. Use these tokens instead of `Color(0xFF...)` or
+ * `MaterialTheme.colorScheme.*` directly in most cases, as they carry semantic meaning and are
+ * easier to theme.
  *
  * ## Usage
+ *
  * ```kotlin
  * Text("Error", color = DefaultColors.error)
  * Surface(color = DefaultColors.cardBackground) { }
  * ```
  *
  * ## Light/Dark Mode
- * By default, these tokens adapt to the current theme (light/dark).
- * Use the `@Composable` properties which read from `MaterialTheme.colorScheme`.
+ * By default, these tokens adapt to the current theme (light/dark). Use the `@Composable`
+ * properties which read from `MaterialTheme.colorScheme`.
  *
  * For static contexts (non-Composable), use the explicit `Light.*` or `Dark.*` objects.
  */

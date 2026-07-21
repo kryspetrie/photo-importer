@@ -5,8 +5,8 @@ import java.io.File
 /**
  * Domain port for platform-specific queries and operations.
  *
- * Decouples the UI and application layers from the infrastructure's [Platform] utility,
- * allowing cross-platform logic to be tested without static method calls.
+ * Decouples the UI and application layers from the infrastructure's [Platform] utility, allowing
+ * cross-platform logic to be tested without static method calls.
  */
 interface PlatformPort {
 

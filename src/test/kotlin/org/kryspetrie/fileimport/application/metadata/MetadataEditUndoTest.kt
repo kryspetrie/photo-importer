@@ -17,8 +17,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 
 class MetadataEditJournalRepositoryTest {
 
-    @TempDir
-    lateinit var tempDir: File
+    @TempDir lateinit var tempDir: File
 
     private val fileSystem = FileSystemAdapter()
 
@@ -56,10 +55,7 @@ class MetadataEditJournalRepositoryTest {
     fun `markUndone updates journal`() {
         val repository = MetadataEditJournalRepository(fileSystem)
         val journal =
-            MetadataEditJournal(
-                sourceFolderPath = "/test/photos",
-                outputMode = "OVERWRITE",
-            )
+            MetadataEditJournal(sourceFolderPath = "/test/photos", outputMode = "OVERWRITE")
         val savedPath = repository.saveJournal(journal)
 
         repository.markUndone(savedPath, journal.copy(undone = true))
@@ -79,8 +75,7 @@ class MetadataEditJournalRepositoryTest {
 
 class MetadataEditUndoServiceTest {
 
-    @TempDir
-    lateinit var tempDir: File
+    @TempDir lateinit var tempDir: File
 
     private val fileSystem = FileSystemAdapter()
     private val journalRepository = MetadataEditJournalRepository(fileSystem)
@@ -240,8 +235,7 @@ class MetadataEditUndoServiceTest {
         oldFile.setLastModified(System.currentTimeMillis() - 8 * 24 * 60 * 60 * 1000L)
 
         // Create a recent backup file
-        val recentFile =
-            File(backupDir, "${System.currentTimeMillis()}_recent_photo.jpg")
+        val recentFile = File(backupDir, "${System.currentTimeMillis()}_recent_photo.jpg")
         recentFile.writeText("recent content")
 
         undoService.cleanupOldBackups(maxAgeMs = 7 * 24 * 60 * 60 * 1000L)
@@ -286,26 +280,30 @@ class MetadataEditUndoServiceTest {
 }
 
 /** Minimal ImageProcessingPort implementation for tests. */
-private class AwtTestImageProcessing :
-    org.kryspetrie.fileimport.domain.port.ImageProcessingPort {
+private class AwtTestImageProcessing : org.kryspetrie.fileimport.domain.port.ImageProcessingPort {
     override fun readImage(path: FilePath) = null
+
     override fun writeJpegImage(
         image: org.kryspetrie.fileimport.domain.model.ProcessedImage,
         path: FilePath,
         quality: Float,
     ) {}
+
     override fun cropAxisAligned(
         sourceImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
         photo: org.kryspetrie.fileimport.domain.model.DetectedPhoto,
     ) = sourceImage
+
     override fun rotateImage(
         image: org.kryspetrie.fileimport.domain.model.ProcessedImage,
         rotation: org.kryspetrie.fileimport.domain.model.RotationAngle,
     ) = image
+
     override fun compositeBackImage(
         frontImage: org.kryspetrie.fileimport.domain.model.ProcessedImage,
         config: org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration,
     ) = frontImage
+
     override fun prepareBackImage(
         config: org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration,
         maxWidth: Int?,

@@ -14,9 +14,8 @@ Petrie File Importer follows **Hexagonal Architecture** (Ports & Adapters) with 
 │  ImportService · ReorganizeService · DuplicateScannerService    │
 │  WatchFolderManager · WatchFolderService · ScanService          │
 │  PhotoScanExportService · LocationSearchService                  │
-│  PersonService · FaceGroupingService                              │
-│  LocationSearchService · FaceRegionTransformer                  │
-│  PerspectiveCorrectionService · ImportScanner · ImportExecutor  │
+│  FaceRegionTransformer · PerspectiveCorrectionService            │
+│  ImportScanner · ImportExecutor                                  │
 ├─────────────────────────────────────────────────────────────────┤
 │                       Domain Layer                              │
 │  Models: data classes, enums, sealed classes                    │
@@ -30,6 +29,8 @@ Petrie File Importer follows **Hexagonal Architecture** (Ports & Adapters) with 
 │  Platform utilities: OS detection, file dialogs                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+> **Note:** The People tab (face grouping, person directory, face similarity search) has been extracted to the `feature/face-grouping` branch for future development.
 
 ## Dependency Rule
 
@@ -58,8 +59,6 @@ org.kryspetrie.fileimport/
 │   ├── DuplicateScannerService.kt  # Standalone duplicate finder
 │   ├── WatchFolderService.kt       # Auto-import from single watched folder
 │   ├── WatchFolderManager.kt       # Multi-watch orchestrator, config persistence
-│   ├── PersonService.kt            # Person directory CRUD, face search, export/import, privacy controls
-│   ├── FaceGroupingService.kt   # Face detect → embed → match pipeline for auto-suggest
 │   ├── PhotoScanExportService.kt   # Photo export pipeline
 │   ├── PerspectiveCorrectionService.kt  # Homography correction
 │   ├── FaceRegionTransformer.kt    # Face region coordinate mapping
@@ -105,9 +104,6 @@ org.kryspetrie.fileimport/
 │   │   ├── ScanProgress.kt         # Duplicate scan progress state
 │   │   ├── WatchFolderConfig.kt    # Watch folder configuration
 │   │   ├── WatchFolderStatus.kt    # Watch folder status
-│   │   ├── Person.kt               # Person directory entry (name, gallery, sourcePaths, name validation)
-│   │   ├── PersonDirectory.kt      # Person directory collection (findBestMatch, diversity-aware merge, import validation)
-│   │   ├── FaceEmbedding.kt        # Face embedding vector (Base64-encoded, cosineSimilarity, FaceCrop, NormalizedRect, FaceMatchingConfig)
 │   │   ├── geometry/               # BoundingBox, Point, Corner, BoundingBoxList
 │   │   └── ...                    # ~30 more model files
 │   └── port/                       # Interfaces (hexagonal ports)
@@ -124,9 +120,6 @@ org.kryspetrie.fileimport/
 │       ├── PhotoScanExportPort.kt  # Photo export with corrections
 │       ├── PerspectiveCorrectionPort.kt  # Homography/perspective correction
 │       ├── FaceRegionTransformerPort.kt   # Face region coordinate mapping
-│       ├── PersonDirectoryPort.kt         # Person directory persistence, matching, import/export, validation
-│       ├── FaceAlignmentPort.kt           # Face alignment (landmarks → affine → 112×112 crop)
-│       ├── FaceEmbeddingPort.kt            # Face embedding extraction (aligned crop → 128-dim vector)
 │       ├── LocationSearchPort.kt  # Geocoding search (live results)
 │       ├── ModelResourcePort.kt    # ONNX model loading
 │       ├── OrientationDetectionPort.kt  # ML orientation detection
@@ -157,9 +150,6 @@ org.kryspetrie.fileimport/
 │   │   ├── PhotoScanDetectorService.kt  # YOLO/CV detection with fallbacks
 │   │   ├── RectangleDetector.kt   # Edge-based rectangle detection
 │   │   ├── FaceDetectionService.kt    # YOLO12n face detection (bounding boxes + confidence)
-│   │   ├── FaceAlignmentAdapter.kt     # Face alignment (center-crop strategy, Phase 1)
-│   │   ├── FaceEmbeddingAdapter.kt    # Face embed → match pipeline (MobileFaceNet 128-dim)
-│   │   ├── MobileFaceNetEmbeddingService.kt  # ONNX inference for face embeddings
 │   │   └── yolo/                  # YOLO neural network pipeline
 │   └── wizard/                    # Photo Scan wizard UI state
 │       ├── PhotoScanWizardState.kt  # Central wizard state (1534 lines)
@@ -202,15 +192,14 @@ org.kryspetrie.fileimport/
         │   │   ├── MetadataEditState.kt   # Compose state holder
         │   │   └── MetadataField.kt      # Reusable metadata field
         │   └── ...
-├── people/                  # People directory tab
-│   └── PeopleScreen.kt        # Find images by face name, manage persons, export/import, privacy controls
-├── metadataeditor/         # Standalone bulk metadata editor tab
-│   ├── MetadataEditorScreen.kt  # Main editor orchestrator (source path, preview, dialogs)
-│   ├── MetadataEditorSidebar.kt # Thumbnail sidebar with modified indicators
-│   ├── MetadataEditorPanel.kt   # Metadata fields panel with override toggles
-│   ├── MetadataEditorActions.kt # OverrideToggle helper and field-updater helpers
-│   ├── BulkEditState.kt         # Per-file metadata state, UiMessage, OutputMode
-│   └── BulkSelectionDialog.kt   # Multi-select thumbnail overlay dialog        ├── duplicatescanner/       # Standalone duplicate scanner tab
+        ├── metadataeditor/         # Standalone bulk metadata editor tab
+        │   ├── MetadataEditorScreen.kt  # Main editor orchestrator (source path, preview, dialogs)
+        │   ├── MetadataEditorSidebar.kt # Thumbnail sidebar with modified indicators
+        │   ├── MetadataEditorPanel.kt   # Metadata fields panel with override toggles
+        │   ├── MetadataEditorActions.kt # OverrideToggle helper and field-updater helpers
+        │   ├── BulkEditState.kt         # Per-file metadata state, UiMessage, OutputMode
+        │   └── BulkSelectionDialog.kt   # Multi-select thumbnail overlay dialog
+        ├── duplicatescanner/       # Standalone duplicate scanner tab
         ├── scan/                   # Legacy Photo Scan (simple mode)
         └── ...
 ```
@@ -234,9 +223,6 @@ Every port in `domain/port/` has a corresponding adapter in `infrastructure/` (o
 | `PhotoScanExportPort` | `PhotoScanExportService` | Photo export with corrections & EXIF |
 | `PerspectiveCorrectionPort` | `PerspectiveCorrectionService` | Homography/perspective correction |
 | `FaceRegionTransformerPort` | `FaceRegionTransformer` | Face region coordinate mapping |
-| `PersonDirectoryPort` | `JsonPersonDirectoryAdapter` | Person directory persistence, matching, import validation |
-| `FaceAlignmentPort` | `FaceAlignmentAdapter` | Face landmark detection and alignment (Phase 1: center-crop) |
-| `FaceEmbeddingPort` | `FaceEmbeddingAdapter` | Face embedding extraction (MobileFaceNet 128-dim) |
 | `PlatformPort` | `PlatformInfoAdapter` | Platform information and file viewer |
 | `LocationSearchPort` | `LocationSearchService` | Geocoding with live results |
 | `ModelResourcePort` | `ClasspathModelResourceAdapter` | ONNX model loading from classpath |
@@ -296,8 +282,6 @@ The UI directly imports application use-case services for user interaction flows
 | `DuplicateScannerService` | Duplicate finding |
 | `WatchFolderService` | Auto-import from watched folders |
 | `WatchFolderManager` | Multi-watch lifecycle & config persistence |
-| `PersonService` | Person directory CRUD, face search, export/import, privacy controls |
-| `FaceGroupingService` | Face detect → embed → match pipeline for auto-suggest |
 | `MetadataWritingService` | Write image + EXIF/IPTC/XMP metadata |
 | `OrientationCorrectionService` | Auto-detect & correct image orientation |
 

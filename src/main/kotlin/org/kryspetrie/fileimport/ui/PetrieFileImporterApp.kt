@@ -11,7 +11,6 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -28,26 +27,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
-import org.kryspetrie.fileimport.domain.model.AppSettings
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.port.ModelDownloadPort
 import org.kryspetrie.fileimport.domain.port.ModelDownloadState
+import org.kryspetrie.fileimport.ui.i18n.StringsProvider
 import org.kryspetrie.fileimport.ui.screens.DuplicateScannerScreen
 import org.kryspetrie.fileimport.ui.screens.MediaImportScreen
 import org.kryspetrie.fileimport.ui.screens.ReorganizeScreen
 import org.kryspetrie.fileimport.ui.screens.metadataeditor.MetadataEditorScreen
-import org.kryspetrie.fileimport.ui.screens.people.PeopleScreen
 import org.kryspetrie.fileimport.ui.screens.metadataeditor.ModelDownloadDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.WizardContainer
-import org.kryspetrie.fileimport.ui.i18n.StringsProvider
 import org.kryspetrie.fileimport.ui.theme.ImporterTheme
 
 /**
  * Defines the available navigation tabs in the PhotoImporter application.
  *
- * This enumeration represents the main features/screens accessible through the bottom
- * navigation bar. Each tab corresponds to a distinct use case in the photo management workflow:
+ * This enumeration represents the main features/screens accessible through the bottom navigation
+ * bar. Each tab corresponds to a distinct use case in the photo management workflow:
  * 1. **Media Import**: Import photos/videos from cameras, SD cards, or folders
  * 2. **Photo Scan Import**: Extract individual photos from scanned images
  * 3. **Reorganize**: Reorganize existing photo libraries with new naming/folder patterns
@@ -159,22 +157,6 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
      * @see MetadataEditorScreen The composable that implements this tab
      */
     METADATA_EDITOR("Metadata Editor", Icons.Default.Edit),
-
-    /**
-     * People tab - find images by face name or face similarity.
-     *
-     * Enables users to:
-     * - Browse the person directory with face crops and photo counts
-     * - Search photos by tagged person name (face name search)
-     * - Browse matching photos using face similarity (face gallery search)
-     * - Open the folder containing a person's photos in the system file manager
-     * - Export/import the person database as a zip bundle
-     * - Merge, rename, and delete persons
-     * - Toggle auto-detect and auto-identify settings per import method
-     *
-     * @see PeopleScreen The composable that implements this tab
-     */
-    PEOPLE("People", Icons.Default.People),
 }
 
 /**
@@ -324,158 +306,161 @@ fun PetrieFileImporterApp(
     // Theme changes trigger recomposition of entire UI tree
     ImporterTheme(settings.theme) {
         StringsProvider {
-        // ── Orientation model download prompt ──────────────────────────
-        // On first start, if the orientation detection model is not available,
-        // prompt the user to download it. Auto-rotate features require this model.
-        val modelDownloadPort: ModelDownloadPort = koinInject()
-        val scope = rememberCoroutineScope()
-        var showModelDownloadPrompt by remember {
-            mutableStateOf(!modelDownloadPort.isModelDownloaded(ModelDownloadPort.ORIENTATION_MODEL_ID))
-        }
-        var modelDownloadState by remember { mutableStateOf<ModelDownloadState?>(null) }
+            // ── Orientation model download prompt ──────────────────────────
+            // On first start, if the orientation detection model is not available,
+            // prompt the user to download it. Auto-rotate features require this model.
+            val modelDownloadPort: ModelDownloadPort = koinInject()
+            val scope = rememberCoroutineScope()
+            var showModelDownloadPrompt by remember {
+                mutableStateOf(
+                    !modelDownloadPort.isModelDownloaded(ModelDownloadPort.ORIENTATION_MODEL_ID)
+                )
+            }
+            var modelDownloadState by remember { mutableStateOf<ModelDownloadState?>(null) }
 
-        if (showModelDownloadPrompt) {
-            ModelDownloadDialog(
-                downloadState = modelDownloadState,
-                onDownload = {
-                    modelDownloadState = ModelDownloadState.Connecting
-                    scope.launch {
-                        modelDownloadPort.downloadModel(ModelDownloadPort.ORIENTATION_MODEL_ID)
-                            .collect { state ->
-                                modelDownloadState = state
-                                if (state is ModelDownloadState.Completed) {
-                                    showModelDownloadPrompt = false
-                                    modelDownloadState = null
-                                }
-                            }
-                    }
-                },
-                onCancel = {
-                    modelDownloadPort.cancelDownload(ModelDownloadPort.ORIENTATION_MODEL_ID)
-                    showModelDownloadPrompt = false
-                    modelDownloadState = null
-                },
-                onRetry = {
-                    modelDownloadState = ModelDownloadState.Connecting
-                    scope.launch {
-                        modelDownloadPort.downloadModel(ModelDownloadPort.ORIENTATION_MODEL_ID)
-                            .collect { state ->
-                                modelDownloadState = state
-                                if (state is ModelDownloadState.Completed) {
-                                    showModelDownloadPrompt = false
-                                    modelDownloadState = null
-                                }
-                            }
-                    }
-                },
-            )
-        }
-
-        // State: Currently selected navigation tab
-        // remember{} ensures state survives recomposition
-        // mutableStateOf{} makes it observable - changes trigger recomposition
-        var currentTab by remember { mutableStateOf(AppTab.MEDIA_IMPORT) }
-
-        // Surface: Material Design container with background color
-        // Provides consistent background across the application
-        // Fills entire window area
-        Surface(modifier = modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            // Column: Vertical layout container
-            // Arranges navigation bar and screen content vertically
-            Column(modifier = Modifier.fillMaxSize()) {
-
-                // NavigationBar: Bottom navigation bar with tabs
-                // tonalElevation adds subtle shadow for depth
-                // Standard Material Design navigation pattern
-                NavigationBar(tonalElevation = 1.dp) {
-                    // Create navigation item for each tab
-                    AppTab.entries.forEach { tab ->
-                        NavigationBarItem(
-                            // Icon: Visual representation of the tab
-                            // Uses 20.dp size for consistency
-                            icon = {
-                                Icon(
-                                    tab.icon,
-                                    contentDescription = tab.label,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            },
-                            // Label: Text shown below icon
-                            // Uses Material Theme typography for consistency
-                            label = {
-                                Text(tab.label, style = MaterialTheme.typography.labelSmall)
-                            },
-                            // Selection state: Highlight when tab is active
-                            selected = currentTab == tab,
-                            // Click handler: Switch to this tab
-                            onClick = { currentTab = tab },
-                        )
-                    }
-                }
-
-                // Box: Container for screen content
-                // Fills remaining space after navigation bar
-                // Adds 12dp padding around content for breathing room
-                Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-                    // Conditional rendering based on selected tab
-                    // Only the active screen is composed (performance optimization)
-                    // Each screen receives settings and callback for consistency
-                    when (currentTab) {
-                        // Import tab: Main photo import workflow
-                        AppTab.MEDIA_IMPORT ->
-                            MediaImportScreen(
-                                settings = settings,
-                                onSettingsChange = onSettingsChange,
-                            )
-
-                        // Reorganize tab: Library reorganization workflow
-                        AppTab.REORGANIZE ->
-                            ReorganizeScreen(
-                                settings = settings,
-                                onSettingsChange = onSettingsChange,
-                            )
-
-                        // Duplicates tab: Duplicate detection and resolution
-                        AppTab.DUPLICATES ->
-                            DuplicateScannerScreen(
-                                settings = settings,
-                                onSettingsChange = onSettingsChange,
-                            )
-
-                        // Photo Scan tab: Multi-photo scan wizard
-                        AppTab.PHOTO_SCAN ->
-                            WizardContainer(
-                                onComplete = { processedPhotos ->
-                                    // Log results for debugging
-                                    println(
-                                        "Photo Scan Complete: ${processedPhotos.size} photos exported"
-                                    )
-                                    processedPhotos.forEach { photo ->
-                                        println(
-                                            "  - ${photo.outputPath}" +
-                                                " (${photo.dimensions.first}x${photo.dimensions.second})"
-                                        )
+            if (showModelDownloadPrompt) {
+                ModelDownloadDialog(
+                    downloadState = modelDownloadState,
+                    onDownload = {
+                        modelDownloadState = ModelDownloadState.Connecting
+                        scope.launch {
+                            modelDownloadPort
+                                .downloadModel(ModelDownloadPort.ORIENTATION_MODEL_ID)
+                                .collect { state ->
+                                    modelDownloadState = state
+                                    if (state is ModelDownloadState.Completed) {
+                                        showModelDownloadPrompt = false
+                                        modelDownloadState = null
                                     }
-                                    // Switch back to Import tab after completion
-                                    currentTab = AppTab.MEDIA_IMPORT
+                                }
+                        }
+                    },
+                    onCancel = {
+                        modelDownloadPort.cancelDownload(ModelDownloadPort.ORIENTATION_MODEL_ID)
+                        showModelDownloadPrompt = false
+                        modelDownloadState = null
+                    },
+                    onRetry = {
+                        modelDownloadState = ModelDownloadState.Connecting
+                        scope.launch {
+                            modelDownloadPort
+                                .downloadModel(ModelDownloadPort.ORIENTATION_MODEL_ID)
+                                .collect { state ->
+                                    modelDownloadState = state
+                                    if (state is ModelDownloadState.Completed) {
+                                        showModelDownloadPrompt = false
+                                        modelDownloadState = null
+                                    }
+                                }
+                        }
+                    },
+                )
+            }
+
+            // State: Currently selected navigation tab
+            // remember{} ensures state survives recomposition
+            // mutableStateOf{} makes it observable - changes trigger recomposition
+            var currentTab by remember { mutableStateOf(AppTab.MEDIA_IMPORT) }
+
+            // Surface: Material Design container with background color
+            // Provides consistent background across the application
+            // Fills entire window area
+            Surface(
+                modifier = modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background,
+            ) {
+                // Column: Vertical layout container
+                // Arranges navigation bar and screen content vertically
+                Column(modifier = Modifier.fillMaxSize()) {
+
+                    // NavigationBar: Bottom navigation bar with tabs
+                    // tonalElevation adds subtle shadow for depth
+                    // Standard Material Design navigation pattern
+                    NavigationBar(tonalElevation = 1.dp) {
+                        // Create navigation item for each tab
+                        AppTab.entries.forEach { tab ->
+                            NavigationBarItem(
+                                // Icon: Visual representation of the tab
+                                // Uses 20.dp size for consistency
+                                icon = {
+                                    Icon(
+                                        tab.icon,
+                                        contentDescription = tab.label,
+                                        modifier = Modifier.size(20.dp),
+                                    )
                                 },
-                                onCancel = { currentTab = AppTab.MEDIA_IMPORT },
+                                // Label: Text shown below icon
+                                // Uses Material Theme typography for consistency
+                                label = {
+                                    Text(tab.label, style = MaterialTheme.typography.labelSmall)
+                                },
+                                // Selection state: Highlight when tab is active
+                                selected = currentTab == tab,
+                                // Click handler: Switch to this tab
+                                onClick = { currentTab = tab },
                             )
+                        }
+                    }
 
-                        // Metadata Editor tab: bulk edit metadata on individual images
-                        AppTab.METADATA_EDITOR ->
-                            MetadataEditorScreen(
-                                settings = settings,
-                                onSettingsChange = onSettingsChange,
-                            )
+                    // Box: Container for screen content
+                    // Fills remaining space after navigation bar
+                    // Adds 12dp padding around content for breathing room
+                    Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                        // Conditional rendering based on selected tab
+                        // Only the active screen is composed (performance optimization)
+                        // Each screen receives settings and callback for consistency
+                        when (currentTab) {
+                            // Import tab: Main photo import workflow
+                            AppTab.MEDIA_IMPORT ->
+                                MediaImportScreen(
+                                    settings = settings,
+                                    onSettingsChange = onSettingsChange,
+                                )
 
-                        // People tab: find images by face name or face similarity
-                        AppTab.PEOPLE ->
-                            PeopleScreen()
+                            // Reorganize tab: Library reorganization workflow
+                            AppTab.REORGANIZE ->
+                                ReorganizeScreen(
+                                    settings = settings,
+                                    onSettingsChange = onSettingsChange,
+                                )
+
+                            // Duplicates tab: Duplicate detection and resolution
+                            AppTab.DUPLICATES ->
+                                DuplicateScannerScreen(
+                                    settings = settings,
+                                    onSettingsChange = onSettingsChange,
+                                )
+
+                            // Photo Scan tab: Multi-photo scan wizard
+                            AppTab.PHOTO_SCAN ->
+                                WizardContainer(
+                                    onComplete = { processedPhotos ->
+                                        // Log results for debugging
+                                        println(
+                                            "Photo Scan Complete: ${processedPhotos.size} photos exported"
+                                        )
+                                        processedPhotos.forEach { photo ->
+                                            println(
+                                                "  - ${photo.outputPath}" +
+                                                    " (${photo.dimensions.first}x${photo.dimensions.second})"
+                                            )
+                                        }
+                                        // Switch back to Import tab after completion
+                                        currentTab = AppTab.MEDIA_IMPORT
+                                    },
+                                    onCancel = { currentTab = AppTab.MEDIA_IMPORT },
+                                )
+
+                            // Metadata Editor tab: bulk edit metadata on individual images
+                            AppTab.METADATA_EDITOR ->
+                                MetadataEditorScreen(
+                                    settings = settings,
+                                    onSettingsChange = onSettingsChange,
+                                )
+                        }
                     }
                 }
             }
         }
-    }
     }
 }

@@ -10,11 +10,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.kryspetrie.fileimport.application.FaceGroupingService
 import org.kryspetrie.fileimport.application.ImportService
 import org.kryspetrie.fileimport.application.WatchFolderManager
-import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
-import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 import org.kryspetrie.fileimport.domain.model.CameraDevice
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
 import org.kryspetrie.fileimport.domain.model.ImageFile
@@ -24,6 +21,8 @@ import org.kryspetrie.fileimport.domain.model.ImportMode
 import org.kryspetrie.fileimport.domain.model.ImportProgress
 import org.kryspetrie.fileimport.domain.model.ImportResult
 import org.kryspetrie.fileimport.domain.model.IndexProgress
+import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
+import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
 import org.kryspetrie.fileimport.domain.port.DeviceEvent
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.ImportHistoryPort
@@ -35,9 +34,9 @@ import org.kryspetrie.fileimport.ui.screens.mediaimport.MediaImportFlowStep
 /**
  * ViewModel for the media import screen.
  *
- * Hoists all business logic, flow control, device detection, and import orchestration
- * from the MediaImportScreen composable. The composable becomes a thin rendering shell
- * that observes this ViewModel's state and delegates actions to it.
+ * Hoists all business logic, flow control, device detection, and import orchestration from the
+ * MediaImportScreen composable. The composable becomes a thin rendering shell that observes this
+ * ViewModel's state and delegates actions to it.
  */
 class MediaImportViewModel(
     val importService: ImportService,
@@ -47,7 +46,6 @@ class MediaImportViewModel(
     val watchFolderManager: WatchFolderManager,
     val timeProvider: TimeProvider,
     val pathsPort: PathsPort,
-    val faceGroupingService: FaceGroupingService? = null,
 ) {
     // ── Device detection ─────────────────────────────────────────
 
@@ -71,8 +69,8 @@ class MediaImportViewModel(
     var importResult by mutableStateOf<ImportResult?>(null)
 
     /**
-     * Sets import result and flow step atomically to prevent UI from seeing COMPLETE
-     * with stale/null result data during recomposition.
+     * Sets import result and flow step atomically to prevent UI from seeing COMPLETE with
+     * stale/null result data during recomposition.
      */
     private fun completeImport(result: ImportResult) {
         importResult = result
@@ -118,9 +116,10 @@ class MediaImportViewModel(
     // ── Computed ─────────────────────────────────────────────────
 
     val canStart: Boolean
-        get() = sourcePath.isNotBlank() &&
-            destinationPath.isNotBlank() &&
-            flowStep == MediaImportFlowStep.SETUP
+        get() =
+            sourcePath.isNotBlank() &&
+                destinationPath.isNotBlank() &&
+                flowStep == MediaImportFlowStep.SETUP
 
     val sourceDir: File?
         get() = if (sourcePath.isNotBlank()) File(sourcePath) else null
@@ -161,8 +160,7 @@ class MediaImportViewModel(
         }
     }
 
-    fun getDefaultDestination(): String =
-        pathsPort.defaultDestination
+    fun getDefaultDestination(): String = pathsPort.defaultDestination
 
     // ── Settings persistence ──────────────────────────────────────
 
@@ -241,68 +239,58 @@ class MediaImportViewModel(
         flowStep = MediaImportFlowStep.IMPORTING
         importProgress = ImportProgress()
         importResult = null
-        importJob = scope.launch {
-            try {
-                val result = importService.executeImport(toImport, currentDestPath, currentConfig) {
-                    importProgress = it
-                }
-                completeImport(result)
-                result.historyEntry?.let { entry -> historyPort.addEntry(entry) }
-                    ?: run {
-                        historyPort.addEntry(
-                            ImportHistoryEntry(
-                                timestamp = timeProvider.currentTimeMillis(),
-                                timestampString = ImportHistoryEntry.createTimestampString(
-                                    timeProvider.currentTimeMillis()
-                                ),
-                                sourcePath = currentSourcePath,
-                                destinationPath = currentDestPath,
-                                folderPattern = currentConfig.folderPattern,
-                                filenamePattern = currentConfig.fileNamePattern,
-                                totalFiles = result.totalFiles,
-                                successCount = result.successCount,
-                                errorCount = result.errorCount,
-                                skippedCount = result.skippedCount,
-                                duplicateCount = result.duplicateCount,
-                                deletedSourceCount = result.deletedSourceCount,
-                                totalBytes = toImport.sumOf { it.fileSize },
-                                durationMs = result.duration,
-                            )
-                        )
-                    }
-                importService.indexFolder(currentDestPath, true) {}
-
-                // Auto-detect faces on import if enabled
-                val settings = settingsPort.observeSettings().first()
-                if (settings.autoDetectFacesOnImport && faceGroupingService?.isDetectionAvailable() == true) {
-                    try {
-                        val importedPaths = result.copiedFiles.map { it.destinationPath }
-                        if (importedPaths.isNotEmpty()) {
-                            faceGroupingService.autoDetectFacesForImports(importedPaths)
+        importJob =
+            scope.launch {
+                try {
+                    val result =
+                        importService.executeImport(toImport, currentDestPath, currentConfig) {
+                            importProgress = it
                         }
-                    } catch (e: Exception) {
-                        // Face detection failure should not affect import success
-                    }
-                }
+                    completeImport(result)
+                    result.historyEntry?.let { entry -> historyPort.addEntry(entry) }
+                        ?: run {
+                            historyPort.addEntry(
+                                ImportHistoryEntry(
+                                    timestamp = timeProvider.currentTimeMillis(),
+                                    timestampString =
+                                        ImportHistoryEntry.createTimestampString(
+                                            timeProvider.currentTimeMillis()
+                                        ),
+                                    sourcePath = currentSourcePath,
+                                    destinationPath = currentDestPath,
+                                    folderPattern = currentConfig.folderPattern,
+                                    filenamePattern = currentConfig.fileNamePattern,
+                                    totalFiles = result.totalFiles,
+                                    successCount = result.successCount,
+                                    errorCount = result.errorCount,
+                                    skippedCount = result.skippedCount,
+                                    duplicateCount = result.duplicateCount,
+                                    deletedSourceCount = result.deletedSourceCount,
+                                    totalBytes = toImport.sumOf { it.fileSize },
+                                    durationMs = result.duration,
+                                )
+                            )
+                        }
+                    importService.indexFolder(currentDestPath, true) {}
 
-                completeImport(importResult!!)
-            } catch (_: CancellationException) {
-                throw CancellationException()
-            } catch (e: Exception) {
-                errorMessage = e.message ?: "Import failed"
-                completeImport(
-                    ImportResult(
-                        totalFiles = toImport.size,
-                        successCount = 0,
-                        errorCount = 1,
-                        duplicateCount = 0,
-                        skippedCount = 0,
-                        deletedSourceCount = 0,
-                        endTime = timeProvider.currentTimeMillis(),
+                    completeImport(importResult!!)
+                } catch (_: CancellationException) {
+                    throw CancellationException()
+                } catch (e: Exception) {
+                    errorMessage = e.message ?: "Import failed"
+                    completeImport(
+                        ImportResult(
+                            totalFiles = toImport.size,
+                            successCount = 0,
+                            errorCount = 1,
+                            duplicateCount = 0,
+                            skippedCount = 0,
+                            deletedSourceCount = 0,
+                            endTime = timeProvider.currentTimeMillis(),
+                        )
                     )
-                )
+                }
             }
-        }
     }
 
     fun continueAfterSelection(
@@ -313,36 +301,40 @@ class MediaImportViewModel(
         val currentImportMode = importMode
         val currentWantsReview = wantsReview
         val currentDestPath = destinationPath
-        importJob = scope.launch {
-            try {
-                var toImport = importService.applyPairFilter(selectedImages, currentConfig)
-                if (currentImportMode == ImportMode.NEW) {
-                    flowStep = MediaImportFlowStep.INDEXING
-                    importService.indexFolder(currentDestPath, true) { indexProgress = it }
-                    val destHashes = importService.getDestinationHashes(currentDestPath)
-                    toImport = importService.filterAlreadyTransferred(
-                        toImport, destHashes, currentConfig,
-                    )
-                }
-                filteredImages = toImport
-                if (currentConfig.detectVisualDuplicates) {
-                    flowStep = MediaImportFlowStep.CHECKING_DUPES
-                    val found = importService.findVisualDuplicates(toImport, currentConfig)
-                    if (found.isNotEmpty()) {
-                        duplicates = found
-                        flowStep = MediaImportFlowStep.DUPE_REVIEW
-                        return@launch
+        importJob =
+            scope.launch {
+                try {
+                    var toImport = importService.applyPairFilter(selectedImages, currentConfig)
+                    if (currentImportMode == ImportMode.NEW) {
+                        flowStep = MediaImportFlowStep.INDEXING
+                        importService.indexFolder(currentDestPath, true) { indexProgress = it }
+                        val destHashes = importService.getDestinationHashes(currentDestPath)
+                        toImport =
+                            importService.filterAlreadyTransferred(
+                                toImport,
+                                destHashes,
+                                currentConfig,
+                            )
                     }
+                    filteredImages = toImport
+                    if (currentConfig.detectVisualDuplicates) {
+                        flowStep = MediaImportFlowStep.CHECKING_DUPES
+                        val found = importService.findVisualDuplicates(toImport, currentConfig)
+                        if (found.isNotEmpty()) {
+                            duplicates = found
+                            flowStep = MediaImportFlowStep.DUPE_REVIEW
+                            return@launch
+                        }
+                    }
+                    if (currentWantsReview) flowStep = MediaImportFlowStep.PREVIEW
+                    else doImport(scope, toImport)
+                } catch (_: CancellationException) {
+                    throw CancellationException()
+                } catch (e: Exception) {
+                    errorMessage = e.message ?: "Processing failed"
+                    flowStep = MediaImportFlowStep.SETUP
                 }
-                if (currentWantsReview) flowStep = MediaImportFlowStep.PREVIEW
-                else doImport(scope, toImport)
-            } catch (_: CancellationException) {
-                throw CancellationException()
-            } catch (e: Exception) {
-                errorMessage = e.message ?: "Processing failed"
-                flowStep = MediaImportFlowStep.SETUP
             }
-        }
     }
 
     fun startFlow(scope: CoroutineScope, withReview: Boolean, mode: ImportMode = importMode) {
@@ -351,26 +343,28 @@ class MediaImportViewModel(
         wantsReview = withReview
         errorMessage = null
         flowStep = MediaImportFlowStep.SCANNING
-        importJob = scope.launch {
-            try {
-                val scanned = importService.scanSource(currentSourcePath, true) { current, total, file ->
-                    scanCurrent = current
-                    scanTotal = total
-                    scanProgress = file
+        importJob =
+            scope.launch {
+                try {
+                    val scanned =
+                        importService.scanSource(currentSourcePath, true) { current, total, file ->
+                            scanCurrent = current
+                            scanTotal = total
+                            scanProgress = file
+                        }
+                    images = scanned.map { it.copy(isSelected = true) }
+                    if (mode == ImportMode.SELECT) {
+                        flowStep = MediaImportFlowStep.SELECTING
+                        return@launch
+                    }
+                    continueAfterSelection(scope, scanned.map { it.copy(isSelected = true) })
+                } catch (_: CancellationException) {
+                    throw CancellationException()
+                } catch (e: Exception) {
+                    errorMessage = e.message ?: "Scan failed"
+                    flowStep = MediaImportFlowStep.SETUP
                 }
-                images = scanned.map { it.copy(isSelected = true) }
-                if (mode == ImportMode.SELECT) {
-                    flowStep = MediaImportFlowStep.SELECTING
-                    return@launch
-                }
-                continueAfterSelection(scope, scanned.map { it.copy(isSelected = true) })
-            } catch (_: CancellationException) {
-                throw CancellationException()
-            } catch (e: Exception) {
-                errorMessage = e.message ?: "Scan failed"
-                flowStep = MediaImportFlowStep.SETUP
             }
-        }
     }
 
     fun toggleImageSelection(imageId: String) {

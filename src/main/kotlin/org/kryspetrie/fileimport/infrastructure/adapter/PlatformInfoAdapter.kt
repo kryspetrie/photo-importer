@@ -6,8 +6,8 @@ import org.kryspetrie.fileimport.domain.port.PlatformPort
 /**
  * Infrastructure adapter that provides platform info via [Platform] utilities.
  *
- * Implements [PlatformPort] so the UI and application layers can query the OS
- * and open files without importing infrastructure directly.
+ * Implements [PlatformPort] so the UI and application layers can query the OS and open files
+ * without importing infrastructure directly.
  */
 class PlatformInfoAdapter : PlatformPort {
 

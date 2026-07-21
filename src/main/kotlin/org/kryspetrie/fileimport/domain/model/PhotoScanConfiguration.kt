@@ -304,8 +304,8 @@ data class PhotoScanConfiguration(
     fun hasBackImage(): Boolean = backImageMode != null && backImageSourcePath != null
 
     /**
-     * Validates configuration fields and returns a list of error messages.
-     * Empty list means valid configuration.
+     * Validates configuration fields and returns a list of error messages. Empty list means valid
+     * configuration.
      */
     fun validate(): List<String> {
         val errors = mutableListOf<String>()

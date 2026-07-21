@@ -5,28 +5,29 @@ import androidx.compose.ui.unit.dp
 /**
  * Spacing design tokens for the PhotoImporter application.
  *
- * Provides a consistent spacing scale based on a 4dp base unit, following the
- * Material Design 3 spacing recommendations. All spacing values in the UI
- * should reference these tokens instead of hardcoded dp values.
+ * Provides a consistent spacing scale based on a 4dp base unit, following the Material Design 3
+ * spacing recommendations. All spacing values in the UI should reference these tokens instead of
+ * hardcoded dp values.
  *
  * ## Usage
+ *
  * ```kotlin
  * Spacer(Modifier.height(DefaultSpacing.md))
  * Column(modifier = Modifier.padding(DefaultSpacing.lg))
  * ```
  *
  * ## Scale
- * | Token  | Value | Usage                                    |
- * |--------|-------|------------------------------------------|
- * | none   | 0dp   | No spacing                               |
- * | xs     | 2dp   | Tight padding inside chips, tags         |
- * | sm     | 4dp   | Inline padding, small gaps               |
- * | md     | 8dp   | Default padding, standard gaps            |
- * | lg     | 12dp  | Section padding, card inner padding       |
- * | xl     | 16dp  | Section spacing, card outer padding      |
- * | xxl    | 24dp  | Major section breaks, dialog padding     |
- * | xxxl   | 32dp  | Screen-level margins, hero spacing       |
- * | huge   | 48dp  | Top-level vertical spacing               |
+ * | Token | Value | Usage                                |
+ * |-------|-------|--------------------------------------|
+ * | none  | 0dp   | No spacing                           |
+ * | xs    | 2dp   | Tight padding inside chips, tags     |
+ * | sm    | 4dp   | Inline padding, small gaps           |
+ * | md    | 8dp   | Default padding, standard gaps       |
+ * | lg    | 12dp  | Section padding, card inner padding  |
+ * | xl    | 16dp  | Section spacing, card outer padding  |
+ * | xxl   | 24dp  | Major section breaks, dialog padding |
+ * | xxxl  | 32dp  | Screen-level margins, hero spacing   |
+ * | huge  | 48dp  | Top-level vertical spacing           |
  */
 object DefaultSpacing {
     val none = 0.dp
