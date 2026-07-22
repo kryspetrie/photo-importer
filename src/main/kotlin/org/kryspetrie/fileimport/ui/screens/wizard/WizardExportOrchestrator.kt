@@ -3,11 +3,14 @@ package org.kryspetrie.fileimport.ui.screens.wizard
 import java.awt.image.BufferedImage
 import java.io.File
 import kotlinx.coroutines.withContext
+import org.kryspetrie.fileimport.application.OrientationCorrectionService
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
+import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
+import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
@@ -18,6 +21,10 @@ import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 /**
  * Orchestrates the photo scan export pipeline: validates destination, iterates through detected
  * boxes, applies configuration, and delegates to [PhotoScanExportPort].
+ *
+ * When [OrientationCorrectionService] is provided and `autoOrientEnabled` is true in the import
+ * configuration, each extracted photo is auto-rotated by detecting its orientation and merging the
+ * detected rotation into the per-photo config's `rotationDegrees`.
  *
  * Extracted from [WizardContainer] to keep UI composable code separate from orchestration logic.
  */
@@ -57,6 +64,10 @@ fun openExportFolder(exportDestination: String) {
 /**
  * Exports a single photo from the scan image based on the given bounding box and configuration.
  *
+ * @param orientationCorrection When non-null and `autoOrientEnabled` is true in config, detects
+ *   orientation and merges the detected rotation into the photo's configuration before export.
+ * @param imageProcessing Required when [orientationCorrection] is provided, for cropping the
+ *   bounding box region before orientation detection.
  * @return [ExportResult.Success] with output path and dimensions, or [ExportResult.Failure] with
  *   error message.
  */
@@ -73,6 +84,8 @@ suspend fun exportSinglePhoto(
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
     onProgress: (Float, String) -> Unit,
+    orientationCorrection: OrientationCorrectionService? = null,
+    imageProcessing: ImageProcessingPort? = null,
 ): ExportResult {
     val progress = (index + 1).toFloat() / totalCount
     onProgress(progress * 0.9f, fileName)
@@ -80,10 +93,63 @@ suspend fun exportSinglePhoto(
     val perspectiveEnabled = state.exportSettings.perspectiveCorrectionEnabled.value
     val marginFraction = state.exportSettings.exportMarginPercent.value
 
+    val autoOrientEnabled = state.importSettings.configuration.value.autoOrientEnabled
+
     val corrections = mutableListOf<String>()
     corrections.add(if (perspectiveEnabled) "Warp-stretch" else "Simple crop")
     if (marginFraction > 0) corrections.add("Margin ${(marginFraction * 100).toInt()}%")
-    if (config.rotationDegrees != 0) corrections.add("Rotation ${config.rotationDegrees}°")
+
+    // Auto-detect orientation and merge with manual rotation, if enabled and available
+    var effectiveConfig = config
+    if (autoOrientEnabled && orientationCorrection != null && orientationCorrection.isAvailable()) {
+        try {
+            // Crop the bounding box region from the source image for orientation detection
+            val detectedPhoto = DetectedPhoto(
+                topLeft = box.corners.topLeft.toPhotoCorner(),
+                topRight = box.corners.topRight.toPhotoCorner(),
+                bottomLeft = box.corners.bottomLeft.toPhotoCorner(),
+                bottomRight = box.corners.bottomRight.toPhotoCorner(),
+                applyPerspectiveCorrection = false, // Simple crop for detection
+                rotation = RotationAngle.NONE,
+                configuration = config,
+            )
+            val croppedImage = imageProcessing?.cropAxisAligned(
+                image.toProcessedImage(), detectedPhoto
+            )
+            if (croppedImage != null) {
+                val result = orientationCorrection.detectOnly(croppedImage)
+                if (result != null && result.nearestRotation != RotationAngle.NONE) {
+                    val autoDegrees = when (result.nearestRotation) {
+                        RotationAngle.NONE -> 0
+                        RotationAngle.CW_90 -> 90
+                        RotationAngle.CW_180 -> 180
+                        RotationAngle.CCW_90 -> 270
+                    }
+                    val mergedRotation = (config.rotationDegrees + autoDegrees) % 360
+                    effectiveConfig = config.copy(rotationDegrees = mergedRotation)
+                    corrections.add("Auto-rotate ${autoDegrees}°")
+                    appLogger.info(
+                        "Auto-orient: detected ${result.orientationDegrees.toInt()}° " +
+                            "(confidence ${(result.confidence * 100).toInt()}%), " +
+                            "rotation ${config.rotationDegrees}° + ${autoDegrees}° → ${mergedRotation}°"
+                    )
+                } else {
+                    appLogger.info("Auto-orient: no rotation needed for photo ${index + 1}")
+                }
+            }
+        } catch (e: Exception) {
+            appLogger.logOperationFailed(
+                OperationType.EXPORT_PHOTO,
+                "Auto-orient detection failed for photo ${index + 1}: ${e.message}",
+                e,
+            )
+            // Fall through — continue export without auto-rotation
+        }
+    }
+
+    if (effectiveConfig.rotationDegrees != 0) {
+        corrections.add("Rotation ${effectiveConfig.rotationDegrees}°")
+    }
 
     appLogger.logOperationStart(
         OperationType.EXPORT_PHOTO,
@@ -91,8 +157,7 @@ suspend fun exportSinglePhoto(
             "(${corrections.joinToString(", ").ifEmpty { "no corrections" }})",
     )
 
-    // PhotoScanConfiguration is now a typealias for PhotoScanConfiguration — no bridge needed.
-    val scanConfig = config
+    val scanConfig = effectiveConfig
 
     val detectedPhoto =
         DetectedPhoto(
@@ -101,7 +166,7 @@ suspend fun exportSinglePhoto(
             bottomLeft = box.corners.bottomLeft.toPhotoCorner(),
             bottomRight = box.corners.bottomRight.toPhotoCorner(),
             applyPerspectiveCorrection = perspectiveEnabled,
-            rotation = rotationFromDegrees(config.rotationDegrees),
+            rotation = rotationFromDegrees(effectiveConfig.rotationDegrees),
             configuration = scanConfig,
         )
 
@@ -147,6 +212,11 @@ suspend fun exportSinglePhoto(
 /**
  * Exports all detected photos from the scan image. Validates the destination, checks disk space,
  * iterates through bounding boxes, and calls [exportSinglePhoto] for each.
+ *
+ * @param orientationCorrection When non-null, enables auto-rotation of extracted photos during
+ *   export when the user has enabled `autoOrientEnabled` in the import configuration.
+ * @param imageProcessing Required when [orientationCorrection] is provided, for cropping the
+ *   bounding box region before orientation detection.
  */
 suspend fun exportPhotos(
     state: PhotoScanWizardState,
@@ -160,6 +230,8 @@ suspend fun exportPhotos(
     onProgress: (Float, String) -> Unit,
     onComplete: (List<ProcessedPhoto>) -> Unit,
     dispatcherProvider: DispatcherProvider,
+    orientationCorrection: OrientationCorrectionService? = null,
+    imageProcessing: ImageProcessingPort? = null,
 ) {
     isLoading(true)
 
@@ -242,6 +314,8 @@ suspend fun exportPhotos(
                     appLogger = appLogger,
                     dispatcherProvider = dispatcherProvider,
                     onProgress = onProgress,
+                    orientationCorrection = orientationCorrection,
+                    imageProcessing = imageProcessing,
                 )
             results.add(result)
         }

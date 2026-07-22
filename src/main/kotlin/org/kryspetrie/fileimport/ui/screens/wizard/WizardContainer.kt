@@ -46,6 +46,8 @@ import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.PathsPort
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
+import org.kryspetrie.fileimport.application.OrientationCorrectionService
+import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
@@ -78,6 +80,8 @@ fun WizardContainer(
     dispatcherProvider: DispatcherProvider = koinInject(),
     faceRegionTransformer: FaceRegionTransformerPort = koinInject(),
     faceDetectionPort: FaceDetectionPort = koinInject(),
+    orientationCorrection: OrientationCorrectionService = koinInject(),
+    imageProcessing: ImageProcessingPort = koinInject(),
     pathsPort: PathsPort = koinInject(),
 ) {
     val state = remember { PhotoScanWizardState() }
@@ -142,6 +146,8 @@ fun WizardContainer(
             appLogger = appLogger,
             dispatcherProvider = dispatcherProvider,
             faceRegionTransformer = faceRegionTransformer,
+            orientationCorrection = orientationCorrection,
+            imageProcessing = imageProcessing,
             scope = scope,
             isLoading = { isLoading = it },
             onMessage = { loadingMessage = it },
@@ -207,6 +213,8 @@ private fun WizardStepContent(
     appLogger: AppLogger,
     dispatcherProvider: DispatcherProvider,
     faceRegionTransformer: FaceRegionTransformerPort,
+    orientationCorrection: OrientationCorrectionService,
+    imageProcessing: ImageProcessingPort,
     scope: kotlinx.coroutines.CoroutineScope,
     isLoading: (Boolean) -> Unit,
     onMessage: (String) -> Unit,
@@ -379,6 +387,8 @@ private fun WizardStepContent(
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = handleExportComplete,
+                                orientationCorrection = orientationCorrection,
+                                imageProcessing = imageProcessing,
                             )
                         }
                     },

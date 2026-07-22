@@ -117,16 +117,28 @@ class MetadataEditorViewModel(
     /** Whether the bulk selection dialog is visible. */
     var showBulkSelectionDialog by mutableStateOf(false)
 
-    /** Whether the auto-rotate result dialog is visible. */
-    var showAutoRotateDialog by mutableStateOf(false)
+    /** Whether the rotation preview overlay is visible. */
+    var showRotationPreview by mutableStateOf(false)
         private set
 
-    /** Result of auto-rotation detection, shown in the dialog. */
-    var autoRotateResult by mutableStateOf<OrientationCorrectionService.CorrectionResult?>(null)
-        private set
-
-    /** Whether orientation detection is running. */
+    /** Whether orientation detection is running (batch scan for all files). */
     var isDetectingOrientation by mutableStateOf(false)
+        private set
+
+    /** Per-file orientation detection results, keyed by file absolute path. */
+    var orientationResults by mutableStateOf<Map<String, OrientationCorrectionService.CorrectionResult>>(emptyMap())
+        private set
+
+    /** Set of file paths that the user has unchecked (excluded from rotation). */
+    var rotationExcludedPaths by mutableStateOf<Set<String>>(emptySet())
+        private set
+
+    /** Index of the file currently shown in the large preview within the rotation overlay. */
+    var rotationPreviewIndex by mutableStateOf(-1)
+        private set
+
+    /** The full-resolution image loaded for the rotation preview overlay. */
+    var rotationPreviewImage by mutableStateOf<BufferedImage?>(null)
         private set
 
     /** Whether to show the model download prompt dialog. */
@@ -492,27 +504,57 @@ class MetadataEditorViewModel(
         editState.clear()
     }
 
-    /** Detect the orientation of the current image using ML. */
-    fun detectOrientation(scope: CoroutineScope) {
-        val file = state.selectedFile ?: return
-        if (!orientationCorrection.isAvailable()) return
+    /**
+     * Detect orientation for all files in the current folder and show the rotation preview overlay.
+     * If the orientation model is not available, requests a download instead.
+     */
+    fun startBatchOrientationDetection(scope: CoroutineScope) {
+        if (state.files.isEmpty()) {
+            state.showError("No files loaded")
+            return
+        }
+        val modelAvailable = isOrientationModelAvailable || orientationCorrection.isAvailable()
+        if (!modelAvailable) {
+            requestModelDownload()
+            return
+        }
         isDetectingOrientation = true
+        orientationResults = emptyMap()
+        rotationExcludedPaths = emptySet()
         scope.launch {
             try {
-                val img =
-                    withContext(dispatcherProvider.io) {
-                        imageProcessing.readImage(FilePath(file.absolutePath))
+                val results = mutableMapOf<String, OrientationCorrectionService.CorrectionResult>()
+                for (file in state.files) {
+                    try {
+                        val img =
+                            withContext(dispatcherProvider.io) {
+                                imageProcessing.readImage(FilePath(file.absolutePath))
+                            }
+                        if (img != null) {
+                            val result = orientationCorrection.detectOnly(img)
+                            if (result != null) {
+                                results[file.absolutePath] = result
+                            }
+                        }
+                    } catch (_: CancellationException) {
+                        throw CancellationException()
+                    } catch (_: Exception) {
+                        // Skip files that fail to load or detect
                     }
-                if (img != null) {
-                    val result = orientationCorrection.detectOnly(img)
-                    if (result != null) {
-                        autoRotateResult = result
-                        showAutoRotateDialog = true
-                    } else {
-                        state.showError("Could not detect orientation")
-                    }
+                }
+                if (results.isEmpty()) {
+                    state.showError("Could not detect orientation for any files")
                 } else {
-                    state.showError("Could not read image")
+                    orientationResults = results
+                    // Pre-check: exclude files where no rotation is needed (NONE)
+                    rotationExcludedPaths =
+                        results
+                            .filter { it.value.nearestRotation == RotationAngle.NONE }
+                            .keys
+                            .toSet()
+                    rotationPreviewIndex =
+                        state.files.indexOfFirst { it.absolutePath in results }.coerceAtLeast(0)
+                    showRotationPreview = true
                 }
             } catch (_: CancellationException) {
                 // Cancellation must propagate
@@ -524,40 +566,94 @@ class MetadataEditorViewModel(
         }
     }
 
-    /** Apply the detected auto-rotation result. */
-    fun applyAutoRotation() {
-        val result = autoRotateResult ?: return
-        val nearestCorrectionDeg =
-            when (result.nearestRotation) {
-                RotationAngle.NONE -> 0
-                RotationAngle.CW_90 -> 90
-                RotationAngle.CW_180 -> 180
-                RotationAngle.CCW_90 -> 270
-            }
-        val currentRotation = state.selectedConfig.rotationDegrees
-        val correctedRotation = (currentRotation + nearestCorrectionDeg) % 360
-        state.updateSelectedConfig {
-            it.copy(
-                rotationDegrees = correctedRotation,
-                faceRegions =
-                    it.faceRegions.map { region ->
-                        when (result.nearestRotation) {
-                            RotationAngle.CW_90 -> region.rotate90CW()
-                            RotationAngle.CCW_90 -> region.rotate90CCW()
-                            RotationAngle.CW_180 -> region.rotate180()
-                            RotationAngle.NONE -> region
-                        }
-                    },
-            )
-        }
-        dismissAutoRotateDialog()
-        state.showInfo("Rotation corrected to ${correctedRotation}°")
+    /** Toggle whether a file is excluded from rotation correction. */
+    fun toggleRotationExclusion(filePath: String) {
+        rotationExcludedPaths =
+            if (filePath in rotationExcludedPaths) rotationExcludedPaths - filePath
+            else rotationExcludedPaths + filePath
     }
 
-    /** Dismiss the auto-rotate result dialog. */
-    fun dismissAutoRotateDialog() {
-        showAutoRotateDialog = false
-        autoRotateResult = null
+    /** Select all files for rotation (clear exclusions). */
+    fun selectAllForRotation() {
+        rotationExcludedPaths = emptySet()
+    }
+
+    /** Deselect all files for rotation (exclude all). */
+    fun deselectAllForRotation() {
+        rotationExcludedPaths = orientationResults.keys
+    }
+
+    /** Set the preview index for the rotation overlay, loading the full-resolution image. */
+    fun updateRotationPreviewIndex(index: Int, scope: kotlinx.coroutines.CoroutineScope) {
+        rotationPreviewIndex = index.coerceIn(-1, state.files.size - 1)
+        // Load the full-resolution image for preview
+        val file = if (index in state.files.indices) state.files[index] else null
+        if (file != null) {
+            scope.launch {
+                try {
+                    val img = withContext(dispatcherProvider.io) { ImageIO.read(file) }
+                    rotationPreviewImage = img
+                } catch (_: CancellationException) {
+                    throw CancellationException()
+                } catch (_: Exception) {
+                    rotationPreviewImage = null
+                }
+            }
+        } else {
+            rotationPreviewImage = null
+        }
+    }
+
+    /**
+     * Apply rotation correction to all checked (non-excluded) files.
+     * Updates each file's rotationDegrees in the bulk edit state.
+     */
+    fun applyBatchRotationCorrection() {
+        var appliedCount = 0
+        for ((filePath, result) in orientationResults) {
+            if (filePath in rotationExcludedPaths) continue
+            if (result.nearestRotation == RotationAngle.NONE) continue
+            val fileIndex = state.files.indexOfFirst { it.absolutePath == filePath }
+            if (fileIndex < 0) continue
+            val nearestCorrectionDeg =
+                when (result.nearestRotation) {
+                    RotationAngle.NONE -> 0
+                    RotationAngle.CW_90 -> 90
+                    RotationAngle.CW_180 -> 180
+                    RotationAngle.CCW_90 -> 270
+                }
+            state.updateConfig(fileIndex) { config ->
+                val correctedRotation = (config.rotationDegrees + nearestCorrectionDeg) % 360
+                config.copy(
+                    rotationDegrees = correctedRotation,
+                    faceRegions =
+                        config.faceRegions.map { region ->
+                            when (result.nearestRotation) {
+                                RotationAngle.CW_90 -> region.rotate90CW()
+                                RotationAngle.CCW_90 -> region.rotate90CCW()
+                                RotationAngle.CW_180 -> region.rotate180()
+                                RotationAngle.NONE -> region
+                            }
+                        },
+                )
+            }
+            appliedCount++
+        }
+        showRotationPreview = false
+        orientationResults = emptyMap()
+        rotationExcludedPaths = emptySet()
+        rotationPreviewIndex = -1
+        rotationPreviewImage = null
+        state.showInfo("Applied rotation to $appliedCount file${if (appliedCount != 1) "s" else ""}")
+    }
+
+    /** Dismiss the rotation preview overlay without applying changes. */
+    fun dismissRotationPreview() {
+        showRotationPreview = false
+        orientationResults = emptyMap()
+        rotationExcludedPaths = emptySet()
+        rotationPreviewIndex = -1
+        rotationPreviewImage = null
     }
 
     // ── Model download ────────────────────────────────────────────
@@ -759,14 +855,6 @@ class MetadataEditorViewModel(
         onSettingsChange(update)
     }
 
-    /** Compute the nearest correction degrees from an auto-rotate result. */
-    fun nearestCorrectionDeg(result: OrientationCorrectionService.CorrectionResult): Int =
-        when (result.nearestRotation) {
-            RotationAngle.NONE -> 0
-            RotationAngle.CW_90 -> 90
-            RotationAngle.CW_180 -> 180
-            RotationAngle.CCW_90 -> 270
-        }
 
     // ── Helper ──────────────────────────────────────────────────
 

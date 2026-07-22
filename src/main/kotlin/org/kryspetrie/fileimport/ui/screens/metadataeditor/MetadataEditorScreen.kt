@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,7 +37,6 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,9 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.koin.compose.koinInject
-import org.kryspetrie.fileimport.application.OrientationCorrectionService
 import org.kryspetrie.fileimport.domain.model.AppSettings
-import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.components.RotationBadge
 import org.kryspetrie.fileimport.ui.components.SourcePathField
@@ -205,68 +201,21 @@ fun MetadataEditorScreen(
         )
     }
 
-    // Auto-rotation result dialog
-    if (vm.showAutoRotateDialog && vm.autoRotateResult != null) {
-        val result = vm.autoRotateResult!!
-        val filePath = vm.state.selectedFile?.absolutePath ?: ""
-        val isJpeg = OrientationCorrectionService.isJpegFile(filePath)
-        val nearestCorrectionDeg = vm.nearestCorrectionDeg(result)
-        val currentRotation = vm.state.selectedConfig.rotationDegrees
-        val correctedRotation = (currentRotation + nearestCorrectionDeg) % 360
-
-        AlertDialog(
-            onDismissRequest = { vm.dismissAutoRotateDialog() },
-            title = { Text("Auto-Rotation Detected") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Detected orientation: ${result.orientationDegrees.toInt()}° " +
-                            "(confidence: ${(result.confidence * 100).toInt()}%)"
-                    )
-                    Text(
-                        "Correction: ${result.correctionDegrees.toInt()}° " +
-                            "(${result.nearestRotation.degrees}°)"
-                    )
-                    if (result.nearestRotation == RotationAngle.NONE) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(4.dp),
-                        ) {
-                            Text(
-                                "Image appears upright — no rotation needed.",
-                                modifier = Modifier.padding(8.dp),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    } else {
-                        Text("New rotation would be: $currentRotation° → $correctedRotation°")
-                        if (isJpeg) {
-                            Surface(
-                                color = MaterialTheme.colorScheme.errorContainer,
-                                shape = RoundedCornerShape(4.dp),
-                            ) {
-                                Text(
-                                    "⚠ JPEG rotation is lossy — re-encoding degrades image quality. " +
-                                        "This only updates metadata rotation, not pixels.",
-                                    modifier = Modifier.padding(8.dp),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onErrorContainer,
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (result.nearestRotation != RotationAngle.NONE) {
-                    TextButton(onClick = { vm.applyAutoRotation() }) { Text("Apply Rotation") }
-                } else {
-                    TextButton(onClick = { vm.dismissAutoRotateDialog() }) { Text("OK") }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { vm.dismissAutoRotateDialog() }) { Text("Cancel") }
-            },
+    // Rotation preview overlay (batch auto-rotation)
+    if (vm.showRotationPreview) {
+        RotationPreviewOverlay(
+            files = vm.state.files,
+            orientationResults = vm.orientationResults,
+            excludedPaths = vm.rotationExcludedPaths,
+            previewIndex = vm.rotationPreviewIndex,
+            thumbnailCache = vm.thumbnailCache,
+            currentImage = vm.rotationPreviewImage,
+            onToggleExclusion = { vm.toggleRotationExclusion(it) },
+            onSelectAll = { vm.selectAllForRotation() },
+            onDeselectAll = { vm.deselectAllForRotation() },
+            onSetPreviewIndex = { vm.updateRotationPreviewIndex(it, coroutineScope) },
+            onApply = { vm.applyBatchRotationCorrection() },
+            onDismiss = { vm.dismissRotationPreview() },
         )
     }
 
@@ -554,6 +503,26 @@ fun MetadataEditorScreen(
                             Text("Select…", style = MaterialTheme.typography.labelSmall)
                         }
                     }
+                    if (vm.state.fileCount > 0 && !vm.isDetectingOrientation) {
+                        OutlinedButton(
+                            onClick = { vm.startBatchOrientationDetection(coroutineScope) },
+                            modifier = Modifier.height(40.dp),
+                        ) {
+                            Icon(
+                                Icons.Default.AutoFixHigh,
+                                "Apply rotation correction",
+                                Modifier.size(16.dp),
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Auto-Rotate…", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                    if (vm.isDetectingOrientation) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    }
                 }
 
                 Row(modifier = Modifier.fillMaxSize().weight(1f)) {
@@ -706,45 +675,6 @@ fun MetadataEditorScreen(
                                             style = MaterialTheme.typography.labelMedium,
                                         )
                                         Spacer(Modifier.weight(1f))
-                                        // Auto-rotation button (only visible when auto-orient
-                                        // setting is enabled)
-                                        if (vm.currentSettings.autoOrientInMetadataEditor) {
-                                            val isAutoAvailable =
-                                                vm.orientationCorrection.isAvailable()
-                                            val modelDownloaded = vm.isOrientationModelAvailable
-                                            IconButton(
-                                                onClick = {
-                                                    if (!modelDownloaded && !isAutoAvailable) {
-                                                        vm.requestModelDownload()
-                                                    } else {
-                                                        vm.detectOrientation(coroutineScope)
-                                                    }
-                                                },
-                                                modifier = Modifier.size(24.dp),
-                                                enabled =
-                                                    (isAutoAvailable || !modelDownloaded) &&
-                                                        !vm.isDetectingOrientation,
-                                            ) {
-                                                if (vm.isDetectingOrientation) {
-                                                    CircularProgressIndicator(
-                                                        modifier = Modifier.size(14.dp),
-                                                        strokeWidth = 2.dp,
-                                                    )
-                                                } else if (!modelDownloaded && !isAutoAvailable) {
-                                                    Icon(
-                                                        Icons.Default.AutoFixHigh,
-                                                        "Download orientation model",
-                                                        Modifier.size(16.dp),
-                                                    )
-                                                } else {
-                                                    Icon(
-                                                        Icons.Default.AutoFixHigh,
-                                                        "Auto-detect rotation",
-                                                        Modifier.size(16.dp),
-                                                    )
-                                                }
-                                            }
-                                        }
                                         IconButton(
                                             onClick = {
                                                 vm.state.updateSelectedConfig {
@@ -790,27 +720,10 @@ fun MetadataEditorScreen(
                                             rotationDegrees =
                                                 vm.state.selectedConfig.rotationDegrees
                                         )
-                                    }
-                                    if (
-                                        !vm.isOrientationModelAvailable &&
-                                            !vm.orientationCorrection.isAvailable() &&
-                                            vm.currentSettings.autoOrientInMetadataEditor
-                                    ) {
-                                        TextButton(
-                                            onClick = { vm.requestModelDownload() },
-                                            contentPadding =
-                                                PaddingValues(horizontal = 4.dp, vertical = 0.dp),
-                                        ) {
-                                            Text(
-                                                "Download orientation model to enable auto-rotate",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.primary,
-                                            )
-                                        }
-                                    }
                                 }
                             }
-                        } else if (vm.isMultiEditMode && vm.selectedIndices.isNotEmpty()) {
+                        }
+                    } else if (vm.isMultiEditMode && vm.selectedIndices.isNotEmpty()) {
                             Box(
                                 modifier = Modifier.weight(1f).fillMaxWidth(),
                                 contentAlignment = Alignment.Center,
