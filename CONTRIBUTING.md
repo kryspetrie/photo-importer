@@ -34,8 +34,14 @@ Thank you for your interest in contributing! This guide covers everything you ne
 git clone <repo-url>
 cd petrie-file-importer
 
+# Metadata integration uses a sibling composite build (required for compile + integration tests)
+git clone git@github.com:kryspetrie/photo-metadata-editor.git ../photo-metadata-editor
+
 # Build the project
 ./gradlew build
+
+# Download bundled ExifTool (required before run/test/integrationTest)
+./gradlew downloadExifTool
 
 # Run the desktop application
 ./gradlew run
@@ -80,17 +86,22 @@ petrie-file-importer/
     │   │   ├── PerspectiveCorrectionService.kt      # Homography correction (BoofCV)
     │   │   ├── FaceRegionTransformer.kt            # Face region coordinate mapping
     │   │   ├── LocationSearchService.kt            # Geocoding search
-    │   │   └── export/                             # Export sub-functions
-    │   │       ├── ExifMetadataWriter.kt
-    │   │       ├── FilenameResolver.kt
-    │   │       ├── ImageTransformer.kt
-    │   │       ├── IptcMetadataWriter.kt
-    │   │       └── XmpMetadataWriter.kt
+    │   │   ├── metadata/                         # Bulk editor save/undo/journal
+    │   │   │   ├── MetadataEditService.kt
+    │   │   │   ├── MetadataEditUndoService.kt
+    │   │   │   └── MetadataEditJournalRepository.kt
+    │   │   └── export/                           # Export & ExifTool metadata writes
+    │   │       ├── MetadataWritingService.kt
+    │   │       ├── PhotoScanMetadataMapper.kt
+    │   │       ├── FileFormatSupport.kt
+    │   │       ├── MetadataWriteException.kt
+    │   │       └── FilenameResolver.kt
     │   ├── cli/                                    # CLI interface (Clikt)
     │   │   ├── PhotoImportCli.kt
     │   │   └── ReorganizeCommand.kt
     │   ├── di/                                     # Dependency injection (Koin)
-    │   │   └── AppModule.kt                        # All service & port registrations
+    │   │   ├── AppModule.kt                        # Service & port registrations
+    │   │   └── MetadataEditorIntegrationModule.kt  # ExifTool / photo-metadata-editor
     │   ├── domain/
     │   │   ├── model/                              # Pure Kotlin data classes & enums
     │   │   │   ├── AppSettings.kt                  # User preferences & window state
@@ -318,8 +329,14 @@ This project uses [ktfmt](https://github.com/facebook/ktfmt) for consistent form
 ### Running Tests
 
 ```bash
-# All tests
+# Unit tests (excludes @Tag("integration") and UI component tests)
 ./gradlew test
+
+# Integration tests — requires sibling photo-metadata-editor repo + bundled ExifTool
+./gradlew downloadExifTool integrationTest
+
+# UI component tests
+./gradlew uiTest
 
 # Specific test class
 ./gradlew test --tests "org.kryspetrie.fileimport.application.ImportServiceTest"
@@ -327,6 +344,8 @@ This project uses [ktfmt](https://github.com/facebook/ktfmt) for consistent form
 # Force re-run (skip cache)
 ./gradlew cleanTest test
 ```
+
+Integration tests load sample RAW/JPEG files from the `metadata-test-fixtures` module (Gradle composite build dependency), not from files checked into this repo.
 
 ### Test Structure
 

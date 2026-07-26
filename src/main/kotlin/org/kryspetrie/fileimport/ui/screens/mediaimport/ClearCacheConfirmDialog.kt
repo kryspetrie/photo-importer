@@ -5,18 +5,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun ClearCacheConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val s = strings()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Clear Index Cache") },
-        text = { Text("Clear all cached folder indexes? Folders will be re-indexed on next use.") },
+        title = { Text(s.t(StringKey.IMPORT_CLEAR_CACHE_TITLE)) },
+        text = { Text(s.t(StringKey.IMPORT_CLEAR_CACHE_MESSAGE)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Clear", color = MaterialTheme.colorScheme.error)
+                Text(s.t(StringKey.IMPORT_CLEAR_CACHE_BUTTON), color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(s.t(StringKey.ACTION_CANCEL)) } },
     )
 }

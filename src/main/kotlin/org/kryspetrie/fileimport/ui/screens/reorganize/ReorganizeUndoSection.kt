@@ -30,13 +30,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.ReorganizeJournalSummary
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
-/**
- * Collapsible undo journal history section for the reorganize screen.
- *
- * Lists past reorganization operations with the ability to undo any non-undone operation. Extracted
- * from [ReorganizeScreen] to reduce method length and complexity.
- */
 @Composable
 fun ReorganizeUndoSection(
     journals: List<ReorganizeJournalSummary>,
@@ -45,6 +41,7 @@ fun ReorganizeUndoSection(
 ) {
     if (journals.isEmpty()) return
 
+    val s = strings()
     var undoExpanded by remember { mutableStateOf(false) }
 
     OutlinedCard(Modifier.fillMaxWidth()) {
@@ -63,17 +60,20 @@ fun ReorganizeUndoSection(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Column(Modifier.weight(1f)) {
-                    Text("Undo History", style = MaterialTheme.typography.titleSmall)
+                    Text(s.t(StringKey.REORG_UNDO_HISTORY), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "${journals.size} operations • " +
-                            "${journals.sumOf { it.changedFiles }} files changed",
+                        s.t(
+                            StringKey.REORG_UNDO_OPERATIONS,
+                            "ops" to "${journals.size}",
+                            "files" to "${journals.sumOf { it.changedFiles }}",
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Icon(
                     if (undoExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    "Toggle",
+                    s.t(StringKey.ACC_TOGGLE),
                     Modifier.size(18.dp),
                 )
             }
@@ -104,6 +104,7 @@ private fun JournalRow(
     onUndoRequest: (ReorganizeJournalSummary) -> Unit,
     onViewJournal: (ReorganizeJournalSummary) -> Unit,
 ) {
+    val s = strings()
     Row(
         Modifier.fillMaxWidth()
             .clip(MaterialTheme.shapes.small)
@@ -136,7 +137,7 @@ private fun JournalRow(
                 )
                 if (journal.undone) {
                     Spacer(Modifier.width(4.dp))
-                    Badge { Text("Undone", Modifier.padding(horizontal = 4.dp)) }
+                    Badge { Text(s.t(StringKey.REORG_UNDONE), Modifier.padding(horizontal = 4.dp)) }
                 }
             }
             Text(
@@ -146,7 +147,7 @@ private fun JournalRow(
             )
         }
         Text(
-            if (!journal.undone) "Undo" else "View",
+            if (!journal.undone) "Undo" else s.t(StringKey.REORG_VIEW),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
         )

@@ -15,8 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.domain.model.AppSettings
-import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.AutoOrientIndicator
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.screens.components.SettingsSection
 import org.kryspetrie.fileimport.ui.screens.mediaimport.ClearCacheConfirmDialog
@@ -32,18 +33,9 @@ import org.kryspetrie.fileimport.ui.screens.mediaimport.SourceDestinationFields
 import org.kryspetrie.fileimport.ui.screens.mediaimport.WatchFolderManagement
 import org.kryspetrie.fileimport.ui.screens.mediaimport.WatchFolderStatusCard
 
-internal fun configSummary(c: ImportConfiguration): String = buildString {
-    if (c.createSubfolders) append(c.folderPattern) else append("Flat")
-    append(" · ")
-    if (c.preserveOriginalName) append("original names") else append(c.fileNamePattern)
-    if (c.verifyAfterCopy) append(" · verify")
-    if (c.deleteAfterImport) append(" · delete source")
-    if (c.detectVisualDuplicates) append(" · dedup")
-    if (c.autoOrientEnabled) append(" · auto-orient")
-}
-
 @Composable
 fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> Unit) {
+    val s = strings()
     val vm: MediaImportViewModel = koinInject()
     val scope = rememberCoroutineScope()
     val watchStatuses by vm.watchStatuses.collectAsState()
@@ -140,7 +132,7 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Import", style = MaterialTheme.typography.headlineSmall)
+                Text(s.t(StringKey.IMPORT_TITLE), style = MaterialTheme.typography.headlineSmall)
                 SourceDestinationFields(
                     sourcePath = vm.sourcePath,
                     onSourcePathChange = { vm.sourcePath = it },

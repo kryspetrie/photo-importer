@@ -71,6 +71,7 @@ import org.kryspetrie.fileimport.domain.model.GeometryUtils
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
@@ -85,6 +86,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.adapter.transformFaceRegionsFromSource
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.EditDialog
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.FaceNameEntryPanel
@@ -120,6 +122,7 @@ fun EditScreen(
     modifier: Modifier = Modifier,
     faceRegionTransformer: FaceRegionTransformerPort? = null,
 ) {
+    val s = strings()
     val locationSearchService: LocationSearchPort = koinInject()
     val geocodingPort: GeocodingPort = koinInject()
     val dispatcherProvider: DispatcherProvider = koinInject()
@@ -186,7 +189,7 @@ fun EditScreen(
                 if (fullscreenBitmap != null) {
                     Image(
                         bitmap = fullscreenBitmap,
-                        contentDescription = "Photo ${idx + 1} fullscreen",
+                        contentDescription = s.t(StringKey.ACC_FULLSCREEN, "index" to "${idx + 1}"),
                         modifier = Modifier.fillMaxSize().padding(32.dp),
                         contentScale = ContentScale.Fit,
                     )
@@ -482,7 +485,7 @@ fun EditScreen(
                     OutlinedButton(onClick = onBack, modifier = Modifier.height(32.dp)) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Back")
+                        Text(s.back)
                     }
                     if (onSkipCurrentPhoto != null) {
                         OutlinedButton(
@@ -495,7 +498,7 @@ fun EditScreen(
                         ) {
                             Icon(Icons.Default.SkipNext, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Skip Photo", style = MaterialTheme.typography.labelSmall)
+                            Text(s.t(StringKey.WIZARD_SKIP_PHOTO), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                     // Center: photo count text
@@ -517,7 +520,7 @@ fun EditScreen(
                         enabled = boundingBoxList.size() > 0,
                         modifier = Modifier.height(32.dp),
                     ) {
-                        Text("Next", style = MaterialTheme.typography.labelSmall)
+                        Text(s.next, style = MaterialTheme.typography.labelSmall)
                         Spacer(Modifier.width(4.dp))
                         Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(16.dp))
                     }
@@ -594,7 +597,7 @@ fun EditScreen(
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Tag Photo", style = MaterialTheme.typography.labelSmall)
+                                    Text(s.t(StringKey.FIELD_TAG_PHOTO), style = MaterialTheme.typography.labelSmall)
                                 }
                                 Surface(
                                     modifier = Modifier.align(Alignment.BottomEnd).padding(8.dp),
@@ -666,7 +669,7 @@ fun EditScreen(
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Tag Photo", style = MaterialTheme.typography.labelSmall)
+                                    Text(s.t(StringKey.FIELD_TAG_PHOTO), style = MaterialTheme.typography.labelSmall)
                                 }
                                 OutlinedButton(
                                     onClick = { showBackImagePicker = true },
@@ -682,7 +685,7 @@ fun EditScreen(
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Add Back", style = MaterialTheme.typography.labelSmall)
+                                    Text(s.t(StringKey.META_ADD_BACK), style = MaterialTheme.typography.labelSmall)
                                 }
                             }
                         }
@@ -736,7 +739,7 @@ fun EditScreen(
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("Rotate all:", style = MaterialTheme.typography.labelMedium)
+                            Text(s.t(StringKey.WIZARD_ROTATE_ALL), style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.weight(1f))
                             IconButton(
                                 onClick = {

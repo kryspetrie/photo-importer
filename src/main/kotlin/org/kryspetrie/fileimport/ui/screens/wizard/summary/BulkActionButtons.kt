@@ -23,6 +23,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * Row of bulk action buttons. Warp-stretch is always applied; only rotation and clear are needed.
@@ -49,13 +51,14 @@ private fun ActionButtonRow(
     onRotateAllCCW: () -> Unit,
     onClearAll: () -> Unit,
 ) {
+    val s = strings()
     Row(
         modifier = Modifier.fillMaxWidth().padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
-            "Bulk Actions:",
+            s.t(StringKey.WIZARD_BULK_ACTIONS),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -63,13 +66,13 @@ private fun ActionButtonRow(
         OutlinedButton(onClick = onRotateAllCW, modifier = Modifier.height(32.dp)) {
             Icon(Icons.Default.RotateRight, null, Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Rotate CW", style = MaterialTheme.typography.labelSmall)
+            Text(s.t(StringKey.ACC_ROTATE_CW), style = MaterialTheme.typography.labelSmall)
         }
 
         OutlinedButton(onClick = onRotateAllCCW, modifier = Modifier.height(32.dp)) {
             Icon(Icons.Default.RotateLeft, null, Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Rotate CCW", style = MaterialTheme.typography.labelSmall)
+            Text(s.t(StringKey.ACC_ROTATE_CCW), style = MaterialTheme.typography.labelSmall)
         }
 
         OutlinedButton(
@@ -80,7 +83,7 @@ private fun ActionButtonRow(
         ) {
             Icon(Icons.Default.Clear, null, Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Clear All", style = MaterialTheme.typography.labelSmall)
+            Text(s.t(StringKey.WIZARD_CLEAR_ALL), style = MaterialTheme.typography.labelSmall)
         }
     }
 }

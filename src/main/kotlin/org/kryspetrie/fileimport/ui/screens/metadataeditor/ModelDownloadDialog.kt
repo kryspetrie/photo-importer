@@ -16,7 +16,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.port.ModelDownloadState
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * Dialog prompting the user to download the orientation detection model.
@@ -36,36 +38,36 @@ fun ModelDownloadDialog(
     onCancel: () -> Unit,
     onRetry: () -> Unit,
 ) {
+    val s = strings()
+
     AlertDialog(
         onDismissRequest = { if (downloadState !is ModelDownloadState.Downloading) onCancel() },
-        title = { Text("Download Orientation Model") },
+        title = { Text(s.t(StringKey.MODEL_DOWNLOAD_TITLE)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (downloadState) {
                     null,
                     is ModelDownloadState.Idle -> {
                         Text(
-                            "The auto-rotate feature requires an orientation detection model " +
-                                "(~330 MB). This model will be downloaded from the internet " +
-                                "and stored locally.",
+                            s.t(StringKey.MODEL_DOWNLOAD_INTRO),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         Text(
-                            "Once downloaded, auto-rotate will work offline.",
+                            s.t(StringKey.MODEL_DOWNLOAD_OFFLINE_NOTE),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     is ModelDownloadState.Connecting -> {
                         Text(
-                            "Connecting to download server...",
+                            s.t(StringKey.META_MODEL_DOWNLOAD_CONNECTING),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                     }
                     is ModelDownloadState.Downloading -> {
                         Text(
-                            "Downloading orientation model...",
+                            s.t(StringKey.META_MODEL_DOWNLOAD_DOWNLOADING),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                         if (downloadState.progressPercent != null) {
@@ -74,20 +76,25 @@ fun ModelDownloadDialog(
                                 modifier = Modifier.fillMaxWidth(),
                             )
                             Text(
-                                "%.1f%% (%.1f / %.1f MB)"
-                                    .format(
-                                        downloadState.progressPercent,
-                                        bytesToMb(downloadState.bytesDownloaded),
-                                        downloadState.totalBytes?.let { bytesToMb(it) } ?: 0.0,
-                                    ),
+                                s.t(
+                                    StringKey.META_MODEL_DOWNLOAD_PROGRESS_MB,
+                                    "progress" to downloadState.progressPercent.toString(),
+                                    "downloaded" to "%.1f".format(bytesToMb(downloadState.bytesDownloaded)),
+                                    "total" to
+                                        "%.1f".format(
+                                            downloadState.totalBytes?.let { bytesToMb(it) } ?: 0.0,
+                                        ),
+                                ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         } else {
                             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                             Text(
-                                "%.1f MB downloaded"
-                                    .format(bytesToMb(downloadState.bytesDownloaded)),
+                                s.t(
+                                    StringKey.META_MODEL_DOWNLOAD_PROGRESS_BYTES,
+                                    "downloaded" to "%.1f".format(bytesToMb(downloadState.bytesDownloaded)),
+                                ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -99,7 +106,7 @@ fun ModelDownloadDialog(
                             shape = RoundedCornerShape(4.dp),
                         ) {
                             Text(
-                                "Download failed: ${downloadState.error}",
+                                s.t(StringKey.MODEL_DOWNLOAD_FAILED, "message" to downloadState.error),
                                 modifier = Modifier.padding(8.dp),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
@@ -107,22 +114,21 @@ fun ModelDownloadDialog(
                         }
                         if (downloadState.canRetry) {
                             Text(
-                                "Click Retry to try again.",
+                                s.t(StringKey.META_MODEL_DOWNLOAD_RETRY_HINT),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
                     }
                     is ModelDownloadState.Completed -> {
                         Text(
-                            "Model downloaded successfully! Auto-rotate is now available.",
+                            s.t(StringKey.MODEL_DOWNLOAD_COMPLETE),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
                     }
                     is ModelDownloadState.Cancelled -> {
                         Text(
-                            "Download cancelled. Auto-rotate will not be available until the " +
-                                "model is downloaded.",
+                            s.t(StringKey.META_MODEL_DOWNLOAD_CANCELLED),
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
@@ -133,29 +139,31 @@ fun ModelDownloadDialog(
             when (downloadState) {
                 null,
                 is ModelDownloadState.Idle -> {
-                    Button(onClick = onDownload) { Text("Download") }
+                    Button(onClick = onDownload) { Text(s.t(StringKey.META_MODEL_DOWNLOAD_BUTTON)) }
                 }
                 is ModelDownloadState.Connecting,
                 is ModelDownloadState.Downloading -> {
-                    OutlinedButton(onClick = onCancel) { Text("Cancel Download") }
+                    OutlinedButton(onClick = onCancel) {
+                        Text(s.t(StringKey.META_MODEL_DOWNLOAD_CANCEL_BUTTON))
+                    }
                 }
                 is ModelDownloadState.Failed -> {
                     if (downloadState.canRetry) {
-                        Button(onClick = onRetry) { Text("Retry") }
+                        Button(onClick = onRetry) { Text(s.t(StringKey.ACTION_RETRY)) }
                     }
-                    TextButton(onClick = onCancel) { Text("Close") }
+                    TextButton(onClick = onCancel) { Text(s.close) }
                 }
                 is ModelDownloadState.Completed -> {
-                    Button(onClick = onCancel) { Text("OK") }
+                    Button(onClick = onCancel) { Text(s.ok) }
                 }
                 is ModelDownloadState.Cancelled -> {
-                    TextButton(onClick = onCancel) { Text("Close") }
+                    TextButton(onClick = onCancel) { Text(s.close) }
                 }
             }
         },
         dismissButton = {
             if (downloadState == null || downloadState is ModelDownloadState.Idle) {
-                TextButton(onClick = onCancel) { Text("Later") }
+                TextButton(onClick = onCancel) { Text(s.t(StringKey.MODEL_DOWNLOAD_CANCEL)) }
             }
         },
     )

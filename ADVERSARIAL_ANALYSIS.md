@@ -83,7 +83,7 @@ This report synthesizes a deep audit across all layers: application services, do
 | # | Issue | File |
 |---|-------|------|
 | M1 | duplicateCount always 0 (dead variable) | ImportExecutor.kt ~L48 |
-| M2 | KEEP_SOURCE EXIF strategy behaves identically to OVERRIDE | ExifMetadataWriter.kt |
+| M2 | Tri-state override semantics may differ from legacy Commons Imaging path; `copyOriginalExif` not yet implemented in ExifTool mapper | `PhotoScanMetadataMapper.kt` |
 | M3 | FilenameResolver unbounded conflict loop | FilenameResolver.kt ~L23 |
 | M4 | WatchFolderManager coroutine leak from status collect | WatchFolderManager.kt |
 | M5 | DomainDefaults uses java.time in domain layer | DomainDefaults.kt |

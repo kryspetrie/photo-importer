@@ -160,7 +160,7 @@ class ImportService(
             )
         }
 
-    /** Detect RAW+JPEG pairs by matching base filename and timestamp. */
+    /** Detect RAW+JPEG pairs by matching base filename within the same directory. */
     fun detectRawJpegPairs(images: List<ImageFile>): List<Pair<ImageFile, ImageFile>> {
         val raws = images.filter { it.fileType.isRawFormat }
         val jpegs = images.filter { it.fileType.isJpeg || it.fileType == ImageFileType.JPEG }
@@ -168,9 +168,14 @@ class ImportService(
         val pairedIds = mutableSetOf<String>()
 
         for (raw in raws) {
+            val rawParent = raw.file.parent
             val match =
                 jpegs.find { jpeg ->
                     jpeg.id !in pairedIds &&
+                        // P1 fix: Require same parent directory to avoid cross-folder mismatches.
+                        // Matching on base filename alone could pair unrelated files in different
+                        // subfolders that happen to share a name.
+                        jpeg.file.parent == rawParent &&
                         jpeg.path.nameWithoutExtension.equals(
                             raw.path.nameWithoutExtension,
                             ignoreCase = true,

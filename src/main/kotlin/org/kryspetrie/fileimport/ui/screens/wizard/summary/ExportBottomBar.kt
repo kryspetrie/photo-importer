@@ -21,6 +21,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /** Bottom bar with photo count, back button, and next button. */
 @Composable
@@ -30,6 +32,7 @@ fun ExportBottomBar(
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Surface(tonalElevation = 4.dp, modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -37,21 +40,21 @@ fun ExportBottomBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "$photoCount ${if (photoCount == 1) "photo" else "photos"} ready",
+                s.t(StringKey.WIZARD_PHOTOS_READY, "count" to "$photoCount"),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Back")
+                    Text(s.back)
                 }
                 Button(
                     onClick = onExport,
                     enabled = photoCount > 0,
                     modifier = Modifier.height(40.dp),
                 ) {
-                    Text("Next")
+                    Text(s.next)
                     Spacer(Modifier.width(4.dp))
                     Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
                 }

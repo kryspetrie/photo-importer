@@ -5,7 +5,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /** Selector for the export destination folder with a browse button in the field. */
 @Composable
@@ -14,18 +16,19 @@ fun DestinationSelector(
     onDestinationChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     FolderSelectionField(
         value = destination,
         onValueChange = onDestinationChange,
         modifier = modifier.fillMaxWidth(),
-        label = "Export Destination",
-        placeholder = "Select destination...",
-        title = "Select Export Destination",
+        label = s.t(StringKey.WIZARD_EXPORT_DESTINATION),
+        placeholder = s.t(StringKey.IMPORT_DEST_PLACEHOLDER),
+        title = s.t(StringKey.WIZARD_SELECT_EXPORT_DEST),
         supportingText = {
             if (destination.isNotBlank()) {
                 Text(destination, style = MaterialTheme.typography.labelSmall)
             } else {
-                Text("Browse or type a path", style = MaterialTheme.typography.labelSmall)
+                Text(s.t(StringKey.WIZARD_BROWSE_OR_TYPE), style = MaterialTheme.typography.labelSmall)
             }
         },
     )

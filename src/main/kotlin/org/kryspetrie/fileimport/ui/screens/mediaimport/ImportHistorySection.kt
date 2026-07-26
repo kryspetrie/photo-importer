@@ -27,14 +27,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.ImportHistoryEntry
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.formatFileSize
+import org.kryspetrie.fileimport.ui.i18n.strings
 
-/**
- * Collapsible import history section for the media import screen.
- *
- * Lists recent import operations with source path, file count, timestamp, and total size. Extracted
- * from [MediaImportScreen] to reduce method length and complexity.
- */
 @Composable
 fun ImportHistorySection(
     historyEntries: List<ImportHistoryEntry>,
@@ -43,6 +39,7 @@ fun ImportHistorySection(
 ) {
     if (historyEntries.isEmpty()) return
 
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column {
             Row(
@@ -59,17 +56,20 @@ fun ImportHistorySection(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Column(Modifier.weight(1f)) {
-                    Text("Import History", style = MaterialTheme.typography.titleSmall)
+                    Text(s.t(StringKey.IMPORT_HISTORY), style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "${historyEntries.size} imports • " +
-                            "${historyEntries.take(10).sumOf { it.successCount }} files",
+                        s.t(
+                            StringKey.IMPORT_HISTORY_SUMMARY,
+                            "imports" to "${historyEntries.size}",
+                            "files" to "${historyEntries.take(10).sumOf { it.successCount }}",
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    "Toggle",
+                    s.t(StringKey.ACC_TOGGLE),
                     Modifier.size(18.dp),
                 )
             }

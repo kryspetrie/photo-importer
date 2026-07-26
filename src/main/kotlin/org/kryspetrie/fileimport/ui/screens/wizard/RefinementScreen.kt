@@ -31,6 +31,9 @@ import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementCanvas
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementControls
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementTopBar
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
+
 
 /**
  * Refinement screen showing a zoomed view of a single bounding box for precise corner adjustment.
@@ -42,6 +45,7 @@ fun RefinementScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     // State flows
     val image by state.image.collectAsState()
     val refinementBoxIndex by state.boxes.refinementBoxIndex.collectAsState()
@@ -170,11 +174,9 @@ fun RefinementScreen(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete Photo") },
+            title = { Text(s.t(StringKey.WIZARD_DELETE_PHOTO)) },
             text = {
-                Text(
-                    "Remove this photo box? This cannot be undone, but you can use Undo (Ctrl+Z) to restore it."
-                )
+                Text(s.t(StringKey.WIZARD_DELETE_PHOTO_MESSAGE))
             },
             confirmButton = {
                 TextButton(
@@ -185,11 +187,11 @@ fun RefinementScreen(
                         onBack()
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(s.delete, color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text(s.cancel) }
             },
         )
     }

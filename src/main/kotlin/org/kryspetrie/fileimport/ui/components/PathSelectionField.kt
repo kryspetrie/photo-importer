@@ -20,22 +20,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * A consistent path selection field with an inline folder browse icon button.
  *
  * Uses a [OutlinedTextField] with a folder icon leading and an icon-only browse button trailing,
  * with a hover tooltip for accessibility.
- *
- * @param value The current folder path text
- * @param onValueChange Callback when the path changes (from typing or picker selection)
- * @param modifier Optional modifier
- * @param label The field label (default "Folder")
- * @param placeholder Placeholder text when empty
- * @param title Title for the folder picker dialog
- * @param isError Whether the field should display an error state
- * @param supportingText Optional supporting text below the field
- * @param leadingIcon Optional leading icon (default: [Icons.Default.FolderOpen])
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -43,34 +35,46 @@ fun FolderSelectionField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "Folder",
-    placeholder: String = "Select folder...",
-    title: String = "Select Folder",
+    label: String? = null,
+    placeholder: String? = null,
+    title: String? = null,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
     leadingIcon: ImageVector = Icons.Default.FolderOpen,
 ) {
+    val s = strings()
+    val resolvedLabel = label ?: s.t(StringKey.ACC_FOLDER)
+    val resolvedPlaceholder = placeholder ?: s.t(StringKey.ACTION_SELECT_FOLDER)
+    val resolvedTitle = title ?: s.t(StringKey.ACTION_SELECT_FOLDER)
+    val selectFolderLabel = s.t(StringKey.ACTION_SELECT_FOLDER)
     val tooltipState = rememberTooltipState()
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
-        placeholder = { Text(placeholder) },
+        label = { Text(resolvedLabel) },
+        placeholder = { Text(resolvedPlaceholder) },
         modifier = modifier,
         textStyle = MaterialTheme.typography.bodyMedium,
         singleLine = true,
         isError = isError,
         leadingIcon = {
-            Icon(leadingIcon, contentDescription = "Folder", modifier = Modifier.size(20.dp))
+            Icon(
+                leadingIcon,
+                contentDescription = s.t(StringKey.ACC_FOLDER),
+                modifier = Modifier.size(20.dp),
+            )
         },
         trailingIcon = {
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                tooltip = { PlainTooltip { Text("Select Folder") } },
+                tooltip = { PlainTooltip { Text(selectFolderLabel) } },
                 state = tooltipState,
             ) {
-                IconButton(onClick = { pickFolder(title)?.let(onValueChange) }) {
-                    Icon(Icons.Default.CreateNewFolder, contentDescription = "Select Folder")
+                IconButton(onClick = { pickFolder(resolvedTitle)?.let(onValueChange) }) {
+                    Icon(
+                        Icons.Default.CreateNewFolder,
+                        contentDescription = selectFolderLabel,
+                    )
                 }
             }
         },
@@ -80,17 +84,6 @@ fun FolderSelectionField(
 
 /**
  * A consistent path selection field with an inline file browse icon button.
- *
- * @param value The current file path text
- * @param onValueChange Callback when the path changes (from typing or picker selection)
- * @param modifier Optional modifier
- * @param label The field label (default "File")
- * @param placeholder Placeholder text when empty
- * @param title Title for the file picker dialog
- * @param extensionFilter Optional list of extensions to filter (e.g. listOf("jpg", "png"))
- * @param isError Whether the field should display an error state
- * @param supportingText Optional supporting text below the field
- * @param leadingIcon Optional leading icon (default: [Icons.AutoMirrored.Filled.InsertDriveFile])
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -98,35 +91,44 @@ fun FileSelectionField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "File",
-    placeholder: String = "Select file...",
-    title: String = "Select File",
+    label: String? = null,
+    placeholder: String? = null,
+    title: String? = null,
     extensionFilter: List<String>? = null,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
     leadingIcon: ImageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
 ) {
+    val s = strings()
+    val resolvedLabel = label ?: s.t(StringKey.ACC_FILE)
+    val resolvedPlaceholder = placeholder ?: s.t(StringKey.ACTION_SELECT_FILE)
+    val resolvedTitle = title ?: s.t(StringKey.ACTION_SELECT_FILE)
+    val selectFileLabel = s.t(StringKey.ACTION_SELECT_FILE)
     val tooltipState = rememberTooltipState()
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
-        placeholder = { Text(placeholder) },
+        label = { Text(resolvedLabel) },
+        placeholder = { Text(resolvedPlaceholder) },
         modifier = modifier,
         textStyle = MaterialTheme.typography.bodyMedium,
         singleLine = true,
         isError = isError,
         leadingIcon = {
-            Icon(leadingIcon, contentDescription = "File", modifier = Modifier.size(20.dp))
+            Icon(
+                leadingIcon,
+                contentDescription = s.t(StringKey.ACC_FILE),
+                modifier = Modifier.size(20.dp),
+            )
         },
         trailingIcon = {
             TooltipBox(
                 positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                tooltip = { PlainTooltip { Text("Select File") } },
+                tooltip = { PlainTooltip { Text(selectFileLabel) } },
                 state = tooltipState,
             ) {
-                IconButton(onClick = { pickFile(title, extensionFilter)?.let(onValueChange) }) {
-                    Icon(leadingIcon, contentDescription = "Select File")
+                IconButton(onClick = { pickFile(resolvedTitle, extensionFilter)?.let(onValueChange) }) {
+                    Icon(leadingIcon, contentDescription = selectFileLabel)
                 }
             }
         },
@@ -136,24 +138,6 @@ fun FileSelectionField(
 
 /**
  * A consistent source path field that supports both file and folder selection.
- *
- * For cases where the user can select either a file (e.g., a single image) or a folder (e.g., a
- * folder of images). Provides two icon-only trailing buttons with hover tooltips — file picker and
- * folder picker.
- *
- * @param value The current path text
- * @param onValueChange Callback when the path changes
- * @param onPickFile Called when the user clicks the file browse icon.
- * @param onPickFolder Called when the user clicks the folder browse icon.
- * @param modifier Optional modifier
- * @param label The field label
- * @param placeholder Placeholder text when empty
- * @param isError Whether the field should display an error state
- * @param supportingText Optional supporting text below the field
- * @param leadingIcon Optional leading icon (default: [Icons.Default.Image])
- * @param fileIcon Icon for the file browse button (default:
- *   [Icons.AutoMirrored.Filled.InsertDriveFile])
- * @param folderIcon Icon for the folder browse button (default: [Icons.Default.CreateNewFolder])
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
@@ -163,46 +147,55 @@ fun SourcePathField(
     onPickFile: () -> Unit,
     onPickFolder: () -> Unit,
     modifier: Modifier = Modifier,
-    label: String = "Source",
-    placeholder: String = "Select file or folder...",
+    label: String? = null,
+    placeholder: String? = null,
     isError: Boolean = false,
     supportingText: @Composable (() -> Unit)? = null,
     leadingIcon: ImageVector = Icons.Default.Image,
     fileIcon: ImageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
     folderIcon: ImageVector = Icons.Default.CreateNewFolder,
 ) {
+    val s = strings()
+    val resolvedLabel = label ?: s.t(StringKey.META_SOURCE_LABEL)
+    val resolvedPlaceholder = placeholder ?: s.t(StringKey.META_SOURCE_PLACEHOLDER)
+    val selectFileLabel = s.t(StringKey.ACTION_SELECT_FILE)
+    val selectFolderLabel = s.t(StringKey.ACTION_SELECT_FOLDER)
     val fileTooltipState = rememberTooltipState()
     val folderTooltipState = rememberTooltipState()
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
-        placeholder = { Text(placeholder) },
+        label = { Text(resolvedLabel) },
+        placeholder = { Text(resolvedPlaceholder) },
         modifier = modifier,
         textStyle = MaterialTheme.typography.bodyMedium,
         singleLine = true,
         isError = isError,
         leadingIcon = {
-            Icon(leadingIcon, contentDescription = "Source", modifier = Modifier.size(20.dp))
+            Icon(
+                leadingIcon,
+                contentDescription = s.t(StringKey.META_SOURCE_LABEL),
+                modifier = Modifier.size(20.dp),
+            )
         },
         trailingIcon = {
             Row {
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = { PlainTooltip { Text("Select File") } },
+                    tooltip = { PlainTooltip { Text(selectFileLabel) } },
                     state = fileTooltipState,
                 ) {
                     IconButton(onClick = onPickFile) {
-                        Icon(fileIcon, contentDescription = "Select File")
+                        Icon(fileIcon, contentDescription = selectFileLabel)
                     }
                 }
                 TooltipBox(
                     positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-                    tooltip = { PlainTooltip { Text("Select Folder") } },
+                    tooltip = { PlainTooltip { Text(selectFolderLabel) } },
                     state = folderTooltipState,
                 ) {
                     IconButton(onClick = onPickFolder) {
-                        Icon(folderIcon, contentDescription = "Select Folder")
+                        Icon(folderIcon, contentDescription = selectFolderLabel)
                     }
                 }
             }

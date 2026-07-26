@@ -22,19 +22,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.formatRelativeTime
+import org.kryspetrie.fileimport.ui.i18n.strings
 
-/**
- * Status card shown when a folder is being watched for automatic imports.
- *
- * Displays the watched path, number of detected files, auto-import count, last import time, and any
- * errors. Provides a "Stop" button to cancel the watch.
- */
 @Composable
 fun WatchFolderStatusCard(
     watchStatus: WatchFolderStatus,
     onStopWatching: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     OutlinedCard(modifier = modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -61,7 +59,7 @@ fun WatchFolderStatusCard(
                 )
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "Watching: ${watchStatus.watchPath}",
+                        s.t(StringKey.WATCH_FILES_DETECTED, "path" to watchStatus.watchPath),
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -70,10 +68,10 @@ fun WatchFolderStatusCard(
                         buildString {
                             append("${watchStatus.filesDetected} file(s) detected")
                             if (watchStatus.autoImportsPending > 0) {
-                                append(" · ${watchStatus.autoImportsPending} pending")
+                                append(" · ${watchStatus.autoImportsPending} ${s.t(StringKey.WATCH_PENDING)}")
                             }
                             if (watchStatus.importCount > 0) {
-                                append(" · ${watchStatus.importCount} imported")
+                                append(" · ${watchStatus.importCount} ${s.t(StringKey.WATCH_IMPORTED)}")
                             }
                         },
                         style = MaterialTheme.typography.labelSmall,
@@ -81,7 +79,10 @@ fun WatchFolderStatusCard(
                     )
                     if (watchStatus.lastImportTime > 0) {
                         Text(
-                            "Last import: ${formatRelativeTime(watchStatus.lastImportTime)}",
+                            s.t(
+                                StringKey.WATCH_LAST_IMPORT,
+                                "time" to s.formatRelativeTime(watchStatus.lastImportTime),
+                            ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -92,11 +93,10 @@ fun WatchFolderStatusCard(
                     modifier = Modifier.height(28.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp),
                 ) {
-                    Text("Stop", style = MaterialTheme.typography.labelSmall)
+                    Text(s.t(StringKey.IMPORT_STOP_BUTTON), style = MaterialTheme.typography.labelSmall)
                 }
             }
 
-            // Show error if present
             watchStatus.lastError?.let { error ->
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -118,19 +118,5 @@ fun WatchFolderStatusCard(
                 }
             }
         }
-    }
-}
-
-/** Formats a timestamp as a relative time string (e.g., "2 min ago", "just now"). */
-private fun formatRelativeTime(timestampMs: Long): String {
-    val now = System.currentTimeMillis()
-    val diffMs = now - timestampMs
-    val diffSec = diffMs / 1000
-    return when {
-        diffSec < 5 -> "just now"
-        diffSec < 60 -> "${diffSec}s ago"
-        diffSec < 3600 -> "${diffSec / 60} min ago"
-        diffSec < 86400 -> "${diffSec / 3600}h ago"
-        else -> "${diffSec / 86400}d ago"
     }
 }

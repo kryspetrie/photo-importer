@@ -15,6 +15,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.kryspetrie.fileimport.ui.i18n.TestStringsProvider
 
 @Tag("UiComponentTest")
 @DisplayName("Loading Components")
@@ -173,7 +174,9 @@ class LoadingComponentTest {
         fun displaysDefaultMessageWhenLoading() {
             composeTestRule.setContent {
                 MaterialTheme {
-                    LoadingOverlay(isLoading = true) { TestContent(text = "Main Content") }
+                    TestStringsProvider {
+                        LoadingOverlay(isLoading = true) { TestContent(text = "Main Content") }
+                    }
                 }
             }
 

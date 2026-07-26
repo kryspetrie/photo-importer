@@ -16,12 +16,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import java.io.File
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
 import org.kryspetrie.fileimport.ui.components.SourcePathField
 import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun ScanModeCard(
@@ -31,6 +33,7 @@ fun ScanModeCard(
     onSinglePhotoModeChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Card(
         modifier = modifier.fillMaxWidth(),
         colors =
@@ -43,8 +46,8 @@ fun ScanModeCard(
                 SettingsToggle(
                     checked = cvAutoDetectEnabled,
                     onCheckedChange = onCvAutoDetectChange,
-                    label = "Auto-detect",
-                    description = "Find and align corners",
+                    label = s.t(StringKey.WIZARD_AUTO_DETECT),
+                    description = s.t(StringKey.WIZARD_AUTO_DETECT_DESC),
                     icon = Icons.Default.AutoAwesome,
                 )
             }
@@ -52,8 +55,8 @@ fun ScanModeCard(
                 SettingsToggle(
                     checked = singlePhotoMode,
                     onCheckedChange = onSinglePhotoModeChange,
-                    label = "Single Photo",
-                    description = "Skip multi-photo detection",
+                    label = s.t(StringKey.WIZARD_SINGLE_PHOTO),
+                    description = s.t(StringKey.WIZARD_SINGLE_PHOTO_DESC),
                     icon = Icons.Default.PhotoCamera,
                 )
             }
@@ -73,25 +76,30 @@ fun SourceDestRow(
     destDirName: String?,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         SourcePathField(
             value = sourcePath,
             onValueChange = onSourcePathChange,
-            onPickFile = { pickImageFile("Select Image File")?.let(onSourcePathChange) },
-            onPickFolder = { pickFolder("Select Source Folder")?.let(onSourcePathChange) },
+            onPickFile = {
+                pickImageFile(s.t(StringKey.META_DIALOG_SELECT_IMAGE))?.let(onSourcePathChange)
+            },
+            onPickFolder = {
+                pickFolder(s.t(StringKey.META_DIALOG_SELECT_FOLDER))?.let(onSourcePathChange)
+            },
             modifier = Modifier.weight(1f),
-            label = "Source",
-            placeholder = "Select source file or folder...",
+            label = s.t(StringKey.META_SOURCE_LABEL),
+            placeholder = s.t(StringKey.META_SOURCE_PLACEHOLDER),
             isError = sourcePath.isNotBlank() && sourceFile == null,
             supportingText = {
                 when {
-                    sourcePath.isBlank() -> Text("File or folder of images")
+                    sourcePath.isBlank() -> Text(s.t(StringKey.WIZARD_FILE_OR_FOLDER))
                     sourceFile == null ->
-                        Text("Path not found", color = MaterialTheme.colorScheme.error)
+                        Text(s.t(StringKey.IMPORT_PATH_NOT_FOUND), color = MaterialTheme.colorScheme.error)
                     sourceFile.isDirectory -> {
                         val imageCount =
                             sourceFile.listFiles { f -> f.isFile && isImageFile(f) }?.size ?: 0
-                        Text("$imageCount image(s)")
+                        Text(s.t(StringKey.WIZARD_IMAGE_COUNT, "count" to "$imageCount"))
                     }
                     else -> Text(sourceFile.name)
                 }
@@ -102,17 +110,17 @@ fun SourceDestRow(
             value = destinationPath,
             onValueChange = onDestinationPathChange,
             modifier = Modifier.weight(1f),
-            label = "Destination",
-            placeholder = "Select destination...",
-            title = "Select Destination Folder",
+            label = s.t(StringKey.IMPORT_DESTINATION_LABEL),
+            placeholder = s.t(StringKey.IMPORT_DEST_PLACEHOLDER),
+            title = s.t(StringKey.META_DIALOG_SELECT_OUTPUT),
             isError = destinationPath.isNotBlank() && !destValid && !destCanCreate,
             supportingText = {
                 when {
-                    destinationPath.isBlank() -> Text("Paste a path or browse")
+                    destinationPath.isBlank() -> Text(s.t(StringKey.IMPORT_PATH_HINT))
                     !destValid && !destCanCreate ->
-                        Text("Path not accessible", color = MaterialTheme.colorScheme.error)
+                        Text(s.t(StringKey.IMPORT_PATH_NOT_ACCESSIBLE), color = MaterialTheme.colorScheme.error)
                     !destValid && destCanCreate ->
-                        Text("Will be created", color = MaterialTheme.colorScheme.primary)
+                        Text(s.t(StringKey.IMPORT_PATH_WILL_CREATE), color = MaterialTheme.colorScheme.primary)
                     else -> Text(destDirName.orEmpty())
                 }
             },

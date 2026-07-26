@@ -33,26 +33,24 @@ import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.application.WatchFolderManager
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.SectionLabel
+import org.kryspetrie.fileimport.ui.i18n.formatRelativeTime
+import org.kryspetrie.fileimport.ui.i18n.strings
 
-/**
- * Management panel for watch folder configurations.
- *
- * Lists all configured watch folders with their status, and provides add/edit/remove/start/stop
- * controls.
- */
 @Composable
 fun WatchFolderManagement(watchFolderManager: WatchFolderManager, modifier: Modifier = Modifier) {
+    val s = strings()
     val statuses by watchFolderManager.statuses.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingConfig by remember { mutableStateOf<WatchFolderConfig?>(null) }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionLabel("Watch Folders")
+        SectionLabel(s.t(StringKey.WATCH_FOLDERS))
 
         if (statuses.isEmpty()) {
             Text(
-                "No watch folders configured. Click \"+ Add\" to start watching a folder.",
+                s.t(StringKey.WATCH_NONE_CONFIGURED),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -65,7 +63,7 @@ fun WatchFolderManagement(watchFolderManager: WatchFolderManager, modifier: Modi
         OutlinedButton(onClick = { showAddDialog = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Add Watch Folder")
+            Text(s.t(StringKey.WATCH_ADD))
         }
     }
 
@@ -93,9 +91,9 @@ fun WatchFolderManagement(watchFolderManager: WatchFolderManager, modifier: Modi
     }
 }
 
-/** Card showing the status of a single watch folder. */
 @Composable
 private fun WatchFolderCard(status: WatchFolderStatus, onStop: () -> Unit) {
+    val s = strings()
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             modifier = Modifier.padding(10.dp),
@@ -131,18 +129,25 @@ private fun WatchFolderCard(status: WatchFolderStatus, onStop: () -> Unit) {
                     )
                     Text(
                         buildString {
-                            if (status.isWatching) append("Watching") else append("Stopped")
-                            append(" · ${status.filesDetected} detected")
-                            if (status.importCount > 0) append(" · ${status.importCount} imported")
-                            if (status.autoImportsPending > 0)
-                                append(" · ${status.autoImportsPending} pending")
+                            if (status.isWatching) append(s.t(StringKey.WATCH_STATUS_WATCHING))
+                            else append(s.t(StringKey.WATCH_STATUS_STOPPED))
+                            append(" · ${status.filesDetected} ${s.t(StringKey.WATCH_DETECTED)}")
+                            if (status.importCount > 0) {
+                                append(" · ${status.importCount} ${s.t(StringKey.WATCH_IMPORTED)}")
+                            }
+                            if (status.autoImportsPending > 0) {
+                                append(" · ${status.autoImportsPending} ${s.t(StringKey.WATCH_PENDING)}")
+                            }
                         },
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     if (status.lastImportTime > 0) {
                         Text(
-                            "Last import: ${formatRelativeTime(status.lastImportTime)}",
+                            s.t(
+                                StringKey.WATCH_LAST_IMPORT,
+                                "time" to s.formatRelativeTime(status.lastImportTime),
+                            ),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -150,7 +155,7 @@ private fun WatchFolderCard(status: WatchFolderStatus, onStop: () -> Unit) {
                 }
                 if (status.isWatching) {
                     OutlinedButton(onClick = onStop, modifier = Modifier.height(28.dp)) {
-                        Text("Stop", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.IMPORT_STOP_BUTTON), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -176,17 +181,5 @@ private fun WatchFolderCard(status: WatchFolderStatus, onStop: () -> Unit) {
                 }
             }
         }
-    }
-}
-
-/** Formats a timestamp as a relative time string (e.g., "2 min ago", "just now"). */
-private fun formatRelativeTime(timestampMs: Long): String {
-    val diffSec = (System.currentTimeMillis() - timestampMs) / 1000
-    return when {
-        diffSec < 5 -> "just now"
-        diffSec < 60 -> "${diffSec}s ago"
-        diffSec < 3600 -> "${diffSec / 60} min ago"
-        diffSec < 86400 -> "${diffSec / 3600}h ago"
-        else -> "${diffSec / 86400}d ago"
     }
 }

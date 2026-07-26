@@ -31,6 +31,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.geometry.Corner
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanConstants
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
@@ -348,6 +350,7 @@ fun KeyboardShortcutHelpDialog(
     modifier: Modifier = Modifier,
     context: ShortcutContext = ShortcutContext.CANVAS,
 ) {
+    val s = strings()
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = modifier,
@@ -357,7 +360,7 @@ fun KeyboardShortcutHelpDialog(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(Icons.Default.Keyboard, contentDescription = null)
-                Text("Keyboard Shortcuts")
+                Text(s.t(StringKey.WIZARD_KEYBOARD_SHORTCUTS))
             }
         },
         text = {
@@ -366,66 +369,60 @@ fun KeyboardShortcutHelpDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // Navigation section — always shown
-                ShortcutSection(title = "Navigation") {
-                    ShortcutRow("Enter", "Confirm / Proceed")
-                    ShortcutRow("Escape", "Cancel / Back / Exit mode")
+                ShortcutSection(title = s.t(StringKey.WIZARD_KS_NAVIGATION)) {
+                    ShortcutRow("Enter", s.t(StringKey.WIZARD_KS_CONFIRM_PROCEED))
+                    ShortcutRow("Escape", s.t(StringKey.WIZARD_KS_CANCEL_BACK))
                 }
 
                 if (context == ShortcutContext.CANVAS) {
                     HorizontalDivider()
 
-                    // Movement section
-                    ShortcutSection(title = "Corner Movement") {
-                        ShortcutRow("Arrow keys", "Move selected corner by 10px")
-                        ShortcutRow("Shift + Arrow keys", "Move selected corner by 1px (fine)")
+                    ShortcutSection(title = s.t(StringKey.WIZARD_KS_CORNER_MOVEMENT)) {
+                        ShortcutRow("Arrow keys", s.t(StringKey.WIZARD_KS_MOVE_CORNER_10))
+                        ShortcutRow("Shift + Arrow keys", s.t(StringKey.WIZARD_KS_MOVE_CORNER_1))
                     }
 
                     HorizontalDivider()
 
-                    // Navigation section
-                    ShortcutSection(title = "Selection") {
-                        ShortcutRow("Space", "Next photo/box (first press selects)")
-                        ShortcutRow(".", "Next corner coordinate")
-                        ShortcutRow(",", "Previous corner coordinate")
-                        ShortcutRow("N", "Next corner / Next box")
-                        ShortcutRow("P", "Previous corner / Previous box")
+                    ShortcutSection(title = s.t(StringKey.WIZARD_KS_SELECTION)) {
+                        ShortcutRow("Space", s.t(StringKey.WIZARD_KS_NEXT_PHOTO))
+                        ShortcutRow(".", s.t(StringKey.WIZARD_KS_NEXT_CORNER))
+                        ShortcutRow(",", s.t(StringKey.WIZARD_KS_PREV_CORNER))
+                        ShortcutRow("N", s.t(StringKey.WIZARD_KS_NEXT_CORNER_BOX))
+                        ShortcutRow("P", s.t(StringKey.WIZARD_KS_PREV_CORNER_BOX))
                     }
 
                     HorizontalDivider()
 
-                    // Manipulation section
-                    ShortcutSection(title = "Box Manipulation") {
-                        ShortcutRow("Delete", "Delete selected box")
+                    ShortcutSection(title = s.t(StringKey.WIZARD_KS_BOX_MANIPULATION)) {
+                        ShortcutRow("Delete", s.t(StringKey.WIZARD_KS_DELETE_BOX))
                     }
 
                     HorizontalDivider()
 
-                    // Modes section
-                    ShortcutSection(title = "Modes") {
-                        ShortcutRow("F", "4-point mode (manual box creation)")
-                        ShortcutRow("A", "Add box mode")
-                        ShortcutRow("R", "Refinement mode")
+                    ShortcutSection(title = s.t(StringKey.WIZARD_KS_MODES)) {
+                        ShortcutRow("F", s.t(StringKey.WIZARD_KS_FOUR_POINT))
+                        ShortcutRow("A", s.t(StringKey.WIZARD_KS_ADD_BOX))
+                        ShortcutRow("R", s.t(StringKey.WIZARD_KS_REFINEMENT))
                     }
 
                     HorizontalDivider()
 
-                    // Zoom section
-                    ShortcutSection(title = "Zoom") {
-                        ShortcutRow("+ / -", "Zoom in / out")
-                        ShortcutRow("0 or Home", "Fit to view")
+                    ShortcutSection(title = s.t(StringKey.WIZARD_KS_ZOOM)) {
+                        ShortcutRow("+ / -", s.t(StringKey.WIZARD_KS_ZOOM_IN_OUT))
+                        ShortcutRow("0 or Home", s.t(StringKey.WIZARD_KS_FIT_VIEW))
                     }
                 }
 
                 HorizontalDivider()
 
-                // Undo/Redo section — always shown
-                ShortcutSection(title = "Undo/Redo") {
-                    ShortcutRow("Ctrl+Z", "Undo")
-                    ShortcutRow("Ctrl+Shift+Z", "Redo")
+                ShortcutSection(title = s.t(StringKey.WIZARD_KS_UNDO_REDO)) {
+                    ShortcutRow("Ctrl+Z", s.t(StringKey.WIZARD_KS_UNDO))
+                    ShortcutRow("Ctrl+Shift+Z", s.t(StringKey.WIZARD_KS_REDO))
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(s.close) } },
     )
 }
 

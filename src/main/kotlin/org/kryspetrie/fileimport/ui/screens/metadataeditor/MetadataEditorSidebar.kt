@@ -32,11 +32,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
+import org.kryspetrie.fileimport.ui.components.RotationBadge
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * Sidebar thumbnail strip for the metadata editor.
@@ -68,6 +73,8 @@ fun MetadataEditorSidebar(
     onOpenFolder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
+
     Surface(
         tonalElevation = 2.dp,
         modifier = modifier.width(120.dp),
@@ -81,7 +88,11 @@ fun MetadataEditorSidebar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = onOpenFolder, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.FolderOpen, "Open folder", modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.FolderOpen,
+                        s.t(StringKey.ACC_OPEN_FOLDER),
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
                 if (state.fileCount > 1) {
                     if (isMultiEditMode) {
@@ -102,7 +113,7 @@ fun MetadataEditorSidebar(
                                 modifier = Modifier.height(20.dp),
                                 contentPadding = PaddingValues(horizontal = 4.dp),
                             ) {
-                                Text("Done", style = MaterialTheme.typography.labelSmall)
+                                Text(s.t(StringKey.META_DONE), style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     } else {
@@ -111,7 +122,7 @@ fun MetadataEditorSidebar(
                             modifier = Modifier.height(20.dp),
                             contentPadding = PaddingValues(horizontal = 4.dp),
                         ) {
-                            Text("Multi", style = MaterialTheme.typography.labelSmall)
+                            Text(s.t(StringKey.META_MULTI), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }
@@ -149,18 +160,23 @@ fun MetadataEditorSidebar(
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
                                 val thumb = thumbnailCache[file.absolutePath]
+                                val thumbRotation = entry?.config?.rotationDegrees?.toFloat() ?: 0f
                                 if (thumb != null) {
                                     val bitmap = remember(thumb) { thumb.toComposeImageBitmap() }
                                     Image(
                                         bitmap = bitmap,
                                         contentDescription = file.name,
-                                        modifier = Modifier.fillMaxSize().padding(2.dp),
+                                        modifier = Modifier.fillMaxSize().padding(2.dp)
+                                            .let { mod ->
+                                                if (thumbRotation != 0f) mod.graphicsLayer { rotationZ = thumbRotation }
+                                                else mod
+                                            },
                                         contentScale = ContentScale.Fit,
                                     )
                                 } else {
                                     Icon(
                                         Icons.Default.Image,
-                                        "Loading",
+                                        s.t(StringKey.ACC_LOADING),
                                         modifier = Modifier.align(Alignment.Center).size(32.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -172,8 +188,16 @@ fun MetadataEditorSidebar(
                                         modifier = Modifier.align(Alignment.TopStart).size(16.dp),
                                     )
                                 }
-                                // Modified indicator dot
-                                if (isModified) {
+                                // Rotation badge (when rotation is applied)
+                                val rotationDeg = entry?.config?.rotationDegrees ?: 0
+                                if (rotationDeg != 0) {
+                                    RotationBadge(
+                                        rotationDegrees = rotationDeg,
+                                        isAutoDetected = true,
+                                        modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
+                                    )
+                                } else if (isModified) {
+                                    // Modified indicator dot (only show when no rotation badge)
                                     Surface(
                                         modifier =
                                             Modifier.align(Alignment.TopEnd)

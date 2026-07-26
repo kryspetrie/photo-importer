@@ -28,48 +28,44 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ReorganizePreview
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
-/**
- * Dry-run preview results section for the reorganize screen.
- *
- * Shows summary statistics and a file-by-file mapping list of proposed changes. Extracted from
- * [ReorganizeScreen] to reduce method length and complexity.
- */
 @Composable
 fun ReorganizePreviewSection(
     preview: ReorganizePreview,
     folderPath: String,
     showFileChanges: Boolean,
 ) {
-    // Preview results — summary card
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                "Dry Run Preview",
+                s.t(StringKey.REORG_DRY_RUN),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
             Text(
-                "No files have been changed. Review the planned operations below before applying.",
+                s.t(StringKey.REORG_DRY_RUN_HINT),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatItem("${preview.totalFiles}", "Total")
-                StatItem("${preview.changedFiles}", "Will Change")
-                StatItem("${preview.conflictCount}", "Conflicts")
-                StatItem("${preview.newFolderCount}", "New Folders")
+                StatItem("${preview.totalFiles}", s.t(StringKey.REORG_STAT_TOTAL))
+                StatItem("${preview.changedFiles}", s.t(StringKey.REORG_STAT_WILL_CHANGE))
+                StatItem("${preview.conflictCount}", s.t(StringKey.REORG_STAT_CONFLICTS))
+                StatItem("${preview.newFolderCount}", s.t(StringKey.REORG_STAT_NEW_FOLDERS))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 Text(
-                    "Mode: ${preview.operationMode}",
+                    s.t(StringKey.REORG_STAT_MODE, "mode" to preview.operationMode.name),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
             if (preview.changedFiles == 0) {
                 Text(
-                    "All files are already organized according to this pattern.",
+                    s.t(StringKey.REORG_ALREADY_ORGANIZED),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -77,7 +73,6 @@ fun ReorganizePreviewSection(
         }
     }
 
-    // Preview results — file-by-file mapping list
     if (showFileChanges) {
         val changed = remember(preview) { preview.mappings.filter { it.isChanged } }
         val rootPath =
@@ -86,7 +81,10 @@ fun ReorganizePreviewSection(
                     ?: folderPath
             }
 
-        Text("File Changes (${changed.size})", style = MaterialTheme.typography.titleSmall)
+        Text(
+            s.t(StringKey.REORG_FILE_CHANGES, "count" to "${changed.size}"),
+            style = MaterialTheme.typography.titleSmall,
+        )
 
         Row(
             modifier =
@@ -96,13 +94,13 @@ fun ReorganizePreviewSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                "Current",
+                s.t(StringKey.REORG_CURRENT),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(24.dp))
             Text(
-                "New",
+                s.t(StringKey.REORG_NEW),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f),
             )

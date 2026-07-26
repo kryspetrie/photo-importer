@@ -1,7 +1,6 @@
 package org.kryspetrie.fileimport.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.SpaceBetween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -27,9 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun PlaceholderHelpTooltip(placeholders: Map<String, String>) {
+    val s = strings()
     var showDialog by remember { mutableStateOf(false) }
 
     TextButton(onClick = { showDialog = true }) {
@@ -39,7 +41,7 @@ fun PlaceholderHelpTooltip(placeholders: Map<String, String>) {
             modifier = Modifier.size(14.dp),
         )
         Spacer(modifier = Modifier.width(4.dp))
-        Text("Show placeholders", style = MaterialTheme.typography.labelMedium)
+        Text(s.t(StringKey.WIZARD_SHOW_PLACEHOLDERS), style = MaterialTheme.typography.labelMedium)
     }
 
     if (showDialog) {
@@ -54,7 +56,7 @@ fun PlaceholderHelpTooltip(placeholders: Map<String, String>) {
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        text = "Available Placeholders",
+                        text = s.t(StringKey.WIZARD_PLACEHOLDERS_TITLE),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Column(
@@ -83,7 +85,7 @@ fun PlaceholderHelpTooltip(placeholders: Map<String, String>) {
                         onClick = { showDialog = false },
                         modifier = Modifier.align(Alignment.End),
                     ) {
-                        Text("Close")
+                        Text(s.t(StringKey.ACTION_CLOSE))
                     }
                 }
             }

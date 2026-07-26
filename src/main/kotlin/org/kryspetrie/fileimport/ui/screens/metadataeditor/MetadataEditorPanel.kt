@@ -19,14 +19,16 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
-import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.SettingsPort
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.CameraSection
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.LocationSection
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.QuickEditMetadataFields
+import org.kryspetrie.fileimport.ui.screens.wizard.edit.SourceMetadataSection
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.SubjectsSection
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
@@ -36,24 +38,18 @@ import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
  * Right-hand metadata editor panel for the bulk metadata editor.
  *
  * Adapts between single-edit and multi-edit modes:
- * - Single-edit: Shows all fields bound to the selected file's config, with override toggles.
- * - Multi-edit: Shows fields for batch editing, with an "Apply" button and no override toggles.
+ * - Single-edit: Shows all fields bound to the selected file's config, with source EXIF hints.
+ * - Multi-edit: Shows fields for batch editing, with an "Apply" button.
  *
- * @param state The bulk edit state.
- * @param editState The metadata edit state (field values).
- * @param isMultiEditMode Whether multi-edit mode is active.
- * @param selectedIndices Set of currently selected indices (multi-edit).
- * @param sourceExif Source EXIF summary for the current file.
- * @param metadataHistory Recent metadata values history.
- * @param onSettingsChange Callback when settings (history) are updated.
- * @param currentSettings Current app settings.
- * @param settingsPort Settings port for persistence.
- * @param coroutineScope Coroutine scope for async operations.
- * @param dispatcherProvider Dispatcher provider for thread switching.
- * @param onPickLocation Callback when location picker is requested.
- * @param onApply Callback when "Apply" is clicked in multi-edit mode (after clearing fields).
- * @param onClear Callback when "Clear" is clicked to reset edit fields.
- * @param modifier Modifier for the panel.
+ * ## Upsert Semantics
+ *
+ * The standalone metadata editor uses pure upsert behavior:
+ * - Non-blank field values are written to the output (overwriting any source value).
+ * - Blank field values preserve the source EXIF (no overwrite).
+ * - There are no per-field override checkboxes — the intent is always "write what I provide,
+ *   keep what I don't touch."
+ * - This matches the legacy `OverrideState = null` behavior in the EXIF writer, which is the
+ *   simplest and most predictable model for bulk metadata editing.
  */
 @Composable
 fun MetadataEditorPanel(
@@ -73,14 +69,9 @@ fun MetadataEditorPanel(
     onClear: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val isMultiSelect = isMultiEditMode && selectedIndices.size > 1
-    val selectedIndex = if (!isMultiSelect && state.selectedIndex >= 0) state.selectedIndex else -1
-    val singleEditConfig: PhotoScanConfiguration? =
-        if (!isMultiSelect) state.selectedConfig else null
     val singleEditBoxId: String? = state.selectedFile?.absolutePath
-
-    // Compute override toggles using helper — eliminates 12x repeated pattern
-    val toggles = computeOverrideToggles(singleEditConfig, isMultiSelect, state)
 
     ChunkyScrollbar(modifier = modifier) {
         Column(
@@ -95,7 +86,7 @@ fun MetadataEditorPanel(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "${selectedIndices.size} photos selected",
+                        s.t(StringKey.META_PHOTOS_SELECTED, "count" to selectedIndices.size.toString()),
                         style =
                             MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary,
@@ -104,14 +95,14 @@ fun MetadataEditorPanel(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     OutlinedButton(onClick = onClear, modifier = Modifier.height(28.dp)) {
-                        Text("Clear", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.META_CLEAR), style = MaterialTheme.typography.labelSmall)
                     }
                     Button(onClick = onApply, modifier = Modifier.height(28.dp)) {
-                        Text("Apply", style = MaterialTheme.typography.labelSmall)
+                        Text(s.apply, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 Text(
-                    "Only filled fields will be applied. Leave blank to keep existing values.",
+                    s.t(StringKey.META_MULTI_EDIT_HINT),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -122,7 +113,7 @@ fun MetadataEditorPanel(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        state.selectedFile?.name ?: "No file selected",
+                        state.selectedFile?.name ?: s.t(StringKey.META_NO_FILE_SELECTED),
                         style =
                             MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary,
@@ -131,7 +122,7 @@ fun MetadataEditorPanel(
                         modifier = Modifier.weight(1f, fill = false),
                     )
                     OutlinedButton(onClick = onClear, modifier = Modifier.height(28.dp)) {
-                        Text("Clear", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.META_CLEAR), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -147,7 +138,14 @@ fun MetadataEditorPanel(
                 )
             }
 
-            // Metadata sections
+            // ── Source metadata display (single-edit only) ──
+            if (!isMultiSelect && sourceExif != null) {
+                SourceMetadataSection(sourceExif = sourceExif)
+            }
+
+            // ── Metadata sections ──
+            // All override parameters are null: the standalone editor uses pure upsert semantics
+            // (non-blank = write, blank = preserve source). No per-field override checkboxes.
             QuickEditMetadataFields(
                 description = editState.description,
                 onDescriptionChange = { v ->
@@ -189,14 +187,14 @@ fun MetadataEditorPanel(
                     } else null,
                 boxId = singleEditBoxId,
                 state = null, // Bulk edit doesn't use PhotoScanWizardState
-                overrideDescription = toggles.description.isChecked,
-                onOverrideDescriptionChange = toggles.description.onToggle,
-                overrideKeywords = toggles.keywords.isChecked,
-                onOverrideKeywordsChange = toggles.keywords.onToggle,
-                overrideOriginalDate = toggles.originalDate.isChecked,
-                onOverrideOriginalDateChange = toggles.originalDate.onToggle,
-                overrideYear = toggles.year.isChecked,
-                onOverrideYearChange = toggles.year.onToggle,
+                overrideDescription = null,
+                onOverrideDescriptionChange = null,
+                overrideKeywords = null,
+                onOverrideKeywordsChange = null,
+                overrideOriginalDate = null,
+                onOverrideOriginalDateChange = null,
+                overrideYear = null,
+                onOverrideYearChange = null,
                 sourceExif = sourceExif,
             )
 
@@ -264,8 +262,8 @@ fun MetadataEditorPanel(
                         if (isMultiSelect) selectedIndices.toList() else listOf(state.selectedIndex)
                     )
                 },
-                overrideGps = toggles.gps.isChecked,
-                onOverrideGpsChange = toggles.gps.onToggle,
+                overrideGps = null,
+                onOverrideGpsChange = null,
                 sourceGpsHint =
                     run {
                         val exif = sourceExif ?: return@run null
@@ -337,157 +335,22 @@ fun MetadataEditorPanel(
                 onMetadataHistoryUpdate = { field, value ->
                     onSettingsChange(currentSettings.addMetadataHistory(field, value))
                 },
-                overrideCameraMake = toggles.cameraMake.isChecked,
-                onOverrideCameraMakeChange = toggles.cameraMake.onToggle,
-                overrideCameraModel = toggles.cameraModel.isChecked,
-                onOverrideCameraModelChange = toggles.cameraModel.onToggle,
-                overrideLensModel = toggles.lensModel.isChecked,
-                onOverrideLensModelChange = toggles.lensModel.onToggle,
-                overrideFocalLength = toggles.focalLength.isChecked,
-                onOverrideFocalLengthChange = toggles.focalLength.onToggle,
-                overrideAperture = toggles.aperture.isChecked,
-                onOverrideApertureChange = toggles.aperture.onToggle,
-                overrideShutterSpeed = toggles.shutterSpeed.isChecked,
-                onOverrideShutterSpeedChange = toggles.shutterSpeed.onToggle,
-                overrideIso = toggles.iso.isChecked,
-                onOverrideIsoChange = toggles.iso.onToggle,
-                sourceExif = null,
+                overrideCameraMake = null,
+                onOverrideCameraMakeChange = null,
+                overrideCameraModel = null,
+                onOverrideCameraModelChange = null,
+                overrideLensModel = null,
+                onOverrideLensModelChange = null,
+                overrideFocalLength = null,
+                onOverrideFocalLengthChange = null,
+                overrideAperture = null,
+                onOverrideApertureChange = null,
+                overrideShutterSpeed = null,
+                onOverrideShutterSpeedChange = null,
+                overrideIso = null,
+                onOverrideIsoChange = null,
+                sourceExif = sourceExif,
             )
         }
     }
-}
-
-// ── Override toggle computation ──
-
-/**
- * Holds all override toggles computed for the metadata editor panel.
- *
- * Using this data class eliminates the 12x repeated pattern of checking isMultiSelect and
- * constructing override toggle callbacks inline.
- */
-data class OverrideToggles(
-    val description: OverrideToggle,
-    val keywords: OverrideToggle,
-    val originalDate: OverrideToggle,
-    val year: OverrideToggle,
-    val gps: OverrideToggle,
-    val cameraMake: OverrideToggle,
-    val cameraModel: OverrideToggle,
-    val lensModel: OverrideToggle,
-    val focalLength: OverrideToggle,
-    val aperture: OverrideToggle,
-    val shutterSpeed: OverrideToggle,
-    val iso: OverrideToggle,
-)
-
-/**
- * Computes all override toggles for the metadata editor panel.
- *
- * In single-edit mode, each toggle reads from the config and updates it. In multi-edit mode, all
- * toggles are null (disabled).
- */
-private fun computeOverrideToggles(
-    config: PhotoScanConfiguration?,
-    isMultiSelect: Boolean,
-    state: BulkEditState,
-): OverrideToggles {
-    val update = state::updateSelectedConfig
-    return OverrideToggles(
-        description =
-            overrideToggle(
-                config,
-                { c -> c.overrideDescription },
-                { c, v -> c.copy(overrideDescription = v) },
-                isMultiSelect,
-                update,
-            ),
-        keywords =
-            overrideToggle(
-                config,
-                { c -> c.overrideKeywords },
-                { c, v -> c.copy(overrideKeywords = v) },
-                isMultiSelect,
-                update,
-            ),
-        originalDate =
-            overrideToggle(
-                config,
-                { c -> c.overrideOriginalDate },
-                { c, v -> c.copy(overrideOriginalDate = v) },
-                isMultiSelect,
-                update,
-            ),
-        year =
-            overrideToggle(
-                config,
-                { c -> c.overrideYear },
-                { c, v -> c.copy(overrideYear = v) },
-                isMultiSelect,
-                update,
-            ),
-        gps =
-            overrideToggle(
-                config,
-                { c -> c.overrideGps },
-                { c, v -> c.copy(overrideGps = v) },
-                isMultiSelect,
-                update,
-            ),
-        cameraMake =
-            overrideCameraToggle(
-                config,
-                { c -> c.overrideCameraMake },
-                { c, v -> c.copy(overrideCameraMake = v) },
-                isMultiSelect,
-                update,
-            ),
-        cameraModel =
-            overrideCameraToggle(
-                config,
-                { c -> c.overrideCameraModel },
-                { c, v -> c.copy(overrideCameraModel = v) },
-                isMultiSelect,
-                update,
-            ),
-        lensModel =
-            overrideCameraToggle(
-                config,
-                { c -> c.overrideLensModel },
-                { c, v -> c.copy(overrideLensModel = v) },
-                isMultiSelect,
-                update,
-            ),
-        focalLength =
-            overrideCameraToggle(
-                config,
-                { c -> c.overrideFocalLength },
-                { c, v -> c.copy(overrideFocalLength = v) },
-                isMultiSelect,
-                update,
-            ),
-        aperture =
-            overrideCameraToggle(
-                config,
-                { c -> c.overrideAperture },
-                { c, v -> c.copy(overrideAperture = v) },
-                isMultiSelect,
-                update,
-            ),
-        shutterSpeed =
-            overrideCameraToggle(
-                config,
-                { c -> c.overrideShutterSpeed },
-                { c, v -> c.copy(overrideShutterSpeed = v) },
-                isMultiSelect,
-                update,
-            ),
-        iso =
-            overrideCameraToggle(
-                config,
-                { c -> c.overrideIso },
-                { c, v -> c.copy(overrideIso = v) },
-                isMultiSelect,
-                update,
-            ),
-    )
 }

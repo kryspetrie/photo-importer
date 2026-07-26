@@ -5,7 +5,9 @@ import com.drew.metadata.Directory
 import com.drew.metadata.avi.AviDirectory
 import com.drew.metadata.exif.ExifIFD0Directory
 import com.drew.metadata.exif.ExifSubIFDDirectory
+import com.drew.metadata.exif.ExifDirectoryBase
 import com.drew.metadata.exif.GpsDirectory
+import com.drew.metadata.iptc.IptcDirectory
 import com.drew.metadata.mov.QuickTimeDirectory
 import com.drew.metadata.mov.media.QuickTimeVideoDirectory
 import com.drew.metadata.mp4.Mp4Directory
@@ -93,6 +95,7 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
         val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
         val sub = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
         val gps = metadata.getFirstDirectoryOfType(GpsDirectory::class.java)
+        val iptc = metadata.getFirstDirectoryOfType(IptcDirectory::class.java)
 
         val dateOriginal =
             safeDate(sub, ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL)
@@ -103,6 +106,25 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
             } catch (_: Exception) {
                 null
             }
+
+        // IPTC keywords (may be multiple values for the same tag)
+        val iptcKeywords: List<String>? = try {
+            iptc?.getStringArray(IptcDirectory.TAG_KEYWORDS)?.toList()?.map { it.trim() }?.filter { it.isNotBlank() }
+        } catch (_: Exception) {
+            val single = safeString(iptc, IptcDirectory.TAG_KEYWORDS)?.trim()
+            if (single.isNullOrBlank()) null else listOf(single)
+        }
+
+        // XP Keywords (Windows Unicode keywords stored in EXIF IFD0)
+        val xpKeywords: String? = try {
+            ifd0?.getString(ExifDirectoryBase.TAG_WIN_KEYWORDS)?.trim()
+        } catch (_: Exception) { null }
+
+        val mergedKeywords = if (iptcKeywords != null || xpKeywords != null) {
+            val iptcSet = iptcKeywords?.toSet() ?: emptySet()
+            val xpList = xpKeywords?.split(";")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
+            (iptcKeywords.orEmpty() + xpList.filter { it !in iptcSet }).takeIf { it.isNotEmpty() }
+        } else null
 
         return ImageMetadata(
             dateTimeOriginal = dateOriginal,
@@ -136,6 +158,11 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
             copyright = safeString(ifd0, ExifIFD0Directory.TAG_COPYRIGHT)?.trim(),
             artist = safeString(ifd0, ExifIFD0Directory.TAG_ARTIST)?.trim(),
             description = safeString(ifd0, ExifIFD0Directory.TAG_IMAGE_DESCRIPTION)?.trim(),
+            keywords = mergedKeywords,
+            subLocation = safeString(iptc, IptcDirectory.TAG_SUB_LOCATION)?.trim(),
+            city = safeString(iptc, IptcDirectory.TAG_CITY)?.trim(),
+            provinceState = safeString(iptc, IptcDirectory.TAG_PROVINCE_OR_STATE)?.trim(),
+            countryName = safeString(iptc, IptcDirectory.TAG_COUNTRY_OR_PRIMARY_LOCATION_NAME)?.trim(),
         )
     }
 
@@ -289,20 +316,23 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
             try {
                 val destFile = destination.toFile()
                 destFile.parentFile?.mkdirs()
-                val totalBytes = source.fileSize
+                // Re-stat the source file to get current size (the cached fileSize may be stale
+                // if the file grew since scanning, e.g. a watch-folder file still being written).
+                val currentSize = source.file.length()
+                val totalBytes = if (currentSize > 0) currentSize else source.fileSize
                 var copiedBytes = 0L
                 java.io.FileInputStream(source.file).channel.use { srcChannel ->
                     java.io.FileOutputStream(destFile).channel.use { dstChannel ->
-                        var position = 0L
-                        while (position < totalBytes) {
+                        // Transfer until EOF (transferTo returns 0 at end-of-stream),
+                        // not just up to the cached size.
+                        while (true) {
                             val transferred =
                                 srcChannel.transferTo(
-                                    position,
+                                    copiedBytes,
                                     COPY_BUFFER_SIZE.toLong(),
                                     dstChannel,
                                 )
                             if (transferred <= 0) break
-                            position += transferred
                             copiedBytes += transferred
                             onProgress(copiedBytes, totalBytes)
                         }
@@ -317,14 +347,17 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
     override suspend fun verifyCopy(source: ImageFile, destination: FilePath): Boolean =
         withContext(dispatcherProvider.io) {
             try {
-                // Use the stored hash from the source ImageFile if available,
-                // avoiding a redundant re-read of the source file
                 val destFile = destination.toFile()
+                // Always compute a fresh hash from the current source file bytes.
+                // The cached hash may be stale (e.g. the file grew after scanning),
+                // and comparing against a stale hash would incorrectly reject valid copies
+                // or accept truncated ones.
                 val sourceHash =
-                    source.hash
-                        ?: FileInputStream(source.file).buffered(HASH_BUFFER_SIZE).use {
-                            DigestUtils.md5Hex(it)
-                        }
+                    FileInputStream(source.file).buffered(HASH_BUFFER_SIZE).use {
+                        DigestUtils.md5Hex(it)
+                    }
+                // Short-circuit: if the source hash is empty (read failure), verification fails
+                if (sourceHash.isEmpty()) return@withContext false
                 val destHash =
                     FileInputStream(destFile).buffered(HASH_BUFFER_SIZE).use {
                         DigestUtils.md5Hex(it)

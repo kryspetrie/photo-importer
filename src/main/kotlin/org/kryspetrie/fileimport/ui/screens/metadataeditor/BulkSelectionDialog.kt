@@ -47,6 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import java.awt.image.BufferedImage
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +62,8 @@ fun BulkSelectionDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val s = strings()
+
     Dialog(onDismissRequest = onDismiss) {
         Surface(
             shape = RoundedCornerShape(12.dp),
@@ -74,9 +78,13 @@ fun BulkSelectionDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
-                        Text("Select Photos", style = MaterialTheme.typography.titleMedium)
+                        Text(s.t(StringKey.META_SELECT_PHOTOS), style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "${selectedIndices.size} of ${state.fileCount} selected",
+                            s.t(
+                                StringKey.META_SELECTED_OF_TOTAL,
+                                "selected" to selectedIndices.size.toString(),
+                                "total" to state.fileCount.toString(),
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -85,14 +93,14 @@ fun BulkSelectionDialog(
                         OutlinedButton(onClick = onSelectAll, modifier = Modifier.height(32.dp)) {
                             Icon(Icons.Default.SelectAll, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("All", style = MaterialTheme.typography.labelSmall)
+                            Text(s.t(StringKey.ACTION_ALL), style = MaterialTheme.typography.labelSmall)
                         }
                         OutlinedButton(onClick = onSelectNone, modifier = Modifier.height(32.dp)) {
                             Icon(Icons.Default.Deselect, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("None", style = MaterialTheme.typography.labelSmall)
+                            Text(s.t(StringKey.ACTION_NONE), style = MaterialTheme.typography.labelSmall)
                         }
-                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
+                        IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, s.close) }
                     }
                 }
                 HorizontalDivider()
@@ -130,7 +138,7 @@ fun BulkSelectionDialog(
                                 } else {
                                     Icon(
                                         Icons.Default.Image,
-                                        "Loading",
+                                        s.t(StringKey.ACC_LOADING),
                                         modifier = Modifier.align(Alignment.Center).size(32.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -160,12 +168,16 @@ fun BulkSelectionDialog(
                     modifier = Modifier.fillMaxWidth().padding(12.dp),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(s.cancel) }
                     Spacer(Modifier.width(8.dp))
                     Button(onClick = onConfirm, enabled = selectedIndices.isNotEmpty()) {
                         Text(
-                            if (selectedIndices.size == 1) "Edit 1 Photo"
-                            else "Edit ${selectedIndices.size} Photos"
+                            if (selectedIndices.size == 1) s.t(StringKey.META_EDIT_ONE_PHOTO)
+                            else
+                                s.t(
+                                    StringKey.META_EDIT_N_PHOTOS,
+                                    "count" to selectedIndices.size.toString(),
+                                ),
                         )
                     }
                 }

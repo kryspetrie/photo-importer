@@ -25,7 +25,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /**
@@ -41,6 +43,7 @@ fun ExportSettingsCard(
     onAutoSkipBackFilesChange: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val perspectiveEnabled by state.exportSettings.perspectiveCorrectionEnabled.collectAsState()
     val marginPercent by state.exportSettings.exportMarginPercent.collectAsState()
 
@@ -53,11 +56,10 @@ fun ExportSettingsCard(
     ) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                "Export Settings",
+                s.t(StringKey.WIZARD_EXPORT_SETTINGS),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
             )
 
-            // Perspective correction + Skip Crop & Rotate toggles
             Row(Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     SettingsToggle(
@@ -65,10 +67,10 @@ fun ExportSettingsCard(
                         onCheckedChange = {
                             state.exportSettings.setPerspectiveCorrectionEnabled(it)
                         },
-                        label = "Perspective correction",
+                        label = s.t(StringKey.WIZARD_PERSPECTIVE_CORRECTION),
                         description =
-                            if (perspectiveEnabled) "Warp-stretch removes skew"
-                            else "Simple crop, no skew removal",
+                            if (perspectiveEnabled) s.t(StringKey.WIZARD_WARP_STRETCH)
+                            else s.t(StringKey.WIZARD_SIMPLE_CROP),
                         icon = Icons.Default.Transform,
                     )
                 }
@@ -77,26 +79,24 @@ fun ExportSettingsCard(
                         SettingsToggle(
                             checked = skipCropAndRotate,
                             onCheckedChange = onSkipCropAndRotateChange,
-                            label = "Skip Crop & Rotate",
-                            description = "Go straight to metadata",
+                            label = s.t(StringKey.SETTINGS_SKIP_CROP_AND_ROTATE),
+                            description = s.t(StringKey.WIZARD_GO_TO_METADATA),
                             icon = Icons.Default.SkipNext,
                         )
                     }
                 }
             }
 
-            // Auto-skip back photos toggle
             if (onAutoSkipBackFilesChange != null) {
                 SettingsToggle(
                     checked = autoSkipBackFiles,
                     onCheckedChange = onAutoSkipBackFilesChange,
-                    label = "Auto-skip back photos",
-                    description = "Skip files used as back-of-photo images during batch processing",
+                    label = s.t(StringKey.SETTINGS_AUTO_SKIP_BACK_FILES),
+                    description = s.t(StringKey.WIZARD_AUTO_SKIP_BACK_DESC),
                     icon = Icons.Default.VisibilityOff,
                 )
             }
 
-            // Margin slider
             Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Icon(
                     Icons.Default.CropFree,
@@ -109,7 +109,7 @@ fun ExportSettingsCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text("Additional margin", style = MaterialTheme.typography.labelMedium)
+                        Text(s.t(StringKey.WIZARD_ADDITIONAL_MARGIN), style = MaterialTheme.typography.labelMedium)
                         Text(
                             "${(marginPercent * 100).toInt()}%",
                             style = MaterialTheme.typography.labelMedium,

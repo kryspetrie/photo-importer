@@ -59,12 +59,20 @@ enum class OutputMode {
  * - The output mode (overwrite vs save new)
  * - The output directory for save-new mode
  * - The source path (file or folder)
+ * - Whether to include subfolders when loading a folder
+ * - Whether the editor is active (folder selected, files loaded)
  * - Undo journal tracking
  * - UI messages (unified status and error feedback)
  */
 class BulkEditState {
     /** Current source path being edited (can be a file or folder). */
     var sourcePath by mutableStateOf("")
+
+    /** Whether to include image files from subdirectories when loading a folder. */
+    var includeSubfolders by mutableStateOf(false)
+
+    /** Whether the editor is active — files have been loaded and the user is editing. */
+    var editingActive by mutableStateOf(false)
 
     /** All image files in the current folder. */
     var files by mutableStateOf<List<File>>(emptyList())

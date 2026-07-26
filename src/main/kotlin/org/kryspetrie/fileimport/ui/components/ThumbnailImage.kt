@@ -31,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import java.io.File
 import java.util.Locale
 import org.kryspetrie.fileimport.domain.model.FilePath
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.domain.model.ImageFileType
 
 fun formatFileSize(bytes: Long): String =
@@ -114,6 +116,7 @@ private fun VideoThumbnail(
     contentScale: ContentScale = ContentScale.Fit,
     durationText: String? = null,
 ) {
+    val s = strings()
     var bitmap by remember(file.absolutePath, maxPx) { mutableStateOf<ImageBitmap?>(null) }
     var loaded by remember(file.absolutePath, maxPx) { mutableStateOf(false) }
 
@@ -154,7 +157,7 @@ private fun VideoThumbnail(
         ) {
             Icon(
                 Icons.Default.PlayArrow,
-                contentDescription = "Video",
+                contentDescription = s.t(StringKey.ACC_VIDEO),
                 modifier = Modifier.size(20.dp),
                 tint = Color.White,
             )

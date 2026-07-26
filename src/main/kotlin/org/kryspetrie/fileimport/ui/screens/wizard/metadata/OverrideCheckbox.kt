@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * Compact override checkbox for EXIF metadata fields.
@@ -42,6 +44,7 @@ fun OverrideCheckbox(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
+    val s = strings()
     val tooltipState = rememberTooltipState()
 
     TooltipBox(
@@ -54,8 +57,8 @@ fun OverrideCheckbox(
                 shadowElevation = 4.dp,
             ) {
                 Text(
-                    if (included) "Field included in output — uncheck to remove from output"
-                    else "Field removed from output — check to restore",
+                    if (included) s.t(StringKey.WIZARD_OVERRIDE_INCLUDE)
+                    else s.t(StringKey.WIZARD_OVERRIDE_EXCLUDE),
                     modifier = Modifier,
                     style = MaterialTheme.typography.labelSmall,
                 )
@@ -69,8 +72,8 @@ fun OverrideCheckbox(
             modifier =
                 modifier.size(20.dp).semantics {
                     contentDescription =
-                        if (included) "Include field in EXIF output"
-                        else "Exclude field from EXIF output"
+                        if (included) s.t(StringKey.WIZARD_INCLUDE_FIELD)
+                        else s.t(StringKey.WIZARD_EXCLUDE_FIELD)
                 },
             enabled = enabled,
             colors =

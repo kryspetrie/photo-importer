@@ -48,9 +48,15 @@ import org.kryspetrie.fileimport.domain.model.FilenamePresets
 import org.kryspetrie.fileimport.domain.model.FolderPresets
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.NamePlaceholders
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.PlaceholderHelpTooltip
 import org.kryspetrie.fileimport.ui.components.SectionLabel
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
+import org.kryspetrie.fileimport.ui.i18n.configSummary
+import org.kryspetrie.fileimport.ui.i18n.conflictResolutionLabel
+import org.kryspetrie.fileimport.ui.i18n.dateSourceDescription
+import org.kryspetrie.fileimport.ui.i18n.dateSourceLabel
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun PhotoScanSettingsSection(
@@ -75,7 +81,7 @@ fun PhotoScanSettingsSection(
                     ) {
                         var orientationExpanded by remember { mutableStateOf(false) }
                         PhotoScanCollapsibleSubsection(
-                            title = "Orientation",
+                            title = strings().t(StringKey.SETTINGS_ORIENTATION),
                             icon = Icons.Default.AutoFixHigh,
                             expanded = orientationExpanded,
                             onToggle = { orientationExpanded = !orientationExpanded },
@@ -84,7 +90,7 @@ fun PhotoScanSettingsSection(
                         }
                         var orgExpanded by remember { mutableStateOf(true) }
                         PhotoScanCollapsibleSubsection(
-                            title = "Organization",
+                            title = strings().t(StringKey.SETTINGS_ORG),
                             icon = Icons.Default.FolderCopy,
                             expanded = orgExpanded,
                             onToggle = { orgExpanded = !orgExpanded },
@@ -104,6 +110,7 @@ private fun SettingsCardHeader(
     onSettingsExpandedChange: (Boolean) -> Unit,
     config: ImportConfiguration,
 ) {
+    val s = strings()
     Row(
         Modifier.fillMaxWidth()
             .clickable { onSettingsExpandedChange(!settingsExpanded) }
@@ -119,12 +126,12 @@ private fun SettingsCardHeader(
         )
         Column(Modifier.weight(1f)) {
             Text(
-                "Custom Settings",
+                s.t(StringKey.IMPORT_SETTINGS_LABEL),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
             )
             if (!settingsExpanded) {
                 Text(
-                    configSummary(config),
+                    s.configSummary(config),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -134,7 +141,7 @@ private fun SettingsCardHeader(
         }
         Icon(
             if (settingsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-            "Toggle",
+            s.t(StringKey.ACC_TOGGLE),
             Modifier.size(16.dp),
         )
     }
@@ -145,17 +152,17 @@ private fun OrientationSection(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("Auto-Orient on Import")
+    val s = strings()
+    SectionLabel(s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT))
     SettingsToggle(
         checked = config.autoOrientEnabled,
         onCheckedChange = { onConfigChange(config.copy(autoOrientEnabled = it)) },
-        label = "Auto-orient photos on import",
-        description = "Detect and correct rotation using ML (requires orientation model)",
+        label = s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT),
+        description = s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT_DESC),
     )
     if (config.autoOrientEnabled) {
         Text(
-            "Photos will be automatically rotated upright during import. " +
-                "JPEG rotation is metadata-only (lossless).",
+            s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT_ENABLED_NOTE),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -167,12 +174,12 @@ private fun OrganizationSection(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    // Folder organization
-    SectionLabel("Folder Organization")
+    val s = strings()
+    SectionLabel(s.t(StringKey.SETTINGS_ORG))
     SettingsToggle(
         checked = config.createSubfolders,
         onCheckedChange = { onConfigChange(config.copy(createSubfolders = it)) },
-        label = "Create date-based subfolders",
+        label = s.t(StringKey.SETTINGS_ORG_SUBFOLDERS),
     )
     if (config.createSubfolders) {
         FolderOrganizationField(config = config, onConfigChange = onConfigChange)
@@ -180,8 +187,7 @@ private fun OrganizationSection(
 
     Spacer(Modifier.height(4.dp))
 
-    // Filename
-    SectionLabel("Filename")
+    SectionLabel(s.t(StringKey.SETTINGS_ORG_FILENAME))
     SettingsToggle(
         checked = config.preserveOriginalName,
         onCheckedChange = {
@@ -192,13 +198,13 @@ private fun OrganizationSection(
                 )
             )
         },
-        label = "Preserve original filename",
+        label = s.t(StringKey.SETTINGS_ORG_PRESERVE_NAMES),
     )
     OutlinedTextField(
         config.fileNamePattern,
         { onConfigChange(config.copy(fileNamePattern = it)) },
         enabled = !config.preserveOriginalName,
-        label = { Text("Filename Pattern") },
+        label = { Text(s.t(StringKey.SETTINGS_ORG_FILENAME_PATTERN)) },
         textStyle = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -208,12 +214,8 @@ private fun OrganizationSection(
 
     Spacer(Modifier.height(4.dp))
 
-    // Conflict resolution
-    SectionLabel("Conflict Resolution")
     ConflictResolutionField(config = config, onConfigChange = onConfigChange)
 
-    // Date source
-    SectionLabel("Date Source")
     DateSourceField(config = config, onConfigChange = onConfigChange)
 }
 
@@ -223,10 +225,11 @@ private fun FolderOrganizationField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
+    val s = strings()
     OutlinedTextField(
         config.folderPattern,
         { onConfigChange(config.copy(folderPattern = it)) },
-        label = { Text("Folder Pattern") },
+        label = { Text(s.t(StringKey.SETTINGS_ORG_FOLDER_PATTERN)) },
         textStyle = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -266,7 +269,7 @@ private fun ConflictResolutionField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    // Short options: flow horizontally in a row of radio buttons
+    val s = strings()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -282,47 +285,32 @@ private fun ConflictResolutionField(
                     config.conflictResolution == r,
                     { onConfigChange(config.copy(conflictResolution = r)) },
                 )
-                Text(r.displayName, style = MaterialTheme.typography.labelSmall)
+                Text(s.conflictResolutionLabel(r), style = MaterialTheme.typography.labelSmall)
             }
         }
     }
 }
-
-private val ConflictResolution.displayName: String
-    get() =
-        when (this) {
-            ConflictResolution.RENAME -> "Rename"
-            ConflictResolution.SKIP -> "Skip"
-            ConflictResolution.REPLACE -> "Replace"
-            ConflictResolution.ASK_USER -> "Ask me"
-        }
-
-private val ConflictResolution.description: String
-    get() =
-        when (this) {
-            ConflictResolution.RENAME -> "Add a number suffix to avoid conflicts (safest)"
-            ConflictResolution.SKIP -> "Don't import if a file with the same name exists"
-            ConflictResolution.REPLACE -> "Overwrite existing files (irreversible!)"
-            ConflictResolution.ASK_USER -> "Prompt for each conflict individually"
-        }
 
 @Composable
 private fun DateSourceField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    // Date sources have descriptions — use compact vertical layout
+    val s = strings()
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        DateSource.entries.forEach { s ->
+        DateSource.entries.forEach { source ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.clickable { onConfigChange(config.copy(dateSource = s)) },
+                modifier = Modifier.clickable { onConfigChange(config.copy(dateSource = source)) },
             ) {
-                RadioButton(config.dateSource == s, { onConfigChange(config.copy(dateSource = s)) })
+                RadioButton(
+                    config.dateSource == source,
+                    { onConfigChange(config.copy(dateSource = source)) },
+                )
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(s.displayName, style = MaterialTheme.typography.labelSmall)
+                    Text(s.dateSourceLabel(source), style = MaterialTheme.typography.labelSmall)
                     Text(
-                        s.description,
+                        s.dateSourceDescription(source),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -331,23 +319,6 @@ private fun DateSourceField(
         }
     }
 }
-
-private val DateSource.displayName: String
-    get() =
-        when (this) {
-            DateSource.EXIF_DATE -> "EXIF date taken"
-            DateSource.FILE_MODIFIED_DATE -> "File modified"
-            DateSource.FILE_CREATED_DATE -> "File created"
-        }
-
-private val DateSource.description: String
-    get() =
-        when (this) {
-            DateSource.EXIF_DATE ->
-                "Use photo capture date from EXIF metadata (falls back to file date)"
-            DateSource.FILE_MODIFIED_DATE -> "Use file's last modified timestamp"
-            DateSource.FILE_CREATED_DATE -> "Use file creation timestamp (may change when copying)"
-        }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -379,10 +350,4 @@ private fun PhotoScanCollapsibleSubsection(
             Column(content = content)
         }
     }
-}
-
-private fun configSummary(c: ImportConfiguration): String = buildString {
-    if (c.createSubfolders) append("${c.folderPattern} • ")
-    if (c.preserveOriginalName) append("Original name") else append(c.fileNamePattern)
-    append(" • ${c.conflictResolution.name.lowercase().replace("_", " ")}")
 }

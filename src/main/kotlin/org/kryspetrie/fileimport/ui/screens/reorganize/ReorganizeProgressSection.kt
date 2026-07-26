@@ -25,7 +25,9 @@ import org.kryspetrie.fileimport.domain.model.ReorganizeMode
 import org.kryspetrie.fileimport.domain.model.ReorganizePhase
 import org.kryspetrie.fileimport.domain.model.ReorganizeProgress
 import org.kryspetrie.fileimport.domain.model.ReorganizeResult
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.CircularSpinner
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.ReorganizeViewModel
 
 @Composable
@@ -45,6 +47,7 @@ fun ReorganizeProgressSection(
 
 @Composable
 private fun ScanningProgressCard(progress: ReorganizeProgress) {
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(16.dp),
@@ -57,8 +60,8 @@ private fun ScanningProgressCard(progress: ReorganizeProgress) {
             ) {
                 CircularSpinner(size = 24.dp, strokeWidth = 2.5.dp)
                 Text(
-                    if (progress.phase == ReorganizePhase.SCANNING) "Scanning files..."
-                    else "Reading metadata...",
+                    if (progress.phase == ReorganizePhase.SCANNING) s.t(StringKey.REORG_SCANNING)
+                    else s.t(StringKey.REORG_READING_METADATA),
                     style = MaterialTheme.typography.titleSmall,
                 )
             }
@@ -80,6 +83,7 @@ private fun ScanningProgressCard(progress: ReorganizeProgress) {
 
 @Composable
 private fun ExecutingProgressCard(progress: ReorganizeProgress) {
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(16.dp),
@@ -93,10 +97,10 @@ private fun ExecutingProgressCard(progress: ReorganizeProgress) {
                 CircularSpinner(size = 24.dp, strokeWidth = 2.5.dp)
                 Text(
                     when (progress.phase) {
-                        ReorganizePhase.ROLLING_BACK -> "Undoing changes..."
-                        ReorganizePhase.UNDOING -> "Undoing changes..."
-                        ReorganizePhase.EXECUTING -> "Reorganizing files..."
-                        else -> "Processing..."
+                        ReorganizePhase.ROLLING_BACK -> s.t(StringKey.REORG_UNDOING)
+                        ReorganizePhase.UNDOING -> s.t(StringKey.REORG_UNDOING)
+                        ReorganizePhase.EXECUTING -> s.t(StringKey.REORG_REORGANIZING)
+                        else -> s.t(StringKey.REORG_PROCESSING)
                     },
                     style = MaterialTheme.typography.titleSmall,
                 )
@@ -125,6 +129,7 @@ private fun ExecutingProgressCard(progress: ReorganizeProgress) {
 
 @Composable
 private fun CompleteResultCard(r: ReorganizeResult, onReset: () -> Unit) {
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(16.dp),
@@ -140,23 +145,24 @@ private fun CompleteResultCard(r: ReorganizeResult, onReset: () -> Unit) {
                     else MaterialTheme.colorScheme.error,
             )
             Text(
-                if (r.errorCount == 0) "Reorganization Complete" else "Completed with Errors",
+                if (r.errorCount == 0) s.t(StringKey.REORG_COMPLETE)
+                else s.t(StringKey.REORG_COMPLETE_ERRORS),
                 style = MaterialTheme.typography.titleSmall,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 when (r.operationMode) {
                     ReorganizeMode.MOVE -> {
-                        StatItem("${r.movedCount}", "Moved")
-                        StatItem("${r.renamedCount}", "Renamed")
+                        StatItem("${r.movedCount}", s.t(StringKey.REORG_STAT_MOVED))
+                        StatItem("${r.renamedCount}", s.t(StringKey.REORG_STAT_RENAMED))
                     }
-                    ReorganizeMode.COPY -> StatItem("${r.copiedCount}", "Copied")
+                    ReorganizeMode.COPY -> StatItem("${r.copiedCount}", s.t(StringKey.REORG_STAT_COPIED))
                 }
-                StatItem("${r.skippedCount}", "Skipped")
-                StatItem("${r.errorCount}", "Errors")
+                StatItem("${r.skippedCount}", s.t(StringKey.REORG_STAT_SKIPPED))
+                StatItem("${r.errorCount}", s.t(StringKey.IMPORT_STAT_ERRORS))
             }
             r.journalPath?.let {
                 Text(
-                    "Undo journal saved. You can reverse these changes at any time.",
+                    s.t(StringKey.REORG_UNDO_SAVED),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -172,13 +178,13 @@ private fun CompleteResultCard(r: ReorganizeResult, onReset: () -> Unit) {
                 }
                 if (r.errors.size > 5) {
                     Text(
-                        "...and ${r.errors.size - 5} more",
+                        s.t(StringKey.REORG_AND_MORE, "count" to "${r.errors.size - 5}"),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
-            OutlinedButton(onClick = onReset) { Text("Done") }
+            OutlinedButton(onClick = onReset) { Text(s.t(StringKey.ACTION_OK)) }
         }
     }
 }

@@ -132,10 +132,20 @@ class NamingAdapter : NamingPort {
         destinationRoot: String,
         configuration: ImportConfiguration,
     ): String {
+        // If the pattern contains {counter}, the loop will produce unique names each iteration.
+        // If not, generateFilePath returns the same path every time, so we must force a
+        // disambiguator to avoid an infinite loop.
         var counter = 1
+        val hasCounter = configuration.fileNamePattern.contains("{counter}")
         var path: String
         do {
             path = generateFilePath(imageFile, destinationRoot, configuration, counter)
+            if (!hasCounter && File(path).exists()) {
+                // Force a unique filename by appending _N before the extension
+                val base = path.substringBeforeLast('.')
+                val ext = path.substringAfterLast('.')
+                path = "${base}_${counter}.$ext"
+            }
             counter++
         } while (File(path).exists())
         return path

@@ -17,8 +17,6 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -26,9 +24,12 @@ import androidx.compose.ui.unit.dp
 import java.awt.Desktop
 import java.io.File
 import org.kryspetrie.fileimport.domain.model.ImportResult
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun ImportResultInline(result: ImportResult, destinationPath: String, onReset: () -> Unit) {
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(16.dp),
@@ -44,7 +45,8 @@ fun ImportResultInline(result: ImportResult, destinationPath: String, onReset: (
                     else MaterialTheme.colorScheme.error,
             )
             Text(
-                if (result.errorCount == 0) "Import Complete!" else "Completed with Errors",
+                if (result.errorCount == 0) s.t(StringKey.IMPORT_PROGRESS_COMPLETE)
+                else s.t(StringKey.IMPORT_COMPLETE_WITH_ERRORS),
                 style = MaterialTheme.typography.titleSmall,
             )
             if (destinationPath.isNotBlank()) {
@@ -57,10 +59,10 @@ fun ImportResultInline(result: ImportResult, destinationPath: String, onReset: (
                 )
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                StatCol("${result.successCount}", "Copied")
-                StatCol("${result.skippedCount}", "Skipped")
-                StatCol("${result.errorCount}", "Errors")
-                StatCol("${result.duplicateCount}", "Duplicates")
+                StatCol("${result.successCount}", s.t(StringKey.IMPORT_STAT_COPIED))
+                StatCol("${result.skippedCount}", s.t(StringKey.IMPORT_STAT_SKIPPED))
+                StatCol("${result.errorCount}", s.t(StringKey.IMPORT_STAT_ERRORS))
+                StatCol("${result.duplicateCount}", s.t(StringKey.IMPORT_STAT_DUPLICATES))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (destinationPath.isNotBlank()) {
@@ -73,10 +75,10 @@ fun ImportResultInline(result: ImportResult, destinationPath: String, onReset: (
                     ) {
                         Icon(Icons.Default.FolderOpen, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Open Destination")
+                        Text(s.t(StringKey.IMPORT_OPEN_DESTINATION))
                     }
                 }
-                OutlinedButton(onClick = onReset) { Text("New Import") }
+                OutlinedButton(onClick = onReset) { Text(s.t(StringKey.IMPORT_NEW_IMPORT)) }
             }
         }
     }

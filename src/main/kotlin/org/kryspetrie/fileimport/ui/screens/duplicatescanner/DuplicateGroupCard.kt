@@ -25,11 +25,15 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.ThumbnailImage
 import org.kryspetrie.fileimport.ui.components.formatFileSize
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun DuplicateGroupCard(group: DuplicateInfo, onSetPrimary: (String) -> Unit) {
+    val s = strings()
+
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
@@ -43,7 +47,11 @@ fun DuplicateGroupCard(group: DuplicateInfo, onSetPrimary: (String) -> Unit) {
                     tint = MaterialTheme.colorScheme.error,
                 )
                 Text(
-                    "${1 + group.duplicateImages.size} files — ${group.duplicateType.name.replace("_", " ")}",
+                    s.t(
+                        StringKey.DUP_FILES_TYPE,
+                        "count" to (1 + group.duplicateImages.size).toString(),
+                        "type" to group.duplicateType.name.replace("_", " "),
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                 )
             }
@@ -79,7 +87,9 @@ fun DuplicateGroupCard(group: DuplicateInfo, onSetPrimary: (String) -> Unit) {
                     if (isPrimary) {
                         AssistChip(
                             onClick = {},
-                            label = { Text("Keep", style = MaterialTheme.typography.labelSmall) },
+                            label = {
+                                Text(s.t(StringKey.DUP_KEEP), style = MaterialTheme.typography.labelSmall)
+                            },
                             colors =
                                 AssistChipDefaults.assistChipColors(
                                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -93,7 +103,7 @@ fun DuplicateGroupCard(group: DuplicateInfo, onSetPrimary: (String) -> Unit) {
                             modifier = Modifier.height(24.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                         ) {
-                            Text("Set as Keep", style = MaterialTheme.typography.labelSmall)
+                            Text(s.t(StringKey.DUP_SET_KEEP), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }

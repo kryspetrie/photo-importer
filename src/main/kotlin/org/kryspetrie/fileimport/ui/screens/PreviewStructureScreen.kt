@@ -2,8 +2,6 @@ package org.kryspetrie.fileimport.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.SpaceBetween
-import androidx.compose.foundation.layout.Arrangement.SpaceEvenly
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -36,12 +34,22 @@ import androidx.compose.ui.unit.dp
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.port.FileStructurePreview
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.ui.components.ThumbnailImage
 import org.kryspetrie.fileimport.ui.components.formatFileSize
+import org.kryspetrie.fileimport.ui.i18n.Strings
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 private const val THUMB_PX = 60
+
+private fun filesStatLabel(s: Strings, count: Int): String {
+    val full =
+        if (count == 1) s.t(StringKey.PLURAL_FILES_ONE)
+        else s.t(StringKey.PLURAL_FILES_OTHER, "count" to count.toString())
+    return full.substringAfter(" ").replaceFirstChar { it.uppercase() }
+}
 
 @Composable
 fun PreviewStructureScreen(
@@ -52,6 +60,7 @@ fun PreviewStructureScreen(
     onImport: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val s = strings()
     val namingPort = koinInject<NamingPort>()
     val previews =
         remember(images, destinationPath, configuration) {
@@ -68,14 +77,13 @@ fun PreviewStructureScreen(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text("Review Import Plan", style = MaterialTheme.typography.headlineSmall)
+        Text(s.t(StringKey.IMPORT_REVIEW_PLAN), style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Dry run — no files have been copied. Review the planned changes below.",
+            s.t(StringKey.IMPORT_DRY_RUN_HINT),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        // Summary card
         OutlinedCard(modifier = Modifier.fillMaxWidth()) {
             Column(
                 modifier = Modifier.padding(12.dp),
@@ -85,9 +93,9 @@ fun PreviewStructureScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                 ) {
-                    StatColumn("${previews.size}", "Files")
-                    StatColumn("${destFolders.size}", "Folders")
-                    StatColumn(formatFileSize(totalSize), "Total size")
+                    StatColumn("${previews.size}", filesStatLabel(s, previews.size))
+                    StatColumn("${destFolders.size}", s.t(StringKey.IMPORT_STAT_FOLDERS))
+                    StatColumn(formatFileSize(totalSize), s.t(StringKey.IMPORT_STAT_TOTAL_SIZE))
                 }
                 if (conflictCount > 0) {
                     Row(
@@ -102,7 +110,7 @@ fun PreviewStructureScreen(
                             tint = MaterialTheme.colorScheme.error,
                         )
                         Text(
-                            "$conflictCount file(s) would conflict with existing files",
+                            s.t(StringKey.IMPORT_CONFLICTS_WARNING, "count" to conflictCount.toString()),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -111,19 +119,17 @@ fun PreviewStructureScreen(
             }
         }
 
-        // Folder structure
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            // Source folders
             OutlinedCard(modifier = Modifier.weight(1f)) {
                 Column(
                     modifier = Modifier.padding(10.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        "Source",
+                        s.t(StringKey.IMPORT_SOURCE_LABEL),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -145,14 +151,13 @@ fun PreviewStructureScreen(
                 }
             }
 
-            // Destination folders
             OutlinedCard(modifier = Modifier.weight(1f)) {
                 Column(
                     modifier = Modifier.padding(10.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        "Destination",
+                        s.t(StringKey.IMPORT_DESTINATION_LABEL),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -175,7 +180,6 @@ fun PreviewStructureScreen(
             }
         }
 
-        // Column headers
         Row(
             modifier =
                 Modifier.fillMaxWidth()
@@ -185,20 +189,19 @@ fun PreviewStructureScreen(
         ) {
             Spacer(Modifier.width(44.dp))
             Text(
-                "Source",
+                s.t(StringKey.IMPORT_SOURCE_LABEL),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f),
             )
             Spacer(Modifier.width(24.dp))
             Text(
-                "Destination",
+                s.t(StringKey.IMPORT_DESTINATION_LABEL),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f),
             )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
-        // File mapping list
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(previews) { preview ->
                 FilePreviewRow(
@@ -212,10 +215,13 @@ fun PreviewStructureScreen(
             }
         }
 
-        // Footer
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            OutlinedButton(onClick = onBack) { Text("Back") }
-            Button(onClick = onImport) { Text("Proceed — Copy ${previews.size} Files") }
+            OutlinedButton(onClick = onBack) { Text(s.t(StringKey.ACTION_BACK)) }
+            Button(onClick = onImport) {
+                Text(
+                    s.t(StringKey.IMPORT_PROCEED_COPY, "count" to previews.size.toString())
+                )
+            }
         }
     }
 }
@@ -275,7 +281,6 @@ private fun FilePreviewRow(
         )
         Spacer(Modifier.width(8.dp))
 
-        // Source path
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 preview.sourceFile.fileName,
@@ -299,7 +304,6 @@ private fun FilePreviewRow(
             tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
         )
 
-        // Destination path
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 preview.fileName,

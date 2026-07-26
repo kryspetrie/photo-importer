@@ -8,6 +8,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.kryspetrie.fileimport.domain.model.i18n.LocaleConfig
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.domain.model.i18n.SupportedLocales
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.LocalePort
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
@@ -38,24 +39,37 @@ class JsonLocaleAdapter(
     /** Loaded locale strings: locale code → (StringKey → translated string). */
     private val strings = ConcurrentHashMap<String, Map<StringKey, String>>()
 
-    /** Native display names for locales. */
+    /** Native display names for locales (shown in language picker). */
     private val nativeNames =
         mutableMapOf<String, String>(
-            "en" to "English",
+            "en" to "English (US)",
             "de" to "Deutsch",
-            "fr" to "Français",
+            "zh" to "中文（简体）",
             "ja" to "日本語",
             "es" to "Español",
-            "ar" to "العربية",
-            "zh" to "中文",
-            "ko" to "한국어",
+            "fr" to "Français",
             "pt" to "Português",
-            "it" to "Italiano",
             "nl" to "Nederlands",
-            "ru" to "Русский",
-            "pl" to "Polski",
             "sv" to "Svenska",
+            "ru" to "Русский",
+            "hi" to "हिन्दी",
+            "ar" to "العربية",
+            "ko" to "한국어",
+            "bn" to "বাংলা",
+            "id" to "Bahasa Indonesia",
+            "ur" to "اردو",
+            "tr" to "Türkçe",
+            "vi" to "Tiếng Việt",
+            "it" to "Italiano",
         )
+
+    companion object {
+        /** Bundled locale files shipped under `resources/i18n/{code}.json`. */
+        val bundledLocales: Set<String> = SupportedLocales.bundled
+
+        /** Locales that use right-to-left layout. */
+        val rtlLocales: Set<String> = SupportedLocales.rtl
+    }
 
     private val localeFlow = MutableStateFlow("en")
 
@@ -85,9 +99,6 @@ class JsonLocaleAdapter(
     override fun config(): LocaleConfig = config.copy(currentLocale = localeFlow.value)
 
     override fun availableLocales(): Set<String> {
-        // Built-in locales from classpath
-        val builtin = setOf("en", "de", "fr", "ja", "es")
-        // User override locales from ~/.petrie-importer/i18n/
         val userDir = java.io.File(System.getProperty("user.home"), ".petrie-importer/i18n")
         val userLocales =
             userDir
@@ -98,7 +109,7 @@ class JsonLocaleAdapter(
                 ?.map { it.name.removeSuffix(".json") }
                 ?.filter { isValidLocaleCode(it) }
                 ?.toSet() ?: emptySet()
-        return builtin + userLocales
+        return bundledLocales + userLocales
     }
 
     override suspend fun setLocale(localeCode: String): Boolean {

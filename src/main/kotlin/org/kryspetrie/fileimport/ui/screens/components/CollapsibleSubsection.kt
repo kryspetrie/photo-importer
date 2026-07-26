@@ -20,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun CollapsibleSubsection(
@@ -29,6 +31,7 @@ fun CollapsibleSubsection(
     onToggle: () -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val s = strings()
     Column {
         Row(
             Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = 4.dp),
@@ -44,7 +47,7 @@ fun CollapsibleSubsection(
             )
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                "Toggle",
+                s.t(StringKey.ACC_TOGGLE),
                 Modifier.size(14.dp),
             )
         }

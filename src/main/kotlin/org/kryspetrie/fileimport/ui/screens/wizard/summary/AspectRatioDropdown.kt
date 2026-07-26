@@ -17,6 +17,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.AspectRatio
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * Dropdown for selecting a photo aspect ratio, auto-selecting the closest match when set to 0.0.
@@ -30,19 +32,21 @@ fun AspectRatioDropdown(
     onRatioChange: (Double) -> Unit,
     boxAspectRatio: Double,
 ) {
+    val s = strings()
     var expanded by remember { mutableStateOf(false) }
 
     val currentRatioName =
-        remember(selectedRatio, boxAspectRatio) {
+        remember(selectedRatio, boxAspectRatio, s) {
             if (selectedRatio == 0.0) {
                 val bestMatch =
                     AspectRatio.entries.minByOrNull { ratio ->
                         if (ratio.value == 0.0) Double.MAX_VALUE
                         else kotlin.math.abs(ratio.value - boxAspectRatio)
                     }
-                bestMatch?.displayName ?: "Current"
+                bestMatch?.displayName ?: s.t(StringKey.WIZARD_CURRENT)
             } else {
-                AspectRatio.entries.find { it.value == selectedRatio }?.displayName ?: "Custom"
+                AspectRatio.entries.find { it.value == selectedRatio }?.displayName
+                    ?: s.t(StringKey.WIZARD_CUSTOM)
             }
         }
 
@@ -51,7 +55,7 @@ fun AspectRatioDropdown(
             value = currentRatioName,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Aspect Ratio") },
+            label = { Text(s.t(StringKey.SCAN_ASPECT_RATIO_LABEL)) },
             modifier = Modifier.width(140.dp).height(40.dp),
             textStyle = MaterialTheme.typography.labelSmall,
             trailingIcon = { Text("▾", style = MaterialTheme.typography.bodySmall) },

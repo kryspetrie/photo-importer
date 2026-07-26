@@ -2,13 +2,17 @@ package org.kryspetrie.fileimport.ui.i18n
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.domain.model.i18n.LocaleConfig
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.domain.model.i18n.SupportedLocales
 import org.kryspetrie.fileimport.domain.port.LocalePort
 
 /**
@@ -29,11 +33,25 @@ val LocalStrings = staticCompositionLocalOf { Strings() }
  * translations via [strings].
  */
 @Composable
-fun StringsProvider(content: @Composable () -> Unit) {
+fun StringsProvider(
+    localeCode: String = "en",
+    content: @Composable () -> Unit,
+) {
     val localePort: LocalePort = koinInject()
+    LaunchedEffect(localeCode) { localePort.setLocale(localeCode) }
     val localeState = localePort.observeLocale().collectAsState()
     val strings = remember(localeState.value) { Strings(localePort) }
-    CompositionLocalProvider(LocalStrings provides strings) { content() }
+    val layoutDirection =
+        remember(localeState.value) {
+            if (localeState.value in SupportedLocales.rtl) LayoutDirection.Rtl
+            else LayoutDirection.Ltr
+        }
+    CompositionLocalProvider(
+        LocalStrings provides strings,
+        LocalLayoutDirection provides layoutDirection,
+    ) {
+        content()
+    }
 }
 
 /**

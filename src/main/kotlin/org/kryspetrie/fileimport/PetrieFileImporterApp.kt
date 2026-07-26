@@ -18,7 +18,9 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.context.startKoin
 import org.kryspetrie.fileimport.di.appModule
 import org.kryspetrie.fileimport.domain.model.AppTheme
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
+import org.kryspetrie.fileimport.domain.port.LocalePort
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.ui.PetrieFileImporterApp
 import org.kryspetrie.fileimport.ui.createAppIcon
@@ -200,36 +202,56 @@ fun main(args: Array<String>) {
             // Application icon for window decorations
             icon = appIcon,
         ) {
+            val localePort: LocalePort = org.koin.core.context.GlobalContext.get().get()
             // Enforce minimum window size for proper desktop layout
             window.minimumSize = Dimension(1024, 768)
             // Create application menu bar (File, View, Help)
             // Standard desktop application menu pattern
             MenuBar {
-                Menu("File") { Item("Quit", onClick = ::exitApplication) }
-                Menu("View") {
-                    // Theme switching menu items
-                    // Updates persisted settings and triggers UI recomposition
+                Menu(localePort.t(StringKey.MENU_FILE)) {
+                    Item(localePort.t(StringKey.MENU_QUIT), onClick = ::exitApplication)
+                }
+                Menu(localePort.t(StringKey.MENU_VIEW)) {
                     Item(
-                        "Light Theme",
+                        localePort.t(StringKey.MENU_LIGHT_THEME),
                         onClick = {
                             onSettingsChange(currentSettings.value.copy(theme = AppTheme.LIGHT))
                         },
                     )
                     Item(
-                        "Dark Theme",
+                        localePort.t(StringKey.MENU_DARK_THEME),
                         onClick = {
                             onSettingsChange(currentSettings.value.copy(theme = AppTheme.DARK))
                         },
                     )
                     Item(
-                        "System Theme",
+                        localePort.t(StringKey.MENU_SYSTEM_THEME),
                         onClick = {
                             onSettingsChange(currentSettings.value.copy(theme = AppTheme.SYSTEM))
                         },
                     )
                     Separator()
+                    Menu(localePort.t(StringKey.MENU_LANGUAGE)) {
+                        localePort
+                            .availableLocales()
+                            .sortedWith(compareBy({ it != "en" }, { it }))
+                            .forEach { code ->
+                                val selected = currentSettings.value.locale == code
+                                Item(
+                                    text =
+                                        buildString {
+                                            append(localePort.nativeLocaleName(code))
+                                            if (selected) append(" ✓")
+                                        },
+                                    onClick = {
+                                        onSettingsChange(currentSettings.value.withLocale(code))
+                                    },
+                                )
+                            }
+                    }
+                    Separator()
                     Item(
-                        "Clear Metadata History",
+                        localePort.t(StringKey.MENU_CLEAR_METADATA_HISTORY),
                         onClick = {
                             onSettingsChange(
                                 currentSettings.value.copy(
@@ -240,9 +262,12 @@ fun main(args: Array<String>) {
                         },
                     )
                 }
-                Menu("Help") {
-                    Item("View Log File") { appLogger.openLogFileWithSystemViewer() }
-                    Item("About $APP_TITLE", onClick = {})
+                Menu(localePort.t(StringKey.MENU_HELP)) {
+                    Item(localePort.t(StringKey.MENU_VIEW_LOG)) { appLogger.openLogFileWithSystemViewer() }
+                    Item(
+                        localePort.t(StringKey.MENU_ABOUT, "app" to APP_TITLE),
+                        onClick = {},
+                    )
                 }
             }
 

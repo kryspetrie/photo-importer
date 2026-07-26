@@ -21,6 +21,8 @@ import org.kryspetrie.fileimport.domain.model.DetectedPhoto
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataField
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
@@ -44,14 +46,14 @@ fun EditPhotoDialog(
     onClose: () -> Unit,
     onConfigChange: (PhotoScanConfiguration) -> Unit,
 ) {
+    val s = strings()
     val editState = remember { MetadataEditState().apply { loadFrom(photo.configuration) } }
 
     AlertDialog(
         onDismissRequest = onClose,
-        title = { Text("Edit Photo") },
+        title = { Text(s.t(StringKey.SCAN_EDIT_PHOTO)) },
         text = {
             Column(modifier = Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
-                // ── Recent Values ──
                 if (metadataHistory != null && metadataHistory.recentSets.isNotEmpty()) {
                     RecentValuesDropdown(
                         recentSets = metadataHistory.recentSets,
@@ -60,8 +62,8 @@ fun EditPhotoDialog(
                 }
 
                 MetadataField(
-                    label = "Description",
-                    placeholder = "Photo description...",
+                    label = s.t(StringKey.FIELD_DESCRIPTION),
+                    placeholder = s.t(StringKey.FIELD_DESCRIPTION_PLACEHOLDER),
                     value = editState.description,
                     onValueChange = { editState.description = it },
                     suggestions = metadataHistory?.description ?: emptyList(),
@@ -75,16 +77,16 @@ fun EditPhotoDialog(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     MetadataField(
-                        label = "Keywords",
-                        placeholder = "vacation, family, holiday",
+                        label = s.t(StringKey.FIELD_KEYWORDS),
+                        placeholder = s.t(StringKey.FIELD_ADD_KEYWORD_PLACEHOLDER),
                         value = editState.keywords,
                         onValueChange = { editState.keywords = it },
                         suggestions = metadataHistory?.keywords ?: emptyList(),
                         modifier = Modifier.weight(2f),
                     )
                     MetadataField(
-                        label = "Year",
-                        placeholder = "1995",
+                        label = s.t(StringKey.FIELD_YEAR),
+                        placeholder = s.t(StringKey.FIELD_YEAR_PLACEHOLDER),
                         value = editState.year,
                         onValueChange = { editState.year = it.filter { c -> c.isDigit() }.take(4) },
                         keyboardType = KeyboardType.Number,
@@ -93,8 +95,8 @@ fun EditPhotoDialog(
                     )
                 }
                 MetadataField(
-                    label = "Original Date",
-                    placeholder = "YYYY-MM-DD or YYYY-MM-DD HH:MM:SS",
+                    label = s.t(StringKey.FIELD_ORIGINAL_DATE),
+                    placeholder = s.t(StringKey.FIELD_DATE_PLACEHOLDER),
                     value = editState.originalDate,
                     onValueChange = { editState.originalDate = it },
                     suggestions = metadataHistory?.originalDate ?: emptyList(),
@@ -102,33 +104,53 @@ fun EditPhotoDialog(
                 )
 
                 Text(
-                    "Corners:",
+                    s.t(StringKey.SCAN_CORNERS),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.padding(top = 16.dp),
                 )
                 Text(
-                    "Drag corners on the image to adjust.",
+                    s.t(StringKey.SCAN_DRAG_CORNERS),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF666666),
                 )
                 Text(
-                    "Top Left: (${photo.topLeft.x.toInt()}, ${photo.topLeft.y.toInt()})",
+                    s.t(
+                        StringKey.SCAN_TOP_LEFT,
+                        "x" to "${photo.topLeft.x.toInt()}",
+                        "y" to "${photo.topLeft.y.toInt()}",
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    "Top Right: (${photo.topRight.x.toInt()}, ${photo.topRight.y.toInt()})",
+                    s.t(
+                        StringKey.SCAN_TOP_RIGHT,
+                        "x" to "${photo.topRight.x.toInt()}",
+                        "y" to "${photo.topRight.y.toInt()}",
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    "Bottom Left: (${photo.bottomLeft.x.toInt()}, ${photo.bottomLeft.y.toInt()})",
+                    s.t(
+                        StringKey.SCAN_BOTTOM_LEFT,
+                        "x" to "${photo.bottomLeft.x.toInt()}",
+                        "y" to "${photo.bottomLeft.y.toInt()}",
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    "Bottom Right: (${photo.bottomRight.x.toInt()}, ${photo.bottomRight.y.toInt()})",
+                    s.t(
+                        StringKey.SCAN_BOTTOM_RIGHT,
+                        "x" to "${photo.bottomRight.x.toInt()}",
+                        "y" to "${photo.bottomRight.y.toInt()}",
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Text(
-                    "Size: ${photo.getBounds().getWidth()}x${photo.getBounds().getHeight()} px",
+                    s.t(
+                        StringKey.SCAN_SIZE_PX,
+                        "width" to "${photo.getBounds().getWidth()}",
+                        "height" to "${photo.getBounds().getHeight()}",
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -138,15 +160,14 @@ fun EditPhotoDialog(
                 onClick = {
                     val newConfig = editState.applyToConfig(photo.configuration)
                     onConfigChange(newConfig)
-                    // Record the metadata set for future reuse
                     val set = RecentMetadataSet.fromConfig(newConfig)
                     onRecordMetadataSet?.invoke(set)
                     onClose()
                 }
             ) {
-                Text("Save")
+                Text(s.save)
             }
         },
-        dismissButton = { TextButton(onClick = onClose) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onClose) { Text(s.cancel) } },
     )
 }

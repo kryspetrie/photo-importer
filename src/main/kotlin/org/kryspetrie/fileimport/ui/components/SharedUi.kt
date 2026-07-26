@@ -17,23 +17,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import org.kryspetrie.fileimport.domain.model.ImportConfiguration
-
-/**
- * Generates a one-line configuration summary string for an [ImportConfiguration].
- *
- * Used as collapsed header text in settings sections across multiple screens (MediaImport,
- * PhotoScanImport, Reorganize).
- */
-fun configSummary(c: ImportConfiguration): String = buildString {
-    if (c.createSubfolders) append(c.folderPattern) else append("Flat")
-    append(" · ")
-    if (c.preserveOriginalName) append("original names") else append(c.fileNamePattern)
-    if (c.verifyAfterCopy) append(" · verify")
-    if (c.deleteAfterImport) append(" · delete source")
-    if (c.detectVisualDuplicates) append(" · dedup")
-}
-
 /**
  * A compact stat column showing a value above a label, used in result/summary cards.
  *

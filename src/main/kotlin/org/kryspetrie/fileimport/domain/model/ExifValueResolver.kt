@@ -128,7 +128,7 @@ object ExifValueResolver {
         val secondsRounded = kotlin.math.round(secondsDecimal * 10000.0).toInt()
 
         // Handle seconds rounding up to 60.0000 (600000 in our units)
-        if (secondsRounded >= 6000000) {
+        if (secondsRounded >= 600000) {
             return arrayOf(
                 RationalNumber(degrees, 1),
                 RationalNumber(minutes + 1, 1),

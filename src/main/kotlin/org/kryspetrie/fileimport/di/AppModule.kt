@@ -82,6 +82,8 @@ import org.kryspetrie.fileimport.ui.screens.metadataeditor.MetadataEditorViewMod
  * design rationale.
  */
 val appModule = module {
+    includes(metadataEditorIntegrationModule)
+
     // ── Domain Ports → Adapter Implementations ──────────────────────
 
     single<ImageRepositoryPort> { ImageRepositoryAdapter(dispatcherProvider = get()) }
@@ -205,9 +207,9 @@ val appModule = module {
     single<FaceRegionTransformerPort> { FaceRegionTransformer() }
     single {
         MetadataWritingService(
+            metadataEditor = get(),
             faceRegionTransformer = get<FaceRegionTransformerPort>(),
             imageProcessing = get<ImageProcessingPort>(),
-            fileSystem = get<FileSystemPort>(),
         )
     }
     single<PhotoScanExportPort> { PhotoScanExportService(get(), get(), get(), get()) }
@@ -216,7 +218,7 @@ val appModule = module {
 
     single { MetadataEditJournalRepository(get()) }
     single { MetadataEditUndoService(get(), get(), get()) }
-    single { MetadataEditService(get(), get(), get(), get()) }
+    single { MetadataEditService(get(), get(), get(), get(), get()) }
 
     // ── Location Search ─────────────────────────────────────────────
 
@@ -245,6 +247,7 @@ val appModule = module {
             fileSystemAdapter = get(),
             orientationCorrection = get(),
             modelDownloadPort = get(),
+            localePort = get(),
         )
     }
     single {
@@ -256,6 +259,7 @@ val appModule = module {
             watchFolderManager = get(),
             timeProvider = get(),
             pathsPort = get(),
+            localePort = get(),
         )
     }
 }

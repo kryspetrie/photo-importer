@@ -113,6 +113,8 @@ class ImportExecutor(
                                     sequenceNumber = counter,
                                 )
                             )
+                            // Advance counter even for skipped files so {counter} sequence numbers don't collide
+                            counter++
                             continue
                         }
                         ConflictResolution.RENAME -> {
@@ -145,6 +147,8 @@ class ImportExecutor(
                                     sequenceNumber = counter,
                                 )
                             )
+                            // Advance counter even for skipped files so {counter} sequence numbers don't collide
+                            counter++
                             continue
                         }
                     }
@@ -176,6 +180,8 @@ class ImportExecutor(
                             sequenceNumber = counter,
                         )
                     )
+                    // Advance counter even for failed files so {counter} sequence numbers don't collide
+                    counter++
                     continue
                 }
 
@@ -207,6 +213,8 @@ class ImportExecutor(
                                 sequenceNumber = counter,
                             )
                         )
+                        // Advance counter even for hash-mismatch files so {counter} sequence numbers don't collide
+                        counter++
                         continue
                     }
                 }
@@ -302,6 +310,10 @@ class ImportExecutor(
                     )
                 )
 
+                // P1 fix: Always advance the counter for every attempted file, not just successful
+                // ones. Previously, skipped/failed/hash-mismatch files used `continue` which
+                // skipped counter++, causing {counter} sequence numbers to have gaps or collide
+                // with the next file's name.
                 counter++
             } catch (e: Exception) {
                 val errorType =
@@ -327,6 +339,8 @@ class ImportExecutor(
                         sequenceNumber = counter,
                     )
                 )
+                // Advance counter even on exception so sequence numbers don't collide
+                counter++
             }
         }
 

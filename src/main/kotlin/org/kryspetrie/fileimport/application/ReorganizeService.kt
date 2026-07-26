@@ -108,13 +108,20 @@ class ReorganizeService(
                     .awaitAll()
             }
 
-            val destRoot = if (renameOnly) folderPath else folderPath
             val usedPaths = mutableSetOf<String>()
             val mappings = mutableListOf<org.kryspetrie.fileimport.domain.model.ReorganizeMapping>()
             val newFolders = mutableSetOf<String>()
 
             filesWithMetadata.forEachIndexed { index, file ->
-                val newFolder = namingPort.generateFolderPath(file, destRoot, configuration)
+                // P1 fix: renameOnly must keep each file in its current directory, only changing
+                // the filename. The previous code passed the same destRoot in both branches, making
+                // the flag a no-op — files were always relocated into subfolders.
+                val newFolder =
+                    if (renameOnly) {
+                        file.path.parent ?: folderPath
+                    } else {
+                        namingPort.generateFolderPath(file, folderPath, configuration)
+                    }
                 val newFileName = namingPort.generateFileName(file, configuration, index + 1)
                 var newPath = "$newFolder/$newFileName"
                 val newPathFilePath = FilePath(newPath)
@@ -225,22 +232,21 @@ class ReorganizeService(
                 result.error?.let { errors.add(it) }
             }
 
-            // Clean up empty directories left behind (only for MOVE operations)
+            // Clean up empty directories left behind (only for MOVE operations).
+            // P1 fix: Only remove directories that were source parents of actually-moved files,
+            // not every empty directory under an arbitrary root. The previous code walked an
+            // excessively broad root and could delete intentionally-empty user folders.
             if (preview.operationMode == ReorganizeMode.MOVE) {
-                val rootFolderPath =
-                    preview.mappings.firstOrNull()?.file?.path?.parent?.let { parentPath ->
-                        FilePath(parentPath).parent?.let { FilePath(it) }
-                    }
-                        ?: return@withContext ReorganizeResult(
-                            movedCount = movedCount,
-                            renamedCount = renamedCount,
-                            copiedCount = copiedCount,
-                            skippedCount = skippedCount,
-                            errorCount = errors.size,
-                            errors = errors,
-                            operationMode = preview.operationMode,
-                        )
-                cleanEmptyDirs(rootFolderPath)
+                val movedSourceParents =
+                    journalEntries
+                        .filter { it.wasSuccessful && it.operationType == ReorganizeMode.MOVE }
+                        .mapNotNull { it.originalParent }
+                        .filter { it.isNotBlank() }
+                        .map { FilePath(it) }
+                        .distinctBy { it.path }
+                for (sourceParent in movedSourceParents) {
+                    fileOperationExecutor.cleanEmptyDirs(sourceParent)
+                }
             }
 
             // Save undo journal

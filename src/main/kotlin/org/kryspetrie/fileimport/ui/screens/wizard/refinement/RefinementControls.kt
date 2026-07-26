@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.geometry.Corner
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 internal fun RefinementControls(
@@ -30,6 +32,7 @@ internal fun RefinementControls(
     onDeselect: () -> Unit,
     refocus: () -> Unit = {},
 ) {
+    val s = strings()
     Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().height(48.dp),
@@ -49,10 +52,18 @@ internal fun RefinementControls(
                     enabled = totalCount > 1,
                     modifier = Modifier.size(32.dp),
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, "Previous", Modifier.size(18.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        s.t(StringKey.WIZARD_PREVIOUS_PHOTO),
+                        Modifier.size(18.dp),
+                    )
                 }
                 Text(
-                    "Photo ${currentIndex + 1} of $totalCount",
+                    s.t(
+                        StringKey.SCAN_PHOTO_LABEL,
+                        "index" to "${currentIndex + 1}",
+                        "total" to "$totalCount",
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 IconButton(
@@ -63,18 +74,21 @@ internal fun RefinementControls(
                     enabled = totalCount > 1,
                     modifier = Modifier.size(32.dp),
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, "Next", Modifier.size(18.dp))
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowForward,
+                        s.t(StringKey.WIZARD_NEXT_PHOTO_NAV),
+                        Modifier.size(18.dp),
+                    )
                 }
             }
 
-            // Corner selection info
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (selectedCorner != null) {
                     Text(
-                        "Selected: ${selectedCorner.name}",
+                        s.t(StringKey.WIZARD_SELECTED, "corner" to selectedCorner.name),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -85,11 +99,11 @@ internal fun RefinementControls(
                         },
                         modifier = Modifier.height(32.dp),
                     ) {
-                        Text("Deselect", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.WIZARD_DESELECT), style = MaterialTheme.typography.labelSmall)
                     }
                 } else {
                     Text(
-                        "Click a corner to select",
+                        s.t(StringKey.WIZARD_CLICK_CORNER),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

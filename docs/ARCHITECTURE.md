@@ -64,17 +64,16 @@ org.kryspetrie.fileimport/
 │   ├── FaceRegionTransformer.kt    # Face region coordinate mapping
 │   ├── LocationSearchService.kt    # Geocoding search
 │   ├── OrientationCorrectionService.kt  # Auto-rotation detection & correction
-│   ├── MetadataWritingService.kt   # Standalone metadata writing (bulk editor)
 │   ├── metadata/                   # Metadata editor application services
 │   │   ├── MetadataEditService.kt        # Save/write orchestration (delegates to MetadataWritingService)
 │   │   ├── MetadataEditUndoService.kt    # Undo/redo backup & restore
 │   │   └── MetadataEditJournalRepository.kt  # Journal persistence (JSON)
-│   └── export/                     # Export sub-functions
-│       ├── ExifMetadataWriter.kt
-│       ├── FilenameResolver.kt
-│       ├── ImageTransformer.kt
-│       ├── IptcMetadataWriter.kt
-│       └── XmpMetadataWriter.kt
+│   └── export/                     # Export & metadata write pipeline
+│       ├── MetadataWritingService.kt     # JPEG write + ExifTool metadata (via MetadataEditorPort)
+│       ├── PhotoScanMetadataMapper.kt    # PhotoScanConfiguration → ExifTool tag map
+│       ├── FileFormatSupport.kt          # In-place metadata write capability by extension
+│       ├── MetadataWriteException.kt     # Propagated write failures
+│       └── FilenameResolver.kt
 │
 ├── cli/                            # Command-line interface (Clikt)
 │   ├── ScanCommand.kt            # Photo scan (detect → crop → export)
@@ -89,7 +88,8 @@ org.kryspetrie.fileimport/
 │   └── ReorganizeCommand.kt       # Reorganize, undo, check-journals
 │
 ├── di/                             # Dependency injection (Koin)
-│   └── AppModule.kt               # All service & port registrations
+│   ├── AppModule.kt               # All service & port registrations
+│   └── MetadataEditorIntegrationModule.kt  # photo-metadata-editor / ExifTool wiring
 │
 ├── domain/
 │   ├── model/                      # Pure Kotlin data classes & enums
@@ -196,7 +196,7 @@ org.kryspetrie.fileimport/
         │   ├── MetadataEditorScreen.kt  # Main editor orchestrator (source path, preview, dialogs)
         │   ├── MetadataEditorSidebar.kt # Thumbnail sidebar with modified indicators
         │   ├── MetadataEditorPanel.kt   # Metadata fields panel with override toggles
-        │   ├── MetadataEditorActions.kt # OverrideToggle helper and field-updater helpers
+        │   ├── MetadataEditorViewModel.kt # Save/undo/redo orchestration
         │   ├── BulkEditState.kt         # Per-file metadata state, UiMessage, OutputMode
         │   └── BulkSelectionDialog.kt   # Multi-select thumbnail overlay dialog
         ├── duplicatescanner/       # Standalone duplicate scanner tab
@@ -207,6 +207,18 @@ org.kryspetrie.fileimport/
 ## Ports & Adapters
 
 Every port in `domain/port/` has a corresponding adapter in `infrastructure/` (or `application/` for application-level services):
+
+### Metadata write path
+
+```
+PhotoScanExportService / MetadataEditService
+  → MetadataWritingService
+  → PhotoScanMetadataMapper (PhotoScanConfiguration → ExifTool tags)
+  → MetadataEditorPort (photo-metadata-editor)
+  → ExifToolMetadataEngine + bundled ExifTool (appResources/)
+```
+
+Undo journal backups live under `~/.petrie-importer/metadata-backups/`. The library also creates sibling backups before each in-place write and rolls back on failure.
 
 | Port (interface) | Adapter (implementation) | Purpose |
 |---|---|---|
@@ -282,7 +294,7 @@ The UI directly imports application use-case services for user interaction flows
 | `DuplicateScannerService` | Duplicate finding |
 | `WatchFolderService` | Auto-import from watched folders |
 | `WatchFolderManager` | Multi-watch lifecycle & config persistence |
-| `MetadataWritingService` | Write image + EXIF/IPTC/XMP metadata |
+| `MetadataWritingService` | Write image + metadata via ExifTool (`MetadataEditorPort`) |
 | `OrientationCorrectionService` | Auto-detect & correct image orientation |
 
 ### UI → Application (AWT-Coupled Services)
@@ -330,15 +342,17 @@ Some application services are tightly coupled to `BufferedImage` and `java.awt`.
 
 3. **UI screens are thin composables** — They render state and delegate logic to application services via Koin injection. Business logic lives in services, not composables.
 
-4. **PhotoScanWizardState** is the central state container for the photo scan wizard. At ~1500 lines it's large, but it manages ~30 interdependent `StateFlow` properties that drive the wizard's reactive UI. Extracting to MVI would be the next evolution step.
+4. **PhotoScanWizardState** is the central state container for the photo scan wizard. It manages many interdependent `StateFlow` properties that drive the wizard's reactive UI. Extracting to MVI would be the next evolution step.
 
-5. **MetadataEditState** is a Compose state holder for the 18 metadata fields shared between `MetadataScreen` and `EditPhotoDialog`. Uses `mutableStateOf` for fine-grained recomposition.
+5. **Metadata writing uses ExifTool** — The `photo-metadata-editor` library (composite Gradle build at `../photo-metadata-editor`) performs selective in-place writes with sibling backup and rollback. `PhotoScanMetadataMapper` maps wizard/bulk-editor fields to ExifTool tags; `metadata-extractor` is still used for read-back in tests and UI hints.
 
-6. **PhotoScanDetectorPort** accepts `ProcessedImage` (domain abstraction). `PhotoScanDetectorService` implements the port and converts to `BufferedImage` internally, keeping AWT out of the domain layer.
+6. **MetadataEditState** is a Compose state holder for the 18 metadata fields shared between `MetadataScreen` and `EditPhotoDialog`. Uses `mutableStateOf` for fine-grained recomposition.
 
-7. **Application data classes live in domain/model** — `ScanProgress`, `WatchFolderConfig`, and `WatchFolderStatus` are pure data classes used by both application services and UI. They belong in the domain model layer, not in the application service files.
+7. **PhotoScanDetectorPort** accepts `ProcessedImage` (domain abstraction). `PhotoScanDetectorService` implements the port and converts to `BufferedImage` internally, keeping AWT out of the domain layer.
 
-8. **Cross-platform support** — All OS-conditional code (file dialogs, device ejection, FFmpeg resolution) is centralized in `Platform.kt`.
+8. **Application data classes live in domain/model** — `ScanProgress`, `WatchFolderConfig`, and `WatchFolderStatus` are pure data classes used by both application services and UI. They belong in the domain model layer, not in the application service files.
+
+9. **Cross-platform support** — All OS-conditional code (file dialogs, device ejection, FFmpeg resolution) is centralized in `Platform.kt`.
 
 ## Technology Stack
 
@@ -347,7 +361,8 @@ Some application services are tightly coupled to `BufferedImage` and `java.awt`.
 | UI Framework | Jetpack Compose for Desktop | Cross-platform UI |
 | Language | Kotlin 2.3 | Primary language |
 | DI | Koin 4.0 | Dependency injection (no annotations, no reflection) |
-| Metadata | metadata-extractor 2.19 | EXIF & video metadata |
+| Metadata (read) | metadata-extractor 2.19 | EXIF/IPTC read, UI hints, test verification |
+| Metadata (write) | photo-metadata-editor + bundled ExifTool | Selective in-place writes (JPEG, TIFF, RAW) |
 | Image Processing | imgscalr, BoofCV (SURF) | Thumbnails, feature matching |
 | ML Inference | ONNX Runtime | YOLO photo detection |
 | Caching | SQLite (xerial) | Hash cache |

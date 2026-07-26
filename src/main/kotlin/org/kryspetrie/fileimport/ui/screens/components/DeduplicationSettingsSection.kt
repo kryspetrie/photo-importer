@@ -24,17 +24,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.SectionLabel
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun DeduplicationSettingsSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
+    val s = strings()
     var dedupExpanded by remember { mutableStateOf(false) }
     CollapsibleSubsection(
-        title = "Deduplication",
+        title = s.t(StringKey.SETTINGS_DEDUPE),
         icon = Icons.Default.FindReplace,
         expanded = dedupExpanded,
         onToggle = { dedupExpanded = !dedupExpanded },
@@ -50,7 +53,8 @@ private fun TransferredDetectionSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("Already-Transferred Detection")
+    val s = strings()
+    SectionLabel(s.t(StringKey.SETTINGS_DEDUPE_TRANSFERRED))
     Text(
         "How to detect files that have already been copied to the destination.",
         style = MaterialTheme.typography.bodySmall,
@@ -63,8 +67,8 @@ private fun TransferredDetectionSection(
                 onCheckedChange = {
                     onConfigChange(configuration.copy(detectTransferredByHash = it))
                 },
-                label = "Match by hash",
-                description = "Compare file content hash (MD5)",
+                label = s.t(StringKey.SETTINGS_DEDUPE_HASH),
+                description = s.t(StringKey.SETTINGS_DEDUPE_HASH_DESC),
             )
         }
         Column(Modifier.weight(1f)) {
@@ -73,8 +77,8 @@ private fun TransferredDetectionSection(
                 onCheckedChange = {
                     onConfigChange(configuration.copy(detectTransferredByExif = it))
                 },
-                label = "Match by EXIF",
-                description = "Compare EXIF metadata",
+                label = s.t(StringKey.SETTINGS_DEDUPE_EXIF),
+                description = s.t(StringKey.SETTINGS_DEDUPE_EXIF_DESC),
             )
         }
     }
@@ -85,19 +89,19 @@ private fun VisualDuplicateSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("Visual Duplicate Detection")
+    val s = strings()
     SettingsToggle(
         checked = configuration.detectVisualDuplicates,
         onCheckedChange = { onConfigChange(configuration.copy(detectVisualDuplicates = it)) },
-        label = "Detect visual duplicates",
-        description = "Find near-duplicate images among source files",
+        label = s.t(StringKey.SETTINGS_DEDUPE_VISUAL),
+        description = s.t(StringKey.SETTINGS_DEDUPE_VISUAL_DESC),
     )
     if (configuration.detectVisualDuplicates) {
         SettingsToggle(
             checked = configuration.useSurfMatching,
             onCheckedChange = { onConfigChange(configuration.copy(useSurfMatching = it)) },
-            label = "SURF feature matching",
-            description = "Slow but high accuracy",
+            label = s.t(StringKey.SETTINGS_DEDUPE_SURF),
+            description = s.t(StringKey.SETTINGS_DEDUPE_SURF_DESC),
         )
         if (configuration.useSurfMatching) {
             OutlinedCard(Modifier.fillMaxWidth()) {
@@ -113,11 +117,7 @@ private fun VisualDuplicateSection(
                         tint = MaterialTheme.colorScheme.error,
                     )
                     Text(
-                        "SURF matching is CPU-intensive and will be " +
-                            "slow for large collections. It compares " +
-                            "visual features between images to find " +
-                            "near-duplicates regardless of resolution " +
-                            "or format differences.",
+                        s.t(StringKey.SETTINGS_DEDUPE_SURF_WARNING),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )

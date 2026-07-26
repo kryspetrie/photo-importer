@@ -27,20 +27,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
-/**
- * Dialog for adding or editing a watch folder configuration.
- *
- * @param existingConfig If non-null, editing an existing config; if null, creating a new one.
- * @param onSave Called with the completed config when the user confirms.
- * @param onDismiss Called when the user cancels.
- */
 @Composable
 fun WatchFolderConfigDialog(
     existingConfig: WatchFolderConfig?,
     onSave: (WatchFolderConfig) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val s = strings()
     var watchPath by remember { mutableStateOf(existingConfig?.watchPath ?: "") }
     var destinationPath by remember { mutableStateOf(existingConfig?.destinationPath ?: "") }
     var cooldownSeconds by remember {
@@ -68,14 +64,14 @@ fun WatchFolderConfigDialog(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Text(
-                    if (isEditing) "Edit Watch Folder" else "Add Watch Folder",
+                    if (isEditing) s.t(StringKey.WATCH_EDIT) else s.t(StringKey.WATCH_ADD),
                     style = MaterialTheme.typography.headlineSmall,
                 )
 
                 OutlinedTextField(
                     value = watchPath,
                     onValueChange = { watchPath = it },
-                    label = { Text("Source folder to watch") },
+                    label = { Text(s.t(StringKey.WATCH_SOURCE_LABEL)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -83,7 +79,7 @@ fun WatchFolderConfigDialog(
                 OutlinedTextField(
                     value = destinationPath,
                     onValueChange = { destinationPath = it },
-                    label = { Text("Destination folder for imports") },
+                    label = { Text(s.t(StringKey.WATCH_DEST_LABEL)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
@@ -91,14 +87,13 @@ fun WatchFolderConfigDialog(
                 OutlinedTextField(
                     value = profileName,
                     onValueChange = { profileName = it },
-                    label = { Text("Profile name (optional)") },
+                    label = { Text(s.t(StringKey.WATCH_PROFILE_LABEL)) },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                 )
 
-                // Cooldown slider: 1-30 seconds
                 Text(
-                    "Cooldown: ${cooldownSeconds.toInt()} seconds",
+                    s.t(StringKey.WATCH_COOLDOWN, "seconds" to "${cooldownSeconds.toInt()}"),
                     style = MaterialTheme.typography.labelMedium,
                 )
                 Slider(
@@ -109,7 +104,7 @@ fun WatchFolderConfigDialog(
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text(
-                    "Wait time after last file change before triggering import",
+                    s.t(StringKey.WATCH_COOLDOWN_DESC),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -120,7 +115,7 @@ fun WatchFolderConfigDialog(
                 ) {
                     Switch(checked = recursive, onCheckedChange = { recursive = it })
                     Spacer(Modifier.width(8.dp))
-                    Text("Watch subdirectories recursively")
+                    Text(s.t(StringKey.WATCH_RECURSIVE))
                 }
 
                 Row(
@@ -129,7 +124,7 @@ fun WatchFolderConfigDialog(
                 ) {
                     Switch(checked = autoStart, onCheckedChange = { autoStart = it })
                     Spacer(Modifier.width(8.dp))
-                    Text("Auto-start on app launch")
+                    Text(s.t(StringKey.WATCH_AUTO_START))
                 }
 
                 if (isEditing) {
@@ -139,14 +134,14 @@ fun WatchFolderConfigDialog(
                     ) {
                         Switch(checked = enabled, onCheckedChange = { enabled = it })
                         Spacer(Modifier.width(8.dp))
-                        Text("Enabled")
+                        Text(s.t(StringKey.WATCH_ENABLED))
                     }
                 }
 
                 Spacer(Modifier.height(8.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    OutlinedButton(onClick = onDismiss) { Text("Cancel") }
+                    OutlinedButton(onClick = onDismiss) { Text(s.t(StringKey.ACTION_CANCEL)) }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
@@ -169,7 +164,7 @@ fun WatchFolderConfigDialog(
                         },
                         enabled = isValid,
                     ) {
-                        Text(if (isEditing) "Save" else "Add")
+                        Text(if (isEditing) s.t(StringKey.ACTION_SAVE) else s.t(StringKey.WATCH_ADD))
                     }
                 }
             }

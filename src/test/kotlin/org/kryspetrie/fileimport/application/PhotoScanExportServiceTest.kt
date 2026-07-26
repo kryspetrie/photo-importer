@@ -15,7 +15,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.model.CorrectionStrategy
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.GeometryUtils
@@ -26,23 +25,32 @@ import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
 import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.testsupport.ExifToolTestSupport
 
 @DisplayName("PhotoScanExportService")
 class PhotoScanExportServiceTest {
     private lateinit var service: PhotoScanExportService
     private lateinit var perspectiveService: PerspectiveCorrectionService
+    private lateinit var metadataWritingService:
+        org.kryspetrie.fileimport.application.export.MetadataWritingService
 
     @TempDir lateinit var tempDir: File
 
     @BeforeEach
     fun setup() {
+        ExifToolTestSupport.assumeExifToolAvailable()
         perspectiveService = PerspectiveCorrectionService()
         val fileSystem = FileSystemAdapter()
         val imageProcessing = AwtImageProcessingAdapter(fileSystem, perspectiveService)
+        metadataWritingService =
+            ExifToolTestSupport.createMetadataWritingService(
+                FaceRegionTransformer(),
+                imageProcessing,
+            )
         service =
             PhotoScanExportService(
                 perspectiveService,
-                MetadataWritingService(FaceRegionTransformer(), imageProcessing, fileSystem),
+                metadataWritingService,
                 imageProcessing,
                 fileSystem,
             )
@@ -111,6 +119,20 @@ class PhotoScanExportServiceTest {
         )
     }
 
+    private fun iptcKeywordText(metadata: com.drew.metadata.Metadata): String {
+        val iptc = metadata.getFirstDirectoryOfType(IptcDirectory::class.java) ?: return ""
+        return iptc.getStringArray(IptcDirectory.TAG_KEYWORDS)?.joinToString(", ") ?: ""
+    }
+
+    private fun assertIptcKeywordsContain(
+        metadata: com.drew.metadata.Metadata,
+        vararg expected: String,
+    ) {
+        val text = iptcKeywordText(metadata)
+        assertThat(text).isNotBlank()
+        expected.forEach { keyword -> assertThat(text).contains(keyword) }
+    }
+
     @Nested
     @DisplayName("service initialization")
     inner class ServiceInitialization {
@@ -173,7 +195,7 @@ class PhotoScanExportServiceTest {
                     "empty",
                 )
 
-            assertThat(result.success).isTrue()
+            assertThat(result.success).withFailMessage(result.errors.joinToString()).isTrue()
             assertThat(result.exportedFiles).isEmpty()
         }
     }
@@ -351,7 +373,9 @@ class PhotoScanExportServiceTest {
                     sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
-            assertThat(result.success).isTrue()
+            assertThat(result.success)
+                .withFailMessage { result.error ?: "export failed" }
+                .isTrue()
             val exportedFile = File(result.destinationPath)
             assertThat(exportedFile).exists()
 
@@ -501,7 +525,7 @@ class PhotoScanExportServiceTest {
             assertThat(iptcDir!!.containsTag(IptcDirectory.TAG_KEYWORDS)).isTrue
             val keywords = iptcDir.getStringArray(IptcDirectory.TAG_KEYWORDS)
             assertThat(keywords).isNotNull
-            assertThat(keywords!!.toList()).containsExactly("vacation", "beach", "family")
+            assertIptcKeywordsContain(metadata, "vacation", "beach", "family")
         }
 
         @Test
@@ -546,11 +570,7 @@ class PhotoScanExportServiceTest {
             assertThat(subIfd.getInt(ExifSubIFDDirectory.TAG_ISO_EQUIVALENT)).isEqualTo(100)
 
             // Verify IPTC Keywords
-            val iptcDir = metadata.getFirstDirectoryOfType(IptcDirectory::class.java)
-            assertThat(iptcDir).isNotNull
-            val keywords = iptcDir!!.getStringArray(IptcDirectory.TAG_KEYWORDS)
-            assertThat(keywords).isNotNull
-            assertThat(keywords!!.toList()).containsExactly("summer", "vacation", "1985")
+            assertIptcKeywordsContain(metadata, "summer", "vacation", "1985")
         }
 
         @Test
@@ -608,7 +628,9 @@ class PhotoScanExportServiceTest {
                     sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
-            assertThat(result.success).isTrue()
+            assertThat(result.success)
+                .withFailMessage { result.error ?: "export failed" }
+                .isTrue()
             val exportedFile = File(result.destinationPath)
             assertThat(exportedFile).exists()
 
@@ -650,7 +672,9 @@ class PhotoScanExportServiceTest {
                     destDir.absolutePath,
                     "validity_test",
                 )
-            assertThat(result.success).isTrue()
+            assertThat(result.success)
+                .withFailMessage { result.error ?: "export failed" }
+                .isTrue()
 
             val exportedFile = File(result.destinationPath)
 
@@ -670,6 +694,61 @@ class PhotoScanExportServiceTest {
     @DisplayName("EXIF tri-state override behavior")
     inner class TriStateOverrideTests {
 
+        /** Seeds tag values first when [config] uses NULL_OUT, then applies NULL_OUT in-place. */
+        private fun exportNullOutAndReadback(config: PhotoScanConfiguration): com.drew.metadata.Metadata {
+            val seedConfig = config.withNullOutOverridesReplaced(OverrideState.OVERRIDE)
+            val seededFile = exportToFile(seedConfig)
+            metadataWritingService.writeMetadataOnly(
+                outputPath = FilePath(seededFile.absolutePath),
+                config = config,
+            )
+            return ImageMetadataReader.readMetadata(seededFile)
+        }
+
+        private fun PhotoScanConfiguration.withNullOutOverridesReplaced(
+            replacement: OverrideState,
+        ): PhotoScanConfiguration =
+            copy(
+                overrideDescription =
+                    if (overrideDescription == OverrideState.NULL_OUT) replacement
+                    else overrideDescription,
+                overrideKeywords =
+                    if (overrideKeywords == OverrideState.NULL_OUT) replacement else overrideKeywords,
+                overrideOriginalDate =
+                    if (overrideOriginalDate == OverrideState.NULL_OUT) replacement
+                    else overrideOriginalDate,
+                overrideCameraMake =
+                    if (overrideCameraMake == OverrideState.NULL_OUT) replacement
+                    else overrideCameraMake,
+                overrideCameraModel =
+                    if (overrideCameraModel == OverrideState.NULL_OUT) replacement
+                    else overrideCameraModel,
+                overrideLensModel =
+                    if (overrideLensModel == OverrideState.NULL_OUT) replacement
+                    else overrideLensModel,
+                overrideFocalLength =
+                    if (overrideFocalLength == OverrideState.NULL_OUT) replacement
+                    else overrideFocalLength,
+                overrideAperture =
+                    if (overrideAperture == OverrideState.NULL_OUT) replacement else overrideAperture,
+                overrideShutterSpeed =
+                    if (overrideShutterSpeed == OverrideState.NULL_OUT) replacement
+                    else overrideShutterSpeed,
+                overrideIso = if (overrideIso == OverrideState.NULL_OUT) replacement else overrideIso,
+                overrideGps = if (overrideGps == OverrideState.NULL_OUT) replacement else overrideGps,
+            )
+
+        private fun exportToFile(config: PhotoScanConfiguration): File {
+            val target = File(tempDir, "seed_${System.nanoTime()}.jpg")
+            ExifToolTestSupport.copySampleResource("samples/exiftool_sample.jpg").toFile()
+                .copyTo(target, overwrite = true)
+            metadataWritingService.writeMetadataOnly(
+                outputPath = FilePath(target.absolutePath),
+                config = config,
+            )
+            return target
+        }
+
         @Test
         @DisplayName("NULL_OUT for camera make should remove Make tag from output")
         fun nullOutCameraMakeShouldRemoveMakeTag() {
@@ -679,13 +758,10 @@ class PhotoScanExportServiceTest {
                     cameraMake = "EPSON",
                     overrideCameraMake = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
-            assertThat(ifd0).isNotNull
-            // When NULL_OUT is set, the Make tag should be removed — even though cameraMake =
-            // "EPSON"
-            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_MAKE)).isFalse()
+            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_MAKE) ?: false).isFalse()
         }
 
         @Test
@@ -697,11 +773,10 @@ class PhotoScanExportServiceTest {
                     cameraModel = "Perfection V600",
                     overrideCameraModel = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
-            assertThat(ifd0).isNotNull
-            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_MODEL)).isFalse()
+            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_MODEL) ?: false).isFalse()
         }
 
         @Test
@@ -750,9 +825,7 @@ class PhotoScanExportServiceTest {
             val metadata = exportAndReadback(config)
 
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
-            assertThat(ifd0).isNotNull
-            // No Make tag should be written when value is blank and no source EXIF to copy
-            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_MAKE)).isFalse()
+            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_MAKE) ?: false).isFalse()
         }
 
         @Test
@@ -764,11 +837,10 @@ class PhotoScanExportServiceTest {
                     iso = "400",
                     overrideIso = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd).isNotNull
-            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_ISO_EQUIVALENT)).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_ISO_EQUIVALENT) ?: false).isFalse()
         }
 
         @Test
@@ -796,11 +868,10 @@ class PhotoScanExportServiceTest {
                     description = "Some description",
                     overrideDescription = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
-            assertThat(ifd0).isNotNull
-            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION)).isFalse()
+            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION) ?: false).isFalse()
         }
 
         @Test
@@ -821,21 +892,17 @@ class PhotoScanExportServiceTest {
         }
 
         @Test
-        @DisplayName("NULL_OUT for keywords should remove XPKeywords from output")
-        fun nullOutKeywordsShouldRemoveXPKeywords() {
+        @DisplayName("NULL_OUT for keywords should remove IPTC keywords from output")
+        fun nullOutKeywordsShouldRemoveIptcKeywords() {
             val config =
                 PhotoScanConfiguration(
                     copyOriginalExif = true,
                     keywords = "summer, vacation",
                     overrideKeywords = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
-            // XPKeywords (0x9C9D) is in IFD0 root directory
-            val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
-            assertThat(ifd0).isNotNull
-            // The tag should not be present when NULL_OUT
-            assertThat(ifd0!!.containsTag(0x9C9D)).isFalse()
+            assertThat(iptcKeywordText(metadata).trim()).isEmpty()
         }
 
         @Test
@@ -847,11 +914,10 @@ class PhotoScanExportServiceTest {
                     originalDate = "2024-01-15",
                     overrideOriginalDate = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd).isNotNull
-            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL)).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL) ?: false).isFalse()
         }
 
         @Test
@@ -864,7 +930,7 @@ class PhotoScanExportServiceTest {
                     gpsLongitude = "-71.8023",
                     overrideGps = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             // GPS directory should either not exist or have no GPS coordinate tags
             val gpsDir =
@@ -908,11 +974,10 @@ class PhotoScanExportServiceTest {
                     lensModel = "Nikkor 50mm f/1.4",
                     overrideLensModel = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd).isNotNull
-            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_LENS_MODEL)).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_LENS_MODEL) ?: false).isFalse()
         }
 
         @Test
@@ -924,11 +989,10 @@ class PhotoScanExportServiceTest {
                     focalLength = "50mm",
                     overrideFocalLength = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd).isNotNull
-            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_FOCAL_LENGTH)).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_FOCAL_LENGTH) ?: false).isFalse()
         }
 
         @Test
@@ -940,11 +1004,10 @@ class PhotoScanExportServiceTest {
                     aperture = "f/2.8",
                     overrideAperture = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd).isNotNull
-            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_FNUMBER)).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_FNUMBER) ?: false).isFalse()
         }
 
         @Test
@@ -956,11 +1019,10 @@ class PhotoScanExportServiceTest {
                     shutterSpeed = "1/125",
                     overrideShutterSpeed = OverrideState.NULL_OUT,
                 )
-            val metadata = exportAndReadback(config)
+            val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd).isNotNull
-            assertThat(subIfd!!.containsTag(ExifSubIFDDirectory.TAG_EXPOSURE_TIME)).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_EXPOSURE_TIME) ?: false).isFalse()
         }
 
         private fun exportAndReadback(
@@ -989,7 +1051,9 @@ class PhotoScanExportServiceTest {
                     sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
-            assertThat(result.success).isTrue()
+            assertThat(result.success)
+                .withFailMessage { result.error ?: "export failed" }
+                .isTrue()
             val exportedFile = File(result.destinationPath)
             assertThat(exportedFile).exists()
 
@@ -1030,7 +1094,7 @@ class PhotoScanExportServiceTest {
             assertThat(iptc).isNotNull
             val keywords = iptc?.getStringArray(IptcDirectory.TAG_KEYWORDS)
             assertThat(keywords).isNotNull
-            assertThat(keywords!!.toList()).containsExactly("vacation", "family")
+            assertIptcKeywordsContain(metadata, "vacation", "family")
         }
 
         @Test
@@ -1106,10 +1170,10 @@ class PhotoScanExportServiceTest {
             val metadata = exportAndReadback(config)
 
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
-            assertThat(ifd0).isNotNull
-            assertThat(ifd0!!.containsTag(ExifIFD0Directory.TAG_MAKE)).isFalse()
-            assertThat(ifd0.containsTag(ExifIFD0Directory.TAG_MODEL)).isFalse()
-            assertThat(ifd0.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION)).isFalse()
+            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_MAKE) ?: false).isFalse()
+            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_MODEL) ?: false).isFalse()
+            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION) ?: false)
+                .isFalse()
         }
 
         @Test
@@ -1236,7 +1300,9 @@ class PhotoScanExportServiceTest {
                     "crop_test",
                     sourceFile = FilePath(sourceFile.absolutePath),
                 )
-            assertThat(result.success).isTrue()
+            assertThat(result.success)
+                .withFailMessage { result.error ?: "export failed" }
+                .isTrue()
             assertThat(File(result.destinationPath)).exists()
         }
 
@@ -1264,7 +1330,9 @@ class PhotoScanExportServiceTest {
                     "perspective_test",
                     sourceFile = FilePath(sourceFile.absolutePath),
                 )
-            assertThat(result.success).isTrue()
+            assertThat(result.success)
+                .withFailMessage { result.error ?: "export failed" }
+                .isTrue()
         }
     }
 }

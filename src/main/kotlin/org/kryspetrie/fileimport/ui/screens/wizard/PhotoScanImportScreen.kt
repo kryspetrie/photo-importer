@@ -46,6 +46,9 @@ import org.kryspetrie.fileimport.ui.components.isImageFile
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.ScanModeCard
 import org.kryspetrie.fileimport.ui.screens.wizard.photoscan.SourceDestRow
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
+
 
 /** Import screen for the wizard - source selection and configuration. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -185,7 +188,7 @@ fun PhotoScanImportScreen(
                     true
                 } else false
             },
-        topBar = { TopAppBar(title = { Text("Import Photos") }, navigationIcon = {}) },
+        topBar = { TopAppBar(title = { Text(strings().t(StringKey.WIZARD_IMPORT_PHOTOS)) }, navigationIcon = {}) },
         content = { paddingValues ->
             ChunkyScrollbar(modifier = modifier.fillMaxSize().padding(paddingValues)) {
                 Column(

@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun ScanActionBar(
@@ -27,23 +29,26 @@ fun ScanActionBar(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier.fillMaxWidth().padding(8.dp),
     ) {
         OutlinedButton(onClick = onRedetect, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Repeat, "Re-detect")
-            Text("Re-detect")
+            Icon(Icons.Default.Repeat, s.t(StringKey.ACC_RE_DETECT))
+            Text(s.t(StringKey.SCAN_RE_DETECT))
         }
         OutlinedButton(onClick = onAddPhoto, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Add, "Add")
-            Text("Add Photo")
+            Icon(Icons.Default.Add, s.t(StringKey.ACC_ADD))
+            Text(s.t(StringKey.SCAN_ADD_PHOTO))
         }
-        OutlinedButton(onClick = onSkip, modifier = Modifier.weight(1f)) { Text("Skip") }
+        OutlinedButton(onClick = onSkip, modifier = Modifier.weight(1f)) {
+            Text(s.t(StringKey.WIZARD_SKIP))
+        }
         OutlinedButton(onClick = onExportAll, modifier = Modifier.weight(1f)) {
-            Icon(Icons.Default.Upload, "Export")
-            Text("Export All")
+            Icon(Icons.Default.Upload, s.export)
+            Text(s.t(StringKey.SCAN_EXPORT_ALL))
         }
     }
     Row(
@@ -56,8 +61,8 @@ fun ScanActionBar(
             enabled = canNavigateNext,
             modifier = Modifier.weight(1f),
         ) {
-            Icon(Icons.Default.NavigateNext, "Next")
-            Text("Next")
+            Icon(Icons.Default.NavigateNext, s.next)
+            Text(s.next)
         }
     }
 }

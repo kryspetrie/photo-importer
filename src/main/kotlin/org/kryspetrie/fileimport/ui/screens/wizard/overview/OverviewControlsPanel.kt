@@ -33,6 +33,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.geometry.Corner
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardMode
@@ -46,6 +48,7 @@ private fun ModeControlsRow(
     refocus: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -61,7 +64,7 @@ private fun ModeControlsRow(
                     },
                     modifier = Modifier.height(40.dp),
                 ) {
-                    Text("Cancel 4-Point")
+                    Text(s.t(StringKey.WIZARD_CANCEL_FOUR_POINT))
                 }
             }
             else -> {
@@ -74,7 +77,7 @@ private fun ModeControlsRow(
                 ) {
                     Icon(Icons.Default.GridOn, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("4-Point")
+                    Text(s.t(StringKey.WIZARD_FOUR_POINT))
                 }
             }
         }
@@ -89,7 +92,7 @@ private fun ModeControlsRow(
                     },
                     modifier = Modifier.height(40.dp),
                 ) {
-                    Text("Cancel")
+                    Text(s.cancel)
                 }
             }
             else -> {
@@ -102,16 +105,15 @@ private fun ModeControlsRow(
                 ) {
                     Icon(Icons.Default.Add, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Add Box")
+                    Text(s.t(StringKey.WIZARD_ADD_BOX))
                 }
             }
         }
 
         Spacer(Modifier.weight(1f))
 
-        // Box count info
         Text(
-            "$boxCount photo${if (boxCount != 1) "s" else ""}",
+            s.t(StringKey.WIZARD_IMAGE_COUNT, "count" to "$boxCount"),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -133,6 +135,7 @@ private fun ActionButtonsRow(
     viewportHeight: Double = 600.0,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -150,10 +153,18 @@ private fun ActionButtonsRow(
                 enabled = boxCount > 1,
                 modifier = Modifier.size(32.dp),
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Previous photo", Modifier.size(18.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    s.t(StringKey.WIZARD_PREVIOUS_PHOTO),
+                    Modifier.size(18.dp),
+                )
             }
             Text(
-                "Photo ${selectedBoxIndex + 1} of $boxCount",
+                s.t(
+                    StringKey.SCAN_PHOTO_LABEL,
+                    "index" to "${selectedBoxIndex + 1}",
+                    "total" to "$boxCount",
+                ),
                 style = MaterialTheme.typography.titleMedium,
             )
             IconButton(
@@ -166,10 +177,13 @@ private fun ActionButtonsRow(
                 enabled = boxCount > 1,
                 modifier = Modifier.size(32.dp),
             ) {
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, "Next photo", Modifier.size(18.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForward,
+                    s.t(StringKey.WIZARD_NEXT_PHOTO_NAV),
+                    Modifier.size(18.dp),
+                )
             }
 
-            // Undo / Redo
             IconButton(
                 onClick = {
                     state.boxes.undo()
@@ -177,7 +191,7 @@ private fun ActionButtonsRow(
                 },
                 modifier = Modifier.size(32.dp),
             ) {
-                Icon(Icons.AutoMirrored.Filled.Undo, "Undo", Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.Undo, s.t(StringKey.META_UNDO), Modifier.size(18.dp))
             }
             IconButton(
                 onClick = {
@@ -186,10 +200,9 @@ private fun ActionButtonsRow(
                 },
                 modifier = Modifier.size(32.dp),
             ) {
-                Icon(Icons.AutoMirrored.Filled.Redo, "Redo", Modifier.size(18.dp))
+                Icon(Icons.AutoMirrored.Filled.Redo, s.t(StringKey.META_REDO), Modifier.size(18.dp))
             }
 
-            // Delete selected box
             IconButton(
                 onClick = {
                     state.removeSelectedBox()
@@ -197,13 +210,16 @@ private fun ActionButtonsRow(
                 },
                 modifier = Modifier.size(32.dp),
             ) {
-                Icon(Icons.Default.Delete, "Delete photo", tint = MaterialTheme.colorScheme.error)
+                Icon(
+                    Icons.Default.Delete,
+                    s.t(StringKey.ACC_DELETE_PHOTO),
+                    tint = MaterialTheme.colorScheme.error,
+                )
             }
 
-            // Corner selection info
             if (selectedCorner != null) {
                 Text(
-                    "Corner: ${selectedCorner.name}",
+                    s.t(StringKey.WIZARD_CORNER, "name" to selectedCorner.name),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -212,7 +228,6 @@ private fun ActionButtonsRow(
 
         Spacer(Modifier.weight(1f))
 
-        // Skip Photo button (batch mode only)
         if (onSkipCurrentPhoto != null) {
             OutlinedButton(
                 onClick = onSkipCurrentPhoto,
@@ -224,19 +239,18 @@ private fun ActionButtonsRow(
             ) {
                 Icon(Icons.Default.SkipNext, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Skip Photo")
+                Text(s.t(StringKey.WIZARD_SKIP_PHOTO))
             }
         }
 
-        // Back and Next buttons
         OutlinedButton(onClick = onBack, modifier = Modifier.height(40.dp)) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, null, Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Back")
+            Text(s.back)
         }
 
         Button(onClick = onToSummary, enabled = boxCount > 0, modifier = Modifier.height(40.dp)) {
-            Text("Next")
+            Text(s.next)
             Spacer(Modifier.width(4.dp))
             Icon(Icons.AutoMirrored.Filled.ArrowForward, null, Modifier.size(18.dp))
         }

@@ -1,7 +1,6 @@
 package org.kryspetrie.fileimport.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.SpaceBetween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.DuplicateInfo
 import org.kryspetrie.fileimport.domain.model.DuplicateResolution
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun DuplicateReviewScreen(
@@ -30,11 +31,13 @@ fun DuplicateReviewScreen(
     onContinue: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val s = strings()
+
     Column(
         modifier = Modifier.fillMaxSize().padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("Review Duplicates", style = MaterialTheme.typography.headlineSmall)
+        Text(s.t(StringKey.DUP_REVIEW_TITLE), style = MaterialTheme.typography.headlineSmall)
 
         if (duplicates.isEmpty()) {
             Box(
@@ -51,19 +54,19 @@ fun DuplicateReviewScreen(
                         Modifier.size(48.dp),
                         tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
                     )
-                    Text("No duplicates found!", style = MaterialTheme.typography.bodyLarge)
+                    Text(s.t(StringKey.DUP_REVIEW_NONE), style = MaterialTheme.typography.bodyLarge)
                 }
             }
         } else {
             Text(
-                "${duplicates.size} duplicate groups found",
+                s.t(StringKey.DUP_REVIEW_GROUPS, "count" to duplicates.size.toString()),
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            OutlinedButton(onClick = onBack) { Text("Back") }
-            Button(onClick = onContinue) { Text("Continue") }
+            OutlinedButton(onClick = onBack) { Text(s.t(StringKey.ACTION_BACK)) }
+            Button(onClick = onContinue) { Text(s.t(StringKey.DUP_CONTINUE)) }
         }
     }
 }

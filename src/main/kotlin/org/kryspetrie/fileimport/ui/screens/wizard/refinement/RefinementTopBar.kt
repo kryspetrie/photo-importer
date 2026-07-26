@@ -12,6 +12,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -22,8 +24,9 @@ internal fun RefinementTopBar(
     onShowHelp: () -> Unit = {},
     refocus: () -> Unit = {},
 ) {
+    val s = strings()
     TopAppBar(
-        title = { Text("Refine Bounding Box") },
+        title = { Text(s.t(StringKey.WIZARD_REFINE_BOX)) },
         actions = {
             IconButton(
                 onClick = {
@@ -31,7 +34,7 @@ internal fun RefinementTopBar(
                     refocus()
                 }
             ) {
-                Icon(Icons.Default.Undo, "Undo")
+                Icon(Icons.Default.Undo, s.t(StringKey.META_UNDO))
             }
             IconButton(
                 onClick = {
@@ -39,12 +42,14 @@ internal fun RefinementTopBar(
                     refocus()
                 }
             ) {
-                Icon(Icons.Default.Redo, "Redo")
+                Icon(Icons.Default.Redo, s.t(StringKey.META_REDO))
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, "Delete", tint = MaterialTheme.colorScheme.error)
+                Icon(Icons.Default.Delete, s.delete, tint = MaterialTheme.colorScheme.error)
             }
-            IconButton(onClick = onShowHelp) { Icon(Icons.Default.Info, "Keyboard shortcuts") }
+            IconButton(onClick = onShowHelp) {
+                Icon(Icons.Default.Info, s.t(StringKey.WIZARD_KEYBOARD_SHORTCUTS))
+            }
         },
     )
 }

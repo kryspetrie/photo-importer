@@ -84,6 +84,12 @@ data class AppSettings(
     /** Recent folder paths used in the Bulk Metadata Editor. Maximum 5 entries. */
     val metadataEditorRecentPaths: List<String> = emptyList(),
 
+    /** Preferred layout for the metadata editor (thumbnail strip vs file picker). */
+    val metadataEditorLayoutMode: MetadataEditorLayoutMode = MetadataEditorLayoutMode.SIDEBAR,
+
+    /** How files are displayed in the metadata editor file browser. */
+    val metadataEditorFileViewMode: MetadataEditorFileViewMode = MetadataEditorFileViewMode.ICONS,
+
     /**
      * When true, automatically detect and correct photo orientation (rotation) when importing
      * photos. Uses the deep-image-orientation-angle-detection model. Requires the orientation model
@@ -165,6 +171,14 @@ data class AppSettings(
             val updated = metadataEditorRecentPaths.filter { it != path }.take(4)
             copy(metadataEditorRecentPaths = listOf(path) + updated)
         }
+
+    /** Updates the metadata editor layout mode. */
+    fun withMetadataEditorLayoutMode(mode: MetadataEditorLayoutMode): AppSettings =
+        copy(metadataEditorLayoutMode = mode)
+
+    /** Updates the metadata editor file browser view mode. */
+    fun withMetadataEditorFileViewMode(mode: MetadataEditorFileViewMode): AppSettings =
+        copy(metadataEditorFileViewMode = mode)
 
     /** Updates the locale setting. */
     fun withLocale(localeCode: String): AppSettings = copy(locale = localeCode)

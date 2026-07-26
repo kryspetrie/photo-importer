@@ -56,7 +56,9 @@ import java.awt.image.BufferedImage
 import java.io.File
 import org.kryspetrie.fileimport.application.OrientationCorrectionService
 import org.kryspetrie.fileimport.domain.model.RotationAngle
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.RotationBadge
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /** Pre-computed view data for a single file's rotation preview. */
 data class RotationPreviewItem(
@@ -82,6 +84,7 @@ fun RotationPreviewOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val items = files.mapIndexed { index, file ->
         val result = orientationResults[file.absolutePath]
         val isChecked = file.absolutePath !in excludedPaths
@@ -108,13 +111,13 @@ fun RotationPreviewOverlay(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         Icons.Default.AutoFixHigh,
-                        contentDescription = "Auto-rotate",
+                        contentDescription = s.t(StringKey.ACC_AUTO_ROTATE),
                         modifier = Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "Apply Rotation Correction",
+                        s.t(StringKey.META_ROTATION_PREVIEW_TITLE),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     )
                 }
@@ -122,21 +125,24 @@ fun RotationPreviewOverlay(
                     OutlinedButton(onClick = onSelectAll, modifier = Modifier.height(32.dp)) {
                         Icon(Icons.Default.SelectAll, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("All", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.ACTION_ALL), style = MaterialTheme.typography.labelSmall)
                     }
                     OutlinedButton(onClick = onDeselectAll, modifier = Modifier.height(32.dp)) {
                         Icon(Icons.Default.Deselect, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("None", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.ACTION_NONE), style = MaterialTheme.typography.labelSmall)
                     }
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, "Close")
+                        Icon(Icons.Default.Close, s.close)
                     }
                 }
             }
             Text(
-                "$checkedCount of $totalDetected photo${if (totalDetected != 1) "s" else ""} selected for rotation correction. " +
-                    "Uncheck photos you don't want auto-rotated.",
+                s.t(
+                    StringKey.META_ROTATION_PREVIEW_SUMMARY,
+                    "checked" to checkedCount.toString(),
+                    "total" to totalDetected.toString(),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -194,7 +200,7 @@ fun RotationPreviewOverlay(
                                 } else {
                                     Icon(
                                         Icons.Default.Image,
-                                        "Loading",
+                                        s.t(StringKey.ACC_LOADING),
                                         modifier = Modifier.align(Alignment.Center).size(32.dp),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -227,7 +233,7 @@ fun RotationPreviewOverlay(
                                         ) {
                                             Icon(
                                                 Icons.Default.CheckCircle,
-                                                "Already upright",
+                                                s.t(StringKey.META_ROTATION_ALREADY_UPRIGHT),
                                                 modifier = Modifier.size(8.dp),
                                                 tint = MaterialTheme.colorScheme.outline,
                                             )
@@ -303,11 +309,17 @@ fun RotationPreviewOverlay(
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         Text(
-                                            "Detected: ${previewResult.orientationDegrees.toInt()}°",
+                                            s.t(
+                                                StringKey.ORIENTATION_DETECTED_ANGLE,
+                                                "angle" to previewResult.orientationDegrees.toInt().toString(),
+                                            ),
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                         Text(
-                                            "Confidence: ${(previewResult.confidence * 100).toInt()}%",
+                                            s.t(
+                                                StringKey.ORIENTATION_DIALOG_CONFIDENCE,
+                                                "confidence" to (previewResult.confidence * 100).toInt().toString(),
+                                            ),
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                     }
@@ -322,7 +334,7 @@ fun RotationPreviewOverlay(
                                                 shape = RoundedCornerShape(4.dp),
                                             ) {
                                                 Text(
-                                                    "Already upright — no rotation needed",
+                                                    s.t(StringKey.META_ROTATION_UPRIGHT_DETAIL),
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                                     style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.onPrimaryContainer,
@@ -334,7 +346,10 @@ fun RotationPreviewOverlay(
                                                 isAutoDetected = true,
                                             )
                                             Text(
-                                                "correction: ${previewResult.correctionDegrees.toInt()}°",
+                                                s.t(
+                                                    StringKey.ORIENTATION_DIALOG_CORRECTION,
+                                                    "correction" to previewResult.correctionDegrees.toInt().toString(),
+                                                ),
                                                 style = MaterialTheme.typography.bodySmall,
                                             )
                                         }
@@ -346,7 +361,7 @@ fun RotationPreviewOverlay(
                                             modifier = Modifier.padding(top = 4.dp),
                                         ) {
                                             Text(
-                                                "⚠ JPEG — rotation updates metadata only, not pixels",
+                                                s.t(StringKey.META_ROTATION_JPEG_METADATA_ONLY),
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onErrorContainer,
@@ -355,7 +370,7 @@ fun RotationPreviewOverlay(
                                     }
                                 } else {
                                     Text(
-                                        "Orientation not detected for this file",
+                                        s.t(StringKey.META_ROTATION_NOT_DETECTED),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -370,13 +385,13 @@ fun RotationPreviewOverlay(
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack,
-                                    "Click a photo",
+                                    s.t(StringKey.META_ROTATION_CLICK_PREVIEW),
                                     modifier = Modifier.size(48.dp),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 Text(
-                                    "Click a photo to preview its rotation",
+                                    s.t(StringKey.META_ROTATION_CLICK_HINT),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
@@ -395,21 +410,24 @@ fun RotationPreviewOverlay(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    "$checkedCount photo${if (checkedCount != 1) "s" else ""} will be rotated",
+                    s.t(StringKey.META_ROTATION_WILL_ROTATE_N, "count" to checkedCount.toString()),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f),
                 )
                 Spacer(Modifier.width(16.dp))
-                TextButton(onClick = onDismiss) { Text("Cancel") }
+                TextButton(onClick = onDismiss) { Text(s.cancel) }
                 Spacer(Modifier.width(8.dp))
                 Button(
                     onClick = onApply,
                     enabled = checkedCount > 0,
                 ) {
-                    Icon(Icons.Default.AutoFixHigh, "Apply rotation", Modifier.size(16.dp))
+                    Icon(Icons.Default.AutoFixHigh, s.t(StringKey.ACC_APPLY_ROTATION), Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text(if (checkedCount == 1) "Rotate 1 Photo" else "Rotate $checkedCount Photos")
+                    Text(
+                        if (checkedCount == 1) s.t(StringKey.META_ROTATE_ONE_PHOTO)
+                        else s.t(StringKey.META_ROTATE_N_PHOTOS, "count" to checkedCount.toString()),
+                    )
                 }
             }
         }

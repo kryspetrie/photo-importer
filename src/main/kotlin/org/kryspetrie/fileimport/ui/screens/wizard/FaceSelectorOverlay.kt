@@ -89,6 +89,9 @@ import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
+
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
 /** Color for each region type when drawn on the canvas. */
@@ -204,6 +207,7 @@ fun FaceSelectorOverlay(
     nameSuggestions: Map<Int, String> = emptyMap(),
     onNameConfirmed: ((faceIndex: Int, name: String) -> Unit)? = null,
 ) {
+    val s = strings()
     // Cache the image bitmap to avoid recomputing on every recomposition (e.g. hover, drag)
     val imageBitmap = remember(fullPreview) { fullPreview.toComposeImageBitmap() }
     var imageDisplayBounds by remember { mutableStateOf(Rect(0f, 0f, 0f, 0f)) }
@@ -414,7 +418,7 @@ fun FaceSelectorOverlay(
                             modifier = Modifier.height(24.dp),
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                         ) {
-                            Text("Done", style = MaterialTheme.typography.labelSmall)
+                            Text(s.t(StringKey.META_DONE), style = MaterialTheme.typography.labelSmall)
                         }
                     }
 
@@ -558,7 +562,7 @@ fun FaceSelectorOverlay(
                             ) {
                                 Icon(
                                     Icons.Default.Face,
-                                    contentDescription = "Auto-detect",
+                                    contentDescription = s.t(StringKey.WIZARD_AUTO_DETECT),
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
@@ -590,7 +594,7 @@ fun FaceSelectorOverlay(
                             ) {
                                 Icon(
                                     Icons.Default.Close,
-                                    contentDescription = "Clear All",
+                                    contentDescription = s.t(StringKey.FIELD_CLEAR_ALL),
                                     modifier = Modifier.size(14.dp),
                                     tint = MaterialTheme.colorScheme.error,
                                 )
@@ -957,7 +961,7 @@ fun FaceSelectorOverlay(
                 ) {
                     Image(
                         bitmap = imageBitmap,
-                        contentDescription = "Select tags on photo ${idx + 1}",
+                        contentDescription = s.t(StringKey.WIZARD_SELECT_TAGS, "index" to "${idx + 1}"),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit,
                     )
@@ -1372,11 +1376,11 @@ fun FaceSelectorOverlay(
                                 OutlinedButton(onClick = { skipCurrentFace() }) {
                                     Icon(
                                         Icons.Default.SkipNext,
-                                        contentDescription = "Skip",
+                                        contentDescription = s.t(StringKey.WIZARD_SKIP),
                                         modifier = Modifier.size(14.dp),
                                     )
                                     Spacer(Modifier.width(2.dp))
-                                    Text("Skip", style = MaterialTheme.typography.labelSmall)
+                                    Text(s.t(StringKey.WIZARD_SKIP), style = MaterialTheme.typography.labelSmall)
                                 }
                             }
                             Text(

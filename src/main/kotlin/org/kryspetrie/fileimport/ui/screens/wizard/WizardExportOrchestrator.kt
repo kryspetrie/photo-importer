@@ -9,8 +9,10 @@ import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RotationAngle
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
+import org.kryspetrie.fileimport.domain.port.LocalePort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
@@ -86,6 +88,7 @@ suspend fun exportSinglePhoto(
     onProgress: (Float, String) -> Unit,
     orientationCorrection: OrientationCorrectionService? = null,
     imageProcessing: ImageProcessingPort? = null,
+    localePort: LocalePort,
 ): ExportResult {
     val progress = (index + 1).toFloat() / totalCount
     onProgress(progress * 0.9f, fileName)
@@ -202,8 +205,14 @@ suspend fun exportSinglePhoto(
             )
             ExportResult.Failure(
                 originalFile = state.imageFile.value ?: File(""),
-                errorMessage = e.message ?: "Unknown error",
-                correctionsApplied = listOf("Failed: ${e.message}"),
+                errorMessage = e.message ?: localePort.t(StringKey.ERROR_UNKNOWN),
+                correctionsApplied =
+                    listOf(
+                        localePort.t(
+                            StringKey.ERROR_EXPORT_ITEM_FAILED,
+                            "message" to (e.message ?: localePort.t(StringKey.ERROR_UNKNOWN)),
+                        )
+                    ),
             )
         }
     }
@@ -232,6 +241,7 @@ suspend fun exportPhotos(
     dispatcherProvider: DispatcherProvider,
     orientationCorrection: OrientationCorrectionService? = null,
     imageProcessing: ImageProcessingPort? = null,
+    localePort: LocalePort,
 ) {
     isLoading(true)
 
@@ -316,6 +326,7 @@ suspend fun exportPhotos(
                     onProgress = onProgress,
                     orientationCorrection = orientationCorrection,
                     imageProcessing = imageProcessing,
+                    localePort = localePort,
                 )
             results.add(result)
         }

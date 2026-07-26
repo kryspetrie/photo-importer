@@ -34,6 +34,13 @@ data class ImageMetadata(
     val orientation: Int? = null,
     val colorSpace: String? = null,
 
+    // IPTC / location fields (read from source file for display)
+    val keywords: List<String>? = null,
+    val subLocation: String? = null,
+    val city: String? = null,
+    val provinceState: String? = null,
+    val countryName: String? = null,
+
     // Video-specific
     val durationSeconds: Double? = null,
     val frameRate: Double? = null,

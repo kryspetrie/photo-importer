@@ -30,8 +30,10 @@ import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.RawJpegPairMode
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.SectionLabel
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun AdvancedSettingsSection(
@@ -44,9 +46,10 @@ fun AdvancedSettingsSection(
     watchStatus: WatchFolderStatus,
     scope: CoroutineScope,
 ) {
+    val s = strings()
     var advancedExpanded by remember { mutableStateOf(false) }
     CollapsibleSubsection(
-        title = "Advanced",
+        title = s.t(StringKey.SETTINGS_ADVANCED),
         icon = Icons.Default.SettingsApplications,
         expanded = advancedExpanded,
         onToggle = { advancedExpanded = !advancedExpanded },
@@ -75,17 +78,17 @@ private fun AutoOrientSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("Orientation")
+    val s = strings()
+    SectionLabel(s.t(StringKey.SETTINGS_ORIENTATION))
     SettingsToggle(
         checked = configuration.autoOrientEnabled,
         onCheckedChange = { onConfigChange(configuration.copy(autoOrientEnabled = it)) },
-        label = "Auto-orient photos on import",
-        description = "Detect and correct rotation using ML (requires orientation model)",
+        label = s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT),
+        description = s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT_DESC),
     )
     if (configuration.autoOrientEnabled) {
         Text(
-            "Photos will be automatically rotated to upright orientation during import. " +
-                "JPEG rotation is metadata-only (lossless).",
+            s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT_ENABLED_NOTE),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -97,7 +100,8 @@ private fun RawJpegPairSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("RAW+JPEG Pairs")
+    val s = strings()
+    SectionLabel(s.t(StringKey.SETTINGS_RAW_JPEG_PAIRS))
     Row(Modifier.fillMaxWidth()) {
         RawJpegPairMode.entries.forEach { mode ->
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
@@ -107,9 +111,9 @@ private fun RawJpegPairSection(
                 )
                 Text(
                     when (mode) {
-                        RawJpegPairMode.IMPORT_BOTH -> "Import both"
-                        RawJpegPairMode.RAW_ONLY -> "RAW only"
-                        RawJpegPairMode.JPEG_ONLY -> "JPEG only"
+                        RawJpegPairMode.IMPORT_BOTH -> s.t(StringKey.SETTINGS_RAW_JPEG_IMPORT_BOTH)
+                        RawJpegPairMode.RAW_ONLY -> s.t(StringKey.SETTINGS_RAW_JPEG_RAW_ONLY)
+                        RawJpegPairMode.JPEG_ONLY -> s.t(StringKey.SETTINGS_RAW_JPEG_JPEG_ONLY)
                     },
                     style = MaterialTheme.typography.labelSmall,
                     maxLines = 1,
@@ -121,7 +125,7 @@ private fun RawJpegPairSection(
         SettingsToggle(
             checked = configuration.keepPairsTogether,
             onCheckedChange = { onConfigChange(configuration.copy(keepPairsTogether = it)) },
-            label = "Keep pairs in same folder",
+            label = s.t(StringKey.SETTINGS_RAW_JPEG_KEEP_TOGETHER),
         )
     }
 }
@@ -131,13 +135,14 @@ private fun SidecarSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
-    SectionLabel("Sidecars & Post-Import")
+    val s = strings()
+    SectionLabel(s.t(StringKey.SETTINGS_SIDECARS))
     Row(Modifier.fillMaxWidth()) {
         Column(Modifier.weight(1f)) {
             SettingsToggle(
                 checked = configuration.importSidecars,
                 onCheckedChange = { onConfigChange(configuration.copy(importSidecars = it)) },
-                label = "Import sidecars",
+                label = s.t(StringKey.SETTINGS_IMPORT_SIDECARS),
                 description = ".xmp, .thm, .lrv, .aae",
             )
         }
@@ -145,7 +150,7 @@ private fun SidecarSection(
             SettingsToggle(
                 checked = configuration.verifyAfterCopy,
                 onCheckedChange = { onConfigChange(configuration.copy(verifyAfterCopy = it)) },
-                label = "Verify copies",
+                label = s.t(StringKey.SETTINGS_VERIFY_COPIES),
                 description = "Hash check after import",
             )
         }
@@ -155,14 +160,14 @@ private fun SidecarSection(
             SettingsToggle(
                 checked = configuration.deleteAfterImport,
                 onCheckedChange = { onConfigChange(configuration.copy(deleteAfterImport = it)) },
-                label = "Delete source",
+                label = s.t(StringKey.SETTINGS_DELETE_SOURCE),
                 description = "Remove after successful copy",
             )
         }
     }
     if (configuration.deleteAfterImport) {
         Text(
-            "Warning: Source files will be deleted after successful copy and verification.",
+            s.t(StringKey.SETTINGS_DELETE_SOURCE_WARNING),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.error,
         )
@@ -178,7 +183,8 @@ private fun WatchFolderSection(
     watchStatus: WatchFolderStatus,
     scope: CoroutineScope,
 ) {
-    SectionLabel("Watch Folder")
+    val s = strings()
+    SectionLabel(s.t(StringKey.SETTINGS_WATCH_FOLDER))
     if (!watchStatus.isWatching) {
         val canWatch = sourcePath.isNotBlank() && destinationPath.isNotBlank()
         OutlinedButton(
@@ -196,16 +202,16 @@ private fun WatchFolderSection(
         ) {
             Icon(Icons.Default.Visibility, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Watch Folder")
+            Text(s.t(StringKey.SETTINGS_WATCH_FOLDER_START))
         }
         Text(
-            "Automatically import new files dropped into the source folder.",
+            s.t(StringKey.SETTINGS_WATCH_FOLDER_DESC),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     } else {
         Text(
-            "Currently watching: ${watchStatus.watchPath}",
+            s.t(StringKey.SETTINGS_WATCHING, "path" to watchStatus.watchPath),
             style = MaterialTheme.typography.bodySmall,
         )
     }
@@ -213,12 +219,13 @@ private fun WatchFolderSection(
 
 @Composable
 private fun CacheManagementSection(onClearCache: () -> Unit) {
-    SectionLabel("Index Cache")
+    val s = strings()
+    SectionLabel(s.t(StringKey.SETTINGS_INDEX_CACHE))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedButton(onClick = onClearCache) {
             Icon(Icons.Default.Delete, null, Modifier.size(14.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Clear Cache")
+            Text(s.t(StringKey.SETTINGS_CLEAR_CACHE))
         }
     }
 }

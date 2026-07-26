@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.i18n.LocaleConfig
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.domain.model.i18n.SupportedLocales
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 
 @DisplayName("JsonLocaleAdapter")
@@ -48,18 +49,19 @@ class JsonLocaleAdapterTest {
         }
 
         @Test
-        @DisplayName("availableLocales returns at least en and de")
+        @DisplayName("availableLocales returns all bundled locales")
         fun availableLocalesReturnsExpected() {
             val locales = adapter.availableLocales()
-            assertThat(locales).contains("en")
-            assertThat(locales).contains("de")
+            assertThat(locales).containsAll(SupportedLocales.bundled)
         }
 
         @Test
         @DisplayName("nativeLocaleName returns correct names")
         fun nativeLocaleNameReturnsCorrectNames() {
-            assertThat(adapter.nativeLocaleName("en")).isEqualTo("English")
+            assertThat(adapter.nativeLocaleName("en")).isEqualTo("English (US)")
             assertThat(adapter.nativeLocaleName("de")).isEqualTo("Deutsch")
+            assertThat(adapter.nativeLocaleName("ja")).isEqualTo("日本語")
+            assertThat(adapter.nativeLocaleName("ar")).isEqualTo("العربية")
         }
     }
 

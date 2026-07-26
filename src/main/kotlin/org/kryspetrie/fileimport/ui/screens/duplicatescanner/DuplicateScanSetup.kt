@@ -17,8 +17,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun DuplicateScanSetup(
@@ -32,24 +34,24 @@ fun DuplicateScanSetup(
     onEnableSurfChange: (Boolean) -> Unit,
     errorMessage: String?,
 ) {
-    // Folder selection
+    val s = strings()
+
     FolderSelectionField(
         value = folderPath,
         onValueChange = onFolderPathChange,
         modifier = Modifier.fillMaxWidth(),
-        label = "Library Folder",
-        placeholder = "Select folder to scan...",
-        title = "Select Library Folder",
+        label = s.t(StringKey.DUP_LIBRARY_FOLDER),
+        placeholder = s.t(StringKey.DUP_LIBRARY_PLACEHOLDER),
+        title = s.t(StringKey.ACTION_SELECT_FOLDER),
         supportingText = {
-            Text("Paste a path or browse", style = MaterialTheme.typography.labelSmall)
+            Text(s.t(StringKey.IMPORT_PATH_HINT), style = MaterialTheme.typography.labelSmall)
         },
     )
 
-    // Detection methods
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                "Detection Methods",
+                s.t(StringKey.DUP_DETECTION_METHODS),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
             )
             Row(Modifier.fillMaxWidth()) {
@@ -57,16 +59,16 @@ fun DuplicateScanSetup(
                     SettingsToggle(
                         checked = enableHash,
                         onCheckedChange = onEnableHashChange,
-                        label = "Exact hash",
-                        description = "MD5 content match",
+                        label = s.t(StringKey.DUP_EXACT_HASH),
+                        description = s.t(StringKey.DUP_MD5_MATCH),
                     )
                 }
                 Column(Modifier.weight(1f)) {
                     SettingsToggle(
                         checked = enableExif,
                         onCheckedChange = onEnableExifChange,
-                        label = "EXIF metadata",
-                        description = "Compare EXIF data",
+                        label = s.t(StringKey.DUP_EXIF_METADATA),
+                        description = s.t(StringKey.DUP_COMPARE_EXIF),
                     )
                 }
             }
@@ -75,15 +77,14 @@ fun DuplicateScanSetup(
                     SettingsToggle(
                         checked = enableSurf,
                         onCheckedChange = onEnableSurfChange,
-                        label = "SURF visual",
-                        description = "Detect near-duplicates",
+                        label = s.t(StringKey.DUP_SURF_VISUAL),
+                        description = s.t(StringKey.DUP_NEAR_DUPLICATES),
                     )
                 }
             }
         }
     }
 
-    // Error
     errorMessage?.let {
         OutlinedCard(Modifier.fillMaxWidth()) {
             Row(

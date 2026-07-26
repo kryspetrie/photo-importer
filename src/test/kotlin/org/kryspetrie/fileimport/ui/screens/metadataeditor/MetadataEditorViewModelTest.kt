@@ -1,12 +1,29 @@
 package org.kryspetrie.fileimport.ui.screens.metadataeditor
 
 import java.io.File
+import java.nio.file.Files
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.application.OrientationCorrectionService
+import org.kryspetrie.fileimport.application.TestDispatcherProvider
+import org.kryspetrie.fileimport.application.metadata.MetadataEditService
+import org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService
+import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.model.MetadataEditorFileViewMode
+import org.kryspetrie.fileimport.domain.model.MetadataEditorLayoutMode
 import org.kryspetrie.fileimport.domain.model.RotationAngle
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.domain.port.LocalePort
+import org.kryspetrie.fileimport.domain.port.SettingsPort
+import androidx.compose.ui.input.key.Key
+import org.mockito.kotlin.any
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
 
 @DisplayName("MetadataEditorViewModel")
 class MetadataEditorViewModelTest {
@@ -228,6 +245,257 @@ class MetadataEditorViewModelTest {
             assertThat(state.modifiedCount).isEqualTo(1)
             state.updateConfig(1) { it.copy(city = "Berlin") }
             assertThat(state.modifiedCount).isEqualTo(2)
+        }
+    }
+
+    @Nested
+    @DisplayName("ViewModel selection and layout")
+    inner class ViewModelBehaviorTests {
+        private lateinit var vm: MetadataEditorViewModel
+
+        @BeforeEach
+        fun setUpViewModel() {
+            vm =
+                MetadataEditorViewModel(
+                    dispatcherProvider = TestDispatcherProvider(),
+                    imageRepository = mock(),
+                    imageProcessing = mock(),
+                    locationSearchService = mock(),
+                    geocodingPort = mock(),
+                    settingsPort = stubSettingsPort(),
+                    editService = mock(),
+                    undoService = mock(),
+                    faceRegionTransformer = mock(),
+                    fileSystemAdapter = mock(),
+                    orientationCorrection = mock(),
+                    modelDownloadPort = mock(),
+                    localePort = stubLocalePort(),
+                )
+            vm.currentSettings = AppSettings()
+        }
+
+        @Test
+        fun toggleSelectionSelectsFileInSingleEditMode() {
+            vm.state.loadFiles(listOf(File("/tmp/a.jpg"), File("/tmp/b.jpg")))
+            vm.toggleSelection(1)
+            assertThat(vm.state.selectedIndex).isEqualTo(1)
+        }
+
+        @Test
+        fun toggleSelectionTogglesIndicesInMultiEditMode() {
+            vm.state.loadFiles(listOf(File("/tmp/a.jpg"), File("/tmp/b.jpg")))
+            vm.isMultiEditMode = true
+            vm.toggleSelection(0)
+            vm.toggleSelection(1)
+            assertThat(vm.selectedIndices).containsExactly(0, 1)
+            vm.toggleSelection(0)
+            assertThat(vm.selectedIndices).containsExactly(1)
+        }
+
+        @Test
+        fun setFileViewModeUpdatesSettingsAndLegacyLayout() {
+            // GIVEN
+            var captured: AppSettings? = null
+
+            // WHEN
+            vm.setFileViewMode(MetadataEditorFileViewMode.COLUMN) { captured = it }
+
+            // THEN
+            assertThat(captured?.metadataEditorFileViewMode)
+                .isEqualTo(MetadataEditorFileViewMode.COLUMN)
+            assertThat(captured?.metadataEditorLayoutMode)
+                .isEqualTo(MetadataEditorLayoutMode.FILE_PICKER)
+
+            // WHEN
+            vm.setFileViewMode(MetadataEditorFileViewMode.ICONS) { captured = it }
+
+            // THEN
+            assertThat(captured?.metadataEditorFileViewMode)
+                .isEqualTo(MetadataEditorFileViewMode.ICONS)
+            assertThat(captured?.metadataEditorLayoutMode)
+                .isEqualTo(MetadataEditorLayoutMode.SIDEBAR)
+        }
+
+        @Test
+        fun handleBrowserKeyNavigatesFoldersAndFilesInListView() {
+            // GIVEN
+            vm.state.editingActive = true
+            vm.state.sourcePath = "/tmp/album"
+            vm.state.loadFiles(
+                listOf(
+                    File("/tmp/album/a.jpg"),
+                    File("/tmp/album/nested/b.jpg"),
+                )
+            )
+            vm.state.selectFile(0)
+            val nestedPath = File("/tmp/album/nested").absolutePath
+
+            // WHEN — move focus to the subfolder
+            val movedToFolder = vm.handleBrowserKey(Key.DirectionUp, MetadataEditorFileViewMode.LIST)
+
+            // THEN
+            assertThat(movedToFolder).isTrue()
+            assertThat(vm.browserFocusedFolderPath).isEqualTo(nestedPath)
+
+            // WHEN — open the focused folder
+            val openedFolder = vm.handleBrowserKey(Key.DirectionRight, MetadataEditorFileViewMode.LIST)
+
+            // THEN
+            assertThat(openedFolder).isTrue()
+            assertThat(vm.browserFolderPathStack).containsExactly(nestedPath)
+            assertThat(vm.browserFocusedFolderPath).isNull()
+
+            // WHEN — select the file inside the folder
+            val movedToFile = vm.handleBrowserKey(Key.DirectionDown, MetadataEditorFileViewMode.LIST)
+
+            // THEN
+            assertThat(movedToFile).isTrue()
+            assertThat(vm.state.selectedIndex).isEqualTo(1)
+
+            // WHEN — navigate back to the parent folder
+            val movedUp = vm.handleBrowserKey(Key.DirectionLeft, MetadataEditorFileViewMode.LIST)
+
+            // THEN
+            assertThat(movedUp).isTrue()
+            assertThat(vm.browserFolderPathStack).isEmpty()
+        }
+
+        @Test
+        fun handleBrowserKeyUsesGlobalFileOrderInHierarchyView() {
+            // GIVEN
+            vm.state.editingActive = true
+            vm.state.loadFiles(listOf(File("/tmp/a.jpg"), File("/tmp/b.jpg")))
+            vm.state.selectFile(0)
+
+            // WHEN
+            val handled = vm.handleBrowserKey(Key.DirectionDown, MetadataEditorFileViewMode.HIERARCHY)
+
+            // THEN
+            assertThat(handled).isTrue()
+            assertThat(vm.state.selectedIndex).isEqualTo(1)
+        }
+
+        @Test
+        fun handleBrowserKeyUsesGlobalFileOrderInColumnView() {
+            // GIVEN
+            vm.state.editingActive = true
+            vm.state.loadFiles(listOf(File("/tmp/a.jpg"), File("/tmp/b.jpg")))
+            vm.state.selectFile(0)
+
+            // WHEN
+            val handled = vm.handleBrowserKey(Key.DirectionDown, MetadataEditorFileViewMode.COLUMN)
+
+            // THEN
+            assertThat(handled).isTrue()
+            assertThat(vm.state.selectedIndex).isEqualTo(1)
+        }
+
+        @Test
+        fun handleBrowserEnterOpensFocusedFolder() {
+            // GIVEN
+            vm.state.editingActive = true
+            vm.state.sourcePath = "/tmp/album"
+            vm.state.loadFiles(
+                listOf(
+                    File("/tmp/album/a.jpg"),
+                    File("/tmp/album/nested/b.jpg"),
+                )
+            )
+            val nestedPath = File("/tmp/album/nested").absolutePath
+            vm.browserFocusedFolderPath = nestedPath
+
+            // WHEN
+            val handled = vm.handleBrowserKey(Key.Enter, MetadataEditorFileViewMode.LIST)
+
+            // THEN
+            assertThat(handled).isTrue()
+            assertThat(vm.browserFolderPathStack).containsExactly(nestedPath)
+            assertThat(vm.browserFocusedFolderPath).isNull()
+        }
+
+        @Test
+        fun selectBrowserFileClearsFocusedFolder() {
+            // GIVEN
+            vm.state.loadFiles(listOf(File("/tmp/a.jpg")))
+            vm.browserFocusedFolderPath = "/tmp/nested"
+
+            // WHEN
+            vm.selectBrowserFile(0)
+
+            // THEN
+            assertThat(vm.browserFocusedFolderPath).isNull()
+            assertThat(vm.state.selectedIndex).isEqualTo(0)
+        }
+
+        @Test
+        fun loadSelectedFilesResetsBrowserNavigation() {
+            // GIVEN
+            val tempFile = Files.createTempFile("metadata-editor", ".jpg").toFile()
+            tempFile.deleteOnExit()
+            vm.browserFolderPathStack = listOf("/tmp/nested")
+            vm.browserFocusedFolderPath = "/tmp/nested"
+
+            // WHEN
+            runBlocking {
+                vm.loadSelectedFiles(listOf(tempFile.absolutePath), this) {}
+            }
+
+            // THEN
+            assertThat(vm.browserFolderPathStack).isEmpty()
+            assertThat(vm.browserFocusedFolderPath).isNull()
+        }
+
+        @Test
+        fun setLayoutModeUpdatesSettingsCallback() {
+            var captured: AppSettings? = null
+            vm.setLayoutMode(MetadataEditorLayoutMode.FILE_PICKER) { captured = it }
+            assertThat(captured?.metadataEditorLayoutMode)
+                .isEqualTo(MetadataEditorLayoutMode.FILE_PICKER)
+        }
+
+        @Test
+        fun loadSelectedFilesLoadsMetadataEditableImages() {
+            val tempFile = Files.createTempFile("metadata-editor", ".jpg").toFile()
+            tempFile.deleteOnExit()
+
+            runBlocking {
+                vm.loadSelectedFiles(listOf(tempFile.absolutePath), this) {}
+            }
+
+            assertThat(vm.state.editingActive).isTrue()
+            assertThat(vm.state.fileCount).isEqualTo(1)
+            assertThat(vm.state.selectedFile?.absolutePath).isEqualTo(tempFile.absolutePath)
+            assertThat(vm.isMultiEditMode).isFalse()
+        }
+
+        @Test
+        fun loadSelectedFilesIgnoresUnsupportedExtensions() {
+            val tempFile = Files.createTempFile("metadata-editor", ".mp4").toFile()
+            tempFile.deleteOnExit()
+
+            runBlocking {
+                vm.loadSelectedFiles(listOf(tempFile.absolutePath), this) {}
+            }
+
+            assertThat(vm.state.fileCount).isEqualTo(0)
+            assertThat(vm.state.message?.severity).isEqualTo(MessageSeverity.ERROR)
+        }
+
+        private fun stubSettingsPort(): SettingsPort {
+            val settingsPort = mock<SettingsPort>()
+            whenever(settingsPort.observeSettings()).thenReturn(MutableStateFlow(AppSettings()))
+            return settingsPort
+        }
+
+        private fun stubLocalePort(): LocalePort {
+            val localePort = mock<LocalePort>()
+            whenever(localePort.t(any<StringKey>())).thenAnswer { inv ->
+                inv.getArgument<StringKey>(0).name
+            }
+            whenever(localePort.t(any<StringKey>(), any())).thenAnswer { inv ->
+                inv.getArgument<StringKey>(0).name
+            }
+            return localePort
         }
     }
 }

@@ -112,10 +112,20 @@ fun pickFile(title: String, extensionFilter: List<String>? = null): String? {
 /** Supported image file extensions for photo/media import. */
 val IMAGE_EXTENSIONS = listOf("jpg", "jpeg", "png", "gif", "bmp", "tiff", "tif", "webp")
 
+/** Extensions that support in-place metadata editing (includes RAW). */
+val METADATA_EDITABLE_EXTENSIONS: List<String> =
+    org.kryspetrie.fileimport.domain.model.ImageFileType.imageExtensions().sorted()
+
 /** Check if a file is a supported image format. */
 fun isImageFile(file: File): Boolean {
     val ext = file.extension.lowercase()
     return ext in IMAGE_EXTENSIONS
+}
+
+/** Check if a file supports metadata editing via ExifTool. */
+fun isMetadataEditableFile(file: File): Boolean {
+    val fileType = org.kryspetrie.fileimport.domain.model.ImageFileType.fromExtension(file.extension)
+    return org.kryspetrie.fileimport.application.export.FileFormatSupport.canWriteMetadataInPlace(fileType)
 }
 
 /**
@@ -127,6 +137,39 @@ fun isImageFile(file: File): Boolean {
  * @return Selected file absolute path, or null if cancelled
  */
 fun pickImageFile(title: String): String? = pickFile(title, IMAGE_EXTENSIONS)
+
+/**
+ * Opens a native file picker allowing multi-selection of metadata-editable image files.
+ *
+ * On macOS this uses [JFileChooser] with the system look-and-feel, which provides the familiar
+ * column view and Cmd-click multi-selection. Single-selection is also supported.
+ *
+ * @param title Dialog window title
+ * @return Selected file absolute paths, or empty list if cancelled
+ */
+@Suppress("SpreadOperator")
+fun pickImageFiles(title: String, extensionDescription: String): List<String> {
+    applySystemLookAndFeel()
+    val chooser =
+        JFileChooser().apply {
+            dialogTitle = title
+            fileSelectionMode = JFileChooser.FILES_ONLY
+            isMultiSelectionEnabled = true
+            isAcceptAllFileFilterUsed = false
+            addChoosableFileFilter(
+                FileNameExtensionFilter(
+                    extensionDescription,
+                    *METADATA_EDITABLE_EXTENSIONS.toTypedArray(),
+                )
+            )
+        }
+    if (chooser.showOpenDialog(null) != JFileChooser.APPROVE_OPTION) {
+        return emptyList()
+    }
+    val selected = chooser.selectedFiles?.toList().orEmpty()
+    if (selected.isNotEmpty()) return selected.map { it.absolutePath }
+    return chooser.selectedFile?.absolutePath?.let { listOf(it) }.orEmpty()
+}
 
 /**
  * Applies the system look-and-feel for native dialog appearance.

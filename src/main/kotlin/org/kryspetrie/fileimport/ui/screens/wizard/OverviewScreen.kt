@@ -44,6 +44,9 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.ui.components.LoadingIndicator
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
+
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.FourPointStatusBar
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewCanvas
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewControlsPanel
@@ -66,6 +69,7 @@ fun OverviewScreen(
     onSkipCurrentPhoto: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     // Collect state flows
     val wizardMode by state.wizardMode.collectAsState()
     val fourPointState by state.fourPointState.collectAsState()
@@ -100,7 +104,7 @@ fun OverviewScreen(
     LaunchedEffect(showBoxRejectedMessage) {
         if (showBoxRejectedMessage) {
             snackbarHostState.showSnackbar(
-                message = "Box too small - image must be at least 100x67 pixels for a box",
+                message = s.t(StringKey.WIZARD_BOX_TOO_SMALL),
                 duration = SnackbarDuration.Short,
             )
             showBoxRejectedMessage = false
@@ -167,7 +171,7 @@ fun OverviewScreen(
     if (showDeleteConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
-            title = { Text("Delete Photo") },
+            title = { Text(s.t(StringKey.WIZARD_DELETE_PHOTO)) },
             text = {
                 Text(
                     "Remove this photo box? This cannot be undone, " +
@@ -181,11 +185,11 @@ fun OverviewScreen(
                         showDeleteConfirmDialog = false
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(s.delete, color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirmDialog = false }) { Text(s.cancel) }
             },
         )
     }
@@ -201,8 +205,9 @@ private fun OverviewTopBar(
     onDeleteSelected: () -> Unit,
     onShowHelp: () -> Unit,
 ) {
+    val s = strings()
     TopAppBar(
-        title = { Text("Select Photos", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        title = { Text(s.t(StringKey.WIZARD_SELECT_PHOTOS), maxLines = 1, overflow = TextOverflow.Ellipsis) },
         navigationIcon = {},
         actions = {
             // Mode indicator

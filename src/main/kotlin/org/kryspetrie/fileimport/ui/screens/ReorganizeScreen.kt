@@ -33,9 +33,11 @@ import org.kryspetrie.fileimport.application.ReorganizeService
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.ReorganizeJournalSummary
 import org.kryspetrie.fileimport.domain.model.ReorganizeMode
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.FolderSelectionField
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeActionBar
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizePreviewSection
 import org.kryspetrie.fileimport.ui.screens.reorganize.ReorganizeProgressSection
@@ -48,6 +50,7 @@ fun ReorganizeScreen(
     onSettingsChange: (AppSettings) -> Unit,
     viewModel: ReorganizeViewModel = remember { ReorganizeViewModel() },
 ) {
+    val s = strings()
     val reorgService = koinInject<ReorganizeService>()
     val scope = rememberCoroutineScope()
 
@@ -72,7 +75,7 @@ fun ReorganizeScreen(
                 viewModel.preview = p
                 viewModel.step = ReorganizeViewModel.ReorgStep.PREVIEW
             } catch (e: Exception) {
-                viewModel.errorMessage = e.message ?: "Scan failed"
+                viewModel.errorMessage = e.message ?: s.t(StringKey.REORG_SCAN_FAILED)
                 viewModel.step = ReorganizeViewModel.ReorgStep.SETUP
             }
         }
@@ -88,7 +91,7 @@ fun ReorganizeScreen(
                 viewModel.journals = reorgService.listJournals()
                 viewModel.step = ReorganizeViewModel.ReorgStep.COMPLETE
             } catch (e: Exception) {
-                viewModel.errorMessage = e.message ?: "Reorganize failed"
+                viewModel.errorMessage = e.message ?: s.t(StringKey.REORG_FAILED)
                 viewModel.step = ReorganizeViewModel.ReorgStep.SETUP
             }
         }
@@ -108,55 +111,54 @@ fun ReorganizeScreen(
                     viewModel.journals = reorgService.listJournals()
                     viewModel.step = ReorganizeViewModel.ReorgStep.COMPLETE
                 } catch (e: Exception) {
-                    viewModel.errorMessage = "Undo failed: ${e.message}"
+                    viewModel.errorMessage = "${s.t(StringKey.REORG_FAILED)}: ${e.message}"
                     viewModel.step = ReorganizeViewModel.ReorgStep.SETUP
                 }
             }
         }
     }
 
-    // Undo confirm dialog
     viewModel.showUndoConfirm?.let { journal ->
         AlertDialog(
             onDismissRequest = { viewModel.showUndoConfirm = null },
-            title = { Text("Undo Reorganization") },
+            title = { Text(s.t(StringKey.REORG_UNDO_TITLE)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Reverse all file operations recorded in this journal?")
+                    Text(s.t(StringKey.REORG_UNDO_MESSAGE))
                     Spacer(Modifier.height(8.dp))
-                    Text("Journal details:", style = MaterialTheme.typography.labelMedium)
+                    Text(s.t(StringKey.REORG_UNDO_JOURNAL), style = MaterialTheme.typography.labelMedium)
                     Text(
-                        "• Folder: ${journal.rootFolder}",
+                        s.t(StringKey.REORG_UNDO_FOLDER, "path" to journal.rootFolder),
                         style = MaterialTheme.typography.labelSmall,
                     )
                     Text(
-                        "• Mode: ${journal.operationMode}",
+                        s.t(StringKey.REORG_UNDO_MODE, "mode" to journal.operationMode.name),
                         style = MaterialTheme.typography.labelSmall,
                     )
                     Text(
-                        "• Files changed: ${journal.changedFiles}",
+                        s.t(StringKey.REORG_UNDO_FILES_CHANGED, "count" to "${journal.changedFiles}"),
                         style = MaterialTheme.typography.labelSmall,
                     )
                     Text(
-                        "• Date: ${journal.timestampString}",
+                        s.t(StringKey.REORG_UNDO_DATE, "date" to journal.timestampString),
                         style = MaterialTheme.typography.labelSmall,
                     )
                     Spacer(Modifier.height(8.dp))
                     when (journal.operationMode) {
-                        ReorganizeMode.MOVE ->
-                            Text("Files will be moved back to their original locations.")
-                        ReorganizeMode.COPY ->
-                            Text("Copied files will be deleted (originals were preserved).")
+                        ReorganizeMode.MOVE -> Text(s.t(StringKey.REORG_UNDO_MOVE_BACK))
+                        ReorganizeMode.COPY -> Text(s.t(StringKey.REORG_UNDO_DELETE_COPIES))
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { undoJournal(journal) }) {
-                    Text("Undo", color = MaterialTheme.colorScheme.error)
+                    Text(s.t(StringKey.META_UNDO), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.showUndoConfirm = null }) { Text("Cancel") }
+                TextButton(onClick = { viewModel.showUndoConfirm = null }) {
+                    Text(s.t(StringKey.ACTION_CANCEL))
+                }
             },
         )
     }
@@ -168,36 +170,34 @@ fun ReorganizeScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Text(
-                    "Reorganize Library",
+                    s.t(StringKey.REORG_TITLE),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                 )
                 Text(
-                    "Apply folder and filename patterns to an existing media library.",
+                    s.t(StringKey.REORG_DESCRIPTION),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
-                // Folder selection
                 FolderSelectionField(
                     value = viewModel.folderPath,
                     onValueChange = { viewModel.folderPath = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = "Library Folder",
-                    placeholder = "Select folder to reorganize...",
-                    title = "Select Library Folder",
+                    label = s.t(StringKey.REORG_LIBRARY_FOLDER),
+                    placeholder = s.t(StringKey.REORG_LIBRARY_PLACEHOLDER),
+                    title = s.t(StringKey.ACTION_SELECT_FOLDER),
                     supportingText = {
-                        Text("Paste a path or browse", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.IMPORT_PATH_HINT), style = MaterialTheme.typography.labelSmall)
                     },
                 )
 
-                // Operation mode selection
                 OutlinedCard(Modifier.fillMaxWidth()) {
                     Column(
                         Modifier.padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
-                            "Operation Mode",
+                            s.t(StringKey.REORG_OPERATION_MODE),
                             style =
                                 MaterialTheme.typography.labelLarge.copy(
                                     fontWeight = FontWeight.Bold
@@ -216,8 +216,8 @@ fun ReorganizeScreen(
                                     Spacer(Modifier.width(2.dp))
                                     Text(
                                         when (mode) {
-                                            ReorganizeMode.MOVE -> "Move files"
-                                            ReorganizeMode.COPY -> "Copy files"
+                                            ReorganizeMode.MOVE -> s.t(StringKey.REORG_MOVE)
+                                            ReorganizeMode.COPY -> s.t(StringKey.REORG_COPY)
                                         },
                                         style = MaterialTheme.typography.labelSmall,
                                     )
@@ -227,15 +227,13 @@ fun ReorganizeScreen(
                     }
                 }
 
-                // Rename only toggle
                 SettingsToggle(
                     checked = viewModel.renameOnly,
                     onCheckedChange = { viewModel.renameOnly = it },
-                    label = "Rename files only",
-                    description = "Don't move files to subfolders",
+                    label = s.t(StringKey.REORG_RENAME_ONLY),
+                    description = s.t(StringKey.REORG_RENAME_ONLY_DESC),
                 )
 
-                // Error
                 viewModel.errorMessage?.let {
                     OutlinedCard(Modifier.fillMaxWidth()) {
                         Row(
@@ -258,7 +256,6 @@ fun ReorganizeScreen(
                     }
                 }
 
-                // Progress states
                 if (
                     viewModel.step == ReorganizeViewModel.ReorgStep.SCANNING ||
                         viewModel.step == ReorganizeViewModel.ReorgStep.EXECUTING ||
@@ -272,7 +269,6 @@ fun ReorganizeScreen(
                     )
                 }
 
-                // Preview results
                 if (
                     viewModel.step == ReorganizeViewModel.ReorgStep.PREVIEW &&
                         viewModel.preview != null
@@ -284,7 +280,6 @@ fun ReorganizeScreen(
                     )
                 }
 
-                // Settings
                 ReorganizeSettingsSection(
                     config = viewModel.config,
                     onConfigChange = { viewModel.config = it },
@@ -293,7 +288,6 @@ fun ReorganizeScreen(
                     renameOnly = viewModel.renameOnly,
                 )
 
-                // Undo journals
                 ReorganizeUndoSection(
                     journals = viewModel.journals,
                     onUndoRequest = { viewModel.showUndoConfirm = it },
@@ -302,7 +296,6 @@ fun ReorganizeScreen(
             }
         }
 
-        // Bottom action bar
         ReorganizeActionBar(
             step = viewModel.step,
             canPreview = viewModel.folderPath.isNotBlank(),

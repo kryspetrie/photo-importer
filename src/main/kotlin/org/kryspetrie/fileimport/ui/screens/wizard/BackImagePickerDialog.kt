@@ -85,6 +85,8 @@ import java.io.File
 import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
 
 /** Mode for the back-image overlay interaction. */
@@ -259,6 +261,7 @@ fun BackImagePickerDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val initialFile =
         remember(preSelectedPath, batchFiles) {
             if (preSelectedPath != null) {
@@ -342,7 +345,7 @@ fun BackImagePickerDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Select Back of Photo", style = MaterialTheme.typography.titleLarge)
+                    Text(s.t(StringKey.META_SELECT_BACK_OF_PHOTO), style = MaterialTheme.typography.titleLarge)
                     IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Close") }
                 }
 
@@ -388,7 +391,7 @@ fun BackImagePickerDialog(
                     ) {
                         Icon(Icons.Default.FolderOpen, null, Modifier.size(14.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Browse...", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.ACTION_BROWSE), style = MaterialTheme.typography.labelSmall)
                     }
                 }
 
@@ -535,7 +538,7 @@ fun BackImagePickerDialog(
                                 Icon(
                                     if (isInCropMode) Icons.Default.CropFree
                                     else Icons.Default.Crop,
-                                    contentDescription = "Crop mode",
+                                    contentDescription = s.t(StringKey.WIZARD_CROP_MODE),
                                     modifier = Modifier.size(14.dp),
                                 )
                                 Spacer(Modifier.width(4.dp))
@@ -563,7 +566,7 @@ fun BackImagePickerDialog(
                             ) {
                                 Icon(
                                     Icons.Default.CropFree,
-                                    contentDescription = "4-Point mode",
+                                    contentDescription = s.t(StringKey.WIZARD_FOUR_POINT_MODE),
                                     modifier = Modifier.size(14.dp),
                                 )
                                 Spacer(Modifier.width(4.dp))
@@ -658,7 +661,7 @@ fun BackImagePickerDialog(
 
                         // Right: Rotation controls
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Rotate:", style = MaterialTheme.typography.labelMedium)
+                            Text(s.t(StringKey.META_ROTATE_LABEL), style = MaterialTheme.typography.labelMedium)
                             Spacer(Modifier.width(4.dp))
                             IconButton(
                                 onClick = {
@@ -729,7 +732,7 @@ fun BackImagePickerDialog(
                                 selected = backImageMode == "combine",
                                 onClick = { backImageMode = "combine" },
                             )
-                            Text("Combine", style = MaterialTheme.typography.bodyMedium)
+                            Text(s.t(StringKey.WIZARD_COMBINE), style = MaterialTheme.typography.bodyMedium)
                         }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -739,7 +742,7 @@ fun BackImagePickerDialog(
                                 selected = backImageMode == "append_back",
                                 onClick = { backImageMode = "append_back" },
                             )
-                            Text("Append \"_back\"", style = MaterialTheme.typography.bodyMedium)
+                            Text(s.t(StringKey.WIZARD_APPEND_BACK), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                     Text(
@@ -772,7 +775,7 @@ fun BackImagePickerDialog(
 
                 // ── Action buttons ──
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(s.cancel) }
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
@@ -788,7 +791,7 @@ fun BackImagePickerDialog(
                         },
                         enabled = selectedFile != null && backImage != null,
                     ) {
-                        Text("Assign Back Image")
+                        Text(s.t(StringKey.WIZARD_ASSIGN_BACK))
                     }
                 }
             }
@@ -1291,6 +1294,7 @@ private fun NearbyFilesStrip(
     onSelect: (File) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val selectedIndex = files.indexOf(selectedFile).coerceAtLeast(0)
     val windowSize = 20
     val startIdx = (selectedIndex - windowSize / 2).coerceIn(0, maxOf(0, files.size - windowSize))
@@ -1300,7 +1304,7 @@ private fun NearbyFilesStrip(
         rememberLazyListState(initialFirstVisibleItemIndex = maxOf(0, selectedIndex - startIdx - 2))
 
     Column(modifier = modifier.fillMaxWidth()) {
-        Text("Nearby files:", style = MaterialTheme.typography.labelMedium)
+        Text(s.t(StringKey.WIZARD_NEARBY_FILES), style = MaterialTheme.typography.labelMedium)
         Spacer(Modifier.height(4.dp))
         LazyRow(
             state = listState,

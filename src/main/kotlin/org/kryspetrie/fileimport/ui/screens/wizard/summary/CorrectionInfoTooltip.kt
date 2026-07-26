@@ -17,16 +17,19 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /** Tooltip dialog explaining the mutual exclusivity of perspective and rotation corrections. */
 @Composable
 fun CorrectionInfoTooltip(modifier: Modifier = Modifier) {
+    val s = strings()
     var showTooltip by remember { mutableStateOf(false) }
     Box(modifier = modifier) {
         IconButton(onClick = { showTooltip = true }, modifier = Modifier.size(32.dp)) {
             Icon(
                 Icons.Default.Info,
-                "Correction info",
+                s.t(StringKey.ACC_CORRECTION_INFO),
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -34,15 +37,9 @@ fun CorrectionInfoTooltip(modifier: Modifier = Modifier) {
         if (showTooltip) {
             AlertDialog(
                 onDismissRequest = { showTooltip = false },
-                title = { Text("Correction Options") },
-                text = {
-                    Text(
-                        "Perspective and Rotation corrections are mutually exclusive. " +
-                            "Enabling one will disable the other. Use Perspective to correct " +
-                            "keystone distortion, or Rotation to fix scan orientation."
-                    )
-                },
-                confirmButton = { TextButton(onClick = { showTooltip = false }) { Text("OK") } },
+                title = { Text(s.t(StringKey.WIZARD_CORRECTION_OPTIONS)) },
+                text = { Text(s.t(StringKey.WIZARD_CORRECTION_BODY)) },
+                confirmButton = { TextButton(onClick = { showTooltip = false }) { Text(s.ok) } },
             )
         }
     }

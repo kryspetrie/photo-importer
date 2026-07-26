@@ -58,6 +58,8 @@ import java.io.File
 import javax.imageio.ImageIO
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * Post-export completion screen. Shows context-dependent next actions:
@@ -87,6 +89,7 @@ fun CompletionScreen(
     onOpenFolder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -101,7 +104,7 @@ fun CompletionScreen(
                 tint = MaterialTheme.colorScheme.primary,
             )
 
-            Text("Complete", style = MaterialTheme.typography.headlineMedium)
+            Text(s.t(StringKey.WIZARD_COMPLETE), style = MaterialTheme.typography.headlineMedium)
 
             // Export details card
             Card(modifier = Modifier.fillMaxWidth(0.6f)) {
@@ -111,9 +114,12 @@ fun CompletionScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Text(
-                        if (failedCount > 0)
-                            "$photoCount ${if (photoCount == 1) "photo" else "photos"} exported ($failedCount failed)"
-                        else "$photoCount ${if (photoCount == 1) "photo" else "photos"} exported",
+                        if (failedCount > 0) {
+                            s.t(StringKey.WIZARD_EXPORTED, "count" to "$photoCount") +
+                                " " + s.t(StringKey.WIZARD_FAILED, "count" to "$failedCount")
+                        } else {
+                            s.t(StringKey.WIZARD_EXPORTED, "count" to "$photoCount")
+                        },
                         style = MaterialTheme.typography.titleMedium,
                         color =
                             if (failedCount > 0) {
@@ -139,13 +145,17 @@ fun CompletionScreen(
                             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                         )
                         Text(
-                            "Photo ${currentBatchIndex + 1} of $batchTotal",
+                            s.t(
+                                StringKey.SCAN_PHOTO_LABEL,
+                                "index" to "${currentBatchIndex + 1}",
+                                "total" to "$batchTotal",
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         if (skippedCount > 0) {
                             Text(
-                                "($skippedCount skipped as photo backs)",
+                                s.t(StringKey.WIZARD_SKIPPED_BACKS, "count" to "$skippedCount"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -166,7 +176,7 @@ fun CompletionScreen(
             OutlinedButton(onClick = onOpenFolder) {
                 Icon(Icons.Default.FolderOpen, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Open Folder")
+                Text(s.t(StringKey.ACC_OPEN_FOLDER))
             }
 
             // Context-dependent action buttons
@@ -198,6 +208,7 @@ private fun BatchActions(
     onSkipNextPhoto: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -209,15 +220,15 @@ private fun BatchActions(
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = onCancelImport) { Text("Cancel Import") }
+            OutlinedButton(onClick = onCancelImport) { Text(s.t(StringKey.WIZARD_CANCEL_IMPORT)) }
             if (onSkipNextPhoto != null) {
                 OutlinedButton(onClick = onSkipNextPhoto) {
                     Icon(Icons.Default.SkipNext, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Skip")
+                    Text(s.t(StringKey.WIZARD_SKIP))
                 }
             }
-            Button(onClick = onContinueToNextPhoto) { Text("Continue") }
+            Button(onClick = onContinueToNextPhoto) { Text(s.t(StringKey.WIZARD_CONTINUE)) }
         }
     }
 }
@@ -235,6 +246,7 @@ private sealed class PreviewState {
 @Suppress("InjectDispatcher")
 @Composable
 private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
+    val s = strings()
     var previewState by remember { mutableStateOf<PreviewState>(PreviewState.Loading) }
     var showFullscreen by remember { mutableStateOf(false) }
 
@@ -276,7 +288,7 @@ private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            Text("Next photo:", style = MaterialTheme.typography.labelMedium)
+            Text(s.t(StringKey.WIZARD_NEXT_PHOTO), style = MaterialTheme.typography.labelMedium)
 
             Box(
                 modifier =
@@ -290,7 +302,7 @@ private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
                     is PreviewState.Success -> {
                         Image(
                             bitmap = state.image.toComposeImageBitmap(),
-                            contentDescription = "Next photo preview",
+                            contentDescription = s.t(StringKey.WIZARD_NEXT_PHOTO_PREVIEW),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Fit,
                         )
@@ -328,7 +340,7 @@ private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
                         ) {
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = "Error",
+                                contentDescription = s.t(StringKey.ERROR_GENERIC),
                                 modifier = Modifier.size(24.dp),
                                 tint = MaterialTheme.colorScheme.error,
                             )
@@ -377,6 +389,7 @@ private fun NextPhotoPreview(file: File, modifier: Modifier = Modifier) {
 
 @Composable
 private fun FullscreenImageDialog(image: BufferedImage, fileName: String, onDismiss: () -> Unit) {
+    val s = strings()
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -409,7 +422,7 @@ private fun FullscreenImageDialog(image: BufferedImage, fileName: String, onDism
                     IconButton(onClick = onDismiss) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = s.close,
                             tint = Color.White.copy(alpha = 0.8f),
                         )
                     }
@@ -440,6 +453,7 @@ private fun FullscreenImageDialog(image: BufferedImage, fileName: String, onDism
  */
 @Composable
 private fun ExportResultsSummary(results: List<ExportResult>, modifier: Modifier = Modifier) {
+    val s = strings()
     if (results.isEmpty()) return
 
     val successCount = results.count { it is ExportResult.Success }
@@ -456,7 +470,7 @@ private fun ExportResultsSummary(results: List<ExportResult>, modifier: Modifier
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Export Results", style = MaterialTheme.typography.titleSmall)
+                Text(s.t(StringKey.WIZARD_EXPORT_RESULTS), style = MaterialTheme.typography.titleSmall)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (successCount > 0) {
                         Row(
@@ -567,24 +581,25 @@ private fun FinishedActions(
     onImportFolder: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Button(onClick = onDone, modifier = Modifier.fillMaxWidth(0.5f).height(40.dp)) {
-            Text("Done")
+            Text(s.t(StringKey.META_DONE))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             OutlinedButton(onClick = onImportFile) {
                 Icon(Icons.AutoMirrored.Filled.InsertDriveFile, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Import File")
+                Text(s.t(StringKey.WIZARD_IMPORT_FILE))
             }
             OutlinedButton(onClick = onImportFolder) {
                 Icon(Icons.Default.CreateNewFolder, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("Import Folder")
+                Text(s.t(StringKey.WIZARD_IMPORT_FOLDER))
             }
         }
     }

@@ -30,9 +30,11 @@ import androidx.compose.ui.window.WindowState
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.port.ModelDownloadPort
 import org.kryspetrie.fileimport.domain.port.ModelDownloadState
 import org.kryspetrie.fileimport.ui.i18n.StringsProvider
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.DuplicateScannerScreen
 import org.kryspetrie.fileimport.ui.screens.MediaImportScreen
 import org.kryspetrie.fileimport.ui.screens.ReorganizeScreen
@@ -76,7 +78,7 @@ import org.kryspetrie.fileimport.ui.theme.ImporterTheme
  * @see NavigationBar Material Design bottom navigation component
  * @see NavigationBarItem Individual tab item in the navigation bar
  */
-private enum class AppTab(val label: String, val icon: ImageVector) {
+private enum class AppTab(val labelKey: StringKey, val icon: ImageVector) {
     /**
      * Media Import tab - standard file import workflow.
      *
@@ -89,7 +91,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
      *
      * @see ImportScreen The composable that implements this tab
      */
-    MEDIA_IMPORT("Media Import", Icons.Default.Download),
+    MEDIA_IMPORT(StringKey.NAV_IMPORT, Icons.Default.Download),
 
     /**
      * Photo Scan Import tab - scan printed photos from a single image.
@@ -106,7 +108,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
      *
      * @see WizardContainer The composable that implements this tab
      */
-    PHOTO_SCAN("Photo Scan Import", Icons.Default.DocumentScanner),
+    PHOTO_SCAN(StringKey.NAV_PHOTO_SCAN, Icons.Default.DocumentScanner),
 
     /**
      * Reorganize tab - library reorganization workflow.
@@ -123,7 +125,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
      *
      * @see ReorganizeScreen The composable that implements this tab
      */
-    REORGANIZE("Reorganize", Icons.AutoMirrored.Filled.DriveFileMove),
+    REORGANIZE(StringKey.NAV_REORGANIZE, Icons.AutoMirrored.Filled.DriveFileMove),
 
     /**
      * Duplicate Scanner tab - library deduplication workflow.
@@ -139,7 +141,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
      *
      * @see DuplicateScannerScreen The composable that implements this tab
      */
-    DUPLICATES("Library Duplicates", Icons.Default.ContentCopy),
+    DUPLICATES(StringKey.NAV_DUPLICATES, Icons.Default.ContentCopy),
 
     /**
      * Bulk Metadata Editor tab - bulk metadata editing on individual files or folders.
@@ -156,7 +158,7 @@ private enum class AppTab(val label: String, val icon: ImageVector) {
      *
      * @see MetadataEditorScreen The composable that implements this tab
      */
-    METADATA_EDITOR("Metadata Editor", Icons.Default.Edit),
+    METADATA_EDITOR(StringKey.NAV_METADATA_EDITOR, Icons.Default.Edit),
 }
 
 /**
@@ -304,8 +306,8 @@ fun PetrieFileImporterApp(
     // Apply application theme
     // Theme provides colors, typography, and shapes to all child composables
     // Theme changes trigger recomposition of entire UI tree
-    ImporterTheme(settings.theme) {
-        StringsProvider {
+        ImporterTheme(settings.theme) {
+        StringsProvider(localeCode = settings.locale) {
             // ── Orientation model download prompt ──────────────────────────
             // On first start, if the orientation detection model is not available,
             // prompt the user to download it. Auto-rotate features require this model.
@@ -361,6 +363,7 @@ fun PetrieFileImporterApp(
             // remember{} ensures state survives recomposition
             // mutableStateOf{} makes it observable - changes trigger recomposition
             var currentTab by remember { mutableStateOf(AppTab.MEDIA_IMPORT) }
+            val s = strings()
 
             // Surface: Material Design container with background color
             // Provides consistent background across the application
@@ -385,14 +388,14 @@ fun PetrieFileImporterApp(
                                 icon = {
                                     Icon(
                                         tab.icon,
-                                        contentDescription = tab.label,
+                                        contentDescription = s.t(tab.labelKey),
                                         modifier = Modifier.size(20.dp),
                                     )
                                 },
                                 // Label: Text shown below icon
                                 // Uses Material Theme typography for consistency
                                 label = {
-                                    Text(tab.label, style = MaterialTheme.typography.labelSmall)
+                                    Text(s.t(tab.labelKey), style = MaterialTheme.typography.labelSmall)
                                 },
                                 // Selection state: Highlight when tab is active
                                 selected = currentTab == tab,

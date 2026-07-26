@@ -5,9 +5,12 @@ package org.kryspetrie.fileimport.ui.components
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -33,16 +36,11 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /**
- * A scrollable container with a visible, chunky scrollbar.
+ * A scrollable container with a visible, chunky vertical scrollbar.
  *
  * Shows a rounded track and proportionally-sized thumb that indicates position and visible
- * proportion. Click on the track to jump, drag the thumb to fast-scroll.
- *
- * @param modifier Layout modifier
- * @param scrollState Scroll state (use [rememberScrollState] for basic usage)
- * @param scrollbarWidth Width of the scrollbar (default 10.dp)
- * @param trackPadding Padding between track edge and content (default 4.dp)
- * @param content The scrollable content
+ * proportion. Click on the track to jump, drag the thumb to fast-scroll. Mouse wheel / trackpad
+ * vertical scroll is handled by [verticalScroll].
  */
 @Composable
 fun ChunkyScrollbar(
@@ -53,19 +51,21 @@ fun ChunkyScrollbar(
     content: @Composable () -> Unit,
 ) {
     var containerHeight by remember { mutableStateOf(0f) }
-    var contentHeight by remember { mutableStateOf(0f) }
     var isDragging by remember { mutableStateOf(false) }
     var dragStartY by remember { mutableStateOf(0f) }
     var dragStartScroll by remember { mutableStateOf(0) }
     val coroutineScope = rememberCoroutineScope()
 
-    val needsScrollbar = contentHeight > containerHeight && containerHeight > 0f
-    val maxScroll = if (needsScrollbar) contentHeight - containerHeight else 0f
+    val maxScroll = scrollState.maxValue.toFloat()
+    val needsScrollbar = maxScroll > 0f && containerHeight > 0f
+    val contentHeight = containerHeight + maxScroll
     val scrollFraction = if (maxScroll > 0f) scrollState.value.toFloat() / maxScroll else 0f
     val thumbHeight =
         if (needsScrollbar) {
             (containerHeight / contentHeight * containerHeight).coerceAtLeast(40f)
-        } else 0f
+        } else {
+            0f
+        }
     val thumbOffset = scrollFraction * (containerHeight - thumbHeight)
 
     val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
@@ -73,26 +73,22 @@ fun ChunkyScrollbar(
         MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDragging) 0.5f else 0.25f)
 
     Box(modifier = modifier) {
-        // Scrollable content with padding for scrollbar
         Box(
             modifier =
                 Modifier.fillMaxSize()
                     .padding(end = scrollbarWidth + trackPadding * 2)
-                    .verticalScroll(scrollState)
-                    .onGloballyPositioned { coords -> contentHeight = coords.size.height.toFloat() }
+                    .verticalScroll(scrollState),
         ) {
             content()
         }
 
-        // Container height measurement
         Box(
             modifier =
                 Modifier.fillMaxSize().onGloballyPositioned { coords ->
                     containerHeight = coords.size.height.toFloat()
-                }
+                },
         )
 
-        // Scrollbar overlay
         if (needsScrollbar) {
             Box(
                 modifier =
@@ -101,14 +97,12 @@ fun ChunkyScrollbar(
                         .width(scrollbarWidth + trackPadding * 2)
                         .padding(vertical = 4.dp, horizontal = trackPadding)
                         .drawBehind {
-                            // Track background
                             drawRoundRect(
                                 color = trackColor,
                                 topLeft = Offset(0f, 0f),
                                 size = Size(scrollbarWidth.toPx(), size.height),
                                 cornerRadius = CornerRadius(scrollbarWidth.toPx() / 2),
                             )
-                            // Thumb
                             drawRoundRect(
                                 color = thumbColor,
                                 topLeft = Offset(0f, thumbOffset),
@@ -116,15 +110,12 @@ fun ChunkyScrollbar(
                                 cornerRadius = CornerRadius(scrollbarWidth.toPx() / 2),
                             )
                         }
-                        .pointerInput(contentHeight, containerHeight) {
+                        .pointerInput(maxScroll, containerHeight, thumbHeight) {
                             detectTapGestures { offset ->
-                                // Tap on track — jump to position
                                 val y = offset.y
                                 val targetFraction =
                                     ((y - thumbHeight / 2) / (containerHeight - thumbHeight))
                                         .coerceIn(0f, 1f)
-                                // scrollTo() uses MutatorMutex internally. During rapid calls,
-                                // one scroll can cancel another via CancellationException.
                                 coroutineScope.launch {
                                     try {
                                         scrollState.scrollTo((targetFraction * maxScroll).toInt())
@@ -134,7 +125,7 @@ fun ChunkyScrollbar(
                                 }
                             }
                         }
-                        .pointerInput(isDragging, contentHeight, containerHeight) {
+                        .pointerInput(isDragging, maxScroll, containerHeight, thumbHeight, thumbOffset) {
                             detectDragGestures(
                                 onDragStart = { offset ->
                                     val y = offset.y
@@ -144,7 +135,7 @@ fun ChunkyScrollbar(
                                         dragStartScroll = scrollState.value
                                     }
                                 },
-                                onDrag = { change, dragAmount ->
+                                onDrag = { change, _ ->
                                     if (!isDragging) return@detectDragGestures
                                     change.consume()
                                     val totalDragY = (change.position.y - dragStartY)
@@ -153,9 +144,6 @@ fun ChunkyScrollbar(
                                         (dragStartScroll + totalDragY * scrollPerPx)
                                             .toInt()
                                             .coerceIn(0, maxScroll.toInt())
-                                    // scrollTo() uses MutatorMutex internally. During rapid drag
-                                    // calls,
-                                    // one scroll can cancel another via CancellationException.
                                     coroutineScope.launch {
                                         try {
                                             scrollState.scrollTo(newScroll)
@@ -167,7 +155,131 @@ fun ChunkyScrollbar(
                                 onDragEnd = { isDragging = false },
                                 onDragCancel = { isDragging = false },
                             )
+                        },
+            )
+        }
+    }
+}
+
+/**
+ * A scrollable container with a visible, chunky horizontal scrollbar.
+ *
+ * Mouse wheel / trackpad horizontal scroll is handled by [horizontalScroll].
+ */
+@Composable
+fun ChunkyHorizontalScrollbar(
+    modifier: Modifier = Modifier,
+    scrollState: ScrollState = rememberScrollState(),
+    scrollbarHeight: Dp = 10.dp,
+    trackPadding: Dp = 4.dp,
+    content: @Composable () -> Unit,
+) {
+    var containerWidth by remember { mutableStateOf(0f) }
+    var isDragging by remember { mutableStateOf(false) }
+    var dragStartX by remember { mutableStateOf(0f) }
+    var dragStartScroll by remember { mutableStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val maxScroll = scrollState.maxValue.toFloat()
+    val needsScrollbar = maxScroll > 0f && containerWidth > 0f
+    val contentWidth = containerWidth + maxScroll
+    val scrollFraction = if (maxScroll > 0f) scrollState.value.toFloat() / maxScroll else 0f
+    val thumbWidth =
+        if (needsScrollbar) {
+            (containerWidth / contentWidth * containerWidth).coerceAtLeast(40f)
+        } else {
+            0f
+        }
+    val thumbOffset = scrollFraction * (containerWidth - thumbWidth)
+
+    val trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+    val thumbColor =
+        MaterialTheme.colorScheme.onSurface.copy(alpha = if (isDragging) 0.5f else 0.25f)
+
+    Box(modifier = modifier) {
+        Box(
+            modifier =
+                Modifier.fillMaxSize()
+                    .padding(bottom = scrollbarHeight + trackPadding * 2)
+                    .horizontalScroll(scrollState),
+        ) {
+            content()
+        }
+
+        Box(
+            modifier =
+                Modifier.fillMaxSize().onGloballyPositioned { coords ->
+                    containerWidth = coords.size.width.toFloat()
+                },
+        )
+
+        if (needsScrollbar) {
+            Box(
+                modifier =
+                    Modifier.align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(scrollbarHeight + trackPadding * 2)
+                        .padding(horizontal = 4.dp, vertical = trackPadding)
+                        .drawBehind {
+                            drawRoundRect(
+                                color = trackColor,
+                                topLeft = Offset(0f, 0f),
+                                size = Size(size.width, scrollbarHeight.toPx()),
+                                cornerRadius = CornerRadius(scrollbarHeight.toPx() / 2),
+                            )
+                            drawRoundRect(
+                                color = thumbColor,
+                                topLeft = Offset(thumbOffset, 0f),
+                                size = Size(thumbWidth, scrollbarHeight.toPx()),
+                                cornerRadius = CornerRadius(scrollbarHeight.toPx() / 2),
+                            )
                         }
+                        .pointerInput(maxScroll, containerWidth, thumbWidth) {
+                            detectTapGestures { offset ->
+                                val x = offset.x
+                                val targetFraction =
+                                    ((x - thumbWidth / 2) / (containerWidth - thumbWidth))
+                                        .coerceIn(0f, 1f)
+                                coroutineScope.launch {
+                                    try {
+                                        scrollState.scrollTo((targetFraction * maxScroll).toInt())
+                                    } catch (_: CancellationException) {
+                                        // Scroll cancelled by a new scroll — safe to ignore
+                                    }
+                                }
+                            }
+                        }
+                        .pointerInput(isDragging, maxScroll, containerWidth, thumbWidth, thumbOffset) {
+                            detectDragGestures(
+                                onDragStart = { offset ->
+                                    val x = offset.x
+                                    if (x in thumbOffset..(thumbOffset + thumbWidth)) {
+                                        isDragging = true
+                                        dragStartX = x
+                                        dragStartScroll = scrollState.value
+                                    }
+                                },
+                                onDrag = { change, _ ->
+                                    if (!isDragging) return@detectDragGestures
+                                    change.consume()
+                                    val totalDragX = (change.position.x - dragStartX)
+                                    val scrollPerPx = maxScroll / (containerWidth - thumbWidth)
+                                    val newScroll =
+                                        (dragStartScroll + totalDragX * scrollPerPx)
+                                            .toInt()
+                                            .coerceIn(0, maxScroll.toInt())
+                                    coroutineScope.launch {
+                                        try {
+                                            scrollState.scrollTo(newScroll)
+                                        } catch (_: CancellationException) {
+                                            // Scroll cancelled by a new scroll — safe to ignore
+                                        }
+                                    }
+                                },
+                                onDragEnd = { isDragging = false },
+                                onDragCancel = { isDragging = false },
+                            )
+                        },
             )
         }
     }

@@ -77,13 +77,32 @@ import java.io.File
 import java.util.Locale
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.ImageMetadata
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.components.ThumbnailImage
 import org.kryspetrie.fileimport.ui.components.formatFileSize
+import org.kryspetrie.fileimport.ui.i18n.Strings
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 private const val THUMB_PX = 80
 private const val TILE_PX = 300
 private const val PREVIEW_PX = 1200
+
+private fun ImagePreviewViewModel.FileFilter.labelKey(): StringKey =
+    when (this) {
+        ImagePreviewViewModel.FileFilter.ALL -> StringKey.IMPORT_FILTER_ALL
+        ImagePreviewViewModel.FileFilter.PHOTOS -> StringKey.IMPORT_FILTER_PHOTOS
+        ImagePreviewViewModel.FileFilter.VIDEOS -> StringKey.IMPORT_FILTER_VIDEOS
+        ImagePreviewViewModel.FileFilter.RAW -> StringKey.IMPORT_FILTER_RAW
+    }
+
+private fun ImagePreviewViewModel.SortMode.labelKey(): StringKey =
+    when (this) {
+        ImagePreviewViewModel.SortMode.NAME -> StringKey.IMPORT_SORT_NAME
+        ImagePreviewViewModel.SortMode.DATE -> StringKey.IMPORT_SORT_DATE
+        ImagePreviewViewModel.SortMode.SIZE -> StringKey.IMPORT_SORT_SIZE
+        ImagePreviewViewModel.SortMode.TYPE -> StringKey.IMPORT_SORT_TYPE
+    }
 
 // ---------------------------------------------------------------------------
 // Main screen
@@ -100,6 +119,7 @@ fun ImagePreviewScreen(
     selectedCount: Int,
     viewModel: ImagePreviewViewModel = remember { ImagePreviewViewModel() },
 ) {
+    val s = strings()
     val totalSelectedSize = images.filter { it.isSelected }.sumOf { it.fileSize }
     val density = LocalDensity.current
     val filteredAndSorted =
@@ -142,8 +162,10 @@ fun ImagePreviewScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                OutlinedButton(onClick = onBack) { Text("Back") }
-                Button(onClick = onContinue, enabled = selectedCount > 0) { Text("Continue") }
+                OutlinedButton(onClick = onBack) { Text(s.t(StringKey.ACTION_BACK)) }
+                Button(onClick = onContinue, enabled = selectedCount > 0) {
+                    Text(s.t(StringKey.IMPORT_CONTINUE))
+                }
             }
         }
         viewModel.fullScreenImage?.let { img ->
@@ -162,12 +184,14 @@ private fun ImagePreviewHeader(
     onSelectAll: () -> Unit,
     onSelectNone: () -> Unit,
 ) {
+    val s = strings()
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Select Files to Import", style = MaterialTheme.typography.headlineSmall)
+        Text(s.t(StringKey.IMPORT_SELECT_FILES), style = MaterialTheme.typography.headlineSmall)
         Row(
             horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -178,7 +202,7 @@ private fun ImagePreviewHeader(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ViewList,
-                    "List view",
+                    s.t(StringKey.ACC_LIST_VIEW),
                     tint =
                         if (viewModel.viewMode == ImagePreviewViewModel.ViewMode.LIST)
                             MaterialTheme.colorScheme.primary
@@ -191,7 +215,7 @@ private fun ImagePreviewHeader(
             ) {
                 Icon(
                     Icons.Default.GridView,
-                    "Grid view",
+                    s.t(StringKey.ACC_GRID_VIEW),
                     tint =
                         if (viewModel.viewMode == ImagePreviewViewModel.ViewMode.GRID)
                             MaterialTheme.colorScheme.primary
@@ -199,14 +223,16 @@ private fun ImagePreviewHeader(
                 )
             }
             Spacer(Modifier.width(8.dp))
-            TextButton(onClick = onSelectAll) { Text("Select All") }
-            TextButton(onClick = onSelectNone) { Text("Select None") }
+            TextButton(onClick = onSelectAll) { Text(s.t(StringKey.ACTION_SELECT_ALL)) }
+            TextButton(onClick = onSelectNone) { Text(s.t(StringKey.IMPORT_SELECT_NONE)) }
         }
     }
 }
 
 @Composable
 private fun FilterAndSortBar(viewModel: ImagePreviewViewModel) {
+    val s = strings()
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -215,7 +241,9 @@ private fun FilterAndSortBar(viewModel: ImagePreviewViewModel) {
         OutlinedTextField(
             value = viewModel.searchQuery,
             onValueChange = { viewModel.searchQuery = it },
-            placeholder = { Text("Search files...", style = MaterialTheme.typography.bodySmall) },
+            placeholder = {
+                Text(s.t(StringKey.IMPORT_SEARCH_PLACEHOLDER), style = MaterialTheme.typography.bodySmall)
+            },
             modifier = Modifier.weight(1f).height(40.dp),
             textStyle = MaterialTheme.typography.bodySmall,
             singleLine = true,
@@ -226,7 +254,7 @@ private fun FilterAndSortBar(viewModel: ImagePreviewViewModel) {
                         onClick = { viewModel.searchQuery = "" },
                         modifier = Modifier.size(20.dp),
                     ) {
-                        Icon(Icons.Default.Clear, "Clear", Modifier.size(14.dp))
+                        Icon(Icons.Default.Clear, s.t(StringKey.ACC_CLEAR), Modifier.size(14.dp))
                     }
                 }
             },
@@ -237,7 +265,7 @@ private fun FilterAndSortBar(viewModel: ImagePreviewViewModel) {
                 onClick = { viewModel.filterType = filter },
                 label = {
                     Text(
-                        filter.name.lowercase().replaceFirstChar { it.uppercase() },
+                        s.t(filter.labelKey()),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 },
@@ -252,7 +280,10 @@ private fun FilterAndSortBar(viewModel: ImagePreviewViewModel) {
                 onClick = { sortMenuExpanded = true },
                 label = {
                     Text(
-                        "Sort: ${viewModel.sortMode.name.lowercase().replaceFirstChar { it.uppercase() }}",
+                        s.t(
+                            StringKey.IMPORT_SORT_LABEL,
+                            "mode" to s.t(viewModel.sortMode.labelKey()),
+                        ),
                         style = MaterialTheme.typography.labelSmall,
                     )
                 },
@@ -274,7 +305,7 @@ private fun FilterAndSortBar(viewModel: ImagePreviewViewModel) {
                     DropdownMenuItem(
                         text = {
                             Text(
-                                mode.name.lowercase().replaceFirstChar { it.uppercase() },
+                                s.t(mode.labelKey()),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         },
@@ -305,14 +336,22 @@ private fun SelectionStatusBar(
     filteredCount: Int,
     totalSelectedSize: Long,
 ) {
+    val s = strings()
+    val filteredSuffix =
+        if (filteredCount != totalImages) " (showing $filteredCount)" else ""
+
     OutlinedCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                "$selectedCount of $totalImages files selected" +
-                    if (filteredCount != totalImages) " (showing $filteredCount)" else "",
+                s.t(
+                    StringKey.IMPORT_FILES_SELECTED,
+                    "selected" to selectedCount.toString(),
+                    "total" to totalImages.toString(),
+                    "filtered" to filteredSuffix,
+                ),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Text(
@@ -407,6 +446,8 @@ private fun ImageContentArea(
 
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
+    val s = strings()
+
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -419,7 +460,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             )
             Text(
-                "No files found",
+                s.t(StringKey.ERROR_NO_FILES_FOUND),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -437,6 +478,8 @@ private fun ImageListView(
     onToggle: (String) -> Unit,
     onPreview: (ImageFile) -> Unit,
 ) {
+    val s = strings()
+
     Column {
         Row(
             modifier =
@@ -447,22 +490,22 @@ private fun ImageListView(
         ) {
             Spacer(Modifier.width(80.dp))
             Text(
-                "Name",
+                s.t(StringKey.IMPORT_SORT_NAME),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(3f),
             )
             Text(
-                "Type",
+                s.t(StringKey.IMPORT_TYPE),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f),
             )
             Text(
-                "Size",
+                s.t(StringKey.IMPORT_SIZE),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1f),
             )
             Text(
-                "Date",
+                s.t(StringKey.IMPORT_DATE),
                 style = MaterialTheme.typography.labelMedium,
                 modifier = Modifier.weight(1.5f),
             )
@@ -636,6 +679,8 @@ private fun PreviewSidePane(
     onClose: () -> Unit,
     onFullScreen: () -> Unit,
 ) {
+    val s = strings()
+
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.surface,
@@ -648,15 +693,18 @@ private fun PreviewSidePane(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Preview", style = MaterialTheme.typography.titleSmall)
+                Text(s.t(StringKey.IMPORT_PREVIEW), style = MaterialTheme.typography.titleSmall)
                 IconButton(onClick = onClose, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Default.Close, "Close preview", modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        s.t(StringKey.IMPORT_CLOSE_PREVIEW),
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
 
             Spacer(Modifier.height(8.dp))
 
-            // Image preview with hover fullscreen hint
             PreviewImageWithHover(
                 file = image.file,
                 modifier = Modifier.fillMaxWidth().weight(1f),
@@ -665,40 +713,48 @@ private fun PreviewSidePane(
 
             Spacer(Modifier.height(12.dp))
 
-            // Scrollable metadata area
             ChunkyScrollbar {
                 Column(modifier = Modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Core metadata — always visible
                     Text(
                         image.fileName,
                         style = MaterialTheme.typography.titleSmall,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    MetadataRow("Path", image.file.parent.orEmpty())
-                    MetadataRow("Type", image.fileType.displayName)
-                    MetadataRow("Size", formatFileSize(image.fileSize))
-                    MetadataRow("Date", image.dateTakenFormatted)
+                    MetadataRow(s, StringKey.IMPORT_PATH, image.file.parent.orEmpty())
+                    MetadataRow(s, StringKey.IMPORT_TYPE, image.fileType.displayName)
+                    MetadataRow(s, StringKey.IMPORT_SIZE, formatFileSize(image.fileSize))
+                    MetadataRow(s, StringKey.IMPORT_DATE, image.dateTakenFormatted)
                     image.metadata?.let { m ->
-                        m.cameraModel.takeIf { it.isNotBlank() }?.let { MetadataRow("Camera", it) }
-                        m.lensInfo.takeIf { it != "Unknown" }?.let { MetadataRow("Lens", it) }
-                        if (m.imageWidth != null && m.imageHeight != null) {
-                            MetadataRow("Dimensions", "${m.imageWidth} \u00D7 ${m.imageHeight}")
+                        m.cameraModel.takeIf { it.isNotBlank() }?.let {
+                            MetadataRow(s, StringKey.IMPORT_CAMERA, it)
                         }
-                        m.durationFormatted?.let { MetadataRow("Duration", it) }
-                        m.videoCodec?.let { MetadataRow("Codec", it) }
-                        m.frameRate?.let { MetadataRow("Frame Rate", "%.1f fps".format(it)) }
+                        m.lensInfo.takeIf { it != "Unknown" }?.let {
+                            MetadataRow(s, StringKey.IMPORT_LENS, it)
+                        }
+                        if (m.imageWidth != null && m.imageHeight != null) {
+                            MetadataRow(
+                                s,
+                                StringKey.IMPORT_DIMENSIONS,
+                                "${m.imageWidth} \u00D7 ${m.imageHeight}",
+                            )
+                        }
+                        m.durationFormatted?.let { MetadataRow(s, StringKey.IMPORT_DURATION, it) }
+                        m.videoCodec?.let { MetadataRow(s, StringKey.IMPORT_CODEC, it) }
+                        m.frameRate?.let {
+                            MetadataRow(s, StringKey.IMPORT_FRAME_RATE, "%.1f fps".format(it))
+                        }
                     }
 
-                    // Collapsible full details section
                     image.metadata?.let { m ->
-                        val detailEntries = buildDetailEntries(m, image.fileType.isVideo)
+                        val detailEntries = buildDetailEntries(s, m, image.fileType.isVideo)
                         if (detailEntries.isNotEmpty()) {
                             Spacer(Modifier.height(4.dp))
                             CollapsibleExifSection(
                                 entries = detailEntries,
                                 title =
-                                    if (image.fileType.isVideo) "Video Details" else "EXIF Details",
+                                    if (image.fileType.isVideo) s.t(StringKey.IMPORT_VIDEO_DETAILS)
+                                    else s.t(StringKey.IMPORT_EXIF_DETAILS),
                             )
                         }
                     }
@@ -714,6 +770,7 @@ private fun PreviewImageWithHover(
     modifier: Modifier = Modifier,
     onFullScreen: () -> Unit,
 ) {
+    val s = strings()
     val hoverInteraction = remember { MutableInteractionSource() }
     val isHovered by hoverInteraction.collectIsHoveredAsState()
 
@@ -751,7 +808,7 @@ private fun PreviewImageWithHover(
                         tint = Color.White.copy(alpha = 0.9f),
                     )
                     Text(
-                        "Click to enlarge",
+                        s.t(StringKey.IMPORT_CLICK_ENLARGE),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.8f),
                     )
@@ -761,59 +818,60 @@ private fun PreviewImageWithHover(
     }
 }
 
-private fun buildDetailEntries(m: ImageMetadata, isVideo: Boolean): List<Pair<String, String>> {
-    val specific = if (isVideo) buildVideoDetailEntries(m) else buildPhotoDetailEntries(m)
-    return specific + buildCommonDetailEntries(m)
+private fun buildDetailEntries(s: Strings, m: ImageMetadata, isVideo: Boolean): List<Pair<String, String>> {
+    val specific = if (isVideo) buildVideoDetailEntries(s, m) else buildPhotoDetailEntries(s, m)
+    return specific + buildCommonDetailEntries(s, m)
 }
 
-private fun buildVideoDetailEntries(m: ImageMetadata): List<Pair<String, String>> = buildList {
-    m.durationFormatted?.let { add("Duration" to it) }
-    m.frameRate?.let { add("Frame Rate" to "%.1f fps".format(it)) }
-    m.videoCodec?.let { add("Video Codec" to it) }
-    m.audioCodec?.let { add("Audio Codec" to it) }
-    m.bitrate?.let { add("Bitrate" to "${it / 1000} kbps") }
-    m.rotation?.let { add("Rotation" to "${it}\u00B0") }
+private fun buildVideoDetailEntries(s: Strings, m: ImageMetadata): List<Pair<String, String>> = buildList {
+    m.durationFormatted?.let { add(s.t(StringKey.IMPORT_DURATION) to it) }
+    m.frameRate?.let { add(s.t(StringKey.IMPORT_FRAME_RATE) to "%.1f fps".format(it)) }
+    m.videoCodec?.let { add(s.t(StringKey.IMPORT_CODEC) to it) }
+    m.audioCodec?.let { add(s.t(StringKey.FIELD_AUDIO_CODEC) to it) }
+    m.bitrate?.let { add(s.t(StringKey.FIELD_BITRATE) to "${it / 1000} kbps") }
+    m.rotation?.let { add(s.t(StringKey.FIELD_ROTATION) to "${it}\u00B0") }
 }
 
-private fun buildPhotoDetailEntries(m: ImageMetadata): List<Pair<String, String>> = buildList {
-    m.iso?.let { add("ISO" to it.toString()) }
-    m.aperture?.let { add("Aperture" to "f/$it") }
-    m.shutterSpeed?.let { add("Shutter Speed" to it) }
+private fun buildPhotoDetailEntries(s: Strings, m: ImageMetadata): List<Pair<String, String>> = buildList {
+    m.iso?.let { add(s.t(StringKey.FIELD_ISO) to it.toString()) }
+    m.aperture?.let { add(s.t(StringKey.FIELD_APERTURE) to "f/$it") }
+    m.shutterSpeed?.let { add(s.t(StringKey.FIELD_SHUTTER_SPEED) to it) }
     m.focalLength?.let {
         val text = buildString {
             append("${it}mm")
             m.focalLength35mm?.let { eq -> append(" (${eq}mm eq.)") }
         }
-        add("Focal Length" to text)
+        add(s.t(StringKey.FIELD_FOCAL_LENGTH) to text)
     }
-    m.exposureProgram?.let { add("Exposure Program" to it) }
-    m.exposureCompensation?.let { add("Exposure Comp." to "${it} EV") }
-    m.meteringMode?.let { add("Metering" to it) }
-    m.flash?.let { add("Flash" to it) }
-    m.whiteBalance?.let { add("White Balance" to it) }
-    m.colorSpace?.let { add("Color Space" to it) }
-    m.orientation?.let { add("Orientation" to it.toString()) }
+    m.exposureProgram?.let { add(s.t(StringKey.FIELD_EXPOSURE_PROGRAM) to it) }
+    m.exposureCompensation?.let { add(s.t(StringKey.FIELD_EXPOSURE_COMP) to "${it} EV") }
+    m.meteringMode?.let { add(s.t(StringKey.FIELD_METERING) to it) }
+    m.flash?.let { add(s.t(StringKey.FIELD_FLASH) to it) }
+    m.whiteBalance?.let { add(s.t(StringKey.FIELD_WHITE_BALANCE) to it) }
+    m.colorSpace?.let { add(s.t(StringKey.FIELD_COLOR_SPACE) to it) }
+    m.orientation?.let { add(s.t(StringKey.FIELD_ORIENTATION) to it.toString()) }
 }
 
-private fun buildCommonDetailEntries(m: ImageMetadata): List<Pair<String, String>> = buildList {
-    m.software?.let { add("Software" to it) }
-    m.artist?.let { add("Artist" to it) }
-    m.copyright?.let { add("Copyright" to it) }
-    m.description?.let { add("Description" to it) }
+private fun buildCommonDetailEntries(s: Strings, m: ImageMetadata): List<Pair<String, String>> = buildList {
+    m.software?.let { add(s.t(StringKey.FIELD_SOFTWARE) to it) }
+    m.artist?.let { add(s.t(StringKey.FIELD_ARTIST) to it) }
+    m.copyright?.let { add(s.t(StringKey.FIELD_COPYRIGHT) to it) }
+    m.description?.let { add(s.t(StringKey.FIELD_DESCRIPTION) to it) }
     if (m.hasGpsData) {
-        add("Latitude" to String.format(Locale.US, "%.6f", m.latitude))
-        add("Longitude" to String.format(Locale.US, "%.6f", m.longitude))
-        m.altitude?.let { add("Altitude" to String.format(Locale.US, "%.1fm", it)) }
+        add(s.t(StringKey.FIELD_LAT) to String.format(Locale.US, "%.6f", m.latitude))
+        add(s.t(StringKey.FIELD_LON) to String.format(Locale.US, "%.6f", m.longitude))
+        m.altitude?.let { add(s.t(StringKey.FIELD_ALTITUDE) to String.format(Locale.US, "%.1fm", it)) }
     }
-    m.dateTimeDigitized?.let { add("Date Digitized" to it.toString()) }
-    m.dateTimeModified?.let { add("Date Modified" to it.toString()) }
+    m.dateTimeDigitized?.let { add(s.t(StringKey.FIELD_DATE_DIGITIZED) to it.toString()) }
+    m.dateTimeModified?.let { add(s.t(StringKey.META_MODIFIED) to it.toString()) }
 }
 
 @Composable
 private fun CollapsibleExifSection(
     entries: List<Pair<String, String>>,
-    title: String = "EXIF Details",
+    title: String,
 ) {
+    val s = strings()
     var expanded by remember { mutableStateOf(false) }
 
     Column {
@@ -829,7 +887,7 @@ private fun CollapsibleExifSection(
         ) {
             Icon(
                 if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                "Toggle details",
+                s.t(StringKey.IMPORT_TOGGLE_DETAILS),
                 modifier = Modifier.size(18.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -848,6 +906,23 @@ private fun CollapsibleExifSection(
                 entries.forEach { (label, value) -> MetadataRow(label, value) }
             }
         }
+    }
+}
+
+@Composable
+private fun MetadataRow(s: Strings, labelKey: StringKey, value: String) {
+    Row(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            "${s.t(labelKey)}: ",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 
@@ -874,6 +949,8 @@ private fun MetadataRow(label: String, value: String) {
 
 @Composable
 private fun FullScreenOverlay(image: ImageFile, onDismiss: () -> Unit) {
+    val s = strings()
+
     Box(
         modifier =
             Modifier.fillMaxSize()
@@ -902,7 +979,7 @@ private fun FullScreenOverlay(image: ImageFile, onDismiss: () -> Unit) {
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
             colors = IconButtonDefaults.iconButtonColors(contentColor = Color.White),
         ) {
-            Icon(Icons.Default.Close, "Close", modifier = Modifier.size(28.dp))
+            Icon(Icons.Default.Close, s.t(StringKey.ACTION_CLOSE), modifier = Modifier.size(28.dp))
         }
         // Image: centered
         ThumbnailImage(

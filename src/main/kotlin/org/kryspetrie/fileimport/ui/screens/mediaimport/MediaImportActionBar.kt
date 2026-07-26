@@ -23,13 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.ImportMode
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
-/**
- * Bottom action bar for the media import screen.
- *
- * Shows import mode buttons (Import All, Import New, Select & Import) and a Preview First option.
- * Extracted from [MediaImportScreen] to reduce method length and complexity.
- */
 @Composable
 fun MediaImportActionBar(
     canStart: Boolean,
@@ -37,6 +33,7 @@ fun MediaImportActionBar(
     onImportModeChange: (ImportMode) -> Unit,
     onStartFlow: (Boolean, ImportMode) -> Unit,
 ) {
+    val s = strings()
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
@@ -46,23 +43,23 @@ fun MediaImportActionBar(
         Button(onClick = { onStartFlow(false, ImportMode.ALL) }, enabled = canStart) {
             Icon(Icons.Default.PhotoLibrary, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Import All")
+            Text(s.t(StringKey.IMPORT_ALL))
         }
         OutlinedButton(onClick = { onStartFlow(false, ImportMode.NEW) }, enabled = canStart) {
             Icon(Icons.Default.NewReleases, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Import New")
+            Text(s.t(StringKey.IMPORT_NEW))
         }
         OutlinedButton(onClick = { onStartFlow(false, ImportMode.SELECT) }, enabled = canStart) {
             Icon(Icons.Default.CheckCircle, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Select & Import")
+            Text(s.t(StringKey.IMPORT_SELECT))
         }
         Spacer(Modifier.weight(1f))
         OutlinedButton(onClick = { onStartFlow(true, importMode) }, enabled = canStart) {
             Icon(Icons.Default.Preview, null, Modifier.size(16.dp))
             Spacer(Modifier.width(6.dp))
-            Text("Preview First ▶")
+            Text(s.t(StringKey.IMPORT_PREVIEW_FIRST))
         }
     }
 }

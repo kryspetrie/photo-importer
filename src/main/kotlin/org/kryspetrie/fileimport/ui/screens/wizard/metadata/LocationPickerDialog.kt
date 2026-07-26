@@ -48,6 +48,9 @@ import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.LocationResult
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
+
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.ui.components.LoadingIndicator
@@ -78,6 +81,7 @@ fun LocationPickerOverlay(
     onDismiss: () -> Unit,
     onMapLocationChanged: ((lat: Double, lon: Double, zoom: Double) -> Unit)? = null,
 ) {
+    val s = strings()
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -115,6 +119,7 @@ fun LocationPickerContent(
     onDismiss: () -> Unit,
     onMapLocationChanged: ((lat: Double, lon: Double, zoom: Double) -> Unit)? = null,
 ) {
+    val s = strings()
     var searchQuery by remember { mutableStateOf("") }
     var selectedLocation by remember { mutableStateOf<LocationResult?>(null) }
     var pinLocation by remember { mutableStateOf<Pair<Double, Double>?>(null) }
@@ -202,7 +207,7 @@ fun LocationPickerContent(
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        "Pick Location",
+                        s.t(StringKey.META_LOCATION_PICKER_TITLE),
                         style =
                             MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     )
@@ -212,7 +217,7 @@ fun LocationPickerContent(
                         modifier = Modifier.height(24.dp),
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
                     ) {
-                        Text("Cancel", style = MaterialTheme.typography.labelSmall)
+                        Text(s.cancel, style = MaterialTheme.typography.labelSmall)
                     }
                 }
 
@@ -223,12 +228,12 @@ fun LocationPickerContent(
                         searchQuery = newQuery
                         locationSearchService.search(newQuery)
                     },
-                    label = { Text("Search location\u2026") },
-                    placeholder = { Text("e.g. Worcester, MA") },
+                    label = { Text(s.t(StringKey.WIZARD_LOCATION_SEARCH)) },
+                    placeholder = { Text(s.t(StringKey.WIZARD_LOCATION_EXAMPLE)) },
                     leadingIcon = {
                         Icon(
                             Icons.Default.Search,
-                            contentDescription = "Search",
+                            contentDescription = s.t(StringKey.ACC_SEARCH),
                             modifier = Modifier.size(20.dp),
                         )
                     },
@@ -321,13 +326,13 @@ fun LocationPickerContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             selectedLocation!!.city?.let {
-                                Text("City: $it", style = MaterialTheme.typography.labelSmall)
+                                Text("${s.t(StringKey.FIELD_CITY)}: $it", style = MaterialTheme.typography.labelSmall)
                             }
                             selectedLocation!!.state?.let {
-                                Text("State: $it", style = MaterialTheme.typography.labelSmall)
+                                Text("${s.t(StringKey.FIELD_STATE)}: $it", style = MaterialTheme.typography.labelSmall)
                             }
                             selectedLocation!!.country?.let {
-                                Text("Country: $it", style = MaterialTheme.typography.labelSmall)
+                                Text("${s.t(StringKey.FIELD_COUNTRY)}: $it", style = MaterialTheme.typography.labelSmall)
                             }
                             Spacer(Modifier.height(6.dp))
                             Row(
@@ -347,7 +352,7 @@ fun LocationPickerContent(
                                 ) {
                                     Icon(Icons.Default.Check, null, Modifier.size(16.dp))
                                     Spacer(Modifier.width(4.dp))
-                                    Text("Use This")
+                                    Text(s.t(StringKey.WIZARD_USE_THIS))
                                 }
                                 OutlinedButton(
                                     onClick = {
@@ -355,7 +360,7 @@ fun LocationPickerContent(
                                         pinLocation = null
                                     }
                                 ) {
-                                    Text("Clear")
+                                    Text(s.t(StringKey.META_CLEAR))
                                 }
                             }
                         }

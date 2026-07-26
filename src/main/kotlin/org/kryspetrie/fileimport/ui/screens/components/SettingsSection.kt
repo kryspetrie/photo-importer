@@ -27,6 +27,9 @@ import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.configSummary
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun SettingsSection(
@@ -43,6 +46,7 @@ fun SettingsSection(
     watchStatus: WatchFolderStatus,
     scope: CoroutineScope,
 ) {
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column {
             Row(
@@ -60,13 +64,13 @@ fun SettingsSection(
                 )
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "Custom Settings",
+                        s.t(StringKey.IMPORT_SETTINGS_LABEL),
                         style =
                             MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     )
                     if (!expanded) {
                         Text(
-                            configSummary(configuration),
+                            s.configSummary(configuration),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -76,7 +80,7 @@ fun SettingsSection(
                 }
                 Icon(
                     if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    "Toggle",
+                    s.t(StringKey.ACC_TOGGLE),
                     Modifier.size(16.dp),
                 )
             }
@@ -104,13 +108,4 @@ fun SettingsSection(
             }
         }
     }
-}
-
-private fun configSummary(c: ImportConfiguration): String = buildString {
-    if (c.createSubfolders) append(c.folderPattern) else append("Flat")
-    append(" · ")
-    if (c.preserveOriginalName) append("original names") else append(c.fileNamePattern)
-    if (c.verifyAfterCopy) append(" · verify")
-    if (c.deleteAfterImport) append(" · delete source")
-    if (c.detectVisualDuplicates) append(" · dedup")
 }

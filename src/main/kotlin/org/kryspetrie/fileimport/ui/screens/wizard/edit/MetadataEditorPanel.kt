@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -22,6 +23,8 @@ import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
@@ -55,6 +58,7 @@ internal fun MetadataEditorPanel(
     onRecordMetadataSet: (RecentMetadataSet) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val isMultiSelect = selectedIndices.size > 1 || isMultiEditMode
 
     // Single MetadataEditState for both multi-edit buffering and single-edit display
@@ -114,7 +118,7 @@ internal fun MetadataEditorPanel(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "${selectedIndices.size} ${if (selectedIndices.size == 1) "photo" else "photos"} selected",
+                        s.t(StringKey.META_PHOTOS_SELECTED, "count" to "${selectedIndices.size}"),
                         style =
                             MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                         color = MaterialTheme.colorScheme.primary,
@@ -122,6 +126,9 @@ internal fun MetadataEditorPanel(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
                     )
+                    OutlinedButton(onClick = { editState.clear() }, modifier = Modifier.height(28.dp)) {
+                        Text(s.t(StringKey.META_CLEAR), style = MaterialTheme.typography.labelSmall)
+                    }
                     Button(
                         onClick = {
                             state.configs.applyMetadataToSelected(editState)
@@ -129,20 +136,32 @@ internal fun MetadataEditorPanel(
                         },
                         modifier = Modifier.height(28.dp),
                     ) {
-                        Text("Apply", style = MaterialTheme.typography.labelSmall)
+                        Text(s.apply, style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 Text(
-                    "Only filled fields will be applied. Leave blank to keep existing values.",
+                    s.t(StringKey.META_MULTI_EDIT_HINT),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
-                Text(
-                    "Photo ${selectedIndex + 1}",
-                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary,
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        s.t(StringKey.ACC_THUMBNAIL, "index" to "${selectedIndex + 1}"),
+                        style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    OutlinedButton(onClick = { editState.clear() }, modifier = Modifier.height(28.dp)) {
+                        Text(s.t(StringKey.META_CLEAR), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
             }
 
             // ── Recent Values (multi-edit only — each field has its own suggestions in
@@ -383,9 +402,15 @@ internal fun MetadataEditorPanel(
                 sourceGpsHint =
                     sourceExif?.let {
                         val parts = mutableListOf<String>()
-                        it.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
-                        it.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
-                        if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
+                        it.gpsLatitude?.let { lat ->
+                            parts.add(s.t(StringKey.FIELD_SOURCE_LAT, "value" to lat))
+                        }
+                        it.gpsLongitude?.let { lon ->
+                            parts.add(s.t(StringKey.FIELD_SOURCE_LON, "value" to lon))
+                        }
+                        if (parts.isNotEmpty()) {
+                            s.t(StringKey.FIELD_SOURCE_GPS, "value" to parts.joinToString(", "))
+                        } else null
                     },
             )
 
@@ -488,7 +513,7 @@ internal fun MetadataEditorPanel(
                 // Override checkboxes (single-edit only)
                 overrideCameraMake =
                     if (!isMultiSelect && singleEditConfig != null) {
-                        singleEditConfig.overrideCameraMake == OverrideState.KEEP_SOURCE
+                        singleEditConfig.overrideCameraMake != OverrideState.NULL_OUT
                     } else null,
                 onOverrideCameraMakeChange =
                     if (!isMultiSelect) {
@@ -506,7 +531,7 @@ internal fun MetadataEditorPanel(
                     } else null,
                 overrideCameraModel =
                     if (!isMultiSelect && singleEditConfig != null) {
-                        singleEditConfig.overrideCameraModel == OverrideState.KEEP_SOURCE
+                        singleEditConfig.overrideCameraModel != OverrideState.NULL_OUT
                     } else null,
                 onOverrideCameraModelChange =
                     if (!isMultiSelect) {
@@ -524,7 +549,7 @@ internal fun MetadataEditorPanel(
                     } else null,
                 overrideLensModel =
                     if (!isMultiSelect && singleEditConfig != null) {
-                        singleEditConfig.overrideLensModel == OverrideState.KEEP_SOURCE
+                        singleEditConfig.overrideLensModel != OverrideState.NULL_OUT
                     } else null,
                 onOverrideLensModelChange =
                     if (!isMultiSelect) {
@@ -542,7 +567,7 @@ internal fun MetadataEditorPanel(
                     } else null,
                 overrideFocalLength =
                     if (!isMultiSelect && singleEditConfig != null) {
-                        singleEditConfig.overrideFocalLength == OverrideState.KEEP_SOURCE
+                        singleEditConfig.overrideFocalLength != OverrideState.NULL_OUT
                     } else null,
                 onOverrideFocalLengthChange =
                     if (!isMultiSelect) {
@@ -560,7 +585,7 @@ internal fun MetadataEditorPanel(
                     } else null,
                 overrideAperture =
                     if (!isMultiSelect && singleEditConfig != null) {
-                        singleEditConfig.overrideAperture == OverrideState.KEEP_SOURCE
+                        singleEditConfig.overrideAperture != OverrideState.NULL_OUT
                     } else null,
                 onOverrideApertureChange =
                     if (!isMultiSelect) {
@@ -578,7 +603,7 @@ internal fun MetadataEditorPanel(
                     } else null,
                 overrideShutterSpeed =
                     if (!isMultiSelect && singleEditConfig != null) {
-                        singleEditConfig.overrideShutterSpeed == OverrideState.KEEP_SOURCE
+                        singleEditConfig.overrideShutterSpeed != OverrideState.NULL_OUT
                     } else null,
                 onOverrideShutterSpeedChange =
                     if (!isMultiSelect) {
@@ -596,7 +621,7 @@ internal fun MetadataEditorPanel(
                     } else null,
                 overrideIso =
                     if (!isMultiSelect && singleEditConfig != null) {
-                        singleEditConfig.overrideIso == OverrideState.KEEP_SOURCE
+                        singleEditConfig.overrideIso != OverrideState.NULL_OUT
                     } else null,
                 onOverrideIsoChange =
                     if (!isMultiSelect) {

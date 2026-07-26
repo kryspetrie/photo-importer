@@ -25,6 +25,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * A reusable metadata text field with optional autocomplete suggestions and an EXIF override
@@ -74,6 +76,7 @@ fun MetadataField(
     alwaysNavigateFocus: Boolean = true,
     trailingIcon: (@Composable () -> Unit)? = null,
 ) {
+    val s = strings()
     val focusManager = LocalFocusManager.current
 
     // Derive whether field is excluded from output (for UI styling)
@@ -213,7 +216,7 @@ fun MetadataField(
         }
         if (showSourceHint) {
             Text(
-                text = "Source: $sourceHint",
+                text = s.t(StringKey.FIELD_SOURCE_GPS, "value" to sourceHint!!),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.padding(start = 4.dp, top = 0.dp),

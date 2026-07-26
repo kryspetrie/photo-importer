@@ -23,9 +23,11 @@ import org.kryspetrie.fileimport.domain.model.ImportResult
 import org.kryspetrie.fileimport.domain.model.IndexProgress
 import org.kryspetrie.fileimport.domain.model.WatchFolderConfig
 import org.kryspetrie.fileimport.domain.model.WatchFolderStatus
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.port.DeviceEvent
 import org.kryspetrie.fileimport.domain.port.DevicePort
 import org.kryspetrie.fileimport.domain.port.ImportHistoryPort
+import org.kryspetrie.fileimport.domain.port.LocalePort
 import org.kryspetrie.fileimport.domain.port.PathsPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
@@ -46,7 +48,9 @@ class MediaImportViewModel(
     val watchFolderManager: WatchFolderManager,
     val timeProvider: TimeProvider,
     val pathsPort: PathsPort,
+    private val localePort: LocalePort,
 ) {
+    private fun t(key: StringKey, vararg params: Pair<String, String>): String = localePort.t(key, *params)
     // ── Device detection ─────────────────────────────────────────
 
     var detectedDevices by mutableStateOf<List<CameraDevice>>(emptyList())
@@ -195,7 +199,11 @@ class MediaImportViewModel(
             try {
                 detectedDevices = devicePort.detectDevices()
             } catch (e: Exception) {
-                errorMessage = "Could not detect devices: ${e.message ?: "Unknown error"}"
+                errorMessage =
+                    t(
+                        StringKey.ERROR_DETECT_DEVICES,
+                        "message" to (e.message ?: t(StringKey.ERROR_UNKNOWN)),
+                    )
                 detectedDevices = emptyList()
             }
         }
@@ -277,7 +285,9 @@ class MediaImportViewModel(
                 } catch (_: CancellationException) {
                     throw CancellationException()
                 } catch (e: Exception) {
-                    errorMessage = e.message ?: "Import failed"
+                    errorMessage =
+                        e.message
+                            ?: t(StringKey.ERROR_IMPORT_FAILED, "message" to t(StringKey.ERROR_UNKNOWN))
                     completeImport(
                         ImportResult(
                             totalFiles = toImport.size,
@@ -331,7 +341,7 @@ class MediaImportViewModel(
                 } catch (_: CancellationException) {
                     throw CancellationException()
                 } catch (e: Exception) {
-                    errorMessage = e.message ?: "Processing failed"
+                    errorMessage = e.message ?: t(StringKey.ERROR_PROCESSING_FAILED)
                     flowStep = MediaImportFlowStep.SETUP
                 }
             }
@@ -361,7 +371,7 @@ class MediaImportViewModel(
                 } catch (_: CancellationException) {
                     throw CancellationException()
                 } catch (e: Exception) {
-                    errorMessage = e.message ?: "Scan failed"
+                    errorMessage = e.message ?: t(StringKey.ERROR_SCAN_FAILED)
                     flowStep = MediaImportFlowStep.SETUP
                 }
             }

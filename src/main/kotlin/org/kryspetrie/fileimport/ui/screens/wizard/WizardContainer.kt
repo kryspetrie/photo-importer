@@ -52,7 +52,9 @@ import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.infrastructure.logging.OperationType
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.LoadingIndicator
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
@@ -83,6 +85,7 @@ fun WizardContainer(
     orientationCorrection: OrientationCorrectionService = koinInject(),
     imageProcessing: ImageProcessingPort = koinInject(),
     pathsPort: PathsPort = koinInject(),
+    localePort: org.kryspetrie.fileimport.domain.port.LocalePort = koinInject(),
 ) {
     val state = remember { PhotoScanWizardState() }
     state.setLogger(appLogger)
@@ -180,6 +183,7 @@ fun WizardContainer(
             exportResults = exportResults,
             onComplete = onComplete,
             onCancel = onCancel,
+            localePort = localePort,
         )
 
         if (isLoading) {
@@ -230,7 +234,9 @@ private fun WizardStepContent(
     exportResults: List<ExportResult>,
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
+    localePort: org.kryspetrie.fileimport.domain.port.LocalePort,
 ) {
+    val s = strings()
     // Shared completion handler for all export flows
     val handleExportComplete: (List<ProcessedPhoto>) -> Unit = { processedPhotos ->
         onFailedCountChange(processedPhotos.count { it.isError })
@@ -304,7 +310,7 @@ private fun WizardStepContent(
                         } else null,
                 )
             } else {
-                LoadingContent(message = "Loading image...")
+                LoadingContent(message = s.t(StringKey.WIZARD_LOADING_IMAGE))
             }
         }
 
@@ -329,7 +335,7 @@ private fun WizardStepContent(
                     onExport = { state.navigation.goToEdit() },
                 )
             } else {
-                LoadingContent(message = "Loading image...")
+                LoadingContent(message = s.t(StringKey.WIZARD_LOADING_IMAGE))
             }
         }
 
@@ -389,6 +395,7 @@ private fun WizardStepContent(
                                 onComplete = handleExportComplete,
                                 orientationCorrection = orientationCorrection,
                                 imageProcessing = imageProcessing,
+                                localePort = localePort,
                             )
                         }
                     },
@@ -415,7 +422,7 @@ private fun WizardStepContent(
                     faceRegionTransformer = faceRegionTransformer,
                 )
             } else {
-                LoadingContent(message = "Loading image...")
+                LoadingContent(message = s.t(StringKey.WIZARD_LOADING_IMAGE))
             }
         }
 
@@ -445,7 +452,7 @@ private fun WizardStepContent(
                     onCancel()
                 },
                 onImportFile = {
-                    val path = pickImageFile("Select Image File")
+                    val path = pickImageFile(s.t(StringKey.META_DIALOG_SELECT_IMAGE))
                     if (path != null) {
                         startNewImport(
                             state,
@@ -509,10 +516,11 @@ private fun WizardStepContent(
 
 @Composable
 private fun BoxScope.ErrorSnackbar(errorMessage: String?, onDismiss: () -> Unit) {
+    val s = strings()
     errorMessage?.let { error ->
         Snackbar(
             modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-            action = { TextButton(onClick = onDismiss) { Text("Dismiss & Retry") } },
+            action = { TextButton(onClick = onDismiss) { Text(s.t(StringKey.WIZARD_DISMISS_RETRY)) } },
         ) {
             Text(error)
         }
@@ -572,6 +580,7 @@ private fun ProcessingScreen(
     destination: String,
     onBack: () -> Unit,
 ) {
+    val s = strings()
     var showCancelConfirm by remember { mutableStateOf(false) }
 
     // Derive current photo index from progress fraction
@@ -593,11 +602,11 @@ private fun ProcessingScreen(
                 tint = MaterialTheme.colorScheme.primary,
             )
 
-            Text("Exporting", style = MaterialTheme.typography.headlineSmall)
+            Text(s.t(StringKey.WIZARD_EXPORTING), style = MaterialTheme.typography.headlineSmall)
 
             if (totalPhotos > 0) {
                 Text(
-                    "Photo $currentIndex of $totalPhotos",
+                    s.t(StringKey.SCAN_PHOTO_LABEL, "index" to "$currentIndex", "total" to "$totalPhotos"),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -609,7 +618,7 @@ private fun ProcessingScreen(
             )
 
             Text(
-                if (currentFile.isNotEmpty()) "Processing: $currentFile" else "Finalizing...",
+                if (currentFile.isNotEmpty()) s.t(StringKey.WIZARD_PROCESSING, "file" to currentFile) else s.t(StringKey.WIZARD_FINALIZING),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -629,7 +638,7 @@ private fun ProcessingScreen(
                         contentColor = MaterialTheme.colorScheme.error
                     ),
             ) {
-                Text("Cancel")
+                Text(s.cancel)
             }
         }
     }
@@ -638,12 +647,9 @@ private fun ProcessingScreen(
     if (showCancelConfirm) {
         AlertDialog(
             onDismissRequest = { showCancelConfirm = false },
-            title = { Text("Cancel Export?") },
+            title = { Text(s.t(StringKey.WIZARD_CANCEL_EXPORT)) },
             text = {
-                Text(
-                    "Canceling will discard all progress and return to the import screen. " +
-                        "Any photos already exported to disk will remain."
-                )
+                Text(s.t(StringKey.WIZARD_CANCEL_EXPORT_MESSAGE))
             },
             confirmButton = {
                 TextButton(
@@ -652,11 +658,11 @@ private fun ProcessingScreen(
                         onBack()
                     }
                 ) {
-                    Text("Cancel Export", color = MaterialTheme.colorScheme.error)
+                    Text(s.t(StringKey.WIZARD_CANCEL_EXPORT), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCancelConfirm = false }) { Text("Continue Export") }
+                TextButton(onClick = { showCancelConfirm = false }) { Text(s.t(StringKey.WIZARD_CONTINUE_EXPORT)) }
             },
         )
     }

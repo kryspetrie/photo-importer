@@ -9,6 +9,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.DuplicateAction
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun DuplicateResolveConfirmDialog(
@@ -18,30 +20,31 @@ fun DuplicateResolveConfirmDialog(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val s = strings()
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Resolve All Duplicates") },
+        title = { Text(s.t(StringKey.DUP_RESOLVE_ALL_TITLE)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("This will process $duplicateCount duplicate groups.")
-                val actionText =
-                    when (resolveAction) {
-                        DuplicateAction.KEEP_HIGHEST_RES -> "Keep highest resolution"
-                        DuplicateAction.KEEP_RAW_OVER_JPEG -> "Keep RAW over JPEG"
-                        DuplicateAction.KEEP_NEWEST -> "Keep newest file"
-                        DuplicateAction.KEEP_OLDEST -> "Keep oldest file"
-                        DuplicateAction.KEEP_LARGEST -> "Keep largest file"
-                    }
-                Text("Strategy: $actionText")
+                Text(
+                    s.t(StringKey.DUP_RESOLVE_ALL_MESSAGE, "count" to duplicateCount.toString())
+                )
+                Text(
+                    s.t(
+                        StringKey.DUP_STRATEGY,
+                        "strategy" to s.t(resolveAction.labelKey()),
+                    )
+                )
                 if (moveToTrash) {
                     Text(
-                        "Removed files will be moved to duplicates_review/ for safe review.",
+                        s.t(StringKey.DUP_REVIEW_FOLDER_NOTE),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 } else {
                     Text(
-                        "WARNING: Removed files will be permanently deleted!",
+                        s.t(StringKey.DUP_DELETE_WARNING),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -51,13 +54,15 @@ fun DuplicateResolveConfirmDialog(
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(
-                    "Resolve",
+                    s.t(StringKey.DUP_RESOLVE),
                     color =
                         if (moveToTrash) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.error,
                 )
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(s.t(StringKey.ACTION_CANCEL)) }
+        },
     )
 }

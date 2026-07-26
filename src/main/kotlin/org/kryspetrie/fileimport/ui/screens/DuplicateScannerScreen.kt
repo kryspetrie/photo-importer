@@ -31,7 +31,9 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.application.DuplicateScannerService
 import org.kryspetrie.fileimport.domain.model.AppSettings
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateGroupCard
 import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateResolveConfirmDialog
 import org.kryspetrie.fileimport.ui.screens.duplicatescanner.DuplicateResolvingProgress
@@ -45,6 +47,7 @@ fun DuplicateScannerScreen(
     onSettingsChange: (AppSettings) -> Unit,
     viewModel: DuplicateScannerViewModel = remember { DuplicateScannerViewModel() },
 ) {
+    val s = strings()
     val scannerService = koinInject<DuplicateScannerService>()
     val scope = rememberCoroutineScope()
 
@@ -67,7 +70,7 @@ fun DuplicateScannerScreen(
                     // Cancellation is expected — don't show error
                     viewModel.step = DuplicateScannerViewModel.ScanStep.SETUP
                 } catch (e: Exception) {
-                    viewModel.errorMessage = e.message ?: "Scan failed"
+                    viewModel.errorMessage = e.message ?: s.t(StringKey.DUP_SCAN_FAILED)
                     viewModel.step = DuplicateScannerViewModel.ScanStep.SETUP
                 }
             }
@@ -95,7 +98,8 @@ fun DuplicateScannerScreen(
                     // Cancellation is expected — don't show error
                     viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
                 } catch (e: Exception) {
-                    viewModel.errorMessage = "Resolve failed: ${e.message}"
+                    viewModel.errorMessage =
+                        s.t(StringKey.DUP_RESOLVE_FAILED, "message" to (e.message ?: ""))
                     viewModel.step = DuplicateScannerViewModel.ScanStep.RESULTS
                 }
             }
@@ -118,10 +122,9 @@ fun DuplicateScannerScreen(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Text("Find Duplicates", style = MaterialTheme.typography.headlineSmall)
+                Text(s.t(StringKey.DUP_TITLE), style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "Scan an existing library to find duplicate files. " +
-                        "Duplicates can be resolved automatically or reviewed individually.",
+                    s.t(StringKey.DUP_DESCRIPTION),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -204,7 +207,9 @@ fun DuplicateScannerScreen(
             when (viewModel.step) {
                 DuplicateScannerViewModel.ScanStep.SCANNING,
                 DuplicateScannerViewModel.ScanStep.RESOLVING -> {
-                    OutlinedButton(onClick = { viewModel.cancelOperation() }) { Text("Cancel") }
+                    OutlinedButton(onClick = { viewModel.cancelOperation() }) {
+                        Text(s.t(StringKey.ACTION_CANCEL))
+                    }
                 }
                 DuplicateScannerViewModel.ScanStep.RESULTS -> {
                     if (viewModel.duplicates.isNotEmpty()) {
@@ -212,12 +217,17 @@ fun DuplicateScannerScreen(
                             onClick = { viewModel.reset() },
                             modifier = Modifier.padding(end = 8.dp),
                         ) {
-                            Text("Back")
+                            Text(s.t(StringKey.ACTION_BACK))
                         }
                         Button(onClick = { viewModel.showResolveConfirm = true }) {
                             Icon(Icons.Default.AutoFixHigh, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Resolve All (${viewModel.duplicates.size} groups)")
+                            Text(
+                                s.t(
+                                    StringKey.DUP_RESOLVE_ALL,
+                                    "count" to viewModel.duplicates.size.toString(),
+                                )
+                            )
                         }
                     }
                 }
@@ -225,7 +235,7 @@ fun DuplicateScannerScreen(
                     Button(onClick = { startScan() }, enabled = viewModel.folderPath.isNotBlank()) {
                         Icon(Icons.Default.Search, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Scan for Duplicates")
+                        Text(s.t(StringKey.DUP_SCAN))
                     }
                 }
             }

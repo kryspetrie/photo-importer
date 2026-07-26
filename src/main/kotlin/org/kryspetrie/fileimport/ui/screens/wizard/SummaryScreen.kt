@@ -79,6 +79,9 @@ import org.kryspetrie.fileimport.ui.components.RotationBadge
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.BulkActionButtons
 import org.kryspetrie.fileimport.ui.screens.wizard.summary.ExportBottomBar
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
+
 
 /**
  * Summary screen with a two-panel layout: scrollable photo list on the left, large preview on the
@@ -98,6 +101,7 @@ fun SummaryScreen(
     onExport: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val boundingBoxList by state.boundingBoxList.collectAsState()
     val photoConfigurations by state.photoConfigurations.collectAsState()
     var selectedIndex by remember { mutableStateOf(0) }
@@ -288,10 +292,11 @@ private fun SummaryTopAppBar(
     onRotateAllCCW: () -> Unit,
     onClearAll: () -> Unit,
 ) {
+    val s = strings()
     var showResetConfirmDialog by remember { mutableStateOf(false) }
 
     TopAppBar(
-        title = { Text("Crop & Rotate") },
+        title = { Text(s.t(StringKey.SCAN_TITLE)) },
         navigationIcon = {},
         actions = {
             TopAppBarActions(
@@ -321,6 +326,7 @@ private fun TopAppBarActions(
     onRotateAllCW: () -> Unit,
     onReset: () -> Unit,
 ) {
+    val s = strings()
     IconButton(onClick = onRotateAllCCW) {
         Icon(Icons.AutoMirrored.Filled.RotateLeft, "Rotate all counter-clockwise")
     }
@@ -332,16 +338,17 @@ private fun TopAppBarActions(
         modifier = Modifier.height(32.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
-        Text("Reset", style = MaterialTheme.typography.labelSmall)
+        Text(s.reset, style = MaterialTheme.typography.labelSmall)
     }
 }
 
 /** Confirmation dialog for the destructive "Reset" action. */
 @Composable
 private fun ResetConfirmDialog(photoCount: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val s = strings()
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Reset All Rotations?") },
+        title = { Text(s.t(StringKey.SCAN_RESET_CONFIRM_TITLE)) },
         text = {
             Text(
                 "This will clear all rotation and correction settings for " +
@@ -350,10 +357,10 @@ private fun ResetConfirmDialog(photoCount: Int, onConfirm: () -> Unit, onDismiss
         },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text("Reset", color = MaterialTheme.colorScheme.error)
+                Text(s.reset, color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(s.cancel) } },
     )
 }
 
@@ -375,6 +382,7 @@ private fun PhotoSidebarList(
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     var pendingDeleteIndex by remember { mutableStateOf<Int?>(null) }
 
     Column(modifier = modifier) {
@@ -423,9 +431,9 @@ private fun PhotoSidebarList(
         val deleteIndex = pendingDeleteIndex!!
         AlertDialog(
             onDismissRequest = { pendingDeleteIndex = null },
-            title = { Text("Delete Photo?") },
+            title = { Text(s.t(StringKey.WIZARD_DELETE_PHOTO_QUESTION)) },
             text = {
-                Text("Remove Photo ${deleteIndex + 1} from the scan? This cannot be undone.")
+                Text(s.t(StringKey.WIZARD_REMOVE_PHOTO, "index" to "${deleteIndex + 1}"))
             },
             confirmButton = {
                 TextButton(
@@ -434,11 +442,11 @@ private fun PhotoSidebarList(
                         pendingDeleteIndex = null
                     }
                 ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(s.delete, color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDeleteIndex = null }) { Text("Cancel") }
+                TextButton(onClick = { pendingDeleteIndex = null }) { Text(s.cancel) }
             },
         )
     }
@@ -459,6 +467,7 @@ private fun SidebarPhotoCard(
     onSelect: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val s = strings()
     val borderColor =
         if (isSelected) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.outlineVariant
@@ -502,6 +511,7 @@ private fun SidebarPhotoCard(
 /** Thumbnail box within a sidebar card. */
 @Composable
 private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?) {
+    val s = strings()
     Box(
         modifier =
             Modifier.width(60.dp)
@@ -513,7 +523,7 @@ private fun SidebarThumbnail(index: Int, thumbnail: ImageBitmap?) {
         if (thumbnail != null) {
             Image(
                 bitmap = thumbnail,
-                contentDescription = "Photo ${index + 1}",
+                contentDescription = s.t(StringKey.ACC_THUMBNAIL, "index" to "${index + 1}"),
                 modifier = Modifier.fillMaxSize().padding(2.dp),
                 contentScale = ContentScale.Fit,
             )
@@ -531,12 +541,13 @@ private fun SidebarInfoColumn(
     config: PhotoScanConfiguration,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Photo ${index + 1}", style = MaterialTheme.typography.labelMedium)
+            Text(s.t(StringKey.ACC_THUMBNAIL, "index" to "${index + 1}"), style = MaterialTheme.typography.labelMedium)
             RotationBadge(rotationDegrees = config.rotationDegrees)
             if (config.aspectRatio != 0.0) {
                 val ratioLabel =
@@ -634,6 +645,7 @@ private fun DetailPreviewImage(
     onImageClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Box(
         modifier =
             modifier
@@ -646,7 +658,7 @@ private fun DetailPreviewImage(
         if (previewBitmap != null) {
             Image(
                 bitmap = previewBitmap,
-                contentDescription = "Photo ${index + 1} preview",
+                contentDescription = s.t(StringKey.ACC_PREVIEW_IMAGE, "index" to "${index + 1}"),
                 modifier = Modifier.fillMaxSize().padding(8.dp),
                 contentScale = ContentScale.Fit,
             )
@@ -664,6 +676,7 @@ private fun DetailPreviewImage(
 /** Small "Click to zoom" hint overlay in the bottom-right of the preview. */
 @Composable
 private fun ZoomHintOverlay(modifier: Modifier = Modifier) {
+    val s = strings()
     Surface(
         modifier = modifier.padding(8.dp),
         shape = RoundedCornerShape(4.dp),
@@ -680,7 +693,7 @@ private fun ZoomHintOverlay(modifier: Modifier = Modifier) {
                 tint = Color.White,
             )
             Spacer(Modifier.width(4.dp))
-            Text("Click to zoom", style = MaterialTheme.typography.labelSmall, color = Color.White)
+            Text(s.t(StringKey.WIZARD_CLICK_ZOOM), style = MaterialTheme.typography.labelSmall, color = Color.White)
         }
     }
 }
@@ -728,6 +741,7 @@ private fun DetailLabelAndRotation(
     onRotateCW: () -> Unit,
     onRotateCCW: () -> Unit,
 ) {
+    val s = strings()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -740,7 +754,7 @@ private fun DetailLabelAndRotation(
             IconButton(onClick = onPrev, enabled = index > 0) {
                 Icon(Icons.AutoMirrored.Filled.ArrowLeft, "Previous photo")
             }
-            Text("Photo ${index + 1} of $totalPhotos", style = MaterialTheme.typography.titleSmall)
+            Text(s.t(StringKey.SCAN_PHOTO_LABEL, "index" to "${index + 1}", "total" to "$totalPhotos"), style = MaterialTheme.typography.titleSmall)
             IconButton(onClick = onNext, enabled = index < totalPhotos - 1) {
                 Icon(Icons.AutoMirrored.Filled.ArrowRight, "Next photo")
             }
@@ -786,6 +800,7 @@ private fun SummaryFullscreenPreviewDialog(
     bitmap: ImageBitmap,
     onDismiss: () -> Unit,
 ) {
+    val s = strings()
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -820,14 +835,14 @@ private fun SummaryFullscreenPreviewDialog(
             ) {
                 Icon(
                     Icons.Default.Close,
-                    contentDescription = "Close",
+                    contentDescription = s.close,
                     modifier = Modifier.size(28.dp),
                 )
             }
             // Image: centered
             Image(
                 bitmap = bitmap,
-                contentDescription = "Photo ${photoIndex + 1} full preview",
+                contentDescription = s.t(StringKey.ACC_PREVIEW_IMAGE, "index" to "${photoIndex + 1}"),
                 modifier = Modifier.fillMaxSize().padding(32.dp),
                 contentScale = ContentScale.Fit,
             )

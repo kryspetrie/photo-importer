@@ -8,6 +8,9 @@ pluginManagement {
 
 rootProject.name = "petrie-file-importer"
 
+// Composite build: photo-metadata-editor library modules (ExifTool-backed metadata I/O)
+includeBuild("../photo-metadata-editor")
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {

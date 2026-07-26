@@ -8,6 +8,8 @@ plugins {
     id("io.gitlab.arturbosch.detekt") version "1.23.8"
 }
 
+apply(from = "gradle/exiftool-download.gradle.kts")
+
 ktfmt {
     // Google style (4-space indent) matches our current formatting
     kotlinLangStyle()
@@ -31,6 +33,7 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Msi,
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Deb,
             )
+            appResourcesRootDir.set(project.layout.projectDirectory.dir("appResources"))
             packageName = "Petrie Image Importer"
             packageVersion = "1.0.0"
             description = "Cross-platform photo and video importer"
@@ -86,7 +89,11 @@ dependencies {
     implementation("com.microsoft.onnxruntime:onnxruntime:1.21.0")
 
     implementation("org.apache.commons:commons-imaging:1.0-alpha3")
-    implementation("javax.inject:javax.inject:1")
+
+    // photo-metadata-editor library (composite build): ExifTool-backed metadata I/O
+    implementation("com.petrielabs.metadataeditor:metadata-koin")
+    testImplementation("com.petrielabs.metadataeditor:metadata-test-fixtures")
+
     implementation("org.slf4j:slf4j-simple:2.0.16")
     implementation("io.insert-koin:koin-core:4.0.0")
     implementation("io.insert-koin:koin-core-coroutines:4.0.0")

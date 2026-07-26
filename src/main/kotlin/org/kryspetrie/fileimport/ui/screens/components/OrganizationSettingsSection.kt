@@ -27,29 +27,33 @@ import org.kryspetrie.fileimport.domain.model.FilenamePresets
 import org.kryspetrie.fileimport.domain.model.FolderPresets
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.NamePlaceholders
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.PlaceholderHelpTooltip
 import org.kryspetrie.fileimport.ui.components.SectionLabel
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
+import org.kryspetrie.fileimport.ui.i18n.conflictResolutionLabel
+import org.kryspetrie.fileimport.ui.i18n.dateSourceLabel
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun OrganizationSettingsSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
+    val s = strings()
     var orgExpanded by remember { mutableStateOf(true) }
     CollapsibleSubsection(
-        title = "Organization",
+        title = s.t(StringKey.SETTINGS_ORG),
         icon = Icons.Default.FolderCopy,
         expanded = orgExpanded,
         onToggle = { orgExpanded = !orgExpanded },
     ) {
-        // Toggles side-by-side
         Row(Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
                 SettingsToggle(
                     checked = configuration.createSubfolders,
                     onCheckedChange = { onConfigChange(configuration.copy(createSubfolders = it)) },
-                    label = "Date subfolders",
+                    label = s.t(StringKey.SETTINGS_ORG_SUBFOLDERS),
                 )
             }
             Column(Modifier.weight(1f)) {
@@ -64,31 +68,21 @@ fun OrganizationSettingsSection(
                             )
                         )
                     },
-                    label = "Original filename",
+                    label = s.t(StringKey.SETTINGS_ORG_PRESERVE_NAMES),
                 )
             }
         }
-        // Conditional: folder pattern when subfolders enabled
         if (configuration.createSubfolders) {
             FolderPatternField(configuration, onConfigChange)
         }
-        // Filename pattern (always shown when not preserving original name)
         if (!configuration.preserveOriginalName) {
             FilenamePatternField(configuration, onConfigChange)
         }
         Spacer(Modifier.height(6.dp))
-        SectionLabel("Conflict Resolution")
-        EnumRadioButtonGroup(
-            entries = ConflictResolution.entries,
-            selected = configuration.conflictResolution,
-            onSelect = { onConfigChange(configuration.copy(conflictResolution = it)) },
-        )
-        SectionLabel("Date Source")
-        EnumRadioButtonGroup(
-            entries = DateSource.entries,
-            selected = configuration.dateSource,
-            onSelect = { onConfigChange(configuration.copy(dateSource = it)) },
-        )
+        SectionLabel(s.t(StringKey.SETTINGS_ORG_CONFLICT_RESOLUTION))
+        ConflictResolutionRadioGroup(configuration, onConfigChange)
+        SectionLabel(s.t(StringKey.SETTINGS_ORG_DATE_SOURCE))
+        DateSourceRadioGroup(configuration, onConfigChange)
     }
 }
 
@@ -97,16 +91,17 @@ private fun FolderPatternField(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
+    val s = strings()
     OutlinedTextField(
         configuration.folderPattern,
         { onConfigChange(configuration.copy(folderPattern = it)) },
-        label = { Text("Folder Pattern") },
+        label = { Text(s.t(StringKey.SETTINGS_ORG_FOLDER_PATTERN)) },
         textStyle = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.fillMaxWidth(),
     )
     FolderPresets.examples[configuration.folderPattern]?.let {
         Text(
-            "Example: $it",
+            s.t(StringKey.PLACEHOLDER_EXAMPLE, "path" to it),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -129,11 +124,12 @@ private fun FilenamePatternField(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
+    val s = strings()
     OutlinedTextField(
         configuration.fileNamePattern,
         { onConfigChange(configuration.copy(fileNamePattern = it)) },
         enabled = !configuration.preserveOriginalName,
-        label = { Text("Filename Pattern") },
+        label = { Text(s.t(StringKey.SETTINGS_ORG_FILENAME_PATTERN)) },
         textStyle = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -150,17 +146,43 @@ private fun FilenamePatternField(
 }
 
 @Composable
-private fun <T : Enum<T>> EnumRadioButtonGroup(
-    entries: List<T>,
-    selected: T,
-    onSelect: (T) -> Unit,
+private fun ConflictResolutionRadioGroup(
+    configuration: ImportConfiguration,
+    onConfigChange: (ImportConfiguration) -> Unit,
 ) {
+    val s = strings()
     Row(Modifier.fillMaxWidth()) {
-        entries.forEach { entry ->
+        ConflictResolution.entries.forEach { entry ->
             Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected == entry, { onSelect(entry) })
+                RadioButton(
+                    configuration.conflictResolution == entry,
+                    { onConfigChange(configuration.copy(conflictResolution = entry)) },
+                )
                 Text(
-                    entry.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                    s.conflictResolutionLabel(entry),
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DateSourceRadioGroup(
+    configuration: ImportConfiguration,
+    onConfigChange: (ImportConfiguration) -> Unit,
+) {
+    val s = strings()
+    Row(Modifier.fillMaxWidth()) {
+        DateSource.entries.forEach { entry ->
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                RadioButton(
+                    configuration.dateSource == entry,
+                    { onConfigChange(configuration.copy(dateSource = entry)) },
+                )
+                Text(
+                    s.dateSourceLabel(entry),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                 )

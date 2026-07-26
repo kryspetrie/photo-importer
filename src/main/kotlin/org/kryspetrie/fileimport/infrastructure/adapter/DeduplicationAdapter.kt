@@ -22,7 +22,7 @@ class DeduplicationAdapter(
 
         if (settings.enableHashDeduplication) {
             images
-                .filter { it.hash != null }
+                .filter { it.hash != null && it.hash.isNotEmpty() }
                 .groupBy { it.hash!! }
                 .filter { it.value.size > 1 }
                 .forEach { (_, group) ->

@@ -37,6 +37,9 @@ import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
+
 import org.kryspetrie.fileimport.ui.components.RotationBadge
 
 /**
@@ -56,6 +59,7 @@ internal fun PhotoSidebar(
     onSelect: (Int) -> Unit,
     onDeselectAll: () -> Unit,
 ) {
+    val s = strings()
     val photoCount = boundingBoxList.size()
     // Scale thumbnails based on how many there are — smaller when crowded
     val thumbHeight =
@@ -105,7 +109,7 @@ internal fun PhotoSidebar(
                             contentPadding =
                                 androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
                         ) {
-                            Text("Done", style = MaterialTheme.typography.labelSmall)
+                            Text(s.t(StringKey.META_DONE), style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 } else {
@@ -115,7 +119,7 @@ internal fun PhotoSidebar(
                         contentPadding =
                             androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
                     ) {
-                        Text("Multi", style = MaterialTheme.typography.labelSmall)
+                        Text(s.t(StringKey.META_MULTI), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -155,7 +159,7 @@ internal fun PhotoSidebar(
                             if (thumbnail != null) {
                                 Image(
                                     bitmap = thumbnail,
-                                    contentDescription = "Photo ${index + 1}",
+                                    contentDescription = s.t(StringKey.ACC_THUMBNAIL, "index" to "${index + 1}"),
                                     modifier = Modifier.fillMaxSize().padding(2.dp),
                                     contentScale = ContentScale.Fit,
                                 )

@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * Animated progress state using time-based interpolation with delay().
@@ -137,9 +139,12 @@ fun CubeGridLoadingIndicator(
 @Composable
 fun LoadingOverlay(
     isLoading: Boolean,
-    message: String = "Processing...",
+    message: String? = null,
     content: @Composable () -> Unit,
 ) {
+    val s = strings()
+    val displayMessage = message ?: s.t(StringKey.IMPORT_PROCESSING)
+
     Box(modifier = Modifier.fillMaxSize()) {
         content()
 
@@ -159,7 +164,7 @@ fun LoadingOverlay(
                     )
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(
-                        text = message,
+                        text = displayMessage,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )

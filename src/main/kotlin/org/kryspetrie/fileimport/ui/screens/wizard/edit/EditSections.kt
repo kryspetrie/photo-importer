@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Sell
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -54,11 +55,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.Color
+
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -67,6 +69,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataField
@@ -85,6 +89,7 @@ internal fun RotationSection(
     onRotateCCW: () -> Unit,
     onRotate180: () -> Unit,
 ) {
+    val s = strings()
     Surface(
         tonalElevation = 1.dp,
         shape = RoundedCornerShape(8.dp),
@@ -95,23 +100,31 @@ internal fun RotationSection(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Rotation", style = MaterialTheme.typography.labelMedium)
+            Text(s.t(StringKey.FIELD_ROTATION), style = MaterialTheme.typography.labelMedium)
             Spacer(Modifier.weight(1f))
             IconButton(onClick = onRotateCCW, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.AutoMirrored.Filled.RotateLeft, "CCW", Modifier.size(16.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.RotateLeft,
+                    s.t(StringKey.ACC_ROTATE_CCW),
+                    Modifier.size(16.dp),
+                )
             }
             IconButton(onClick = onRotate180, modifier = Modifier.size(24.dp)) {
                 Icon(
                     Icons.Default.Refresh,
-                    contentDescription = "Rotate 180°",
+                    contentDescription = s.t(StringKey.FIELD_ROTATE_180),
                     modifier = Modifier.size(16.dp),
                 )
             }
             IconButton(onClick = onRotateCW, modifier = Modifier.size(24.dp)) {
-                Icon(Icons.AutoMirrored.Filled.RotateRight, "CW", Modifier.size(16.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.RotateRight,
+                    s.t(StringKey.ACC_ROTATE_CW),
+                    Modifier.size(16.dp),
+                )
             }
             Text(
-                "${rotationDegrees}°",
+                s.t(StringKey.META_ROTATION_DEGREES, "degrees" to "$rotationDegrees"),
                 style = MaterialTheme.typography.labelSmall,
                 color =
                     if (rotationDegrees != 0) MaterialTheme.colorScheme.primary
@@ -154,6 +167,7 @@ internal fun QuickEditMetadataFields(
     onOverrideYearChange: ((Boolean) -> Unit)? = null,
     sourceExif: SourceExifSummary? = null,
 ) {
+    val s = strings()
     val focusManager = LocalFocusManager.current
     val keywordList =
         remember(keywords) { keywords.split(",").map { it.trim() }.filter { it.isNotBlank() } }
@@ -161,8 +175,8 @@ internal fun QuickEditMetadataFields(
     var showDatePicker by remember { mutableStateOf(false) }
 
     MetadataField(
-        label = "Description",
-        placeholder = "Photo description...",
+        label = s.t(StringKey.FIELD_DESCRIPTION),
+        placeholder = s.t(StringKey.FIELD_DESCRIPTION_PLACEHOLDER),
         value = description,
         onValueChange = onDescriptionChange,
         suggestions = metadataHistory.description,
@@ -174,7 +188,7 @@ internal fun QuickEditMetadataFields(
 
     // Keywords — chip/tag UI with X removal + suggestion dropdown
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Keywords", style = MaterialTheme.typography.labelMedium)
+        Text(s.t(StringKey.FIELD_KEYWORDS), style = MaterialTheme.typography.labelMedium)
         if (keywordList.isNotEmpty()) {
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -202,7 +216,7 @@ internal fun QuickEditMetadataFields(
                 if (keywordInput.isBlank()) availableSuggestions
                 else availableSuggestions.filter { it.contains(keywordInput, ignoreCase = true) }
             }
-        if (availableSuggestions.isNotEmpty() || true) {
+        if (availableSuggestions.isNotEmpty()) {
             Box {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -216,7 +230,10 @@ internal fun QuickEditMetadataFields(
                             suggestionsExpanded = true
                         },
                         placeholder = {
-                            Text("Add keyword...", style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                s.t(StringKey.FIELD_ADD_KEYWORD_PLACEHOLDER),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                         },
                         modifier = Modifier.weight(1f).defaultMinSize(minHeight = 0.dp),
                         singleLine = true,
@@ -252,7 +269,7 @@ internal fun QuickEditMetadataFields(
                                 ) {
                                     Icon(
                                         Icons.Default.Add,
-                                        "Add keyword",
+                                        s.t(StringKey.FIELD_ADD_KEYWORD),
                                         modifier = Modifier.size(16.dp),
                                     )
                                 }
@@ -296,8 +313,8 @@ internal fun QuickEditMetadataFields(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MetadataField(
-                    label = "Original Date",
-                    placeholder = "YYYY-MM-DD",
+                    label = s.t(StringKey.FIELD_ORIGINAL_DATE),
+                    placeholder = s.t(StringKey.FIELD_DATE_PLACEHOLDER),
                     value = originalDate,
                     onValueChange = onOriginalDateChange,
                     suggestions = metadataHistory.originalDate,
@@ -313,15 +330,15 @@ internal fun QuickEditMetadataFields(
                 ) {
                     Icon(
                         Icons.Default.DateRange,
-                        "Pick date",
+                        s.t(StringKey.FIELD_PICK_DATE),
                         tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }
         }
         MetadataField(
-            label = "Year",
-            placeholder = "1995",
+            label = s.t(StringKey.FIELD_YEAR),
+            placeholder = s.t(StringKey.FIELD_YEAR_PLACEHOLDER),
             value = year,
             onValueChange = { onYearChange(it.filter { c -> c.isDigit() }.take(4)) },
             keyboardType = KeyboardType.Number,
@@ -380,6 +397,7 @@ internal fun CameraSection(
     onOverrideIsoChange: ((Boolean) -> Unit)? = null,
     sourceExif: SourceExifSummary? = null,
 ) {
+    val s = strings()
     var expanded by remember { mutableStateOf(false) }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
@@ -389,13 +407,13 @@ internal fun CameraSection(
         ) {
             Icon(
                 if (expanded) ExpandLessIcon else ExpandMoreIcon,
-                contentDescription = if (expanded) "Hide" else "Show",
+                contentDescription = if (expanded) s.t(StringKey.ACC_HIDE) else s.t(StringKey.ACC_SHOW),
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                "Camera Settings",
+                s.t(StringKey.FIELD_CAMERA_SETTINGS),
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
             )
         }
@@ -405,8 +423,8 @@ internal fun CameraSection(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 MetadataField(
-                    label = "Camera Make",
-                    placeholder = "Canon",
+                    label = s.t(StringKey.FIELD_CAMERA_MAKE),
+                    placeholder = s.t(StringKey.FIELD_CAMERA_MAKE_PLACEHOLDER),
                     value = cameraMake,
                     onValueChange = onCameraMakeChange,
                     modifier = Modifier.weight(1f),
@@ -417,8 +435,8 @@ internal fun CameraSection(
                     sourceHint = sourceExif?.cameraMake,
                 )
                 MetadataField(
-                    label = "Camera Model",
-                    placeholder = "EOS 5D",
+                    label = s.t(StringKey.FIELD_CAMERA_MODEL),
+                    placeholder = s.t(StringKey.FIELD_CAMERA_MODEL_PLACEHOLDER),
                     value = cameraModel,
                     onValueChange = onCameraModelChange,
                     modifier = Modifier.weight(1f),
@@ -430,8 +448,8 @@ internal fun CameraSection(
                 )
             }
             MetadataField(
-                label = "Lens Model",
-                placeholder = "24-70mm f/2.8L",
+                label = s.t(StringKey.FIELD_LENS_MODEL),
+                placeholder = s.t(StringKey.FIELD_LENS_PLACEHOLDER),
                 value = lensModel,
                 onValueChange = onLensModelChange,
                 suggestions = metadataHistory.lensModel,
@@ -445,8 +463,8 @@ internal fun CameraSection(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 MetadataField(
-                    label = "Focal Length",
-                    placeholder = "50mm",
+                    label = s.t(StringKey.FIELD_FOCAL_LENGTH),
+                    placeholder = s.t(StringKey.FIELD_FOCAL_PLACEHOLDER),
                     value = focalLength,
                     onValueChange = onFocalLengthChange,
                     modifier = Modifier.weight(1f),
@@ -457,8 +475,8 @@ internal fun CameraSection(
                     sourceHint = sourceExif?.focalLength,
                 )
                 MetadataField(
-                    label = "Aperture",
-                    placeholder = "f/2.8",
+                    label = s.t(StringKey.FIELD_APERTURE),
+                    placeholder = s.t(StringKey.FIELD_APERTURE_PLACEHOLDER),
                     value = aperture,
                     onValueChange = onApertureChange,
                     modifier = Modifier.weight(1f),
@@ -474,8 +492,8 @@ internal fun CameraSection(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 MetadataField(
-                    label = "Shutter Speed",
-                    placeholder = "1/125",
+                    label = s.t(StringKey.FIELD_SHUTTER_SPEED),
+                    placeholder = s.t(StringKey.FIELD_SHUTTER_PLACEHOLDER),
                     value = shutterSpeed,
                     onValueChange = onShutterSpeedChange,
                     modifier = Modifier.weight(1f),
@@ -486,8 +504,8 @@ internal fun CameraSection(
                     sourceHint = sourceExif?.shutterSpeed,
                 )
                 MetadataField(
-                    label = "ISO",
-                    placeholder = "400",
+                    label = s.t(StringKey.FIELD_ISO),
+                    placeholder = s.t(StringKey.FIELD_ISO_PLACEHOLDER),
                     value = iso,
                     onValueChange = onIsoChange,
                     modifier = Modifier.weight(1f),
@@ -540,8 +558,8 @@ internal fun LocationSection(
     onOverrideGpsChange: ((Boolean) -> Unit)? = null,
     sourceGpsHint: String? = null,
 ) {
-    // Collapse details by default — the map picker fills City/State/Country/GPS automatically.
-    // Users can expand for fine-grained manual control.
+    val s = strings()
+    // Collapse details by default
     val hasDetails =
         city.isNotBlank() ||
             stateVal.isNotBlank() ||
@@ -554,7 +572,7 @@ internal fun LocationSection(
         HorizontalDivider(modifier = Modifier.padding(top = 16.dp))
         // ── Section header ──
         Text(
-            "Location",
+            s.t(StringKey.FIELD_LOCATION),
             style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
         )
 
@@ -568,8 +586,8 @@ internal fun LocationSection(
 
         // ── Location Name — colloquial/recognizable name ──
         MetadataField(
-            label = "Location Name",
-            placeholder = "e.g. Grandma's House, Disney World",
+            label = s.t(StringKey.FIELD_LOCATION_NAME),
+            placeholder = s.t(StringKey.FIELD_LOCATION_NAME_PLACEHOLDER),
             value = locationName,
             onValueChange = onLocationNameChange,
             suggestions = metadataHistory.locationName,
@@ -578,8 +596,8 @@ internal fun LocationSection(
 
         // ── Address — full geocoded address from map picker ──
         MetadataField(
-            label = "Address",
-            placeholder = "e.g. 123 Main St, Worcester, MA 01610",
+            label = s.t(StringKey.FIELD_ADDRESS),
+            placeholder = s.t(StringKey.FIELD_ADDRESS_PLACEHOLDER),
             value = address,
             onValueChange = onAddressChange,
             suggestions = metadataHistory.address,
@@ -590,7 +608,7 @@ internal fun LocationSection(
                         IconButton(onClick = onPickLocation, modifier = Modifier.size(32.dp)) {
                             Icon(
                                 Icons.Default.LocationOn,
-                                contentDescription = "Pick on Map",
+                                contentDescription = s.t(StringKey.FIELD_PICK_ON_MAP),
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.primary,
                             )
@@ -606,13 +624,16 @@ internal fun LocationSection(
         ) {
             Icon(
                 if (detailsExpanded) ExpandLessIcon else ExpandMoreIcon,
-                contentDescription = if (detailsExpanded) "Hide details" else "Show details",
+                contentDescription =
+                    if (detailsExpanded) s.t(StringKey.FIELD_HIDE_DETAILS)
+                    else s.t(StringKey.FIELD_SHOW_DETAILS),
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                if (detailsExpanded) "Hide location details" else "Location details",
+                if (detailsExpanded) s.t(StringKey.FIELD_HIDE_DETAILS)
+                else s.t(StringKey.FIELD_LOCATION_DETAILS),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
@@ -644,8 +665,8 @@ internal fun LocationSection(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 MetadataField(
-                    label = "City",
-                    placeholder = "Worcester",
+                    label = s.t(StringKey.FIELD_CITY),
+                    placeholder = s.t(StringKey.FIELD_CITY_PLACEHOLDER),
                     value = city,
                     onValueChange = onCityChange,
                     modifier = Modifier.weight(1f),
@@ -653,8 +674,8 @@ internal fun LocationSection(
                     onCommit = { onMetadataHistoryUpdate("city", city) },
                 )
                 MetadataField(
-                    label = "State",
-                    placeholder = "MA",
+                    label = s.t(StringKey.FIELD_STATE),
+                    placeholder = s.t(StringKey.FIELD_STATE_PLACEHOLDER),
                     value = stateVal,
                     onValueChange = onStateChange,
                     modifier = Modifier.weight(1f),
@@ -662,8 +683,8 @@ internal fun LocationSection(
                     onCommit = { onMetadataHistoryUpdate("state", stateVal) },
                 )
                 MetadataField(
-                    label = "Country",
-                    placeholder = "United States",
+                    label = s.t(StringKey.FIELD_COUNTRY),
+                    placeholder = s.t(StringKey.FIELD_COUNTRY_PLACEHOLDER),
                     value = country,
                     onValueChange = onCountryChange,
                     modifier = Modifier.weight(1f),
@@ -678,7 +699,7 @@ internal fun LocationSection(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text("GPS", style = MaterialTheme.typography.labelMedium)
+                Text(s.t(StringKey.FIELD_GPS), style = MaterialTheme.typography.labelMedium)
                 if (overrideGps != null && onOverrideGpsChange != null) {
                     Spacer(Modifier.width(4.dp))
                     OverrideCheckbox(included = overrideGps, onIncludedChange = onOverrideGpsChange)
@@ -698,8 +719,8 @@ internal fun LocationSection(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 MetadataField(
-                    label = "Lat",
-                    placeholder = "42.2626",
+                    label = s.t(StringKey.FIELD_LAT),
+                    placeholder = s.t(StringKey.FIELD_LAT_PLACEHOLDER),
                     value = gpsLatitude,
                     onValueChange = onGpsLatitudeChange,
                     suggestions = metadataHistory.gpsLatitude,
@@ -708,8 +729,8 @@ internal fun LocationSection(
                     modifier = Modifier.weight(1f),
                 )
                 MetadataField(
-                    label = "Lon",
-                    placeholder = "-71.8023",
+                    label = s.t(StringKey.FIELD_LON),
+                    placeholder = s.t(StringKey.FIELD_LON_PLACEHOLDER),
                     value = gpsLongitude,
                     onValueChange = onGpsLongitudeChange,
                     suggestions = metadataHistory.gpsLongitude,
@@ -736,6 +757,7 @@ internal fun SubjectsSection(
     onRemoveFace: ((Int) -> Unit)? = null,
     onClearAllFaces: (() -> Unit)? = null,
 ) {
+    val s = strings()
     val subjectList =
         remember(subjects) { subjects.split(",").map { it.trim() }.filter { it.isNotBlank() } }
     var subjectInput by remember { mutableStateOf("") }
@@ -750,13 +772,13 @@ internal fun SubjectsSection(
         ) {
             Icon(
                 if (subjectsExpanded) ExpandLessIcon else ExpandMoreIcon,
-                contentDescription = if (subjectsExpanded) "Hide" else "Show",
+                contentDescription = if (subjectsExpanded) s.t(StringKey.ACC_HIDE) else s.t(StringKey.ACC_SHOW),
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                "Tag Photo",
+                s.t(StringKey.FIELD_TAG_PHOTO),
                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
             )
         }
@@ -774,7 +796,7 @@ internal fun SubjectsSection(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "Tag Regions",
+                                s.t(StringKey.FIELD_TAG_REGIONS),
                                 style =
                                     MaterialTheme.typography.labelSmall.copy(
                                         fontWeight = FontWeight.Bold
@@ -782,12 +804,12 @@ internal fun SubjectsSection(
                             )
                             if (onClearAllFaces != null) {
                                 Text(
-                                    "Clear All",
+                                    s.t(StringKey.FIELD_CLEAR_ALL),
                                     style =
                                         MaterialTheme.typography.labelSmall.copy(
                                             fontWeight = FontWeight.Bold
                                         ),
-                                    color = Color(0xFFFF6666),
+                                    color = MaterialTheme.colorScheme.error,
                                     modifier = Modifier.clickable { onClearAllFaces() },
                                 )
                             }
@@ -824,7 +846,7 @@ internal fun SubjectsSection(
                                     ) {
                                         Icon(
                                             Icons.Default.Close,
-                                            "Remove",
+                                            s.t(StringKey.META_REMOVE),
                                             modifier = Modifier.size(12.dp),
                                             tint = MaterialTheme.colorScheme.error,
                                         )
@@ -870,8 +892,8 @@ internal fun SubjectsSection(
                             Icon(Icons.Default.Sell, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                if (faceRegions.isEmpty()) "Tag Photo"
-                                else "Edit Tags (${faceRegions.size})",
+                                if (faceRegions.isEmpty()) s.t(StringKey.FIELD_TAG_PHOTO)
+                                else "${s.t(StringKey.WIZARD_TAG_EDITOR)} (${faceRegions.size})",
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         }
@@ -903,7 +925,7 @@ internal fun SubjectsSection(
                                 },
                                 placeholder = {
                                     Text(
-                                        "Add person...",
+                                        s.t(StringKey.FIELD_ADD_PERSON),
                                         style = MaterialTheme.typography.labelSmall,
                                     )
                                 },
@@ -947,7 +969,7 @@ internal fun SubjectsSection(
                                         ) {
                                             Icon(
                                                 Icons.Default.Add,
-                                                "Add subject",
+                                                s.t(StringKey.FIELD_ADD_SUBJECT),
                                                 modifier = Modifier.size(16.dp),
                                             )
                                         }
@@ -991,6 +1013,7 @@ internal fun SubjectsSection(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun DatePickerDialog(onDismissRequest: () -> Unit, onDateSelected: (String) -> Unit) {
+    val s = strings()
     val datePickerState = rememberDatePickerState()
     EditDialog(onDismissRequest = onDismissRequest) {
         Card(modifier = Modifier.padding(16.dp)) {
@@ -1000,7 +1023,7 @@ internal fun DatePickerDialog(onDismissRequest: () -> Unit, onDateSelected: (Str
             ) {
                 DatePicker(state = datePickerState)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = onDismissRequest) { Text("Cancel") }
+                    TextButton(onClick = onDismissRequest) { Text(s.cancel) }
                     TextButton(
                         onClick = {
                             val selectedDate =
@@ -1014,7 +1037,7 @@ internal fun DatePickerDialog(onDismissRequest: () -> Unit, onDateSelected: (Str
                             onDismissRequest()
                         }
                     ) {
-                        Text("OK")
+                        Text(s.ok)
                     }
                 }
             }
@@ -1050,6 +1073,7 @@ internal fun FaceNameEntryPanel(
     onConfirm: () -> Unit,
     onCancel: () -> Unit,
 ) {
+    val s = strings()
     Surface(
         modifier = Modifier.width(220.dp),
         tonalElevation = 8.dp,
@@ -1060,7 +1084,10 @@ internal fun FaceNameEntryPanel(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                "Name this ${selectedRegionType.displayName.lowercase()}",
+                s.t(
+                    StringKey.FIELD_NAME_THIS,
+                    "type" to selectedRegionType.displayName.lowercase(),
+                ),
                 style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
             )
             Row(
@@ -1082,7 +1109,7 @@ internal fun FaceNameEntryPanel(
             TextField(
                 value = faceNameInput,
                 onValueChange = onFaceNameInputChange,
-                placeholder = { Text("Name…", style = MaterialTheme.typography.labelSmall) },
+                placeholder = { Text(s.t(StringKey.FIELD_NAME_PLACEHOLDER), style = MaterialTheme.typography.labelSmall) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 textStyle = MaterialTheme.typography.bodyMedium,
@@ -1092,12 +1119,12 @@ internal fun FaceNameEntryPanel(
                 modifier = Modifier.align(Alignment.End),
             ) {
                 OutlinedButton(onClick = onCancel) {
-                    Text("Cancel", style = MaterialTheme.typography.labelSmall)
+                    Text(s.cancel, style = MaterialTheme.typography.labelSmall)
                 }
                 Button(onClick = onConfirm, enabled = faceNameInput.isNotBlank()) {
                     Icon(Icons.Default.Check, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Save", style = MaterialTheme.typography.labelSmall)
+                    Text(s.save, style = MaterialTheme.typography.labelSmall)
                 }
             }
         }
@@ -1107,6 +1134,7 @@ internal fun FaceNameEntryPanel(
 /** A removable chip/tag for keywords and subjects. Shows text with an X button to remove. */
 @Composable
 internal fun RemovableChip(text: String, onRemove: () -> Unit) {
+    val s = strings()
     Surface(
         modifier = Modifier.clickable(onClick = onRemove),
         shape = RoundedCornerShape(8.dp),
@@ -1125,10 +1153,70 @@ internal fun RemovableChip(text: String, onRemove: () -> Unit) {
             )
             Icon(
                 Icons.Default.Close,
-                contentDescription = "Remove $text",
+                contentDescription = "${s.t(StringKey.META_REMOVE)} $text",
                 modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.onSecondaryContainer,
             )
+        }
+    }
+}
+
+/** Read-only section showing all source metadata from the original file. */
+@Composable
+internal fun SourceMetadataSection(sourceExif: SourceExifSummary) {
+    val s = strings()
+    val lines = sourceExif.summaryLines(s)
+    if (lines.isEmpty()) return
+
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        HorizontalDivider(modifier = Modifier.padding(top = 8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = s.t(StringKey.FIELD_SOURCE_METADATA),
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.tertiary,
+            )
+            Spacer(Modifier.width(4.dp))
+            Text(
+                s.t(StringKey.FIELD_SOURCE_METADATA),
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.tertiary,
+            )
+        }
+        Surface(
+            tonalElevation = 1.dp,
+            shape = RoundedCornerShape(6.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Column(modifier = Modifier.padding(6.dp)) {
+                lines.forEach { (label, value) ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Text(
+                            "$label:",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = FontWeight.Bold
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(100.dp),
+                        )
+                        Text(
+                            value,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
         }
     }
 }

@@ -3,6 +3,7 @@ package org.kryspetrie.fileimport.ui.screens.metadataeditor
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.input.key.Key
 import java.awt.image.BufferedImage
 import java.io.File
 import javax.imageio.ImageIO
@@ -12,7 +13,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.kryspetrie.fileimport.application.OrientationCorrectionService
-import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.application.metadata.MetadataEditService
 import org.kryspetrie.fileimport.application.metadata.MetadataEditUndoService
 import org.kryspetrie.fileimport.domain.model.AppSettings
@@ -20,18 +20,23 @@ import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.ImageFile
 import org.kryspetrie.fileimport.domain.model.MetadataEditEntry
+import org.kryspetrie.fileimport.domain.model.MetadataEditorFileViewMode
+import org.kryspetrie.fileimport.domain.model.MetadataEditorLayoutMode
 import org.kryspetrie.fileimport.domain.model.RotationAngle
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
+import org.kryspetrie.fileimport.domain.port.LocalePort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.domain.port.ModelDownloadPort
 import org.kryspetrie.fileimport.domain.port.ModelDownloadState
 import org.kryspetrie.fileimport.domain.port.SettingsPort
-import org.kryspetrie.fileimport.ui.components.isImageFile
+import org.kryspetrie.fileimport.ui.components.isMetadataEditableFile
+import org.kryspetrie.fileimport.ui.components.pickImageFiles
 import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 
@@ -65,7 +70,10 @@ class MetadataEditorViewModel(
     val fileSystemAdapter: FileSystemPort,
     val orientationCorrection: OrientationCorrectionService,
     val modelDownloadPort: ModelDownloadPort,
+    private val localePort: LocalePort,
 ) {
+    private fun t(key: StringKey, vararg params: Pair<String, String>): String =
+        localePort.t(key, *params)
     // ── Core state ──────────────────────────────────────────────
 
     /** Bulk edit state (file list, configs, selection, output mode, messages). */
@@ -151,6 +159,14 @@ class MetadataEditorViewModel(
     val isOrientationModelAvailable: Boolean
         get() = modelDownloadPort.isModelDownloaded(ModelDownloadPort.ORIENTATION_MODEL_ID)
 
+    /** Progress counter for orientation detection ("Analyzing photo x / y"). */
+    var orientationDetectCurrent by mutableStateOf(0)
+        private set
+
+    /** Total count for orientation detection progress. */
+    var orientationDetectTotal by mutableStateOf(0)
+        private set
+
     /** Whether the location picker overlay is visible. */
     var showLocationPicker by mutableStateOf(false)
         private set
@@ -166,6 +182,14 @@ class MetadataEditorViewModel(
     /** Set of selected indices in multi-edit mode. */
     var selectedIndices by mutableStateOf<Set<Int>>(emptySet())
 
+    // ── File browser navigation ───────────────────────────────────
+
+    /** Folder path stack for list/icons views. */
+    var browserFolderPathStack by mutableStateOf<List<String>>(emptyList())
+
+    /** Folder row highlighted by arrow keys; open with Right or Enter. */
+    var browserFocusedFolderPath by mutableStateOf<String?>(null)
+
     // ── Current settings ─────────────────────────────────────────
 
     /** Cached current settings, observed from settingsPort. */
@@ -178,38 +202,39 @@ class MetadataEditorViewModel(
         scope.launch { settingsPort.observeSettings().collect { currentSettings = it } }
     }
 
-    /** Load a source path (file or folder). */
+    /** Load a source path (file or folder). Includes subfolders if [state.includeSubfolders] is true. */
     fun loadSource(path: String, onSettingsChange: (AppSettings) -> Unit) {
         state.isLoading = true
         state.message = null
         val source = File(path)
         if (source.isFile) {
-            if (!isImageFile(source)) {
-                state.showError("Not an image file: $path")
+            if (!isMetadataEditableFile(source)) {
+                state.showError(t(StringKey.META_ERROR_NOT_EDITABLE, "path" to path))
                 return
             }
             state.loadSingleFile(source)
             thumbnailCache.clear()
+            resetBrowserNavigation()
+            state.editingActive = true
             onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
         } else if (source.isDirectory) {
             val imageFiles =
                 runCatching {
-                        source
-                            .listFiles()
-                            ?.filter { it.isFile && isImageFile(it) }
-                            ?.sortedBy { it.name.lowercase() } ?: emptyList()
+                        collectImageFiles(source, state.includeSubfolders)
                     }
                     .getOrDefault(emptyList())
             if (imageFiles.isEmpty()) {
-                state.showError("No image files found in: $path")
+                state.showError(t(StringKey.META_ERROR_NO_IMAGES_IN_PATH, "path" to path))
                 return
             }
             state.sourcePath = path
             state.loadFiles(imageFiles)
             thumbnailCache.clear()
+            resetBrowserNavigation()
+            state.editingActive = true
             onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
         } else {
-            state.showError("Path does not exist: $path")
+            state.showError(t(StringKey.META_ERROR_PATH_NOT_FOUND, "path" to path))
         }
         state.isLoading = false
     }
@@ -226,40 +251,99 @@ class MetadataEditorViewModel(
             try {
                 val source = File(path)
                 if (source.isFile) {
-                    if (!isImageFile(source)) {
-                        state.showError("Not an image file: $path")
+                    if (!isMetadataEditableFile(source)) {
+                        state.showError(t(StringKey.META_ERROR_NOT_EDITABLE, "path" to path))
                         return@launch
                     }
                     state.loadSingleFile(source)
                     thumbnailCache.clear()
+                    resetBrowserNavigation()
+                    state.editingActive = true
                     onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
                 } else if (source.isDirectory) {
                     val imageFiles =
                         withContext(dispatcherProvider.io) {
-                            source
-                                .listFiles()
-                                ?.filter { it.isFile && isImageFile(it) }
-                                ?.sortedBy { it.name.lowercase() } ?: emptyList()
+                            collectImageFiles(source, state.includeSubfolders)
                         }
                     if (imageFiles.isEmpty()) {
-                        state.showError("No image files found in: $path")
+                        state.showError(t(StringKey.META_ERROR_NO_IMAGES_IN_PATH, "path" to path))
                         return@launch
                     }
                     state.sourcePath = path
                     state.loadFiles(imageFiles)
                     thumbnailCache.clear()
+                    resetBrowserNavigation()
+                    state.editingActive = true
                     onSettingsChange(currentSettings.withMetadataEditorRecentPath(path))
                 } else {
-                    state.showError("Path does not exist: $path")
+                    state.showError(t(StringKey.META_ERROR_PATH_NOT_FOUND, "path" to path))
                 }
             } catch (_: CancellationException) {
                 // Cancellation must propagate
             } catch (e: Exception) {
-                state.showError("Error loading: ${e.message}")
+                state.showError(t(StringKey.META_ERROR_LOAD, "message" to (e.message ?: "")))
             } finally {
                 state.isLoading = false
             }
         }
+    }
+
+    /** Load explicitly selected image files from a native multi-select dialog. */
+    fun loadSelectedFiles(
+        paths: List<String>,
+        scope: CoroutineScope,
+        onSettingsChange: (AppSettings) -> Unit,
+    ) {
+        if (paths.isEmpty()) return
+        state.isLoading = true
+        state.message = null
+        scope.launch {
+            try {
+                val imageFiles =
+                    withContext(dispatcherProvider.io) {
+                        paths.map { File(it) }.filter { it.isFile && isMetadataEditableFile(it) }
+                    }
+                if (imageFiles.isEmpty()) {
+                    state.showError(t(StringKey.META_ERROR_NO_EDITABLE_SELECTION))
+                    return@launch
+                }
+                val displayPath =
+                    if (imageFiles.size == 1) {
+                        imageFiles.first().absolutePath
+                    }                     else t(StringKey.META_SELECTED_IMAGES_SUMMARY, "count" to imageFiles.size.toString())
+                state.sourcePath = displayPath
+                state.loadFiles(imageFiles)
+                thumbnailCache.clear()
+                resetBrowserNavigation()
+                state.editingActive = true
+                isMultiEditMode = false
+                selectedIndices = emptySet()
+                onSettingsChange(currentSettings.withMetadataEditorRecentPath(imageFiles.first().parent))
+            } catch (_: CancellationException) {
+                throw CancellationException()
+            } catch (e: Exception) {
+                state.showError(t(StringKey.META_ERROR_LOAD, "message" to (e.message ?: "")))
+            } finally {
+                state.isLoading = false
+            }
+        }
+    }
+
+    /** Toggle between sidebar and file-picker layout modes. */
+    fun setLayoutMode(mode: MetadataEditorLayoutMode, onSettingsChange: (AppSettings) -> Unit) {
+        onSettingsChange(currentSettings.withMetadataEditorLayoutMode(mode))
+    }
+
+    /** Updates the file browser view mode (column, list, hierarchy, icons). */
+    fun setFileViewMode(mode: MetadataEditorFileViewMode, onSettingsChange: (AppSettings) -> Unit) {
+        val legacyLayout =
+            when (mode) {
+                MetadataEditorFileViewMode.ICONS -> MetadataEditorLayoutMode.SIDEBAR
+                else -> MetadataEditorLayoutMode.FILE_PICKER
+            }
+        onSettingsChange(
+            currentSettings.withMetadataEditorFileViewMode(mode).withMetadataEditorLayoutMode(legacyLayout)
+        )
     }
 
     /** Load the image and EXIF for the currently selected file. Called in LaunchedEffect. */
@@ -292,8 +376,29 @@ class MetadataEditorViewModel(
                                 iso = it.iso?.toString(),
                                 description = it.description,
                                 dateOriginal = it.dateTimeOriginal?.toString(),
+                                keywords = it.keywords?.joinToString(", "),
+                                locationName = it.subLocation,
+                                address = null, // No direct mapping in ImageMetadata
+                                city = it.city,
+                                state = it.provinceState,
+                                country = it.countryName,
                                 gpsLatitude = it.latitude?.toString(),
                                 gpsLongitude = it.longitude?.toString(),
+                                imageWidth = it.imageWidth,
+                                imageHeight = it.imageHeight,
+                                orientation = it.orientation,
+                                software = it.software,
+                                copyright = it.copyright,
+                                artist = it.artist,
+                                colorSpace = it.colorSpace,
+                                flash = it.flash,
+                                whiteBalance = it.whiteBalance,
+                                meteringMode = it.meteringMode,
+                                exposureProgram = it.exposureProgram,
+                                exposureCompensation = it.exposureCompensation?.let { ec ->
+                                    if (ec >= 0) "+${ec}" else "${ec}"
+                                },
+                                focalLength35mm = it.focalLength35mm,
                             )
                         }
                     state.markSourceExifLoaded(file)
@@ -360,14 +465,14 @@ class MetadataEditorViewModel(
                         state.canRedo = false
                     }
                     state.markSaved(file)
-                    state.showInfo("Saved: ${file.name}")
+                    state.showInfo(t(StringKey.META_SAVED_FILE, "name" to file.name))
                 } else {
-                    state.showError("Could not read image: ${file.name}")
+                    state.showError(t(StringKey.ERROR_IMAGE_READ_FAILED) + ": ${file.name}")
                 }
             } catch (_: CancellationException) {
                 // Cancellation must propagate
             } catch (e: Exception) {
-                state.showError("Error saving: ${e.message}")
+                state.showError(t(StringKey.META_ERROR_SAVE, "message" to (e.message ?: "")))
             }
         }
     }
@@ -376,7 +481,7 @@ class MetadataEditorViewModel(
     fun saveAllModified(scope: CoroutineScope) {
         val modifiedEntries = state.fileConfigs.values.filter { it.isModified }
         if (modifiedEntries.isEmpty()) {
-            state.showInfo("No unsaved changes")
+            state.showInfo(t(StringKey.META_NO_UNSAVED))
             return
         }
         scope.launch {
@@ -412,11 +517,11 @@ class MetadataEditorViewModel(
                         state.canRedo = false
                     }
                 }
-                state.showInfo("Saved $savedCount file${if (savedCount != 1) "s" else ""}")
+                state.showInfo(t(StringKey.META_SAVED_N_FILES, "count" to savedCount.toString()))
             } catch (_: CancellationException) {
                 // Cancellation must propagate
             } catch (e: Exception) {
-                state.showError("Error saving: ${e.message}")
+                state.showError(t(StringKey.META_ERROR_SAVE, "message" to (e.message ?: "")))
             }
         }
     }
@@ -428,18 +533,16 @@ class MetadataEditorViewModel(
             try {
                 val undoResult = undoService.undo(journalId)
                 if (undoResult > 0) {
-                    state.showInfo(
-                        "Undone: $undoResult file${if (undoResult != 1) "s" else ""} restored"
-                    )
+                    state.showInfo(t(StringKey.META_UNDONE_N, "count" to undoResult.toString()))
                     state.canUndo = false
                     state.canRedo = true
                     // Reload current image
                     state.selectedIndex = state.selectedIndex
                 } else {
-                    state.showError("Undo failed")
+                    state.showError(t(StringKey.META_UNDO_FAILED))
                 }
             } catch (e: Exception) {
-                state.showError("Error undoing: ${e.message}")
+                state.showError(t(StringKey.META_ERROR_UNDO, "message" to (e.message ?: "")))
             }
         }
     }
@@ -448,41 +551,26 @@ class MetadataEditorViewModel(
     fun redoLast(scope: CoroutineScope) {
         val journalId = state.lastJournalPath ?: return
         if (!state.canRedo) return
-        val writer =
-            MetadataWritingService(
-                faceRegionTransformer = faceRegionTransformer,
-                imageProcessing = imageProcessing,
-                fileSystem = fileSystemAdapter,
-            )
         scope.launch {
             try {
                 val redoResult =
                     undoService.redo(journalId) { outputPath, config, sourcePath ->
-                        val processedImage =
-                            withContext(dispatcherProvider.io) {
-                                imageProcessing.readImage(outputPath)
-                            }
-                        if (processedImage != null) {
-                            writer.writeImageWithMetadata(
-                                image = processedImage,
-                                outputPath = outputPath,
-                                config = config,
-                                sourcePath = sourcePath ?: outputPath,
-                                preRotationWidth = processedImage.width,
-                                preRotationHeight = processedImage.height,
-                            )
-                        }
+                        editService.reapplyMetadata(
+                            filePath = outputPath,
+                            config = config,
+                            exifSourcePath = sourcePath,
+                        )
                     }
                 if (redoResult > 0) {
-                    state.showInfo("Redone: $redoResult file${if (redoResult != 1) "s" else ""}")
+                    state.showInfo(t(StringKey.META_REDONE_N, "count" to redoResult.toString()))
                     state.canUndo = true
                     state.canRedo = false
                     state.selectedIndex = state.selectedIndex
                 } else {
-                    state.showError("Redo failed")
+                    state.showError(t(StringKey.META_REDO_FAILED))
                 }
             } catch (e: Exception) {
-                state.showError("Error redoing: ${e.message}")
+                state.showError(t(StringKey.META_ERROR_REDO, "message" to (e.message ?: "")))
             }
         }
     }
@@ -510,7 +598,7 @@ class MetadataEditorViewModel(
      */
     fun startBatchOrientationDetection(scope: CoroutineScope) {
         if (state.files.isEmpty()) {
-            state.showError("No files loaded")
+            state.showError(t(StringKey.META_ERROR_NO_FILES))
             return
         }
         val modelAvailable = isOrientationModelAvailable || orientationCorrection.isAvailable()
@@ -521,10 +609,13 @@ class MetadataEditorViewModel(
         isDetectingOrientation = true
         orientationResults = emptyMap()
         rotationExcludedPaths = emptySet()
+        orientationDetectCurrent = 0
+        orientationDetectTotal = state.files.size
         scope.launch {
             try {
                 val results = mutableMapOf<String, OrientationCorrectionService.CorrectionResult>()
-                for (file in state.files) {
+                for ((index, file) in state.files.withIndex()) {
+                    orientationDetectCurrent = index + 1
                     try {
                         val img =
                             withContext(dispatcherProvider.io) {
@@ -543,7 +634,7 @@ class MetadataEditorViewModel(
                     }
                 }
                 if (results.isEmpty()) {
-                    state.showError("Could not detect orientation for any files")
+                    state.showError(t(StringKey.META_ERROR_NO_ORIENTATION))
                 } else {
                     orientationResults = results
                     // Pre-check: exclude files where no rotation is needed (NONE)
@@ -559,9 +650,13 @@ class MetadataEditorViewModel(
             } catch (_: CancellationException) {
                 // Cancellation must propagate
             } catch (e: Exception) {
-                state.showError("Orientation detection failed: ${e.message}")
+                state.showError(
+                    t(StringKey.META_ERROR_ORIENTATION_DETECT, "message" to (e.message ?: "")),
+                )
             } finally {
                 isDetectingOrientation = false
+                orientationDetectCurrent = 0
+                orientationDetectTotal = 0
             }
         }
     }
@@ -644,7 +739,7 @@ class MetadataEditorViewModel(
         rotationExcludedPaths = emptySet()
         rotationPreviewIndex = -1
         rotationPreviewImage = null
-        state.showInfo("Applied rotation to $appliedCount file${if (appliedCount != 1) "s" else ""}")
+        state.showInfo(t(StringKey.META_APPLIED_ROTATION_N, "count" to appliedCount.toString()))
     }
 
     /** Dismiss the rotation preview overlay without applying changes. */
@@ -833,6 +928,7 @@ class MetadataEditorViewModel(
     }
 
     fun toggleSelection(index: Int) {
+        browserFocusedFolderPath = null
         if (isMultiEditMode) {
             selectedIndices =
                 if (index in selectedIndices) selectedIndices - index else selectedIndices + index
@@ -855,6 +951,108 @@ class MetadataEditorViewModel(
         onSettingsChange(update)
     }
 
+    private fun resetBrowserNavigation() {
+        browserFolderPathStack = emptyList()
+        browserFocusedFolderPath = null
+    }
+
+    private fun fileTree(): MetadataFolderNode = buildMetadataFileTree(state.files, state.sourcePath)
+
+    fun currentBrowserFolder(): MetadataFolderNode =
+        resolveMetadataBrowserFolder(fileTree(), browserFolderPathStack)
+
+    fun navigateBrowserUp() {
+        if (browserFolderPathStack.isNotEmpty()) {
+            browserFolderPathStack = browserFolderPathStack.dropLast(1)
+            browserFocusedFolderPath = null
+        }
+    }
+
+    fun navigateBrowserInto(folderPath: String) {
+        browserFolderPathStack = browserFolderPathStack + folderPath
+        browserFocusedFolderPath = null
+    }
+
+    fun selectBrowserFile(index: Int) {
+        browserFocusedFolderPath = null
+        if (isMultiEditMode) {
+            selectedIndices = setOf(index)
+        } else {
+            state.selectFile(index)
+        }
+    }
+
+    /** Arrow-key navigation for the file browser. Returns true when the key was handled. */
+    fun handleBrowserKey(key: Key, viewMode: MetadataEditorFileViewMode): Boolean {
+        if (!state.editingActive || state.fileCount == 0) return false
+        return when (key) {
+            Key.DirectionUp -> {
+                if (viewMode == MetadataEditorFileViewMode.LIST || viewMode == MetadataEditorFileViewMode.ICONS) {
+                    moveBrowserNav(-1)
+                } else {
+                    state.prevFile()
+                }
+                true
+            }
+            Key.DirectionDown -> {
+                if (viewMode == MetadataEditorFileViewMode.LIST || viewMode == MetadataEditorFileViewMode.ICONS) {
+                    moveBrowserNav(1)
+                } else {
+                    state.nextFile()
+                }
+                true
+            }
+            Key.DirectionLeft -> {
+                if (viewMode == MetadataEditorFileViewMode.LIST || viewMode == MetadataEditorFileViewMode.ICONS) {
+                    navigateBrowserUp()
+                    true
+                } else {
+                    false
+                }
+            }
+            Key.DirectionRight,
+            Key.Enter,
+            -> {
+                if (
+                    (viewMode == MetadataEditorFileViewMode.LIST || viewMode == MetadataEditorFileViewMode.ICONS) &&
+                        browserFocusedFolderPath != null
+                ) {
+                    navigateBrowserInto(browserFocusedFolderPath!!)
+                    true
+                } else {
+                    false
+                }
+            }
+            else -> false
+        }
+    }
+
+    private fun moveBrowserNav(delta: Int) {
+        val items = metadataBrowserNavItems(currentBrowserFolder())
+        if (items.isEmpty()) return
+        val currentIndex =
+            metadataBrowserNavIndex(items, state.selectedIndex, browserFocusedFolderPath)
+        val newIndex = metadataBrowserNavIndexAfterDelta(items, currentIndex, delta)
+        if (newIndex < 0) return
+        when (val item = items[newIndex]) {
+            is MetadataBrowserNavItem.File -> selectBrowserFile(item.index)
+            is MetadataBrowserNavItem.Folder -> browserFocusedFolderPath = item.path
+        }
+    }
+
+    // ── Navigation ──────────────────────────────────────────────────
+
+    /** Go back to the landing page, clearing all loaded files and edit state. */
+    fun goBackToLanding() {
+        state.editingActive = false
+        state.clear()
+        currentImage = null
+        sourceExif = null
+        isMultiEditMode = false
+        selectedIndices = emptySet()
+        resetBrowserNavigation()
+        thumbnailCache.clear()
+    }
 
     // ── Helper ──────────────────────────────────────────────────
 
@@ -888,4 +1086,23 @@ private fun scaleToThumbnail(img: BufferedImage): BufferedImage {
     g.drawImage(img, 0, 0, newWidth, newHeight, null)
     g.dispose()
     return result
+}
+
+/**
+ * Recursively collects image files from a directory, optionally including subdirectories.
+ * Files are sorted by path for deterministic ordering.
+ */
+private fun collectImageFiles(directory: File, includeSubfolders: Boolean): List<File> {
+    val files = mutableListOf<File>()
+    fun walk(dir: File) {
+        dir.listFiles()?.sortedBy { it.name.lowercase() }?.forEach { file ->
+            if (file.isFile && isMetadataEditableFile(file)) {
+                files.add(file)
+            } else if (file.isDirectory && includeSubfolders) {
+                walk(file)
+            }
+        }
+    }
+    walk(directory)
+    return files
 }

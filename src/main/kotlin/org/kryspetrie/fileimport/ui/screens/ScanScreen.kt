@@ -33,6 +33,8 @@ import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.scan.EditPhotoDialog
 import org.kryspetrie.fileimport.ui.screens.scan.ScanActionBar
 import org.kryspetrie.fileimport.ui.screens.scan.ScanImagePreview
@@ -49,6 +51,7 @@ fun ScanScreen(
     imageRepository: ImageRepositoryPort,
     settingsPort: SettingsPort? = null,
 ) {
+    val s = strings()
     val scope = rememberCoroutineScope()
     val settings by
         settingsPort?.observeSettings()?.collectAsState() ?: remember { mutableStateOf(null) }
@@ -109,10 +112,10 @@ fun ScanScreen(
 
     if (currentImage == null) {
         if (currentFileIndex >= filepaths.size) {
-            Text("All scans processed!")
-            Button(onClick = onFinished) { Text("Finish") }
+            Text(s.t(StringKey.SCAN_ALL_PROCESSED))
+            Button(onClick = onFinished) { Text(s.t(StringKey.SCAN_FINISH)) }
         } else {
-            Text("Could not load image: $currentFilePath")
+            Text(s.t(StringKey.ERROR_IMAGE_READ_FAILED) + ": $currentFilePath")
         }
         return
     }
@@ -148,7 +151,11 @@ fun ScanScreen(
             Card(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
                 Column(modifier = Modifier.padding(8.dp)) {
                     Text(
-                        "Export Progress: $exportProgress / $exportTotal",
+                        s.t(
+                            StringKey.SCAN_EXPORT_PROGRESS,
+                            "current" to "$exportProgress",
+                            "total" to "$exportTotal",
+                        ),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     LinearProgressIndicator(

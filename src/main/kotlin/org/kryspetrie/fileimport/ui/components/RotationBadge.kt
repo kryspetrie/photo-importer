@@ -18,6 +18,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * A small badge indicating rotation was applied to a photo.
@@ -37,6 +39,7 @@ fun RotationBadge(
 ) {
     if (rotationDegrees == 0) return
 
+    val s = strings()
     val backgroundColor =
         if (isAutoDetected) {
             MaterialTheme.colorScheme.primaryContainer
@@ -62,7 +65,7 @@ fun RotationBadge(
         if (isAutoDetected) {
             Icon(
                 Icons.Default.AutoFixHigh,
-                contentDescription = "Auto-detected",
+                contentDescription = s.t(StringKey.ACC_AUTO_DETECTED),
                 modifier = Modifier.size(10.dp),
                 tint = textColor,
             )
@@ -87,6 +90,8 @@ fun RotationBadge(
  */
 @Composable
 fun AutoOrientIndicator(modifier: Modifier = Modifier) {
+    val s = strings()
+
     Row(
         modifier =
             modifier
@@ -98,12 +103,12 @@ fun AutoOrientIndicator(modifier: Modifier = Modifier) {
     ) {
         Icon(
             Icons.Default.AutoFixHigh,
-            contentDescription = "Auto-orient enabled",
+            contentDescription = s.t(StringKey.ACC_AUTO_ROTATE),
             modifier = Modifier.size(12.dp),
             tint = MaterialTheme.colorScheme.onPrimaryContainer,
         )
         Text(
-            "Auto-orient",
+            s.t(StringKey.ORIENTATION_INDICATOR_LABEL),
             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Medium),
             color = MaterialTheme.colorScheme.onPrimaryContainer,
         )

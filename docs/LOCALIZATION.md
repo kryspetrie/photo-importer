@@ -392,12 +392,52 @@ Icon(
 - Run full UI regression test after each screen migration
 
 ### Phase 3: Sample Locales (1 week)
-- Create `de.json` (German)
-- Create `fr.json` (French)
-- Create `ja.json` (Japanese)
-- Create `es.json` (Spanish)
-- Verify RTL handling with `ar.json` (Arabic)
-- Verify CJK text rendering and line-breaking
+Bundled locales (13 total):
+
+| Code | Language | Notes |
+|------|----------|-------|
+| `en` | English (US) | Fallback locale |
+| `de` | Deutsch | Hand-maintained |
+| `zh` | 中文（简体） | Chinese (Simplified) |
+| `ja` | 日本語 | Kanji, hiragana, katakana |
+| `es` | Español | Spanish |
+| `fr` | Français | French |
+| `pt` | Português | Portuguese |
+| `nl` | Nederlands | Dutch |
+| `sv` | Svenska | Swedish |
+| `ru` | Русский | Russian |
+| `hi` | हिन्दी | Hindi (Devanagari) |
+| `ar` | العربية | Arabic (RTL) |
+| `ko` | 한국어 | Korean |
+| `bn` | বাংলা | Bengali |
+| `id` | Bahasa Indonesia | Indonesian |
+| `ur` | اردو | Urdu (RTL) |
+| `tr` | Türkçe | Turkish |
+| `vi` | Tiếng Việt | Vietnamese |
+| `it` | Italiano | Italian |
+
+Regenerate machine-translated locales from `en.json`:
+
+```bash
+# One command: create venv, install deps, sync all locales
+./scripts/sync-locales.sh
+
+# Preview / verify (pass-through flags)
+./scripts/sync-locales.sh --dry-run
+./scripts/sync-locales.sh --check
+
+# Or run the Python entry points directly:
+pip install deep-translator
+python3 scripts/sync_locales_from_en.py
+
+# Full regenerate of one locale (overwrites existing translations)
+python3 scripts/generate_locales.py --locale ja --force
+```
+
+Machine translations are a starting point — review changes before release, especially for hand-maintained locales (`de`, `zh`).
+
+- Verify RTL handling with `ar.json` and `ur.json` (Arabic, Urdu)
+- Verify CJK text rendering and line-breaking (`zh`, `ja`, `ko`)
 
 ### Phase 4: Settings UI (1 week)
 - Add Language dropdown to `AppSettings`
@@ -421,13 +461,25 @@ Icon(
 ## 4. File Structure
 ```
 src/main/resources/i18n/
-├── en.json              # English (base, always present)
+├── en.json              # English (US, base, always present)
 ├── de.json              # German
-├── fr.json              # French
+├── zh.json              # Chinese (Simplified)
 ├── ja.json              # Japanese
 ├── es.json              # Spanish
-├── ar.json              # Arabic (RTL test)
-└── locale-names.json    # Native names for locale picker
+├── fr.json              # French
+├── pt.json              # Portuguese
+├── nl.json              # Dutch
+├── sv.json              # Swedish
+├── ru.json              # Russian
+├── hi.json              # Hindi
+├── ar.json              # Arabic (RTL)
+├── ko.json              # Korean
+├── bn.json              # Bengali
+├── id.json              # Indonesian
+├── ur.json              # Urdu (RTL)
+├── tr.json              # Turkish
+├── vi.json              # Vietnamese
+└── it.json              # Italian
 
 src/main/kotlin/.../domain/
 ├── model/i18n/
@@ -488,6 +540,7 @@ class DevLocaleWatcher(
 ### 6.1 Unit Tests
 - **StringKey enum completeness**: Every key in `StringKey` must have a corresponding entry in `en.json`
 - **en.json completeness**: Every entry in `en.json` must have a matching `StringKey` enum value
+- **UI text localization** (`UiLocalizationArchitectureTest`): No hardcoded user-facing strings in `ui/` composables or the desktop menu bar; use `StringKey` + locale JSON, or `@LocalizedExempt` for rare exceptions (e.g. native file-picker filter labels passed from callers)
 - **Parameter substitution**: Verify `{count}` is correctly replaced with actual values
 - **Fallback chain**: Missing key in locale → English fallback → key name (never crashes, never returns null)
 - **Empty/missing locale file**: Gracefully falls back to English

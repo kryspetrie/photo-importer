@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.wizard.state.FourPointState
 import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
 
@@ -36,6 +38,7 @@ fun ZoomControls(
     onFitToView: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         Surface(
             shape = RoundedCornerShape(4.dp),
@@ -47,7 +50,7 @@ fun ZoomControls(
                 modifier = Modifier.padding(4.dp),
             ) {
                 IconButton(onClick = onZoomOut, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.ZoomOut, "Zoom out", Modifier.size(18.dp))
+                    Icon(Icons.Default.ZoomOut, s.t(StringKey.ACC_ZOOM_OUT), Modifier.size(18.dp))
                 }
 
                 Text(
@@ -58,11 +61,11 @@ fun ZoomControls(
                 )
 
                 IconButton(onClick = onZoomIn, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.ZoomIn, "Zoom in", Modifier.size(18.dp))
+                    Icon(Icons.Default.ZoomIn, s.t(StringKey.ACC_ZOOM_IN), Modifier.size(18.dp))
                 }
 
                 IconButton(onClick = onFitToView, modifier = Modifier.size(32.dp)) {
-                    Icon(Icons.Default.FitScreen, "Fit to view", Modifier.size(18.dp))
+                    Icon(Icons.Default.FitScreen, s.t(StringKey.ACC_ZOOM_FIT), Modifier.size(18.dp))
                 }
             }
         }
@@ -78,16 +81,17 @@ fun FourPointStatusBar(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val isRectangle = state.isRectangle()
     val pointText =
         if (isRectangle) {
             when (state.points.size) {
-                0 -> "Click to set first corner"
-                1 -> "Click to set opposite corner"
-                else -> "Done"
+                0 -> s.t(StringKey.WIZARD_CLICK_FIRST_CORNER)
+                1 -> s.t(StringKey.WIZARD_CLICK_OPPOSITE)
+                else -> s.t(StringKey.META_DONE)
             }
         } else {
-            "Point ${state.points.size + 1} of 4"
+            s.t(StringKey.WIZARD_POINT_OF_FOUR, "current" to "${state.points.size + 1}")
         }
 
     Surface(
@@ -105,19 +109,18 @@ fun FourPointStatusBar(
             // Undo button - only in 4-point mode or if there's a point to undo
             if (!isRectangle && state.points.isNotEmpty()) {
                 OutlinedButton(onClick = onRemoveLast, modifier = Modifier.height(32.dp)) {
-                    Text("Undo", style = MaterialTheme.typography.labelSmall)
+                    Text(s.t(StringKey.META_UNDO), style = MaterialTheme.typography.labelSmall)
                 }
             }
 
-            // Confirm button - only in 4-point mode (rectangle auto-confirms on 2nd click)
             if (!isRectangle && state.canConfirm()) {
                 Button(onClick = onConfirm, modifier = Modifier.height(32.dp)) {
-                    Text("Confirm", style = MaterialTheme.typography.labelSmall)
+                    Text(s.t(StringKey.WIZARD_CONFIRM), style = MaterialTheme.typography.labelSmall)
                 }
             }
 
             OutlinedButton(onClick = onCancel, modifier = Modifier.height(32.dp)) {
-                Text("Cancel", style = MaterialTheme.typography.labelSmall)
+                Text(s.cancel, style = MaterialTheme.typography.labelSmall)
             }
         }
     }

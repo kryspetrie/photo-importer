@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * A dropdown button that shows recently used metadata value sets and allows the user to apply one
@@ -51,6 +53,7 @@ fun RecentValuesDropdown(
     modifier: Modifier = Modifier,
 ) {
     if (recentSets.isEmpty()) return
+    val s = strings()
 
     var expanded by remember { mutableStateOf(false) }
 
@@ -58,7 +61,7 @@ fun RecentValuesDropdown(
         OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
             Icon(Icons.Default.History, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(4.dp))
-            Text("Apply Recent Values", style = MaterialTheme.typography.labelSmall)
+            Text(s.t(StringKey.WIZARD_APPLY_RECENT), style = MaterialTheme.typography.labelSmall)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             recentSets.take(10).forEach { set ->
@@ -107,6 +110,7 @@ fun RecentLocationDropdown(
     onApplyLocation: (RecentMetadataSet) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     val locationSets = remember(metadataHistory) { metadataHistory.getLocationSets() }
     if (locationSets.isEmpty()) return
 
@@ -120,7 +124,7 @@ fun RecentLocationDropdown(
                 modifier = Modifier.size(16.dp),
             )
             Spacer(Modifier.width(4.dp))
-            Text("Recent Locations", style = MaterialTheme.typography.labelSmall)
+            Text(s.t(StringKey.WIZARD_RECENT_LOCATIONS), style = MaterialTheme.typography.labelSmall)
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             locationSets.take(10).forEach { set ->

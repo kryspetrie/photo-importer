@@ -28,7 +28,10 @@ import org.kryspetrie.fileimport.domain.model.ConflictResolution
 import org.kryspetrie.fileimport.domain.model.FilenamePresets
 import org.kryspetrie.fileimport.domain.model.FolderPresets
 import org.kryspetrie.fileimport.domain.model.ImportConfiguration
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.SettingsToggle
+import org.kryspetrie.fileimport.ui.i18n.conflictResolutionLabel
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun ReorganizeSettingsSection(
@@ -38,6 +41,7 @@ fun ReorganizeSettingsSection(
     onSettingsExpandedChange: (Boolean) -> Unit,
     renameOnly: Boolean,
 ) {
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column {
             Row(
@@ -54,13 +58,13 @@ fun ReorganizeSettingsSection(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
-                    "Organization Settings",
+                    s.t(StringKey.SETTINGS_ORG),
                     style = MaterialTheme.typography.titleSmall,
                     modifier = Modifier.weight(1f),
                 )
                 Icon(
                     if (settingsExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    "Toggle",
+                    s.t(StringKey.ACC_TOGGLE),
                     Modifier.size(18.dp),
                 )
             }
@@ -89,8 +93,9 @@ private fun FolderPatternField(
     onConfigChange: (ImportConfiguration) -> Unit,
     renameOnly: Boolean,
 ) {
+    val s = strings()
     Text(
-        "Folder Pattern",
+        s.t(StringKey.SETTINGS_ORG_FOLDER_PATTERN),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
     )
@@ -98,7 +103,7 @@ private fun FolderPatternField(
         OutlinedTextField(
             config.folderPattern,
             { onConfigChange(config.copy(folderPattern = it)) },
-            label = { Text("Folder Pattern") },
+            label = { Text(s.t(StringKey.SETTINGS_ORG_FOLDER_PATTERN)) },
             textStyle = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -120,8 +125,9 @@ private fun FilenamePatternField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
+    val s = strings()
     Text(
-        "Filename",
+        s.t(StringKey.SETTINGS_ORG_FILENAME),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.primary,
     )
@@ -135,13 +141,13 @@ private fun FilenamePatternField(
                 )
             )
         },
-        label = "Preserve original filename",
+        label = s.t(StringKey.SETTINGS_ORG_PRESERVE_NAMES),
     )
     OutlinedTextField(
         config.fileNamePattern,
         { onConfigChange(config.copy(fileNamePattern = it)) },
         enabled = !config.preserveOriginalName,
-        label = { Text("Filename Pattern") },
+        label = { Text(s.t(StringKey.SETTINGS_ORG_FILENAME_PATTERN)) },
         textStyle = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -164,6 +170,7 @@ private fun ConflictResolutionField(
     config: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
 ) {
+    val s = strings()
     Text(
         "Conflict Resolution",
         style = MaterialTheme.typography.labelMedium,
@@ -177,7 +184,7 @@ private fun ConflictResolutionField(
                     { onConfigChange(config.copy(conflictResolution = r)) },
                 )
                 Text(
-                    r.name.replace("_", " ").lowercase().replaceFirstChar { it.uppercase() },
+                    s.conflictResolutionLabel(r),
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                 )

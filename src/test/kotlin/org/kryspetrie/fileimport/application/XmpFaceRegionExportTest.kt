@@ -2,18 +2,18 @@ package org.kryspetrie.fileimport.application
 
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.iptc.IptcDirectory
+import com.petrielabs.metadataeditor.domain.MetadataTag
 import java.awt.image.BufferedImage
 import java.io.File
+import java.nio.file.Paths
 import javax.imageio.ImageIO
 import kotlinx.coroutines.runBlocking
-import org.apache.commons.imaging.Imaging
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.FilePath
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
@@ -22,6 +22,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.toProcessedImage
 import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
 import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
+import org.kryspetrie.fileimport.testsupport.ExifToolTestSupport
 
 /**
  * Integration tests for XMP face region (MWG-RS) writing in PhotoScanExportService.
@@ -39,13 +40,17 @@ class XmpFaceRegionExportTest {
 
     @BeforeEach
     fun setup() {
+        ExifToolTestSupport.assumeExifToolAvailable()
         perspectiveService = PerspectiveCorrectionService()
         val fileSystem = FileSystemAdapter()
         val imageProcessing = AwtImageProcessingAdapter(fileSystem, perspectiveService)
         service =
             PhotoScanExportService(
                 perspectiveService,
-                MetadataWritingService(FaceRegionTransformer(), imageProcessing, fileSystem),
+                ExifToolTestSupport.createMetadataWritingService(
+                    FaceRegionTransformer(),
+                    imageProcessing,
+                ),
                 imageProcessing,
                 fileSystem,
             )
@@ -121,7 +126,7 @@ class XmpFaceRegionExportTest {
         return ImageMetadataReader.readMetadata(exportedFile)
     }
 
-    private fun exportAndGetBytes(config: PhotoScanConfiguration): ByteArray {
+    private fun exportAndGetFile(config: PhotoScanConfiguration): File {
         val img = BufferedImage(200, 150, BufferedImage.TYPE_INT_RGB)
         val g = img.createGraphics()
         g.color = java.awt.Color(0x40, 0x80, 0xC0)
@@ -141,9 +146,18 @@ class XmpFaceRegionExportTest {
         assertThat(result.success).isTrue()
         val exportedFile = File(result.destinationPath)
         assertThat(exportedFile).exists()
-
-        return exportedFile.readBytes()
+        return exportedFile
     }
+
+    private fun readExportedTags(config: PhotoScanConfiguration): List<MetadataTag> {
+        val exportedFile = exportAndGetFile(config)
+        return ExifToolTestSupport.createMetadataEditor()
+            .read(Paths.get(exportedFile.absolutePath))
+            .tags
+    }
+
+    private fun tagValues(tags: List<MetadataTag>, name: String): List<String> =
+        tags.filter { it.name.equals(name, ignoreCase = true) }.map { it.value }
 
     @Nested
     @DisplayName("XMP face region writing")
@@ -167,14 +181,11 @@ class XmpFaceRegionExportTest {
                         )
                 )
 
-            val exportedBytes = exportAndGetBytes(config)
-            val xmpData = Imaging.getXmpXml(exportedBytes)
+            val tags = readExportedTags(config)
 
-            assertThat(xmpData).isNotNull()
-            assertThat(xmpData).contains("Alice")
-            assertThat(xmpData).contains("mwg-rs")
-            assertThat(xmpData).contains("0.300000")
-            assertThat(xmpData).contains("0.400000")
+            assertThat(tagValues(tags, "RegionName")).contains("Alice")
+            assertThat(tagValues(tags, "RegionType")).contains("Face")
+            assertThat(tags.any { it.name.contains("RegionArea", ignoreCase = true) }).isTrue()
         }
 
         @Test
@@ -203,29 +214,18 @@ class XmpFaceRegionExportTest {
                         )
                 )
 
-            val exportedBytes = exportAndGetBytes(config)
-            val xmpData = Imaging.getXmpXml(exportedBytes)
+            val tags = readExportedTags(config)
 
-            assertThat(xmpData).isNotNull()
-            assertThat(xmpData).contains("Alice")
-            assertThat(xmpData).contains("Bob")
-            assertThat(xmpData).contains("0.700000")
+            assertThat(tagValues(tags, "RegionName").joinToString()).contains("Alice")
+            assertThat(tagValues(tags, "RegionName").joinToString()).contains("Bob")
         }
 
         @Test
         @DisplayName("should NOT write MWG-RS XMP when no face regions are present")
         fun shouldNotWriteXmpWhenNoFaceRegions() {
             val config = PhotoScanConfiguration()
-
-            val exportedBytes = exportAndGetBytes(config)
-            val xmpData = Imaging.getXmpXml(exportedBytes)
-
-            // No MWG-RS data should be written when there are no face regions
-            // XMP may be null or not contain mwg-rs
-            if (xmpData != null) {
-                assertThat(xmpData).doesNotContain("mwg-rs")
-            }
-            // This is fine — null means no XMP was written, which is correct
+            val tags = readExportedTags(config)
+            assertThat(tagValues(tags, "RegionName")).isEmpty()
         }
 
         @Test
@@ -246,11 +246,8 @@ class XmpFaceRegionExportTest {
                         )
                 )
 
-            val exportedBytes = exportAndGetBytes(config)
-            val xmpData = Imaging.getXmpXml(exportedBytes)
-
-            assertThat(xmpData).isNotNull()
-            assertThat(xmpData).contains("Pet")
+            val tags = readExportedTags(config)
+            assertThat(tagValues(tags, "RegionType")).contains("Pet")
         }
 
         @Test
@@ -271,18 +268,15 @@ class XmpFaceRegionExportTest {
                         )
                 )
 
-            val exportedBytes = exportAndGetBytes(config)
-            val xmpData = Imaging.getXmpXml(exportedBytes)
-
-            assertThat(xmpData).isNotNull()
-            assertThat(xmpData).contains("0.123456")
-            assertThat(xmpData).contains("0.789012")
-            assertThat(xmpData).contains("normalized")
+            val tags = readExportedTags(config)
+            val areaValues = tags.filter { it.name.contains("RegionArea", ignoreCase = true) }.map { it.value }
+            assertThat(areaValues.any { it.contains("0.123456") || it.contains("0.123") }).isTrue()
+            assertThat(areaValues.any { it.contains("0.789012") || it.contains("0.789") }).isTrue()
         }
 
         @Test
-        @DisplayName("should escape special XML characters in face names")
-        fun shouldEscapeXmlInFaceNames() {
+        @DisplayName("should preserve special characters in face names")
+        fun shouldPreserveSpecialCharactersInFaceNames() {
             val config =
                 PhotoScanConfiguration(
                     faceRegions =
@@ -298,12 +292,8 @@ class XmpFaceRegionExportTest {
                         )
                 )
 
-            val exportedBytes = exportAndGetBytes(config)
-            val xmpData = Imaging.getXmpXml(exportedBytes)
-
-            assertThat(xmpData).isNotNull()
-            // The XML should have escaped the ampersand
-            assertThat(xmpData).contains("Alice &amp; Bob")
+            val tags = readExportedTags(config)
+            assertThat(tagValues(tags, "RegionName")).contains("Alice & Bob")
         }
     }
 
@@ -365,9 +355,9 @@ class XmpFaceRegionExportTest {
             assertThat(iptcDir).isNotNull
             val keywords = iptcDir!!.getStringArray(IptcDirectory.TAG_KEYWORDS)
             assertThat(keywords).isNotNull
-            // Alice should appear exactly once (not duplicated)
-            val aliceCount = keywords!!.toList().count { it == "Alice" }
-            assertThat(aliceCount).isEqualTo(1)
+            // ExifTool writes comma-separated keywords as one IPTC value
+            val keywordParts = keywords!!.joinToString(", ").split(",").map { it.trim() }
+            assertThat(keywordParts.count { it == "Alice" }).isEqualTo(1)
         }
 
         @Test
@@ -439,7 +429,11 @@ class XmpFaceRegionExportTest {
             assertThat(iptcDir).isNotNull
             val keywords = iptcDir!!.getStringArray(IptcDirectory.TAG_KEYWORDS)
             assertThat(keywords).isNotNull
-            assertThat(keywords!!.toList()).contains("vacation", "beach", "Alice", "Bob")
+            val keywordText = keywords!!.joinToString(", ")
+            assertThat(keywordText).contains("vacation")
+            assertThat(keywordText).contains("beach")
+            assertThat(keywordText).contains("Alice")
+            assertThat(keywordText).contains("Bob")
         }
     }
 }

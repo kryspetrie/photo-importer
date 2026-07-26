@@ -19,6 +19,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.DetectedPhoto
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun ScanPhotoList(
@@ -27,10 +29,11 @@ fun ScanPhotoList(
     onEditPhoto: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val s = strings()
     Card(modifier = modifier.fillMaxWidth().padding(8.dp)) {
         Column(modifier = Modifier.padding(8.dp)) {
             Text(
-                "Detected Photos: ${detectedPhotos.size}",
+                s.t(StringKey.SCAN_DETECTED_PHOTOS_LABEL, "count" to "${detectedPhotos.size}"),
                 style = MaterialTheme.typography.titleMedium,
             )
             detectedPhotos.forEachIndexed { i, _ ->
@@ -39,7 +42,7 @@ fun ScanPhotoList(
                     modifier = Modifier.clickable { onEditPhoto(i) },
                 ) {
                     Text(
-                        "Photo ${i + 1}",
+                        s.t(StringKey.ACC_THUMBNAIL, "index" to "${i + 1}"),
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f),
                     )
@@ -48,7 +51,7 @@ fun ScanPhotoList(
                             onClick = { onRemovePhoto(i) },
                             contentPadding = PaddingValues(4.dp),
                         ) {
-                            Icon(Icons.Default.Delete, "Remove", Modifier.size(16.dp))
+                            Icon(Icons.Default.Delete, s.t(StringKey.META_REMOVE), Modifier.size(16.dp))
                         }
                     }
                 }

@@ -20,14 +20,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.ReorganizeViewModel
 
-/**
- * Bottom action bar for the reorganize screen.
- *
- * Shows contextual action buttons (Preview Changes, Back, Apply Changes) based on the current step.
- * Extracted from [ReorganizeScreen] to reduce method length and complexity.
- */
 @Composable
 fun ReorganizeActionBar(
     step: ReorganizeViewModel.ReorgStep,
@@ -37,6 +33,7 @@ fun ReorganizeActionBar(
     onPreview: () -> Unit,
     onApply: () -> Unit,
 ) {
+    val s = strings()
     if (
         step == ReorganizeViewModel.ReorgStep.SETUP || step == ReorganizeViewModel.ReorgStep.PREVIEW
     ) {
@@ -48,21 +45,21 @@ fun ReorganizeActionBar(
         ) {
             if (step == ReorganizeViewModel.ReorgStep.PREVIEW) {
                 OutlinedButton(onClick = onBack, modifier = Modifier.padding(end = 8.dp)) {
-                    Text("Back")
+                    Text(s.t(StringKey.ACTION_BACK))
                 }
             }
             if (step == ReorganizeViewModel.ReorgStep.SETUP) {
                 Button(onClick = onPreview, enabled = canPreview) {
                     Icon(Icons.Default.Preview, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Preview Changes")
+                    Text(s.t(StringKey.REORG_PREVIEW_CHANGES))
                 }
             }
             if (step == ReorganizeViewModel.ReorgStep.PREVIEW && changeCount > 0) {
                 Button(onClick = onApply) {
                     Icon(Icons.AutoMirrored.Filled.DriveFileMove, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Apply $changeCount Changes")
+                    Text(s.t(StringKey.REORG_APPLY_CHANGES, "count" to "$changeCount"))
                 }
             }
         }

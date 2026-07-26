@@ -18,11 +18,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.ImportProgress
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.CircularSpinner
 import org.kryspetrie.fileimport.ui.components.formatFileSize
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 @Composable
 fun ImportProgressInline(progress: ImportProgress, onCancel: () -> Unit) {
+    val s = strings()
     OutlinedCard(Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(16.dp),
@@ -34,12 +37,16 @@ fun ImportProgressInline(progress: ImportProgress, onCancel: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 CircularSpinner(size = 24.dp, strokeWidth = 2.5.dp)
-                Text("Importing...", style = MaterialTheme.typography.titleSmall)
+                Text(s.t(StringKey.IMPORT_PROCESSING), style = MaterialTheme.typography.titleSmall)
             }
             if (progress.totalFiles > 0) {
                 val percent = (progress.progressPercent * 100).toInt()
                 Text(
-                    "${progress.currentIndex} of ${progress.totalFiles} ($percent%)",
+                    s.t(
+                        StringKey.IMPORT_PROGRESS_IMPORTING,
+                        "current" to "${progress.currentIndex}",
+                        "total" to "${progress.totalFiles}",
+                    ) + " ($percent%)",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -61,7 +68,7 @@ fun ImportProgressInline(progress: ImportProgress, onCancel: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            OutlinedButton(onClick = onCancel) { Text("Cancel") }
+            OutlinedButton(onClick = onCancel) { Text(s.t(StringKey.IMPORT_CANCEL_BUTTON)) }
         }
     }
 }
