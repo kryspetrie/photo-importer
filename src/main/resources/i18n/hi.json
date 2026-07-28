@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "मेटाडेटा इतिहास साफ़ करें",
   "MENU_VIEW_LOG": "लॉग फ़ाइल देखें",
   "MENU_ABOUT": "{app} के बारे में",
+  "MENU_UI_DENSITY": "यूआई घनत्व",
+  "MENU_UI_DENSITY_COMPACT": "सघन",
+  "MENU_UI_DENSITY_COMFORTABLE": "आरामदायक",
+  "MENU_UI_DENSITY_SPACIOUS": "विशाल",
+  "MENU_NAVIGATION_STYLE": "नेविगेशन शैली",
+  "MENU_NAV_BOTTOM_BAR": "निचला बार",
+  "MENU_NAV_SIDE_RAIL": "साइड रेल",
+  "MENU_NAV_AUTO": "स्वचालित",
   "FIELD_AUDIO_CODEC": "ऑडियो कोडेक",
   "FIELD_BITRATE": "बिटरेट",
   "FIELD_EXPOSURE_PROGRAM": "एक्सपोज़र प्रोग्राम",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "पदानुक्रम",
   "META_VIEW_ICONS": "प्रतीक",
   "META_BROWSER_UP": "ऊपर",
-  "ACC_ENTER_FOLDER": "फ़ोल्डर दर्ज करें"
+  "META_BROWSER_TOGGLE": "फ़ाइल ब्राउज़र टॉगल करें",
+  "META_LANDING_TIPS": "EXIF मेटाडेटा को थोक में संपादित करने के लिए एक फ़ोल्डर खोलें या अलग-अलग छवियों का चयन करें।",
+  "ACC_ENTER_FOLDER": "फ़ोल्डर दर्ज करें",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "स्रोत: {value}"
 }

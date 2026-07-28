@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "میٹا ڈیٹا کی تاریخ صاف کریں۔",
   "MENU_VIEW_LOG": "لاگ فائل دیکھیں",
   "MENU_ABOUT": "تقریباً {app}",
+  "MENU_UI_DENSITY": "UI کثافت",
+  "MENU_UI_DENSITY_COMPACT": "کمپیکٹ",
+  "MENU_UI_DENSITY_COMFORTABLE": "آرام دہ",
+  "MENU_UI_DENSITY_SPACIOUS": "کشادہ",
+  "MENU_NAVIGATION_STYLE": "نیویگیشن اسٹائل",
+  "MENU_NAV_BOTTOM_BAR": "نیچے کی بار",
+  "MENU_NAV_SIDE_RAIL": "سائیڈ ریل",
+  "MENU_NAV_AUTO": "خودکار",
   "FIELD_AUDIO_CODEC": "آڈیو کوڈیک",
   "FIELD_BITRATE": "بٹریٹ",
   "FIELD_EXPOSURE_PROGRAM": "نمائش پروگرام",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "درجہ بندی",
   "META_VIEW_ICONS": "شبیہیں",
   "META_BROWSER_UP": "اوپر",
-  "ACC_ENTER_FOLDER": "فولڈر درج کریں۔"
+  "META_BROWSER_TOGGLE": "فائل براؤزر کو ٹوگل کریں۔",
+  "META_LANDING_TIPS": "ایک فولڈر کھولیں یا EXIF میٹا ڈیٹا میں بڑی تعداد میں ترمیم کرنے کے لیے انفرادی تصاویر منتخب کریں۔",
+  "ACC_ENTER_FOLDER": "فولڈر درج کریں۔",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "ماخذ: {value}"
 }

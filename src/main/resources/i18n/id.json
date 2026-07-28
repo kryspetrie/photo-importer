@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "Hapus Riwayat Metadata",
   "MENU_VIEW_LOG": "Lihat File Log",
   "MENU_ABOUT": "Tentang {app}",
+  "MENU_UI_DENSITY": "Kepadatan UI",
+  "MENU_UI_DENSITY_COMPACT": "Kompak",
+  "MENU_UI_DENSITY_COMFORTABLE": "Nyaman",
+  "MENU_UI_DENSITY_SPACIOUS": "Luas",
+  "MENU_NAVIGATION_STYLE": "Gaya Navigasi",
+  "MENU_NAV_BOTTOM_BAR": "Bilah Bawah",
+  "MENU_NAV_SIDE_RAIL": "Rel Samping",
+  "MENU_NAV_AUTO": "Otomatis",
   "FIELD_AUDIO_CODEC": "Kodek Audio",
   "FIELD_BITRATE": "Kecepatan bit",
   "FIELD_EXPOSURE_PROGRAM": "Program Paparan",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Hirarki",
   "META_VIEW_ICONS": "Ikon",
   "META_BROWSER_UP": "Naik",
-  "ACC_ENTER_FOLDER": "Masuk ke map"
+  "META_BROWSER_TOGGLE": "Alihkan peramban file",
+  "META_LANDING_TIPS": "Buka folder atau pilih gambar satu per satu untuk mengedit metadata EXIF secara massal.",
+  "ACC_ENTER_FOLDER": "Masuk ke map",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "Sumber: {value}"
 }

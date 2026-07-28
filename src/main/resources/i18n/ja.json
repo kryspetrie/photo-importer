@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "メタデータ履歴のクリア",
   "MENU_VIEW_LOG": "ログファイルの表示",
   "MENU_ABOUT": "{app}について",
+  "MENU_UI_DENSITY": "UI密度",
+  "MENU_UI_DENSITY_COMPACT": "コンパクト",
+  "MENU_UI_DENSITY_COMFORTABLE": "快適",
+  "MENU_UI_DENSITY_SPACIOUS": "広々とした",
+  "MENU_NAVIGATION_STYLE": "ナビゲーションスタイル",
+  "MENU_NAV_BOTTOM_BAR": "ボトムバー",
+  "MENU_NAV_SIDE_RAIL": "サイドレール",
+  "MENU_NAV_AUTO": "自動",
   "FIELD_AUDIO_CODEC": "オーディオコーデック",
   "FIELD_BITRATE": "ビットレート",
   "FIELD_EXPOSURE_PROGRAM": "露出プログラム",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "階層",
   "META_VIEW_ICONS": "アイコン",
   "META_BROWSER_UP": "上へ",
-  "ACC_ENTER_FOLDER": "フォルダを入力してください"
+  "META_BROWSER_TOGGLE": "ファイルブラウザを切り替えます",
+  "META_LANDING_TIPS": "フォルダーを開くか、個々の画像を選択して、EXIF メタデータを一括編集します。",
+  "ACC_ENTER_FOLDER": "フォルダを入力してください",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "出典: {value}"
 }

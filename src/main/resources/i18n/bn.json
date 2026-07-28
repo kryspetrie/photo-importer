@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "মেটাডেটা ইতিহাস সাফ করুন",
   "MENU_VIEW_LOG": "লগ ফাইল দেখুন",
   "MENU_ABOUT": "প্রায় {app}",
+  "MENU_UI_DENSITY": "UI ঘনত্ব",
+  "MENU_UI_DENSITY_COMPACT": "কমপ্যাক্ট",
+  "MENU_UI_DENSITY_COMFORTABLE": "আরামদায়ক",
+  "MENU_UI_DENSITY_SPACIOUS": "প্রশস্ত",
+  "MENU_NAVIGATION_STYLE": "নেভিগেশন শৈলী",
+  "MENU_NAV_BOTTOM_BAR": "নিচের বার",
+  "MENU_NAV_SIDE_RAIL": "সাইড রেল",
+  "MENU_NAV_AUTO": "স্বয়ংক্রিয়",
   "FIELD_AUDIO_CODEC": "অডিও কোডেক",
   "FIELD_BITRATE": "বিটরেট",
   "FIELD_EXPOSURE_PROGRAM": "এক্সপোজার প্রোগ্রাম",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Hierarchy",
   "META_VIEW_ICONS": "আইকন",
   "META_BROWSER_UP": "উপরে",
-  "ACC_ENTER_FOLDER": "ফোল্ডার লিখুন"
+  "META_BROWSER_TOGGLE": "ফাইল ব্রাউজার টগল করুন",
+  "META_LANDING_TIPS": "একটি ফোল্ডার খুলুন বা বাল্ক EXIF মেটাডেটা সম্পাদনা করতে পৃথক ছবি নির্বাচন করুন৷",
+  "ACC_ENTER_FOLDER": "ফোল্ডার লিখুন",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "সূত্র: {value}"
 }

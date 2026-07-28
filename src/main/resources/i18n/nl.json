@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "Metagegevensgeschiedenis wissen",
   "MENU_VIEW_LOG": "Logbestand bekijken",
   "MENU_ABOUT": "Over {app}",
+  "MENU_UI_DENSITY": "UI-dichtheid",
+  "MENU_UI_DENSITY_COMPACT": "Compact",
+  "MENU_UI_DENSITY_COMFORTABLE": "Comfortabel",
+  "MENU_UI_DENSITY_SPACIOUS": "Ruim",
+  "MENU_NAVIGATION_STYLE": "Navigatiestijl",
+  "MENU_NAV_BOTTOM_BAR": "Onderste balk",
+  "MENU_NAV_SIDE_RAIL": "Zijrail",
+  "MENU_NAV_AUTO": "Automatisch",
   "FIELD_AUDIO_CODEC": "Audiocodec",
   "FIELD_BITRATE": "Bitsnelheid",
   "FIELD_EXPOSURE_PROGRAM": "Belichtingsprogramma",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Hierarchy",
   "META_VIEW_ICONS": "Icons",
   "META_BROWSER_UP": "Op",
-  "ACC_ENTER_FOLDER": "Voer map in"
+  "META_BROWSER_TOGGLE": "Schakel bestandsbrowser in",
+  "META_LANDING_TIPS": "Open een map of selecteer afzonderlijke afbeeldingen om EXIF-metagegevens bulksgewijs te bewerken.",
+  "ACC_ENTER_FOLDER": "Voer map in",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "Bron: {value}"
 }

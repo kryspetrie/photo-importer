@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "Borrar historial de metadatos",
   "MENU_VIEW_LOG": "Ver archivo de registro",
   "MENU_ABOUT": "Acerca de {app}",
+  "MENU_UI_DENSITY": "Densidad de la interfaz de usuario",
+  "MENU_UI_DENSITY_COMPACT": "Compacto",
+  "MENU_UI_DENSITY_COMFORTABLE": "Cómodo",
+  "MENU_UI_DENSITY_SPACIOUS": "Espacioso",
+  "MENU_NAVIGATION_STYLE": "Estilo de navegación",
+  "MENU_NAV_BOTTOM_BAR": "Barra inferior",
+  "MENU_NAV_SIDE_RAIL": "Riel lateral",
+  "MENU_NAV_AUTO": "Automático",
   "FIELD_AUDIO_CODEC": "Códec de audio",
   "FIELD_BITRATE": "tasa de bits",
   "FIELD_EXPOSURE_PROGRAM": "Programa de exposición",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Jerarquía",
   "META_VIEW_ICONS": "Icons",
   "META_BROWSER_UP": "arriba",
-  "ACC_ENTER_FOLDER": "Ingresar carpeta"
+  "META_BROWSER_TOGGLE": "Alternar explorador de archivos",
+  "META_LANDING_TIPS": "Abra una carpeta o seleccione imágenes individuales para editar metadatos EXIF de forma masiva.",
+  "ACC_ENTER_FOLDER": "Ingresar carpeta",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "Fuente: {value}"
 }

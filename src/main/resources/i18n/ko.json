@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "메타데이터 기록 지우기",
   "MENU_VIEW_LOG": "로그 파일 보기",
   "MENU_ABOUT": "{app} 정보",
+  "MENU_UI_DENSITY": "UI 밀도",
+  "MENU_UI_DENSITY_COMPACT": "콤팩트",
+  "MENU_UI_DENSITY_COMFORTABLE": "편안함",
+  "MENU_UI_DENSITY_SPACIOUS": "넓다",
+  "MENU_NAVIGATION_STYLE": "탐색 스타일",
+  "MENU_NAV_BOTTOM_BAR": "하단 바",
+  "MENU_NAV_SIDE_RAIL": "사이드 레일",
+  "MENU_NAV_AUTO": "자동",
   "FIELD_AUDIO_CODEC": "오디오 코덱",
   "FIELD_BITRATE": "비트레이트",
   "FIELD_EXPOSURE_PROGRAM": "노출 프로그램",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "계층 구조",
   "META_VIEW_ICONS": "아이콘",
   "META_BROWSER_UP": "위로",
-  "ACC_ENTER_FOLDER": "폴더 입력"
+  "META_BROWSER_TOGGLE": "파일 브라우저 전환",
+  "META_LANDING_TIPS": "EXIF 메타데이터를 일괄 편집하려면 폴더를 열거나 개별 이미지를 선택하세요.",
+  "ACC_ENTER_FOLDER": "폴더 입력",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "출처: {value}"
 }

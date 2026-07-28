@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "مسح سجل البيانات التعريفية",
   "MENU_VIEW_LOG": "عرض ملف السجل",
   "MENU_ABOUT": "حول {app}",
+  "MENU_UI_DENSITY": "كثافة واجهة المستخدم",
+  "MENU_UI_DENSITY_COMPACT": "مدمج",
+  "MENU_UI_DENSITY_COMFORTABLE": "مريح",
+  "MENU_UI_DENSITY_SPACIOUS": "فسيحة",
+  "MENU_NAVIGATION_STYLE": "نمط التنقل",
+  "MENU_NAV_BOTTOM_BAR": "شريط أسفل",
+  "MENU_NAV_SIDE_RAIL": "السكك الحديدية الجانبية",
+  "MENU_NAV_AUTO": "تلقائي",
   "FIELD_AUDIO_CODEC": "ترميز الصوت",
   "FIELD_BITRATE": "معدل البت",
   "FIELD_EXPOSURE_PROGRAM": "برنامج التعرض",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Hierarchy",
   "META_VIEW_ICONS": "أيقونات",
   "META_BROWSER_UP": "لأعلى",
-  "ACC_ENTER_FOLDER": "أدخل المجلد"
+  "META_BROWSER_TOGGLE": "تبديل متصفح الملفات",
+  "META_LANDING_TIPS": "افتح مجلدًا أو حدد صورًا فردية لتحرير بيانات EXIF التعريفية بشكل مجمّع.",
+  "ACC_ENTER_FOLDER": "أدخل المجلد",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "المصدر: {value}"
 }

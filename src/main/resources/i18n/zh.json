@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "清除元数据历史记录",
   "MENU_VIEW_LOG": "查看日志文件",
   "MENU_ABOUT": "关于 {app}",
+  "MENU_UI_DENSITY": "UI密度",
+  "MENU_UI_DENSITY_COMPACT": "紧凑型",
+  "MENU_UI_DENSITY_COMFORTABLE": "舒适",
+  "MENU_UI_DENSITY_SPACIOUS": "宽敞",
+  "MENU_NAVIGATION_STYLE": "导航风格",
+  "MENU_NAV_BOTTOM_BAR": "底栏",
+  "MENU_NAV_SIDE_RAIL": "侧轨",
+  "MENU_NAV_AUTO": "自动",
   "FIELD_AUDIO_CODEC": "音频编解码器",
   "FIELD_BITRATE": "比特率",
   "FIELD_EXPOSURE_PROGRAM": "曝光计划",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "等级制度",
   "META_VIEW_ICONS": "Icons",
   "META_BROWSER_UP": "向上",
-  "ACC_ENTER_FOLDER": "输入文件夹"
+  "META_BROWSER_TOGGLE": "切换文件浏览器",
+  "META_LANDING_TIPS": "打开文件夹或选择单个图像以批量编辑 EXIF 元数据。",
+  "ACC_ENTER_FOLDER": "输入文件夹",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "来源：{value}"
 }

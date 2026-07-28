@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "Xóa lịch sử siêu dữ liệu",
   "MENU_VIEW_LOG": "Xem tệp nhật ký",
   "MENU_ABOUT": "Giới thiệu {app}",
+  "MENU_UI_DENSITY": "Mật độ giao diện người dùng",
+  "MENU_UI_DENSITY_COMPACT": "Nhỏ gọn",
+  "MENU_UI_DENSITY_COMFORTABLE": "Thoải mái",
+  "MENU_UI_DENSITY_SPACIOUS": "Rộng rãi",
+  "MENU_NAVIGATION_STYLE": "Kiểu điều hướng",
+  "MENU_NAV_BOTTOM_BAR": "Thanh dưới cùng",
+  "MENU_NAV_SIDE_RAIL": "Đường ray phụ",
+  "MENU_NAV_AUTO": "tự động",
   "FIELD_AUDIO_CODEC": "Bộ giải mã âm thanh",
   "FIELD_BITRATE": "Tốc độ bit",
   "FIELD_EXPOSURE_PROGRAM": "Chương trình tiếp xúc",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Hệ thống phân cấp",
   "META_VIEW_ICONS": "Biểu tượng",
   "META_BROWSER_UP": "Lên",
-  "ACC_ENTER_FOLDER": "Nhập thư mục"
+  "META_BROWSER_TOGGLE": "Chuyển đổi trình duyệt tập tin",
+  "META_LANDING_TIPS": "Mở một thư mục hoặc chọn từng hình ảnh để chỉnh sửa hàng loạt siêu dữ liệu EXIF.",
+  "ACC_ENTER_FOLDER": "Nhập thư mục",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "Nguồn: {value}"
 }

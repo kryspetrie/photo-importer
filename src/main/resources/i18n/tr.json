@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "Meta Veri Geçmişini Temizle",
   "MENU_VIEW_LOG": "Günlük Dosyasını Görüntüle",
   "MENU_ABOUT": "{app} hakkında",
+  "MENU_UI_DENSITY": "Kullanıcı Arayüzü Yoğunluğu",
+  "MENU_UI_DENSITY_COMPACT": "Kompakt",
+  "MENU_UI_DENSITY_COMFORTABLE": "Rahat",
+  "MENU_UI_DENSITY_SPACIOUS": "Geniş",
+  "MENU_NAVIGATION_STYLE": "Gezinme Stili",
+  "MENU_NAV_BOTTOM_BAR": "Alt Çubuk",
+  "MENU_NAV_SIDE_RAIL": "Yan Ray",
+  "MENU_NAV_AUTO": "Otomatik",
   "FIELD_AUDIO_CODEC": "Ses Codec'i",
   "FIELD_BITRATE": "Bit hızı",
   "FIELD_EXPOSURE_PROGRAM": "Maruziyet Programı",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Hiyerarşi",
   "META_VIEW_ICONS": "Simgeler",
   "META_BROWSER_UP": "Yukarı",
-  "ACC_ENTER_FOLDER": "Klasöre girin"
+  "META_BROWSER_TOGGLE": "Dosya tarayıcısını değiştir",
+  "META_LANDING_TIPS": "EXIF meta verilerini toplu olarak düzenlemek için bir klasör açın veya tek tek görselleri seçin.",
+  "ACC_ENTER_FOLDER": "Klasöre girin",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "Kaynak: {value}"
 }

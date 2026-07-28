@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "Rensa metadatahistorik",
   "MENU_VIEW_LOG": "Visa loggfil",
   "MENU_ABOUT": "Om {app}",
+  "MENU_UI_DENSITY": "UI-densitet",
+  "MENU_UI_DENSITY_COMPACT": "Kompakt",
+  "MENU_UI_DENSITY_COMFORTABLE": "Bekväm",
+  "MENU_UI_DENSITY_SPACIOUS": "Rymlig",
+  "MENU_NAVIGATION_STYLE": "Navigationsstil",
+  "MENU_NAV_BOTTOM_BAR": "Nedre fältet",
+  "MENU_NAV_SIDE_RAIL": "Side Rail",
+  "MENU_NAV_AUTO": "Automatisk",
   "FIELD_AUDIO_CODEC": "Audio Codec",
   "FIELD_BITRATE": "Bithastighet",
   "FIELD_EXPOSURE_PROGRAM": "Exponeringsprogram",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Hierarki",
   "META_VIEW_ICONS": "Icons",
   "META_BROWSER_UP": "Upp",
-  "ACC_ENTER_FOLDER": "Gå in i mappen"
+  "META_BROWSER_TOGGLE": "Växla filläsare",
+  "META_LANDING_TIPS": "Öppna en mapp eller välj enskilda bilder för att redigera EXIF-metadata samtidigt.",
+  "ACC_ENTER_FOLDER": "Gå in i mappen",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "Källa: {value}"
 }

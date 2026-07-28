@@ -152,9 +152,14 @@ class MediaImportViewModel(
 
     // ── Initialization ────────────────────────────────────────────
 
-    fun initializeFromSettings(initialSourcePath: String, initialDestPath: String) {
+    fun initializeFromSettings(
+        initialSourcePath: String,
+        initialDestPath: String,
+        initialConfig: ImportConfiguration = ImportConfiguration(),
+    ) {
         sourcePath = initialSourcePath
         destinationPath = initialDestPath
+        customConfig = initialConfig
     }
 
     fun syncFromSettings(lastSourcePath: String, lastDestPath: String) {

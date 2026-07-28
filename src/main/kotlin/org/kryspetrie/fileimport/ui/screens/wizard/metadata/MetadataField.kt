@@ -216,7 +216,7 @@ fun MetadataField(
         }
         if (showSourceHint) {
             Text(
-                text = s.t(StringKey.FIELD_SOURCE_GPS, "value" to sourceHint!!),
+                text = s.t(StringKey.FIELD_SOURCE_VALUE, "value" to sourceHint!!),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.padding(start = 4.dp, top = 0.dp),

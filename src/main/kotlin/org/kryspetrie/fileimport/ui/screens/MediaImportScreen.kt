@@ -43,14 +43,14 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
     // Show the first active watch status in the main flow area
     val activeWatchStatus = watchStatuses.values.firstOrNull { it.isWatching }
 
-    // Initialize paths from settings
+    // Initialize paths and import configuration from settings
     LaunchedEffect(Unit) {
-        val initialDest =
-            settings.importTabSettings.lastDestinationPath.ifBlank { vm.getDefaultDestination() }
-        vm.initializeFromSettings(settings.importTabSettings.lastSourcePath, initialDest)
+        val tab = settings.importTabSettings
+        val initialDest = tab.lastDestinationPath.ifBlank { vm.getDefaultDestination() }
+        vm.initializeFromSettings(tab.lastSourcePath, initialDest, tab.configuration)
     }
 
-    // Sync local state from settings
+    // Sync paths from settings when they change externally
     LaunchedEffect(
         settings.importTabSettings.lastSourcePath,
         settings.importTabSettings.lastDestinationPath,
@@ -61,11 +61,15 @@ fun MediaImportScreen(settings: AppSettings, onSettingsChange: (AppSettings) -> 
         )
     }
 
-    // Persist sourcePath when changed
-    LaunchedEffect(vm.sourcePath) { vm.persistSourcePath(scope) }
-
-    // Persist destinationPath when changed
-    LaunchedEffect(vm.destinationPath) { vm.persistDestinationPath(scope) }
+    // Persist paths and import configuration (mirrors Photo Scan Import tab)
+    LaunchedEffect(vm.sourcePath, vm.destinationPath, vm.customConfig) {
+        val tabSettings =
+            settings.importTabSettings
+                .withRecentSourcePath(vm.sourcePath)
+                .withRecentDestinationPath(vm.destinationPath)
+                .withConfiguration(vm.customConfig)
+        onSettingsChange(settings.withImportTabSettings(tabSettings))
+    }
 
     // Detect cameras on launch, then monitor for hot-plug events
     LaunchedEffect(Unit) {

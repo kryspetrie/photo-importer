@@ -708,6 +708,14 @@
   "MENU_CLEAR_METADATA_HISTORY": "Очистить историю метаданных",
   "MENU_VIEW_LOG": "Просмотр файла журнала",
   "MENU_ABOUT": "О {app}",
+  "MENU_UI_DENSITY": "Плотность пользовательского интерфейса",
+  "MENU_UI_DENSITY_COMPACT": "Компактный",
+  "MENU_UI_DENSITY_COMFORTABLE": "Удобный",
+  "MENU_UI_DENSITY_SPACIOUS": "Просторный",
+  "MENU_NAVIGATION_STYLE": "Стиль навигации",
+  "MENU_NAV_BOTTOM_BAR": "Нижняя панель",
+  "MENU_NAV_SIDE_RAIL": "Боковая направляющая",
+  "MENU_NAV_AUTO": "Автоматический",
   "FIELD_AUDIO_CODEC": "Аудиокодек",
   "FIELD_BITRATE": "Битрейт",
   "FIELD_EXPOSURE_PROGRAM": "Программа экспозиции",
@@ -766,5 +774,11 @@
   "META_VIEW_HIERARCHY": "Иерархия",
   "META_VIEW_ICONS": "Иконки",
   "META_BROWSER_UP": "Вверх",
-  "ACC_ENTER_FOLDER": "Введите папку"
+  "META_BROWSER_TOGGLE": "Переключить файловый браузер",
+  "META_LANDING_TIPS": "Откройте папку или выберите отдельные изображения для массового редактирования метаданных EXIF.",
+  "ACC_ENTER_FOLDER": "Введите папку",
+  "META_DISK_THUMBNAILS": "Disk thumbnails",
+  "META_CLEAR_THUMBS": "Clear .thumbs",
+  "META_THUMBS_CLEARED": "Thumbnail cache cleared",
+  "FIELD_SOURCE_VALUE": "Источник: {value}"
 }
