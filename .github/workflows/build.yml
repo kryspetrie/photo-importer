@@ -1,23 +1,20 @@
 name: Build Installers
 
+# Automatic CI disabled to avoid Actions storage/minutes limits.
+# On-demand options:
+#   1. Actions → Build Installers → Run workflow  (builds + artifacts only)
+#   2. git tag vX.Y.Z && git push origin vX.Y.Z  (full release upload)
 on:
-  push:
-    branches: [main]
-    tags: ["v*"]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
+  push:
+    tags: ["v*"]
 
 permissions:
   contents: read
 
-# Skip CI for documentation-only changes. Include [skip ci] or [ci skip] in
-# your commit message to skip the entire workflow. Tag pushes always run.
-# This follows the same convention used by Travis CI, CircleCI, and GitLab CI.
 jobs:
   test:
     name: Test
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]') || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: macos-26
     steps:
       - name: Free disk space
@@ -39,7 +36,6 @@ jobs:
   build-macos-intel:
     name: Build macOS (Intel x86_64)
     needs: test
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]') || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: macos-26-intel  # Intel-based macOS runner
     steps:
       - name: Free disk space
@@ -105,13 +101,14 @@ jobs:
           name: Petrie-Image-Importer-${{ steps.version.outputs.version }}-Intel
           path: output/*.dmg
           if-no-files-found: error
-          retention-days: 30
+          # Short retention: installers are large and count against Actions storage.
+          # Tag releases also attach files to the GitHub Release (separate quota).
+          retention-days: 3
           compression-level: 0
 
   build-macos-arm:
     name: Build macOS (ARM arm64)
     needs: test
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]') || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: macos-26  # Apple Silicon-based macOS runner
     steps:
       - name: Free disk space
@@ -177,13 +174,12 @@ jobs:
           name: Petrie-Image-Importer-${{ steps.version.outputs.version }}-ARM
           path: output/*.dmg
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3
           compression-level: 0
 
   build-windows:
     name: Build Windows
     needs: test
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]') || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: windows-latest
     steps:
       - name: Free disk space
@@ -241,11 +237,11 @@ jobs:
           name: Petrie-Image-Importer-${{ steps.version.outputs.version }}-Windows
           path: output/*.msi
           if-no-files-found: error
+          retention-days: 3
 
   build-linux:
     name: Build Linux
     needs: test
-    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') && !contains(github.event.head_commit.message, '[ci skip]') || startsWith(github.ref, 'refs/tags/v') }}
     runs-on: ubuntu-latest
     steps:
       - name: Free disk space
@@ -303,6 +299,7 @@ jobs:
           name: Petrie-Image-Importer-${{ steps.version.outputs.version }}-Linux
           path: output/*.deb
           if-no-files-found: error
+          retention-days: 3
 
   release:
     name: Upload Release Assets
