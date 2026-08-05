@@ -137,11 +137,7 @@ fun CubeGridLoadingIndicator(
  * @param content The main content to display behind the overlay
  */
 @Composable
-fun LoadingOverlay(
-    isLoading: Boolean,
-    message: String? = null,
-    content: @Composable () -> Unit,
-) {
+fun LoadingOverlay(isLoading: Boolean, message: String? = null, content: @Composable () -> Unit) {
     val s = strings()
     val displayMessage = message ?: s.t(StringKey.IMPORT_PROCESSING)
 

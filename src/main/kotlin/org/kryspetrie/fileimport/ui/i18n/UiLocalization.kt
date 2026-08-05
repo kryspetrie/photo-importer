@@ -6,29 +6,28 @@ import org.kryspetrie.fileimport.domain.model.ImportConfiguration
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 
 /** Builds a one-line import configuration summary for settings headers. */
-fun Strings.configSummary(c: ImportConfiguration): String =
-    buildString {
-        if (c.createSubfolders) append(c.folderPattern) else append(t(StringKey.IMPORT_SUMMARY_FLAT))
+fun Strings.configSummary(c: ImportConfiguration): String = buildString {
+    if (c.createSubfolders) append(c.folderPattern) else append(t(StringKey.IMPORT_SUMMARY_FLAT))
+    append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
+    if (c.preserveOriginalName) append(t(StringKey.IMPORT_SUMMARY_ORIGINAL_NAMES))
+    else append(c.fileNamePattern)
+    if (c.verifyAfterCopy) {
         append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
-        if (c.preserveOriginalName) append(t(StringKey.IMPORT_SUMMARY_ORIGINAL_NAMES))
-        else append(c.fileNamePattern)
-        if (c.verifyAfterCopy) {
-            append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
-            append(t(StringKey.IMPORT_SETTINGS_VERIFY))
-        }
-        if (c.deleteAfterImport) {
-            append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
-            append(t(StringKey.IMPORT_SETTINGS_DELETE_SOURCE))
-        }
-        if (c.detectVisualDuplicates) {
-            append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
-            append(t(StringKey.IMPORT_SETTINGS_DEDUPE))
-        }
-        if (c.autoOrientEnabled) {
-            append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
-            append(t(StringKey.IMPORT_SUMMARY_AUTO_ORIENT))
-        }
+        append(t(StringKey.IMPORT_SETTINGS_VERIFY))
     }
+    if (c.deleteAfterImport) {
+        append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
+        append(t(StringKey.IMPORT_SETTINGS_DELETE_SOURCE))
+    }
+    if (c.detectVisualDuplicates) {
+        append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
+        append(t(StringKey.IMPORT_SETTINGS_DEDUPE))
+    }
+    if (c.autoOrientEnabled) {
+        append(t(StringKey.IMPORT_SUMMARY_SEPARATOR))
+        append(t(StringKey.IMPORT_SUMMARY_AUTO_ORIENT))
+    }
+}
 
 fun Strings.conflictResolutionLabel(value: ConflictResolution): String =
     when (value) {

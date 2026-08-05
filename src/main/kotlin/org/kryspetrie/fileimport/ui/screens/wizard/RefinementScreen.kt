@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,19 +24,17 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.ZoomControls
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementCanvas
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementControls
 import org.kryspetrie.fileimport.ui.screens.wizard.refinement.RefinementTopBar
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
-import org.kryspetrie.fileimport.domain.model.i18n.StringKey
-import org.kryspetrie.fileimport.ui.i18n.strings
-
 
 /**
  * Refinement screen showing a zoomed view of a single bounding box for precise corner adjustment.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RefinementScreen(
     state: PhotoScanWizardState,
@@ -75,92 +71,87 @@ fun RefinementScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            RefinementTopBar(
-                onDelete = {
-                    if (refinementBoxIndex >= 0) {
-                        showDeleteConfirmDialog = true
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.SpaceBetween,
+    ) {
+        RefinementTopBar(
+            onDelete = {
+                if (refinementBoxIndex >= 0) {
+                    showDeleteConfirmDialog = true
+                }
+            },
+            onUndo = { state.boxes.undo() },
+            onRedo = { state.boxes.redo() },
+            onShowHelp = { showHelpDialog = true },
+            refocus = { focusRequester.requestFocus() },
+        )
+
+        // Main canvas area
+        Box(
+            modifier =
+                Modifier.weight(1f)
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+                    .withWizardKeyboardShortcuts(
+                        wizardState = state,
+                        onProceed = onBack,
+                        onCancel = onBack,
+                        viewportCenterX = canvasSize.width.toDouble() / 2,
+                        viewportCenterY = canvasSize.height.toDouble() / 2,
+                    )
+        ) {
+            // Auto-focus canvas so keyboard shortcuts work immediately
+            LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+            RefinementCanvas(
+                state = state,
+                image = image,
+                box = currentBox,
+                boxIndex = refinementBoxIndex,
+                canvasSize = canvasSize,
+                onCanvasSizeChanged = { canvasSize = it },
+                modifier = Modifier.fillMaxSize(),
+            )
+
+            // Zoom controls (top-right corner)
+            ZoomControls(
+                zoomController = zoomController,
+                onZoomIn = {
+                    state.zoom.zoomIn(
+                        canvasSize.width.toDouble() / 2,
+                        canvasSize.height.toDouble() / 2,
+                    )
+                },
+                onZoomOut = {
+                    state.zoom.zoomOut(
+                        canvasSize.width.toDouble() / 2,
+                        canvasSize.height.toDouble() / 2,
+                    )
+                },
+                onFitToView = {
+                    if (canvasSize.width > 0) {
+                        state.fitToBox(
+                            canvasSize.width.toDouble(),
+                            canvasSize.height.toDouble(),
+                        )
                     }
                 },
-                onUndo = { state.boxes.undo() },
-                onRedo = { state.boxes.redo() },
-                onShowHelp = { showHelpDialog = true },
-                refocus = { focusRequester.requestFocus() },
+                modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
             )
-        },
-        content = { paddingValues ->
-            Column(
-                modifier = modifier.fillMaxSize().padding(paddingValues),
-                verticalArrangement = Arrangement.SpaceBetween,
-            ) {
-                // Main canvas area
-                Box(
-                    modifier =
-                        Modifier.weight(1f)
-                            .fillMaxWidth()
-                            .focusRequester(focusRequester)
-                            .withWizardKeyboardShortcuts(
-                                wizardState = state,
-                                onProceed = onBack,
-                                onCancel = onBack,
-                                viewportCenterX = canvasSize.width.toDouble() / 2,
-                                viewportCenterY = canvasSize.height.toDouble() / 2,
-                            )
-                ) {
-                    // Auto-focus canvas so keyboard shortcuts work immediately
-                    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+        }
 
-                    RefinementCanvas(
-                        state = state,
-                        image = image,
-                        box = currentBox,
-                        boxIndex = refinementBoxIndex,
-                        canvasSize = canvasSize,
-                        onCanvasSizeChanged = { canvasSize = it },
-                        modifier = Modifier.fillMaxSize(),
-                    )
-
-                    // Zoom controls (top-right corner)
-                    ZoomControls(
-                        zoomController = zoomController,
-                        onZoomIn = {
-                            state.zoom.zoomIn(
-                                canvasSize.width.toDouble() / 2,
-                                canvasSize.height.toDouble() / 2,
-                            )
-                        },
-                        onZoomOut = {
-                            state.zoom.zoomOut(
-                                canvasSize.width.toDouble() / 2,
-                                canvasSize.height.toDouble() / 2,
-                            )
-                        },
-                        onFitToView = {
-                            if (canvasSize.width > 0) {
-                                state.fitToBox(
-                                    canvasSize.width.toDouble(),
-                                    canvasSize.height.toDouble(),
-                                )
-                            }
-                        },
-                        modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
-                    )
-                }
-
-                // Bottom controls
-                RefinementControls(
-                    currentIndex = refinementBoxIndex,
-                    totalCount = boxCount,
-                    selectedCorner = selectedCorner,
-                    onPrevious = { state.previousBox() },
-                    onNext = { state.nextBox() },
-                    onDeselect = { state.boxes.deselectCorner() },
-                    refocus = { focusRequester.requestFocus() },
-                )
-            }
-        },
-    )
+        // Bottom controls
+        RefinementControls(
+            currentIndex = refinementBoxIndex,
+            totalCount = boxCount,
+            selectedCorner = selectedCorner,
+            onPrevious = { state.previousBox() },
+            onNext = { state.nextBox() },
+            onDeselect = { state.boxes.deselectCorner() },
+            refocus = { focusRequester.requestFocus() },
+        )
+    }
 
     // Keyboard shortcut help dialog
     if (showHelpDialog) {
@@ -175,9 +166,7 @@ fun RefinementScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             title = { Text(s.t(StringKey.WIZARD_DELETE_PHOTO)) },
-            text = {
-                Text(s.t(StringKey.WIZARD_DELETE_PHOTO_MESSAGE))
-            },
+            text = { Text(s.t(StringKey.WIZARD_DELETE_PHOTO_MESSAGE)) },
             confirmButton = {
                 TextButton(
                     onClick = {

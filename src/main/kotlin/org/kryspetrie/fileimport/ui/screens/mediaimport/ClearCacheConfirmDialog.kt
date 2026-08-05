@@ -17,7 +17,10 @@ fun ClearCacheConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
         text = { Text(s.t(StringKey.IMPORT_CLEAR_CACHE_MESSAGE)) },
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(s.t(StringKey.IMPORT_CLEAR_CACHE_BUTTON), color = MaterialTheme.colorScheme.error)
+                Text(
+                    s.t(StringKey.IMPORT_CLEAR_CACHE_BUTTON),
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(s.t(StringKey.ACTION_CANCEL)) } },

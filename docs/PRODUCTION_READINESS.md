@@ -4,6 +4,12 @@
 > **Application Version**: Current main branch  
 > **Assessor**: Architecture review of Kotlin + Compose Desktop codebase
 
+> **Status: point-in-time snapshot.** File names, line counts, and per-file metrics below describe the
+> codebase as audited and are no longer accurate — hard-coded UI strings have since been migrated to
+> `StringKey`/`en.json`, design tokens live in `DefaultSpacing`/`DefaultColors`, and the god files cited
+> here (for example `EditSections.kt`, `MetadataEditorScreen.kt`, `ImagePreviewScreen.kt`) have been
+> split into smaller focused files. See `IMPROVEMENT_PLAN.md` for the live backlog.
+
 ---
 
 ## 1. Executive Summary

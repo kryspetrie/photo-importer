@@ -37,7 +37,10 @@ fun SourceDestinationFields(
             supportingText = {
                 when {
                     sourcePath.isBlank() ->
-                        Text(s.t(StringKey.IMPORT_PATH_HINT), style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            s.t(StringKey.IMPORT_PATH_HINT),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
                     !sourceValid ->
                         Text(
                             s.t(StringKey.IMPORT_PATH_NOT_FOUND),
@@ -65,7 +68,10 @@ fun SourceDestinationFields(
             supportingText = {
                 when {
                     destinationPath.isBlank() ->
-                        Text(s.t(StringKey.IMPORT_PATH_HINT), style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            s.t(StringKey.IMPORT_PATH_HINT),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
                     !destValid && !destCanCreate ->
                         Text(
                             s.t(StringKey.IMPORT_PATH_NOT_ACCESSIBLE),

@@ -7,4 +7,8 @@ enum class ShortcutContext {
     CANVAS,
     /** Summary screen — navigation shortcuts only */
     SUMMARY,
+    /** Bulk metadata editor */
+    METADATA_EDITOR,
+    /** App-wide shortcuts (menu Help dialog) */
+    APP,
 }

@@ -269,7 +269,8 @@ class XmpFaceRegionExportTest {
                 )
 
             val tags = readExportedTags(config)
-            val areaValues = tags.filter { it.name.contains("RegionArea", ignoreCase = true) }.map { it.value }
+            val areaValues =
+                tags.filter { it.name.contains("RegionArea", ignoreCase = true) }.map { it.value }
             assertThat(areaValues.any { it.contains("0.123456") || it.contains("0.123") }).isTrue()
             assertThat(areaValues.any { it.contains("0.789012") || it.contains("0.789") }).isTrue()
         }
@@ -434,6 +435,90 @@ class XmpFaceRegionExportTest {
             assertThat(keywordText).contains("beach")
             assertThat(keywordText).contains("Alice")
             assertThat(keywordText).contains("Bob")
+        }
+    }
+
+    @Nested
+    @DisplayName("MWG RegionInfo with pre-existing XMP")
+    inner class MwgWithPreExistingXmp {
+
+        @Test
+        @DisplayName("writing face regions preserves prior non-MWG XMP tags from source")
+        fun writingFacesPreservesExistingXmp() {
+            // GIVEN — a JPEG that already has XMP-dc Description / Creator / Subject
+            val sourceFile = File(tempDir, "pre_xmp_${System.nanoTime()}.jpg")
+            val seed = BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB)
+            ImageIO.write(seed, "jpg", sourceFile)
+            val editor = ExifToolTestSupport.createMetadataEditor()
+            val writeResult =
+                editor.write(
+                    com.petrielabs.metadataeditor.domain.WriteMetadataCommand(
+                        path = Paths.get(sourceFile.absolutePath),
+                        changes =
+                            mapOf(
+                                "XMP-dc:Description" to "Original album caption",
+                                "XMP-dc:Creator" to "Original Photographer",
+                                "XMP-dc:Subject" to "heirloom, family",
+                            ),
+                        allowProtectedWrites = false,
+                    )
+                )
+            assertThat(writeResult)
+                .isInstanceOf(
+                    com.petrielabs.metadataeditor.domain.MetadataWriteResult.Success::class.java
+                )
+
+            val config =
+                PhotoScanConfiguration(
+                    copyOriginalExif = true,
+                    faceRegions =
+                        listOf(
+                            FaceRegion(
+                                name = "Alice",
+                                type = "Face",
+                                x = 0.3,
+                                y = 0.4,
+                                w = 0.15,
+                                h = 0.20,
+                            )
+                        ),
+                )
+
+            val img = BufferedImage(200, 150, BufferedImage.TYPE_INT_RGB)
+            val g = img.createGraphics()
+            g.color = java.awt.Color(0x40, 0x80, 0xC0)
+            g.fillRect(0, 0, 200, 150)
+            g.dispose()
+
+            val photo =
+                createDetectedPhoto(0f, 0f, 200f, 0f, 200f, 150f, 0f, 150f)
+                    .copy(applyPerspectiveCorrection = false, configuration = config)
+
+            val destDir = File(tempDir, "mwg_merge_${System.nanoTime()}")
+            destDir.mkdirs()
+
+            // WHEN — export crops pixels and writes MWG RegionInfo (+ copies source XMP)
+            val result =
+                exportSinglePhoto(
+                    img.toProcessedImage(),
+                    photo,
+                    destDir.absolutePath,
+                    "mwg_merge",
+                    sourceFile = FilePath(sourceFile.absolutePath),
+                )
+
+            // THEN
+            assertThat(result.success).withFailMessage { result.error ?: "export failed" }.isTrue()
+            val tags =
+                ExifToolTestSupport.createMetadataEditor()
+                    .read(Paths.get(result.destinationPath))
+                    .tags
+
+            assertThat(tagValues(tags, "RegionName")).contains("Alice")
+            assertThat(tagValues(tags, "Description").joinToString())
+                .contains("Original album caption")
+            assertThat(tagValues(tags, "Creator").joinToString()).contains("Original Photographer")
+            assertThat(tagValues(tags, "Subject").joinToString()).contains("heirloom")
         }
     }
 }

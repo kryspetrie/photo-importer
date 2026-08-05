@@ -17,7 +17,8 @@ class MetadataRotationHelperTest {
     @Test
     fun rawUsesMetadataOrientationOnly() {
         assertThat(MetadataRotationHelper.usesPixelRotation(ImageFileType.RAW_CR2, 90)).isFalse()
-        assertThat(MetadataRotationHelper.usesMetadataOrientation(ImageFileType.RAW_CR2, 90)).isTrue()
+        assertThat(MetadataRotationHelper.usesMetadataOrientation(ImageFileType.RAW_CR2, 90))
+            .isTrue()
     }
 
     @Test

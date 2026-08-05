@@ -19,6 +19,7 @@ import org.kryspetrie.fileimport.domain.model.ReorganizeProgress
 import org.kryspetrie.fileimport.domain.model.ReorganizeResult
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
+import org.kryspetrie.fileimport.domain.port.FolderThumbnailCachePort
 import org.kryspetrie.fileimport.domain.port.ImageRepositoryPort
 import org.kryspetrie.fileimport.domain.port.NamingPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
@@ -33,6 +34,7 @@ class ReorganizeService(
     private val journalRepository: ReorganizeJournalRepository,
     private val fileOperationExecutor: FileOperationExecutor,
     private val fileSystem: FileSystemPort,
+    private val folderThumbnailCache: FolderThumbnailCachePort,
 ) {
 
     /**
@@ -179,6 +181,7 @@ class ReorganizeService(
                 conflictCount = mappings.count { it.wouldConflict },
                 newFolderCount = newFolders.size,
                 operationMode = mode,
+                libraryRoot = folderPath,
             )
         }
 
@@ -249,10 +252,22 @@ class ReorganizeService(
                 }
             }
 
+            invalidateReorganizeThumbnails(
+                journalEntries = journalEntries,
+                libraryRoot =
+                    preview.libraryRoot.ifBlank {
+                        preview.mappings.firstOrNull()?.file?.path?.parent.orEmpty()
+                    },
+                useOriginalPaths = true,
+            )
+
             // Save undo journal
             var journalPath: String? = null
             if (journalEntries.isNotEmpty()) {
-                val rootFolder = preview.mappings.firstOrNull()?.file?.path?.parent.orEmpty()
+                val rootFolder =
+                    preview.libraryRoot.ifBlank {
+                        preview.mappings.firstOrNull()?.file?.path?.parent.orEmpty()
+                    }
                 val journal =
                     ReorganizeJournal(
                         rootFolder = rootFolder,
@@ -338,6 +353,12 @@ class ReorganizeService(
                 fileOperationExecutor.cleanEmptyDirs(FilePath(journal.rootFolder))
             }
 
+            invalidateReorganizeThumbnails(
+                journalEntries = entries,
+                libraryRoot = journal.rootFolder,
+                useOriginalPaths = false,
+            )
+
             // Mark journal as undone
             if (errors.isEmpty()) {
                 val updatedJournal = journal.copy(undone = true)
@@ -373,5 +394,21 @@ class ReorganizeService(
 
     private suspend fun cleanEmptyDirs(root: FilePath) {
         fileOperationExecutor.cleanEmptyDirs(root)
+    }
+
+    private suspend fun invalidateReorganizeThumbnails(
+        journalEntries: List<JournalEntry>,
+        libraryRoot: String,
+        useOriginalPaths: Boolean,
+    ) {
+        val paths =
+            journalEntries
+                .filter { it.wasSuccessful }
+                .map { if (useOriginalPaths) it.originalPath else it.newPath }
+                .filter { it.isNotBlank() }
+                .map { FilePath(it) }
+        if (paths.isNotEmpty()) {
+            folderThumbnailCache.invalidateSources(paths, libraryRoot.ifBlank { null })
+        }
     }
 }

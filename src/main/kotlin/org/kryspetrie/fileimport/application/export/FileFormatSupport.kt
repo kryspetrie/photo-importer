@@ -43,8 +43,7 @@ object FileFormatSupport {
             ImageFileType.RAW_3FR,
             ImageFileType.RAW_IIQ,
             ImageFileType.RAW_RWL,
-            ImageFileType.RAW_X3F,
-            -> MetadataSupport.FULL
+            ImageFileType.RAW_X3F -> MetadataSupport.FULL
 
             ImageFileType.VIDEO_MP4,
             ImageFileType.VIDEO_MOV,
@@ -56,8 +55,7 @@ object FileFormatSupport {
             ImageFileType.VIDEO_FLV,
             ImageFileType.VIDEO_3GP,
             ImageFileType.VIDEO_MPG,
-            ImageFileType.UNKNOWN,
-            -> MetadataSupport.NONE
+            ImageFileType.UNKNOWN -> MetadataSupport.NONE
         }
 
     fun metadataSupportForFile(filePath: String): MetadataSupport {
@@ -78,9 +76,12 @@ object FileFormatSupport {
             else -> false
         }
 
-    fun canSetOrientationLossless(fileType: ImageFileType): Boolean = canWriteMetadataInPlace(fileType)
+    fun canSetOrientationLossless(fileType: ImageFileType): Boolean =
+        canWriteMetadataInPlace(fileType)
 
-    /** Sidecar XMP is not required when ExifTool writes in-place; kept for callers that prefer it. */
+    /**
+     * Sidecar XMP is not required when ExifTool writes in-place; kept for callers that prefer it.
+     */
     fun canWriteSidecarXmp(fileType: ImageFileType): Boolean = false
 
     fun supportDescription(fileType: ImageFileType): String =

@@ -71,10 +71,7 @@ fun FolderSelectionField(
                 state = tooltipState,
             ) {
                 IconButton(onClick = { pickFolder(resolvedTitle)?.let(onValueChange) }) {
-                    Icon(
-                        Icons.Default.CreateNewFolder,
-                        contentDescription = selectFolderLabel,
-                    )
+                    Icon(Icons.Default.CreateNewFolder, contentDescription = selectFolderLabel)
                 }
             }
         },
@@ -82,9 +79,7 @@ fun FolderSelectionField(
     )
 }
 
-/**
- * A consistent path selection field with an inline file browse icon button.
- */
+/** A consistent path selection field with an inline file browse icon button. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun FileSelectionField(
@@ -127,7 +122,9 @@ fun FileSelectionField(
                 tooltip = { PlainTooltip { Text(selectFileLabel) } },
                 state = tooltipState,
             ) {
-                IconButton(onClick = { pickFile(resolvedTitle, extensionFilter)?.let(onValueChange) }) {
+                IconButton(
+                    onClick = { pickFile(resolvedTitle, extensionFilter)?.let(onValueChange) }
+                ) {
                     Icon(leadingIcon, contentDescription = selectFileLabel)
                 }
             }
@@ -136,9 +133,7 @@ fun FileSelectionField(
     )
 }
 
-/**
- * A consistent source path field that supports both file and folder selection.
- */
+/** A consistent source path field that supports both file and folder selection. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SourcePathField(

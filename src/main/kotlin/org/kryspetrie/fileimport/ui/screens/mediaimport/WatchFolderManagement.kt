@@ -136,7 +136,9 @@ private fun WatchFolderCard(status: WatchFolderStatus, onStop: () -> Unit) {
                                 append(" · ${status.importCount} ${s.t(StringKey.WATCH_IMPORTED)}")
                             }
                             if (status.autoImportsPending > 0) {
-                                append(" · ${status.autoImportsPending} ${s.t(StringKey.WATCH_PENDING)}")
+                                append(
+                                    " · ${status.autoImportsPending} ${s.t(StringKey.WATCH_PENDING)}"
+                                )
                             }
                         },
                         style = MaterialTheme.typography.labelSmall,
@@ -155,7 +157,10 @@ private fun WatchFolderCard(status: WatchFolderStatus, onStop: () -> Unit) {
                 }
                 if (status.isWatching) {
                     OutlinedButton(onClick = onStop, modifier = Modifier.height(28.dp)) {
-                        Text(s.t(StringKey.IMPORT_STOP_BUTTON), style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            s.t(StringKey.IMPORT_STOP_BUTTON),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
                     }
                 }
             }

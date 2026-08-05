@@ -27,15 +27,8 @@ fun DuplicateResolveConfirmDialog(
         title = { Text(s.t(StringKey.DUP_RESOLVE_ALL_TITLE)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    s.t(StringKey.DUP_RESOLVE_ALL_MESSAGE, "count" to duplicateCount.toString())
-                )
-                Text(
-                    s.t(
-                        StringKey.DUP_STRATEGY,
-                        "strategy" to s.t(resolveAction.labelKey()),
-                    )
-                )
+                Text(s.t(StringKey.DUP_RESOLVE_ALL_MESSAGE, "count" to duplicateCount.toString()))
+                Text(s.t(StringKey.DUP_STRATEGY, "strategy" to s.t(resolveAction.labelKey())))
                 if (moveToTrash) {
                     Text(
                         s.t(StringKey.DUP_REVIEW_FOLDER_NOTE),
@@ -61,8 +54,6 @@ fun DuplicateResolveConfirmDialog(
                 )
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(s.t(StringKey.ACTION_CANCEL)) }
-        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(s.t(StringKey.ACTION_CANCEL)) } },
     )
 }

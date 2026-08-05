@@ -109,7 +109,10 @@ fun ExportSettingsCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
-                        Text(s.t(StringKey.WIZARD_ADDITIONAL_MARGIN), style = MaterialTheme.typography.labelMedium)
+                        Text(
+                            s.t(StringKey.WIZARD_ADDITIONAL_MARGIN),
+                            style = MaterialTheme.typography.labelMedium,
+                        )
                         Text(
                             "${(marginPercent * 100).toInt()}%",
                             style = MaterialTheme.typography.labelMedium,

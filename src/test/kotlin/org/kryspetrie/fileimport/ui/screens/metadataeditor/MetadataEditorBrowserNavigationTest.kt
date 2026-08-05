@@ -14,10 +14,7 @@ class MetadataEditorBrowserNavigationTest {
         val root = File("/tmp/album")
         val tree =
             buildMetadataFileTree(
-                listOf(
-                    File(root, "a.jpg"),
-                    File(root, "nested/b.jpg"),
-                ),
+                listOf(File(root, "a.jpg"), File(root, "nested/b.jpg")),
                 root.absolutePath,
             )
 
@@ -36,10 +33,7 @@ class MetadataEditorBrowserNavigationTest {
         val root = File("/tmp/album")
         val tree =
             buildMetadataFileTree(
-                listOf(
-                    File(root, "a.jpg"),
-                    File(root, "nested/b.jpg"),
-                ),
+                listOf(File(root, "a.jpg"), File(root, "nested/b.jpg")),
                 root.absolutePath,
             )
         val nestedPath = File(root, "nested").absolutePath
@@ -73,7 +67,13 @@ class MetadataEditorBrowserNavigationTest {
         // WHEN / THEN
         assertThat(metadataBrowserNavIndex(items, selectedFileIndex = 0, focusedFolderPath = null))
             .isEqualTo(1)
-        assertThat(metadataBrowserNavIndex(items, selectedFileIndex = -1, focusedFolderPath = "/tmp/nested"))
+        assertThat(
+                metadataBrowserNavIndex(
+                    items,
+                    selectedFileIndex = -1,
+                    focusedFolderPath = "/tmp/nested",
+                )
+            )
             .isEqualTo(0)
         assertThat(metadataBrowserNavIndex(items, selectedFileIndex = -1, focusedFolderPath = null))
             .isEqualTo(-1)
@@ -98,9 +98,13 @@ class MetadataEditorBrowserNavigationTest {
             )
 
         // WHEN / THEN
-        assertThat(metadataBrowserNavIndexAfterDelta(items, currentIndex = -1, delta = 1)).isEqualTo(0)
-        assertThat(metadataBrowserNavIndexAfterDelta(items, currentIndex = 0, delta = 1)).isEqualTo(1)
-        assertThat(metadataBrowserNavIndexAfterDelta(items, currentIndex = 1, delta = 1)).isEqualTo(1)
-        assertThat(metadataBrowserNavIndexAfterDelta(items, currentIndex = 0, delta = -1)).isEqualTo(0)
+        assertThat(metadataBrowserNavIndexAfterDelta(items, currentIndex = -1, delta = 1))
+            .isEqualTo(0)
+        assertThat(metadataBrowserNavIndexAfterDelta(items, currentIndex = 0, delta = 1))
+            .isEqualTo(1)
+        assertThat(metadataBrowserNavIndexAfterDelta(items, currentIndex = 1, delta = 1))
+            .isEqualTo(1)
+        assertThat(metadataBrowserNavIndexAfterDelta(items, currentIndex = 0, delta = -1))
+            .isEqualTo(0)
     }
 }

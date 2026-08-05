@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBox
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
-import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
+import org.kryspetrie.fileimport.ui.screens.shared.metadata.MetadataEditState
 
 /**
  * Manages per-photo configuration state and metadata selection for the photo scan wizard.

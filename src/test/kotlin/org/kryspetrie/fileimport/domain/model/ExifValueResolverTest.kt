@@ -403,11 +403,33 @@ class ExifValueResolverTest {
         }
 
         @Test
+        fun `seconds rounding to 60 carries into minutes`() {
+            // 42.26666665° → roughly 42° 16′ 0″ after seconds round-up from ~59.999″
+            // Construct so minutesDecimal is just under 16 and seconds round to 60.0000.
+            val result = resolver.decimalToGpsRationals(42.0 + (15.0 + 59.99995 / 60.0) / 60.0)
+            assertTrue(result[1].numerator < 60, "Minutes must stay < 60")
+            assertTrue(result[2].numerator < 600000, "Seconds units must stay < 60.0000")
+            // Either 42°16′0″ or 42°15′… depending on FP; never 42°60′…
+            assertTrue(result[0].numerator == 42L || result[0].numerator == 43L)
+        }
+
+        @Test
+        fun `seconds rounding to 60 at 59 minutes carries into degrees`() {
+            // 42.999999999° → minutes≈59, seconds round to 60 → 43° 0′ 0″
+            val result = resolver.decimalToGpsRationals(42.999999999)
+            assertEquals(43, result[0].numerator)
+            assertEquals(0, result[1].numerator)
+            assertEquals(0, result[2].numerator)
+            assertTrue(result[1].numerator < 60)
+        }
+
+        @Test
         fun `degrees and minutes never overflow 60`() {
             // Test a value close to 60 minutes: 89.9999
             val result = resolver.decimalToGpsRationals(89.9999)
             assertTrue(result[0].numerator < 180, "Degrees should be < 180")
             assertTrue(result[1].numerator < 60, "Minutes should be < 60")
+            assertTrue(result[2].numerator < 600000, "Seconds units should be < 60.0000")
         }
     }
 }

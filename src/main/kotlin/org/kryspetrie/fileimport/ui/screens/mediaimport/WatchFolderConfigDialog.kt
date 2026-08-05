@@ -164,7 +164,9 @@ fun WatchFolderConfigDialog(
                         },
                         enabled = isValid,
                     ) {
-                        Text(if (isEditing) s.t(StringKey.ACTION_SAVE) else s.t(StringKey.WATCH_ADD))
+                        Text(
+                            if (isEditing) s.t(StringKey.ACTION_SAVE) else s.t(StringKey.WATCH_ADD)
+                        )
                     }
                 }
             }

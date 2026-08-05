@@ -84,9 +84,6 @@ data class AppSettings(
     /** Recent folder paths used in the Bulk Metadata Editor. Maximum 5 entries. */
     val metadataEditorRecentPaths: List<String> = emptyList(),
 
-    /** Preferred layout for the metadata editor (thumbnail strip vs file picker). */
-    val metadataEditorLayoutMode: MetadataEditorLayoutMode = MetadataEditorLayoutMode.SIDEBAR,
-
     /** How files are displayed in the metadata editor file browser. */
     val metadataEditorFileViewMode: MetadataEditorFileViewMode = MetadataEditorFileViewMode.ICONS,
 
@@ -105,6 +102,41 @@ data class AppSettings(
      * manual rotation controls and triggers ML-based orientation detection.
      */
     val autoOrientInMetadataEditor: Boolean = true,
+
+    /** UI spacing and control sizing preference. */
+    val uiDensity: UiDensity = UiDensity.COMFORTABLE,
+
+    /** When false, metadata editor thumbnails are memory-only (no `.thumbs` read/write). */
+    val metadataEditorDiskThumbnailCache: Boolean = true,
+
+    /** Persisted layout preferences for the bulk metadata editor. */
+    val metadataEditorLayoutPreferences: MetadataEditorLayoutPreferences =
+        MetadataEditorLayoutPreferences(),
+
+    /** Persisted output and load options for the bulk metadata editor. */
+    val metadataEditorSessionPreferences: MetadataEditorSessionPreferences =
+        MetadataEditorSessionPreferences(),
+
+    /** Persisted setup for the Reorganize tab. */
+    val reorganizeSessionPreferences: ReorganizeSessionPreferences = ReorganizeSessionPreferences(),
+
+    /** Persisted setup for the Duplicate Scanner tab. */
+    val duplicateScannerSessionPreferences: DuplicateScannerSessionPreferences =
+        DuplicateScannerSessionPreferences(),
+
+    /** Scan mode and landing UI state for the Photo Scan import screen. */
+    val photoScanImportSessionPreferences: PhotoScanImportSessionPreferences =
+        PhotoScanImportSessionPreferences(),
+
+    /** Expanded sections and UI state for the Media Import tab. */
+    val mediaImportSessionPreferences: MediaImportSessionPreferences =
+        MediaImportSessionPreferences(),
+
+    /**
+     * Last selected main tab ([org.kryspetrie.fileimport.ui.AppTab.name]). Defaults to Photo Scan
+     * so the primary workflow opens first for new installs.
+     */
+    val lastAppTab: String = "PHOTO_SCAN",
 ) {
     /** Returns the currently active Photo Scan profile, or the default if none is selected. */
     val activePhotoScanProfile: PhotoScanProfile
@@ -172,13 +204,47 @@ data class AppSettings(
             copy(metadataEditorRecentPaths = listOf(path) + updated)
         }
 
-    /** Updates the metadata editor layout mode. */
-    fun withMetadataEditorLayoutMode(mode: MetadataEditorLayoutMode): AppSettings =
-        copy(metadataEditorLayoutMode = mode)
-
     /** Updates the metadata editor file browser view mode. */
     fun withMetadataEditorFileViewMode(mode: MetadataEditorFileViewMode): AppSettings =
         copy(metadataEditorFileViewMode = mode)
+
+    /** Updates the UI density preference. */
+    fun withUiDensity(density: UiDensity): AppSettings = copy(uiDensity = density)
+
+    /** Updates metadata editor disk thumbnail cache preference. */
+    fun withMetadataEditorDiskThumbnailCache(enabled: Boolean): AppSettings =
+        copy(metadataEditorDiskThumbnailCache = enabled)
+
+    /** Updates metadata editor layout preferences. */
+    fun withMetadataEditorLayoutPreferences(
+        preferences: MetadataEditorLayoutPreferences
+    ): AppSettings = copy(metadataEditorLayoutPreferences = preferences)
+
+    /** Updates metadata editor session preferences (output mode, directory, subfolders). */
+    fun withMetadataEditorSessionPreferences(
+        preferences: MetadataEditorSessionPreferences
+    ): AppSettings = copy(metadataEditorSessionPreferences = preferences)
+
+    /** Updates Reorganize tab session preferences. */
+    fun withReorganizeSessionPreferences(preferences: ReorganizeSessionPreferences): AppSettings =
+        copy(reorganizeSessionPreferences = preferences)
+
+    /** Updates Duplicate Scanner tab session preferences. */
+    fun withDuplicateScannerSessionPreferences(
+        preferences: DuplicateScannerSessionPreferences
+    ): AppSettings = copy(duplicateScannerSessionPreferences = preferences)
+
+    /** Updates Photo Scan import landing session preferences. */
+    fun withPhotoScanImportSessionPreferences(
+        preferences: PhotoScanImportSessionPreferences
+    ): AppSettings = copy(photoScanImportSessionPreferences = preferences)
+
+    /** Updates Media Import tab session preferences. */
+    fun withMediaImportSessionPreferences(preferences: MediaImportSessionPreferences): AppSettings =
+        copy(mediaImportSessionPreferences = preferences)
+
+    /** Remembers the last selected main application tab. */
+    fun withLastAppTab(tabName: String): AppSettings = copy(lastAppTab = tabName)
 
     /** Updates the locale setting. */
     fun withLocale(localeCode: String): AppSettings = copy(locale = localeCode)

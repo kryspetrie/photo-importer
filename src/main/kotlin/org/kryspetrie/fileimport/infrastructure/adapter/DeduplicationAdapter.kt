@@ -146,7 +146,7 @@ class DeduplicationAdapter(
         image2: ImageFile,
         settings: DeduplicationSettings,
     ): DuplicateType? {
-        val hashesAvailable = image1.hash != null && image2.hash != null
+        val hashesAvailable = !image1.hash.isNullOrEmpty() && !image2.hash.isNullOrEmpty()
         val hashesMatch = image1.hash == image2.hash
         if (settings.enableHashDeduplication && hashesAvailable && hashesMatch)
             return DuplicateType.EXACT_HASH

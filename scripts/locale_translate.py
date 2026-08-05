@@ -15,6 +15,28 @@ DELIM = "\n###I18N###\n"
 BATCH_SIZE = 40
 BATCH_SLEEP_SECONDS = 0.5
 
+# Keys from UI consistency phases that should be translated (not left as English copy-paste).
+TRANSLATED_UI_KEYS: frozenset[str] = frozenset(
+    {
+        "SETTINGS_VERIFY_COPIES_DESC",
+        "SETTINGS_DELETE_SOURCE_DESC",
+        "APP_KS_TABS",
+        "APP_KS_ENTER_SUBMIT",
+        "APP_KS_WIZARD_HELP_HINT",
+        "META_KS_EDITING",
+        "META_KS_PREV_NEXT",
+        "META_KS_SAVE",
+        "META_KS_LOCATION",
+        "META_KS_FACES",
+        "META_KS_KEYWORDS",
+        "META_KS_BROWSER",
+        "META_KS_APPLY_MULTI",
+    }
+)
+
+# Values that are intentionally identical in every locale (extensions, symbols).
+IDENTICAL_ACROSS_LOCALES: frozenset[str] = frozenset({"SETTINGS_SIDECAR_TYPES_DESC"})
+
 # Bundled locale code → Google Translate target language code.
 LOCALES: dict[str, str] = {
     "de": "de",
@@ -145,6 +167,70 @@ def write_locale(locale: str, strings: dict[str, str], en: dict[str, str]) -> Pa
     path = I18N_DIR / f"{locale}.json"
     path.write_text(json.dumps(ordered, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     return path
+
+
+def english_fallback_keys(en: dict[str, str], locale_data: dict[str, str]) -> list[str]:
+    """Keys present in both maps whose value still matches en.json (machine copy-paste)."""
+    return [
+        key
+        for key in TRANSLATED_UI_KEYS
+        if key in en
+        and key in locale_data
+        and key not in IDENTICAL_ACROSS_LOCALES
+        and locale_data[key] == en[key]
+    ]
+
+
+def fix_english_fallbacks_from_en(
+    locale: str,
+    *,
+    dry_run: bool = False,
+    sleep_seconds: float = BATCH_SLEEP_SECONDS,
+) -> int:
+    """Re-translate [TRANSLATED_UI_KEYS] that still match en.json in [locale]. Returns count fixed."""
+    if locale not in LOCALES:
+        raise LocaleTranslateError(f"Unknown locale code: {locale}")
+
+    en = load_en()
+    existing = load_locale(locale)
+    keys_to_fix = english_fallback_keys(en, existing)
+    if not keys_to_fix:
+        print(f"  {locale}: no English fallbacks in UI keys")
+        return 0
+
+    if dry_run:
+        preview = ", ".join(keys_to_fix[:5])
+        suffix = "..." if len(keys_to_fix) > 5 else ""
+        print(f"  {locale}: would re-translate {len(keys_to_fix)} keys ({preview}{suffix})")
+        return len(keys_to_fix)
+
+    translator = get_translator("en", LOCALES[locale])
+    merged = dict(existing)
+    for start in range(0, len(keys_to_fix), BATCH_SIZE):
+        batch_keys = keys_to_fix[start : start + BATCH_SIZE]
+        batch_values = [en[key] for key in batch_keys]
+        translated = translate_batch(batch_values, translator)
+        for key, value in zip(batch_keys, translated):
+            merged[key] = value
+        end = min(start + BATCH_SIZE, len(keys_to_fix))
+        print(f"  {locale}: re-translated {end}/{len(keys_to_fix)} English fallbacks")
+        time.sleep(sleep_seconds)
+
+    path = write_locale(locale, merged, en)
+    print(f"  {locale}: wrote {path} ({len(merged)} keys)")
+    return len(keys_to_fix)
+
+
+def fix_all_english_fallbacks(
+    locales: list[str] | None = None,
+    *,
+    dry_run: bool = False,
+) -> dict[str, int]:
+    targets = locales or list(LOCALES.keys())
+    fixed: dict[str, int] = {}
+    for locale in targets:
+        fixed[locale] = fix_english_fallbacks_from_en(locale, dry_run=dry_run)
+    return fixed
 
 
 def merge_missing_from_en(

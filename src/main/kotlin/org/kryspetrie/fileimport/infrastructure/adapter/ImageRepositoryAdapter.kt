@@ -3,9 +3,9 @@ package org.kryspetrie.fileimport.infrastructure.adapter
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.Directory
 import com.drew.metadata.avi.AviDirectory
+import com.drew.metadata.exif.ExifDirectoryBase
 import com.drew.metadata.exif.ExifIFD0Directory
 import com.drew.metadata.exif.ExifSubIFDDirectory
-import com.drew.metadata.exif.ExifDirectoryBase
 import com.drew.metadata.exif.GpsDirectory
 import com.drew.metadata.iptc.IptcDirectory
 import com.drew.metadata.mov.QuickTimeDirectory
@@ -108,23 +108,36 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
             }
 
         // IPTC keywords (may be multiple values for the same tag)
-        val iptcKeywords: List<String>? = try {
-            iptc?.getStringArray(IptcDirectory.TAG_KEYWORDS)?.toList()?.map { it.trim() }?.filter { it.isNotBlank() }
-        } catch (_: Exception) {
-            val single = safeString(iptc, IptcDirectory.TAG_KEYWORDS)?.trim()
-            if (single.isNullOrBlank()) null else listOf(single)
-        }
+        val iptcKeywords: List<String>? =
+            try {
+                iptc
+                    ?.getStringArray(IptcDirectory.TAG_KEYWORDS)
+                    ?.toList()
+                    ?.map { it.trim() }
+                    ?.filter { it.isNotBlank() }
+            } catch (_: Exception) {
+                val single = safeString(iptc, IptcDirectory.TAG_KEYWORDS)?.trim()
+                if (single.isNullOrBlank()) null else listOf(single)
+            }
 
         // XP Keywords (Windows Unicode keywords stored in EXIF IFD0)
-        val xpKeywords: String? = try {
-            ifd0?.getString(ExifDirectoryBase.TAG_WIN_KEYWORDS)?.trim()
-        } catch (_: Exception) { null }
+        val xpKeywords: String? =
+            try {
+                ifd0?.getString(ExifDirectoryBase.TAG_WIN_KEYWORDS)?.trim()
+            } catch (_: Exception) {
+                null
+            }
 
-        val mergedKeywords = if (iptcKeywords != null || xpKeywords != null) {
-            val iptcSet = iptcKeywords?.toSet() ?: emptySet()
-            val xpList = xpKeywords?.split(";")?.map { it.trim() }?.filter { it.isNotBlank() } ?: emptyList()
-            (iptcKeywords.orEmpty() + xpList.filter { it !in iptcSet }).takeIf { it.isNotEmpty() }
-        } else null
+        val mergedKeywords =
+            if (iptcKeywords != null || xpKeywords != null) {
+                val iptcSet = iptcKeywords?.toSet() ?: emptySet()
+                val xpList =
+                    xpKeywords?.split(";")?.map { it.trim() }?.filter { it.isNotBlank() }
+                        ?: emptyList()
+                (iptcKeywords.orEmpty() + xpList.filter { it !in iptcSet }).takeIf {
+                    it.isNotEmpty()
+                }
+            } else null
 
         return ImageMetadata(
             dateTimeOriginal = dateOriginal,
@@ -162,7 +175,8 @@ class ImageRepositoryAdapter(private val dispatcherProvider: DispatcherProvider)
             subLocation = safeString(iptc, IptcDirectory.TAG_SUB_LOCATION)?.trim(),
             city = safeString(iptc, IptcDirectory.TAG_CITY)?.trim(),
             provinceState = safeString(iptc, IptcDirectory.TAG_PROVINCE_OR_STATE)?.trim(),
-            countryName = safeString(iptc, IptcDirectory.TAG_COUNTRY_OR_PRIMARY_LOCATION_NAME)?.trim(),
+            countryName =
+                safeString(iptc, IptcDirectory.TAG_COUNTRY_OR_PRIMARY_LOCATION_NAME)?.trim(),
         )
     }
 

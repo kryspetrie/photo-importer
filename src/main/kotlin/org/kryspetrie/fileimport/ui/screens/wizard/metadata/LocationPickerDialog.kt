@@ -49,11 +49,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import org.kryspetrie.fileimport.domain.model.LocationResult
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
-import org.kryspetrie.fileimport.ui.i18n.strings
-
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.LocationSearchPort
 import org.kryspetrie.fileimport.ui.components.LoadingIndicator
+import org.kryspetrie.fileimport.ui.i18n.strings
 
 /**
  * Full-screen location picker overlay with an OpenStreetMap map and unified search panel.
@@ -251,7 +250,7 @@ fun LocationPickerContent(
                         LoadingIndicator(modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            "Searching\u2026",
+                            s.t(StringKey.WIZARD_SEARCHING),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -277,7 +276,7 @@ fun LocationPickerContent(
                         LoadingIndicator(modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            "Looking up address\u2026",
+                            s.t(StringKey.WIZARD_LOOKUP_ADDRESS),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -326,13 +325,22 @@ fun LocationPickerContent(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             selectedLocation!!.city?.let {
-                                Text("${s.t(StringKey.FIELD_CITY)}: $it", style = MaterialTheme.typography.labelSmall)
+                                Text(
+                                    "${s.t(StringKey.FIELD_CITY)}: $it",
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
                             }
                             selectedLocation!!.state?.let {
-                                Text("${s.t(StringKey.FIELD_STATE)}: $it", style = MaterialTheme.typography.labelSmall)
+                                Text(
+                                    "${s.t(StringKey.FIELD_STATE)}: $it",
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
                             }
                             selectedLocation!!.country?.let {
-                                Text("${s.t(StringKey.FIELD_COUNTRY)}: $it", style = MaterialTheme.typography.labelSmall)
+                                Text(
+                                    "${s.t(StringKey.FIELD_COUNTRY)}: $it",
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
                             }
                             Spacer(Modifier.height(6.dp))
                             Row(
@@ -370,7 +378,7 @@ fun LocationPickerContent(
                 // ── Search results ──
                 if (searchResults.isNotEmpty()) {
                     Text(
-                        "Results",
+                        s.t(StringKey.WIZARD_RESULTS),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -398,14 +406,14 @@ fun LocationPickerContent(
                     }
                 } else if (!isSearching && searchQuery.length >= 2 && errorMessage == null) {
                     Text(
-                        "No locations found. Try a different search, or click the map to drop a pin.",
+                        s.t(StringKey.WIZARD_NO_LOCATIONS),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
 
                 Text(
-                    "Tip: Click on the map to drop a pin and look up the address.",
+                    s.t(StringKey.WIZARD_MAP_TIP),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

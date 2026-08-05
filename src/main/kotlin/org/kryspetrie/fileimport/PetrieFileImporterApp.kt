@@ -1,6 +1,11 @@
 package org.kryspetrie.fileimport
 
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import androidx.compose.ui.unit.dp
@@ -18,12 +23,16 @@ import kotlinx.coroutines.runBlocking
 import org.koin.core.context.startKoin
 import org.kryspetrie.fileimport.di.appModule
 import org.kryspetrie.fileimport.domain.model.AppTheme
+import org.kryspetrie.fileimport.domain.model.UiDensity
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
-import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.domain.port.LocalePort
+import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
 import org.kryspetrie.fileimport.ui.PetrieFileImporterApp
 import org.kryspetrie.fileimport.ui.createAppIcon
+import org.kryspetrie.fileimport.ui.i18n.StringsProvider
+import org.kryspetrie.fileimport.ui.screens.wizard.KeyboardShortcutHelpDialog
+import org.kryspetrie.fileimport.ui.screens.wizard.ShortcutContext
 
 /**
  * Main entry point for the PhotoImporter desktop application.
@@ -158,6 +167,7 @@ fun main(args: Array<String>) {
         // Mutable state holder for current settings
         // Changes to this state trigger recomposition of dependent UI
         val currentSettings = mutableStateOf(settings)
+        var showKeyboardShortcutHelp by remember { mutableStateOf(false) }
 
         // Get the application logger
         val appLogger: AppLogger = org.koin.core.context.GlobalContext.get().get()
@@ -203,6 +213,12 @@ fun main(args: Array<String>) {
             icon = appIcon,
         ) {
             val localePort: LocalePort = org.koin.core.context.GlobalContext.get().get()
+            // Observe locale changes so MenuBar recomposes when language switches
+            val currentLocale by localePort.observeLocale().collectAsState()
+            // Eagerly set locale when settings change, so MenuBar is in sync
+            LaunchedEffect(currentSettings.value.locale) {
+                localePort.setLocale(currentSettings.value.locale)
+            }
             // Enforce minimum window size for proper desktop layout
             window.minimumSize = Dimension(1024, 768)
             // Create application menu bar (File, View, Help)
@@ -250,6 +266,28 @@ fun main(args: Array<String>) {
                             }
                     }
                     Separator()
+                    Menu(localePort.t(StringKey.MENU_UI_DENSITY)) {
+                        UiDensity.entries.forEach { density ->
+                            val selected = currentSettings.value.uiDensity == density
+                            val labelKey =
+                                when (density) {
+                                    UiDensity.COMPACT -> StringKey.MENU_UI_DENSITY_COMPACT
+                                    UiDensity.COMFORTABLE -> StringKey.MENU_UI_DENSITY_COMFORTABLE
+                                    UiDensity.SPACIOUS -> StringKey.MENU_UI_DENSITY_SPACIOUS
+                                }
+                            Item(
+                                text =
+                                    buildString {
+                                        append(localePort.t(labelKey))
+                                        if (selected) append(" ✓")
+                                    },
+                                onClick = {
+                                    onSettingsChange(currentSettings.value.withUiDensity(density))
+                                },
+                            )
+                        }
+                    }
+                    Separator()
                     Item(
                         localePort.t(StringKey.MENU_CLEAR_METADATA_HISTORY),
                         onClick = {
@@ -263,10 +301,21 @@ fun main(args: Array<String>) {
                     )
                 }
                 Menu(localePort.t(StringKey.MENU_HELP)) {
-                    Item(localePort.t(StringKey.MENU_VIEW_LOG)) { appLogger.openLogFileWithSystemViewer() }
-                    Item(
-                        localePort.t(StringKey.MENU_ABOUT, "app" to APP_TITLE),
-                        onClick = {},
+                    Item(localePort.t(StringKey.MENU_KEYBOARD_SHORTCUTS)) {
+                        showKeyboardShortcutHelp = true
+                    }
+                    Item(localePort.t(StringKey.MENU_VIEW_LOG)) {
+                        appLogger.openLogFileWithSystemViewer()
+                    }
+                    Item(localePort.t(StringKey.MENU_ABOUT, "app" to APP_TITLE), onClick = {})
+                }
+            }
+
+            if (showKeyboardShortcutHelp) {
+                StringsProvider(localeCode = currentSettings.value.locale) {
+                    KeyboardShortcutHelpDialog(
+                        onDismiss = { showKeyboardShortcutHelp = false },
+                        context = ShortcutContext.APP,
                     )
                 }
             }
@@ -280,6 +329,7 @@ fun main(args: Array<String>) {
                 onSettingsChange = onSettingsChange,
                 // Window state for potential window management
                 windowState = windowState,
+                onRequestKeyboardShortcutHelp = { showKeyboardShortcutHelp = true },
             )
         }
     }

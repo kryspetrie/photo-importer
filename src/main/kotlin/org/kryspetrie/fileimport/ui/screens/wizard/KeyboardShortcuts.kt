@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.kryspetrie.fileimport.domain.model.geometry.Corner
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.components.ShortcutLabels
 import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanConstants
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
@@ -368,10 +369,13 @@ fun KeyboardShortcutHelpDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Navigation section — always shown
-                ShortcutSection(title = s.t(StringKey.WIZARD_KS_NAVIGATION)) {
-                    ShortcutRow("Enter", s.t(StringKey.WIZARD_KS_CONFIRM_PROCEED))
-                    ShortcutRow("Escape", s.t(StringKey.WIZARD_KS_CANCEL_BACK))
+                // Navigation — canvas/summary contexts only (APP/METADATA_EDITOR include Enter
+                // below)
+                if (context != ShortcutContext.APP && context != ShortcutContext.METADATA_EDITOR) {
+                    ShortcutSection(title = s.t(StringKey.WIZARD_KS_NAVIGATION)) {
+                        ShortcutRow("Enter", s.t(StringKey.WIZARD_KS_CONFIRM_PROCEED))
+                        ShortcutRow("Escape", s.t(StringKey.WIZARD_KS_CANCEL_BACK))
+                    }
                 }
 
                 if (context == ShortcutContext.CANVAS) {
@@ -414,11 +418,60 @@ fun KeyboardShortcutHelpDialog(
                     }
                 }
 
+                if (context == ShortcutContext.APP || context == ShortcutContext.METADATA_EDITOR) {
+                    HorizontalDivider()
+
+                    ShortcutSection(title = s.t(StringKey.APP_KS_TABS)) {
+                        ShortcutRow(ShortcutLabels.chord("1"), s.t(StringKey.NAV_IMPORT))
+                        ShortcutRow(ShortcutLabels.chord("2"), s.t(StringKey.NAV_PHOTO_SCAN))
+                        ShortcutRow(ShortcutLabels.chord("3"), s.t(StringKey.NAV_REORGANIZE))
+                        ShortcutRow(ShortcutLabels.chord("4"), s.t(StringKey.NAV_DUPLICATES))
+                        ShortcutRow(ShortcutLabels.chord("5"), s.t(StringKey.NAV_METADATA_EDITOR))
+                        ShortcutRow(
+                            ShortcutLabels.chord("?"),
+                            s.t(StringKey.MENU_KEYBOARD_SHORTCUTS),
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    ShortcutSection(title = s.t(StringKey.META_KS_EDITING)) {
+                        ShortcutRow(
+                            ShortcutLabels.chord(",", "."),
+                            s.t(StringKey.META_KS_PREV_NEXT),
+                        )
+                        ShortcutRow(ShortcutLabels.chord("S"), s.t(StringKey.META_KS_SAVE))
+                        ShortcutRow(ShortcutLabels.chord("L"), s.t(StringKey.META_KS_LOCATION))
+                        ShortcutRow(ShortcutLabels.chord("T"), s.t(StringKey.META_KS_FACES))
+                        ShortcutRow(ShortcutLabels.chord("F"), s.t(StringKey.META_KS_KEYWORDS))
+                        ShortcutRow(ShortcutLabels.chord("B"), s.t(StringKey.META_KS_BROWSER))
+                        ShortcutRow(
+                            ShortcutLabels.chord("Enter"),
+                            s.t(StringKey.META_KS_APPLY_MULTI),
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    ShortcutSection(title = s.t(StringKey.WIZARD_KS_NAVIGATION)) {
+                        ShortcutRow("Enter", s.t(StringKey.APP_KS_ENTER_SUBMIT))
+                        ShortcutRow("Escape", s.t(StringKey.WIZARD_KS_CANCEL_BACK))
+                    }
+
+                    HorizontalDivider()
+
+                    Text(
+                        s.t(StringKey.APP_KS_WIZARD_HELP_HINT),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+
                 HorizontalDivider()
 
                 ShortcutSection(title = s.t(StringKey.WIZARD_KS_UNDO_REDO)) {
-                    ShortcutRow("Ctrl+Z", s.t(StringKey.WIZARD_KS_UNDO))
-                    ShortcutRow("Ctrl+Shift+Z", s.t(StringKey.WIZARD_KS_REDO))
+                    ShortcutRow(ShortcutLabels.chord("Z"), s.t(StringKey.WIZARD_KS_UNDO))
+                    ShortcutRow("${ShortcutLabels.modifier}+Shift+Z", s.t(StringKey.WIZARD_KS_REDO))
                 }
             }
         },

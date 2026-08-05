@@ -3,9 +3,11 @@ package org.kryspetrie.fileimport.infrastructure.photoscan
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import kotlin.math.hypot
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 
+@Tag("scratch")
 class AccuracyCheckTest {
 
     private fun loadImage(path: String): BufferedImage {

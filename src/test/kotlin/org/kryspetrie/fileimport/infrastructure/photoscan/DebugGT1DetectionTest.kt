@@ -4,6 +4,7 @@ import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import kotlin.math.hypot
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
@@ -18,6 +19,7 @@ import org.kryspetrie.fileimport.domain.model.PhotoCorner
  * These corners are completely different! The detector is finding wrong contours entirely.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Tag("scratch")
 class DebugGT1DetectionTest {
 
     private lateinit var img02: BufferedImage

@@ -79,11 +79,14 @@ fun ModelDownloadDialog(
                                 s.t(
                                     StringKey.META_MODEL_DOWNLOAD_PROGRESS_MB,
                                     "progress" to downloadState.progressPercent.toString(),
-                                    "downloaded" to "%.1f".format(bytesToMb(downloadState.bytesDownloaded)),
+                                    "downloaded" to
+                                        "%.1f".format(bytesToMb(downloadState.bytesDownloaded)),
                                     "total" to
-                                        "%.1f".format(
-                                            downloadState.totalBytes?.let { bytesToMb(it) } ?: 0.0,
-                                        ),
+                                        "%.1f"
+                                            .format(
+                                                downloadState.totalBytes?.let { bytesToMb(it) }
+                                                    ?: 0.0
+                                            ),
                                 ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -93,7 +96,8 @@ fun ModelDownloadDialog(
                             Text(
                                 s.t(
                                     StringKey.META_MODEL_DOWNLOAD_PROGRESS_BYTES,
-                                    "downloaded" to "%.1f".format(bytesToMb(downloadState.bytesDownloaded)),
+                                    "downloaded" to
+                                        "%.1f".format(bytesToMb(downloadState.bytesDownloaded)),
                                 ),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -106,7 +110,10 @@ fun ModelDownloadDialog(
                             shape = RoundedCornerShape(4.dp),
                         ) {
                             Text(
-                                s.t(StringKey.MODEL_DOWNLOAD_FAILED, "message" to downloadState.error),
+                                s.t(
+                                    StringKey.MODEL_DOWNLOAD_FAILED,
+                                    "message" to downloadState.error,
+                                ),
                                 modifier = Modifier.padding(8.dp),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onErrorContainer,

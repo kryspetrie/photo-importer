@@ -1,14 +1,10 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performClick
 import java.io.File
-import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -18,13 +14,6 @@ import org.kryspetrie.fileimport.domain.port.SettingsPort
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 
-/**
- * Component tests for PhotoScanImportScreen. Tests UI rendering and user interactions with mode
- * selection.
- *
- * Uses JUnit 4 style with @get:Rule for ComposeTestRule. Tagged with @Tag(UiComponentTest::class)
- * for test filtering.
- */
 @DisplayName("PhotoScanImportScreen Component Tests")
 @Tag("UiComponentTest")
 class PhotoScanImportScreenTest {
@@ -54,42 +43,30 @@ class PhotoScanImportScreenTest {
         )
 
     @Test
-    @DisplayName("should display Photo Scan Import title")
-    fun shouldDisplayTitle() {
+    @DisplayName("should display landing hero with workflow steps")
+    fun shouldDisplayLandingHero() {
         composeTestRule.setContent {
             importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
         }
 
-        composeTestRule.onNodeWithText("Photo Scan Import").assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText(
+                "Digitize photos on a solid background — detect each print, fix perspective, add metadata, and export."
+            )
+            .assertIsDisplayed()
+        composeTestRule
+            .onNodeWithText("Select source → Adjust boxes → Edit metadata → Export")
+            .assertIsDisplayed()
     }
 
     @Test
-    @DisplayName("should display Import Mode header")
-    fun shouldDisplayImportModeHeader() {
-        composeTestRule.setContent {
-            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
-        }
-
-        composeTestRule.onNodeWithText("Import Mode").assertIsDisplayed()
-    }
-
-    @Test
-    @DisplayName("should display Photo Scan mode card")
-    fun shouldDisplayPhotoScanCard() {
+    @DisplayName("should display scan mode cards")
+    fun shouldDisplayScanModeCards() {
         composeTestRule.setContent {
             importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
         }
 
         composeTestRule.onNodeWithText("Photo Scan").assertIsDisplayed()
-    }
-
-    @Test
-    @DisplayName("should display Single Photo mode card")
-    fun shouldDisplaySinglePhotoCard() {
-        composeTestRule.setContent {
-            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
-        }
-
         composeTestRule.onNodeWithText("Single Photo").assertIsDisplayed()
     }
 
@@ -104,36 +81,12 @@ class PhotoScanImportScreenTest {
     }
 
     @Test
-    @DisplayName("should display cancel button")
-    fun shouldDisplayCancelButton() {
+    @DisplayName("should display import scans button")
+    fun shouldDisplayImportScansButton() {
         composeTestRule.setContent {
             importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
         }
 
-        composeTestRule.onNodeWithContentDescription("Cancel").assertIsDisplayed()
-    }
-
-    @Test
-    @DisplayName("should call onCancel when clicked")
-    fun shouldCallOnCancelWhenClicked() {
-        var cancelCalled = false
-
-        composeTestRule.setContent {
-            importScreenCall(onImageSelected = { _, _ -> }, onCancel = { cancelCalled = true })
-        }
-
-        composeTestRule.onNodeWithContentDescription("Cancel").performClick()
-
-        assertThat(cancelCalled).isTrue()
-    }
-
-    @Test
-    @DisplayName("should display Select Image button")
-    fun shouldDisplaySelectImageButton() {
-        composeTestRule.setContent {
-            importScreenCall(onImageSelected = { _, _ -> }, onCancel = {})
-        }
-
-        composeTestRule.onNodeWithText("Select Image").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Import Scans").assertIsDisplayed()
     }
 }

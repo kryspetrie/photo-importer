@@ -68,10 +68,14 @@ fun WatchFolderStatusCard(
                         buildString {
                             append("${watchStatus.filesDetected} file(s) detected")
                             if (watchStatus.autoImportsPending > 0) {
-                                append(" · ${watchStatus.autoImportsPending} ${s.t(StringKey.WATCH_PENDING)}")
+                                append(
+                                    " · ${watchStatus.autoImportsPending} ${s.t(StringKey.WATCH_PENDING)}"
+                                )
                             }
                             if (watchStatus.importCount > 0) {
-                                append(" · ${watchStatus.importCount} ${s.t(StringKey.WATCH_IMPORTED)}")
+                                append(
+                                    " · ${watchStatus.importCount} ${s.t(StringKey.WATCH_IMPORTED)}"
+                                )
                             }
                         },
                         style = MaterialTheme.typography.labelSmall,
@@ -93,7 +97,10 @@ fun WatchFolderStatusCard(
                     modifier = Modifier.height(28.dp),
                     contentPadding = PaddingValues(horizontal = 8.dp),
                 ) {
-                    Text(s.t(StringKey.IMPORT_STOP_BUTTON), style = MaterialTheme.typography.labelSmall)
+                    Text(
+                        s.t(StringKey.IMPORT_STOP_BUTTON),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
                 }
             }
 

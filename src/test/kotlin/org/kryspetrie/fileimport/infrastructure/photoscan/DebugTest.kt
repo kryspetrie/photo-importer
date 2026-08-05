@@ -3,8 +3,10 @@ package org.kryspetrie.fileimport.infrastructure.photoscan
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import kotlin.math.abs
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
+@Tag("scratch")
 class DebugTest {
 
     private fun loadImage(path: String): BufferedImage {

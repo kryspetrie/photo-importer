@@ -28,10 +28,8 @@ class TabSettingsTest {
     @DisplayName("withConfiguration preserves paths")
     fun withConfigurationPreservesPaths() {
         val tab =
-            TabSettings(
-                lastSourcePath = "/src",
-                lastDestinationPath = "/dest",
-            ).withConfiguration(ImportConfiguration(deleteAfterImport = true))
+            TabSettings(lastSourcePath = "/src", lastDestinationPath = "/dest")
+                .withConfiguration(ImportConfiguration(deleteAfterImport = true))
 
         assertThat(tab.lastSourcePath).isEqualTo("/src")
         assertThat(tab.lastDestinationPath).isEqualTo("/dest")

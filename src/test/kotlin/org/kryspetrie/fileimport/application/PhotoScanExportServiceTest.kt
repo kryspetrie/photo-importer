@@ -373,9 +373,7 @@ class PhotoScanExportServiceTest {
                     sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
-            assertThat(result.success)
-                .withFailMessage { result.error ?: "export failed" }
-                .isTrue()
+            assertThat(result.success).withFailMessage { result.error ?: "export failed" }.isTrue()
             val exportedFile = File(result.destinationPath)
             assertThat(exportedFile).exists()
 
@@ -398,7 +396,7 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("should write Make (IFD0 tag 0x010F) and read it back")
         fun shouldWriteAndReadMake() {
-            val config = PhotoScanConfiguration(cameraMake = "Canon")
+            val config = PhotoScanConfiguration(cameraMake = "Canon", overrideCameraMake = null)
             val metadata = exportAndReadback(config)
 
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
@@ -410,7 +408,7 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("should write Model (IFD0 tag 0x0110) and read it back")
         fun shouldWriteAndReadModel() {
-            val config = PhotoScanConfiguration(cameraModel = "EOS R5")
+            val config = PhotoScanConfiguration(cameraModel = "EOS R5", overrideCameraModel = null)
             val metadata = exportAndReadback(config)
 
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
@@ -448,7 +446,7 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("should write LensModel (Exif SubIFD tag 0xA434) and read it back")
         fun shouldWriteAndReadLensModel() {
-            val config = PhotoScanConfiguration(lensModel = "RF24-105mm F4 L IS USM")
+            val config = PhotoScanConfiguration(lensModel = "RF24-105mm F4 L IS USM", overrideLensModel = null)
             val metadata = exportAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
@@ -461,7 +459,7 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("should write FocalLength (Exif SubIFD tag 0x920A) and read it back")
         fun shouldWriteAndReadFocalLength() {
-            val config = PhotoScanConfiguration(focalLength = "50mm")
+            val config = PhotoScanConfiguration(focalLength = "50mm", overrideFocalLength = null)
             val metadata = exportAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
@@ -475,7 +473,7 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("should write FNumber (Exif SubIFD tag 0x829D) and read it back")
         fun shouldWriteAndReadFNumber() {
-            val config = PhotoScanConfiguration(aperture = "f/2.8")
+            val config = PhotoScanConfiguration(aperture = "f/2.8", overrideAperture = null)
             val metadata = exportAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
@@ -489,7 +487,7 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("should write ExposureTime (Exif SubIFD tag 0x829A) and read it back")
         fun shouldWriteAndReadExposureTime() {
-            val config = PhotoScanConfiguration(shutterSpeed = "1/125")
+            val config = PhotoScanConfiguration(shutterSpeed = "1/125", overrideShutterSpeed = null)
             val metadata = exportAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
@@ -504,7 +502,7 @@ class PhotoScanExportServiceTest {
         @Test
         @DisplayName("should write ISOSpeedRatings (Exif SubIFD tag 0x8827) and read it back")
         fun shouldWriteAndReadIso() {
-            val config = PhotoScanConfiguration(iso = "400")
+            val config = PhotoScanConfiguration(iso = "400", overrideIso = null)
             val metadata = exportAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
@@ -543,6 +541,13 @@ class PhotoScanExportServiceTest {
                     shutterSpeed = "1/250",
                     iso = "100",
                     keywords = "summer, vacation, 1985",
+                    overrideCameraMake = null,
+                    overrideCameraModel = null,
+                    overrideLensModel = null,
+                    overrideFocalLength = null,
+                    overrideAperture = null,
+                    overrideShutterSpeed = null,
+                    overrideIso = null,
                 )
             val metadata = exportAndReadback(config)
 
@@ -579,7 +584,7 @@ class PhotoScanExportServiceTest {
             // Create a source image with some EXIF (just the plain JPEG from ImageIO — no EXIF)
             // Then export WITH copyOriginalExif=false. The output should have only overrides, no
             // scanner EXIF.
-            val config = PhotoScanConfiguration(cameraMake = "TestCamera", copyOriginalExif = false)
+            val config = PhotoScanConfiguration(cameraMake = "TestCamera", copyOriginalExif = false, overrideCameraMake = null)
             val metadata = exportAndReadback(config)
 
             // The override we set should be present
@@ -604,6 +609,7 @@ class PhotoScanExportServiceTest {
                 PhotoScanConfiguration(
                     cameraMake = "MyCamera", // Override just the Make
                     copyOriginalExif = true,
+                    overrideCameraMake = null,
                 )
 
             val img = BufferedImage(200, 150, BufferedImage.TYPE_INT_RGB)
@@ -628,9 +634,7 @@ class PhotoScanExportServiceTest {
                     sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
-            assertThat(result.success)
-                .withFailMessage { result.error ?: "export failed" }
-                .isTrue()
+            assertThat(result.success).withFailMessage { result.error ?: "export failed" }.isTrue()
             val exportedFile = File(result.destinationPath)
             assertThat(exportedFile).exists()
 
@@ -650,6 +654,7 @@ class PhotoScanExportServiceTest {
                     cameraMake = "Canon",
                     originalDate = "2020-01-15",
                     keywords = "test",
+                    overrideCameraMake = null,
                 )
 
             val img = BufferedImage(200, 150, BufferedImage.TYPE_INT_RGB)
@@ -672,9 +677,7 @@ class PhotoScanExportServiceTest {
                     destDir.absolutePath,
                     "validity_test",
                 )
-            assertThat(result.success)
-                .withFailMessage { result.error ?: "export failed" }
-                .isTrue()
+            assertThat(result.success).withFailMessage { result.error ?: "export failed" }.isTrue()
 
             val exportedFile = File(result.destinationPath)
 
@@ -695,7 +698,9 @@ class PhotoScanExportServiceTest {
     inner class TriStateOverrideTests {
 
         /** Seeds tag values first when [config] uses NULL_OUT, then applies NULL_OUT in-place. */
-        private fun exportNullOutAndReadback(config: PhotoScanConfiguration): com.drew.metadata.Metadata {
+        private fun exportNullOutAndReadback(
+            config: PhotoScanConfiguration
+        ): com.drew.metadata.Metadata {
             val seedConfig = config.withNullOutOverridesReplaced(OverrideState.OVERRIDE)
             val seededFile = exportToFile(seedConfig)
             metadataWritingService.writeMetadataOnly(
@@ -706,14 +711,15 @@ class PhotoScanExportServiceTest {
         }
 
         private fun PhotoScanConfiguration.withNullOutOverridesReplaced(
-            replacement: OverrideState,
+            replacement: OverrideState
         ): PhotoScanConfiguration =
             copy(
                 overrideDescription =
                     if (overrideDescription == OverrideState.NULL_OUT) replacement
                     else overrideDescription,
                 overrideKeywords =
-                    if (overrideKeywords == OverrideState.NULL_OUT) replacement else overrideKeywords,
+                    if (overrideKeywords == OverrideState.NULL_OUT) replacement
+                    else overrideKeywords,
                 overrideOriginalDate =
                     if (overrideOriginalDate == OverrideState.NULL_OUT) replacement
                     else overrideOriginalDate,
@@ -730,17 +736,21 @@ class PhotoScanExportServiceTest {
                     if (overrideFocalLength == OverrideState.NULL_OUT) replacement
                     else overrideFocalLength,
                 overrideAperture =
-                    if (overrideAperture == OverrideState.NULL_OUT) replacement else overrideAperture,
+                    if (overrideAperture == OverrideState.NULL_OUT) replacement
+                    else overrideAperture,
                 overrideShutterSpeed =
                     if (overrideShutterSpeed == OverrideState.NULL_OUT) replacement
                     else overrideShutterSpeed,
-                overrideIso = if (overrideIso == OverrideState.NULL_OUT) replacement else overrideIso,
-                overrideGps = if (overrideGps == OverrideState.NULL_OUT) replacement else overrideGps,
+                overrideIso =
+                    if (overrideIso == OverrideState.NULL_OUT) replacement else overrideIso,
+                overrideGps =
+                    if (overrideGps == OverrideState.NULL_OUT) replacement else overrideGps,
             )
 
         private fun exportToFile(config: PhotoScanConfiguration): File {
             val target = File(tempDir, "seed_${System.nanoTime()}.jpg")
-            ExifToolTestSupport.copySampleResource("samples/exiftool_sample.jpg").toFile()
+            ExifToolTestSupport.copySampleResource("samples/exiftool_sample.jpg")
+                .toFile()
                 .copyTo(target, overwrite = true)
             metadataWritingService.writeMetadataOnly(
                 outputPath = FilePath(target.absolutePath),
@@ -804,7 +814,8 @@ class PhotoScanExportServiceTest {
                 PhotoScanConfiguration(
                     copyOriginalExif = true,
                     cameraMake = "Canon",
-                    // overrideCameraMake = null (default) → legacy behavior
+                    // Explicit null: legacy (write non-blank value); camera defaults are NULL_OUT
+                    overrideCameraMake = null,
                 )
             val metadata = exportAndReadback(config)
 
@@ -820,7 +831,7 @@ class PhotoScanExportServiceTest {
                 PhotoScanConfiguration(
                     copyOriginalExif = false,
                     cameraMake = "",
-                    // overrideCameraMake = null → legacy behavior, but value is blank
+                    overrideCameraMake = null, // legacy blank → do not write Make
                 )
             val metadata = exportAndReadback(config)
 
@@ -840,7 +851,8 @@ class PhotoScanExportServiceTest {
             val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_ISO_EQUIVALENT) ?: false).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_ISO_EQUIVALENT) ?: false)
+                .isFalse()
         }
 
         @Test
@@ -871,7 +883,8 @@ class PhotoScanExportServiceTest {
             val metadata = exportNullOutAndReadback(config)
 
             val ifd0 = metadata.getFirstDirectoryOfType(ExifIFD0Directory::class.java)
-            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION) ?: false).isFalse()
+            assertThat(ifd0?.containsTag(ExifIFD0Directory.TAG_IMAGE_DESCRIPTION) ?: false)
+                .isFalse()
         }
 
         @Test
@@ -917,7 +930,8 @@ class PhotoScanExportServiceTest {
             val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL) ?: false).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_DATETIME_ORIGINAL) ?: false)
+                .isFalse()
         }
 
         @Test
@@ -1022,7 +1036,8 @@ class PhotoScanExportServiceTest {
             val metadata = exportNullOutAndReadback(config)
 
             val subIfd = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory::class.java)
-            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_EXPOSURE_TIME) ?: false).isFalse()
+            assertThat(subIfd?.containsTag(ExifSubIFDDirectory.TAG_EXPOSURE_TIME) ?: false)
+                .isFalse()
         }
 
         private fun exportAndReadback(
@@ -1051,9 +1066,7 @@ class PhotoScanExportServiceTest {
                     sourceFile = sourceFile?.let { FilePath(it.absolutePath) },
                 )
 
-            assertThat(result.success)
-                .withFailMessage { result.error ?: "export failed" }
-                .isTrue()
+            assertThat(result.success).withFailMessage { result.error ?: "export failed" }.isTrue()
             val exportedFile = File(result.destinationPath)
             assertThat(exportedFile).exists()
 
@@ -1108,7 +1121,14 @@ class PhotoScanExportServiceTest {
                     cameraMake = "Nikon",
                     cameraModel = "D850",
                     lensModel = "24-70mm f/2.8",
-                    // All override fields null → legacy behavior
+                    // Explicit null overrides → legacy behavior (camera defaults are NULL_OUT)
+                    overrideCameraMake = null,
+                    overrideCameraModel = null,
+                    overrideLensModel = null,
+                    overrideFocalLength = null,
+                    overrideAperture = null,
+                    overrideShutterSpeed = null,
+                    overrideIso = null,
                 )
             val metadata = exportAndReadback(config)
 
@@ -1163,9 +1183,15 @@ class PhotoScanExportServiceTest {
         fun allNullOverridesWithBlankValuesShouldWriteNothing() {
             val config =
                 PhotoScanConfiguration(
-                    copyOriginalExif = false
-                    // All string fields default to empty/blank, all overrides null → nothing
-                    // written
+                    copyOriginalExif = false,
+                    // Explicit null so camera fields use legacy (not default NULL_OUT strip)
+                    overrideCameraMake = null,
+                    overrideCameraModel = null,
+                    overrideLensModel = null,
+                    overrideFocalLength = null,
+                    overrideAperture = null,
+                    overrideShutterSpeed = null,
+                    overrideIso = null,
                 )
             val metadata = exportAndReadback(config)
 
@@ -1185,6 +1211,7 @@ class PhotoScanExportServiceTest {
                     cameraMake = "Canon",
                     description = "Summer vacation",
                     overrideDescription = OverrideState.OVERRIDE,
+                    overrideCameraMake = null, // legacy include Make
                     cameraModel = "EOS 5D",
                     overrideCameraModel = OverrideState.NULL_OUT,
                 )
@@ -1300,9 +1327,7 @@ class PhotoScanExportServiceTest {
                     "crop_test",
                     sourceFile = FilePath(sourceFile.absolutePath),
                 )
-            assertThat(result.success)
-                .withFailMessage { result.error ?: "export failed" }
-                .isTrue()
+            assertThat(result.success).withFailMessage { result.error ?: "export failed" }.isTrue()
             assertThat(File(result.destinationPath)).exists()
         }
 
@@ -1330,9 +1355,7 @@ class PhotoScanExportServiceTest {
                     "perspective_test",
                     sourceFile = FilePath(sourceFile.absolutePath),
                 )
-            assertThat(result.success)
-                .withFailMessage { result.error ?: "export failed" }
-                .isTrue()
+            assertThat(result.success).withFailMessage { result.error ?: "export failed" }.isTrue()
         }
     }
 }

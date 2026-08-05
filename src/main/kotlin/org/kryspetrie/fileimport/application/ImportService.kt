@@ -149,6 +149,7 @@ class ImportService(
         destinationPath: String,
         configuration: ImportConfiguration,
         onProgress: (ImportProgress) -> Unit = {},
+        detectedDuplicateCount: Int = 0,
     ): ImportResult =
         importMutex.withLock {
             importExecutor.executeImport(
@@ -157,6 +158,7 @@ class ImportService(
                 configuration,
                 _importProgress,
                 onProgress,
+                detectedDuplicateCount = detectedDuplicateCount,
             )
         }
 

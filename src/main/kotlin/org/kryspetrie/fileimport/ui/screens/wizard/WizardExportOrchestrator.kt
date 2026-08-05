@@ -107,27 +107,28 @@ suspend fun exportSinglePhoto(
     if (autoOrientEnabled && orientationCorrection != null && orientationCorrection.isAvailable()) {
         try {
             // Crop the bounding box region from the source image for orientation detection
-            val detectedPhoto = DetectedPhoto(
-                topLeft = box.corners.topLeft.toPhotoCorner(),
-                topRight = box.corners.topRight.toPhotoCorner(),
-                bottomLeft = box.corners.bottomLeft.toPhotoCorner(),
-                bottomRight = box.corners.bottomRight.toPhotoCorner(),
-                applyPerspectiveCorrection = false, // Simple crop for detection
-                rotation = RotationAngle.NONE,
-                configuration = config,
-            )
-            val croppedImage = imageProcessing?.cropAxisAligned(
-                image.toProcessedImage(), detectedPhoto
-            )
+            val detectedPhoto =
+                DetectedPhoto(
+                    topLeft = box.corners.topLeft.toPhotoCorner(),
+                    topRight = box.corners.topRight.toPhotoCorner(),
+                    bottomLeft = box.corners.bottomLeft.toPhotoCorner(),
+                    bottomRight = box.corners.bottomRight.toPhotoCorner(),
+                    applyPerspectiveCorrection = false, // Simple crop for detection
+                    rotation = RotationAngle.NONE,
+                    configuration = config,
+                )
+            val croppedImage =
+                imageProcessing?.cropAxisAligned(image.toProcessedImage(), detectedPhoto)
             if (croppedImage != null) {
                 val result = orientationCorrection.detectOnly(croppedImage)
                 if (result != null && result.nearestRotation != RotationAngle.NONE) {
-                    val autoDegrees = when (result.nearestRotation) {
-                        RotationAngle.NONE -> 0
-                        RotationAngle.CW_90 -> 90
-                        RotationAngle.CW_180 -> 180
-                        RotationAngle.CCW_90 -> 270
-                    }
+                    val autoDegrees =
+                        when (result.nearestRotation) {
+                            RotationAngle.NONE -> 0
+                            RotationAngle.CW_90 -> 90
+                            RotationAngle.CW_180 -> 180
+                            RotationAngle.CCW_90 -> 270
+                        }
                     val mergedRotation = (config.rotationDegrees + autoDegrees) % 360
                     effectiveConfig = config.copy(rotationDegrees = mergedRotation)
                     corrections.add("Auto-rotate ${autoDegrees}°")

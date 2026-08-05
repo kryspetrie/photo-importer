@@ -155,7 +155,8 @@ private fun CompleteResultCard(r: ReorganizeResult, onReset: () -> Unit) {
                         StatItem("${r.movedCount}", s.t(StringKey.REORG_STAT_MOVED))
                         StatItem("${r.renamedCount}", s.t(StringKey.REORG_STAT_RENAMED))
                     }
-                    ReorganizeMode.COPY -> StatItem("${r.copiedCount}", s.t(StringKey.REORG_STAT_COPIED))
+                    ReorganizeMode.COPY ->
+                        StatItem("${r.copiedCount}", s.t(StringKey.REORG_STAT_COPIED))
                 }
                 StatItem("${r.skippedCount}", s.t(StringKey.REORG_STAT_SKIPPED))
                 StatItem("${r.errorCount}", s.t(StringKey.IMPORT_STAT_ERRORS))

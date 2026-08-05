@@ -94,6 +94,26 @@ class ImportServiceEdgeCaseTest {
         }
 
         @Test
+        fun `should not pair RAW and JPEG in different folders`() {
+            val subA = File(tempDir, "folderA").also { it.mkdirs() }
+            val subB = File(tempDir, "folderB").also { it.mkdirs() }
+            val raw =
+                ImageFile(
+                    path = FilePath(File(subA, "PHOTO.cr2").absolutePath),
+                    fileType = ImageFileType.RAW_CR2,
+                )
+            val jpeg =
+                ImageFile(
+                    path = FilePath(File(subB, "PHOTO.jpg").absolutePath),
+                    fileType = ImageFileType.JPEG,
+                )
+
+            val pairs = service.detectRawJpegPairs(listOf(raw, jpeg))
+
+            assertThat(pairs).isEmpty()
+        }
+
+        @Test
         fun `should handle duplicate pairs`() {
             val raw1 = createImageFile("IMG_0001", "cr2")
             val jpeg1 = createImageFile("IMG_0001", "jpg")

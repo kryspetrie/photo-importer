@@ -6,6 +6,11 @@ package org.kryspetrie.fileimport.domain.model.i18n
  * Use sparingly for non-translatable values (file extensions, technical identifiers). Prefer
  * [StringKey] for all user-visible text.
  */
-@Target(AnnotationTarget.FILE, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY, AnnotationTarget.EXPRESSION)
+@Target(
+    AnnotationTarget.FILE,
+    AnnotationTarget.FUNCTION,
+    AnnotationTarget.PROPERTY,
+    AnnotationTarget.EXPRESSION,
+)
 @Retention(AnnotationRetention.SOURCE)
 annotation class LocalizedExempt(val reason: String = "")

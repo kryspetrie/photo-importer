@@ -10,10 +10,12 @@ import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.flow.StateFlow
 import org.koin.compose.koinInject
+import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.domain.model.i18n.LocaleConfig
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.model.i18n.SupportedLocales
 import org.kryspetrie.fileimport.domain.port.LocalePort
+import org.kryspetrie.fileimport.ui.wizard.state.FaceSize
 
 /**
  * Composition local for providing [Strings] throughout the composable tree.
@@ -33,10 +35,7 @@ val LocalStrings = staticCompositionLocalOf { Strings() }
  * translations via [strings].
  */
 @Composable
-fun StringsProvider(
-    localeCode: String = "en",
-    content: @Composable () -> Unit,
-) {
+fun StringsProvider(localeCode: String = "en", content: @Composable () -> Unit) {
     val localePort: LocalePort = koinInject()
     LaunchedEffect(localeCode) { localePort.setLocale(localeCode) }
     val localeState = localePort.observeLocale().collectAsState()
@@ -130,6 +129,25 @@ class Strings(private val localePort: LocalePort = StubLocalePort()) {
     /** "Export". */
     val export: String
         get() = localePort.t(StringKey.ACTION_EXPORT)
+
+    // ── Localized enum lookups ────────────────────────────────────────
+
+    /** Returns the localized display name for a [RegionType]. */
+    fun regionTypeName(type: RegionType): String =
+        when (type) {
+            RegionType.FACE -> localePort.t(StringKey.REGION_TYPE_FACE)
+            RegionType.PET -> localePort.t(StringKey.REGION_TYPE_PET)
+            RegionType.BODY -> localePort.t(StringKey.REGION_TYPE_BODY)
+            RegionType.OBJECT -> localePort.t(StringKey.REGION_TYPE_OBJECT)
+        }
+
+    /** Returns the localized display name for a [FaceSize]. */
+    fun faceSizeName(size: FaceSize): String =
+        when (size) {
+            FaceSize.SMALL -> localePort.t(StringKey.FACE_SIZE_SMALL)
+            FaceSize.MEDIUM -> localePort.t(StringKey.FACE_SIZE_MEDIUM)
+            FaceSize.LARGE -> localePort.t(StringKey.FACE_SIZE_LARGE)
+        }
 }
 
 /**

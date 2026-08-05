@@ -1,11 +1,11 @@
 package org.kryspetrie.fileimport.application.export
 
+import java.nio.file.Paths
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import java.nio.file.Paths
 
 @DisplayName("PhotoScanMetadataMapper")
 class PhotoScanMetadataMapperTest {
@@ -29,11 +29,7 @@ class PhotoScanMetadataMapperTest {
         val mapped =
             PhotoScanMetadataMapper.map(
                 filePath = Paths.get("/tmp/test.jpg"),
-                config =
-                    PhotoScanConfiguration(
-                        keywords = "vacation, beach",
-                        subjects = "Alice",
-                    ),
+                config = PhotoScanConfiguration(keywords = "vacation, beach", subjects = "Alice"),
             )
 
         assertThat(mapped.command.changes["IPTC:Keywords"]).isEqualTo("vacation, beach, Alice")
@@ -66,6 +62,9 @@ class PhotoScanMetadataMapperTest {
                         cameraMake = "Canon",
                         cameraModel = "EOS R6",
                         iso = "400",
+                        overrideCameraMake = null,
+                        overrideCameraModel = null,
+                        overrideIso = null,
                     ),
             )
 
@@ -80,11 +79,7 @@ class PhotoScanMetadataMapperTest {
         val mapped =
             PhotoScanMetadataMapper.map(
                 filePath = Paths.get("/tmp/test.jpg"),
-                config =
-                    PhotoScanConfiguration(
-                        gpsLatitude = "42.2626",
-                        gpsLongitude = "-71.8023",
-                    ),
+                config = PhotoScanConfiguration(gpsLatitude = "42.2626", gpsLongitude = "-71.8023"),
             )
 
         assertThat(mapped.command.changes["EXIF:GPSLatitude"]).isEqualTo("42.2626")
@@ -107,7 +102,7 @@ class PhotoScanMetadataMapperTest {
                                     w = 0.15,
                                     h = 0.2,
                                 )
-                            ),
+                            )
                     ),
                 preRotationWidth = 200,
                 preRotationHeight = 150,
@@ -124,7 +119,7 @@ class PhotoScanMetadataMapperTest {
         val mapped =
             PhotoScanMetadataMapper.map(
                 filePath = Paths.get("/tmp/test.jpg"),
-                config = PhotoScanConfiguration(focalLength = "50mm"),
+                config = PhotoScanConfiguration(focalLength = "50mm", overrideFocalLength = null),
             )
         assertThat(mapped.command.changes["EXIF:FocalLength"]).isEqualTo("50 mm")
         assertThat(mapped.command.allowProtectedWrites).isTrue()

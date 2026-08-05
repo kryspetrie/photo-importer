@@ -31,9 +31,9 @@ import androidx.compose.ui.unit.dp
 import java.io.File
 import java.util.Locale
 import org.kryspetrie.fileimport.domain.model.FilePath
+import org.kryspetrie.fileimport.domain.model.ImageFileType
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.i18n.strings
-import org.kryspetrie.fileimport.domain.model.ImageFileType
 
 fun formatFileSize(bytes: Long): String =
     when {

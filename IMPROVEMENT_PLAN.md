@@ -27,85 +27,67 @@ This document tracks known issues and proposed work, ordered by priority. Line r
 
 - [x] **Metadata-only "save" re-encodes the whole JPEG at quality 0.95** — fixed: metadata-only path calls `writeMetadataOnly()`. Export/crop paths still re-encode pixels intentionally via `writeImageWithMetadata()`.
 
-- [ ] **Unreadable files are grouped as EXACT_HASH duplicates and can be deleted** — `infrastructure/adapter/ImageRepositoryAdapter.kt:277`, `infrastructure/adapter/DeduplicationAdapter.kt:23-38`
-  `calculateFileHash` returns `""` (not null) on any exception. `findDuplicates` filters `hash != null` (empty string passes) then `groupBy { hash!! }`, collapsing all hash-failures into one duplicate group with `hashMatch = true`. "Resolve all" then deletes/moves all but one. **Fix:** treat `""`/failed hashes as non-hashable and exclude them from grouping.
+- [x] **Unreadable files are grouped as EXACT_HASH duplicates and can be deleted** — fixed: `findDuplicates` excludes empty hashes; `getDuplicateType` requires non-empty hashes (2026-07-28).
 
-- [ ] **Copy bounded by stale scan-time file size → truncated copy** — `infrastructure/adapter/ImageRepositoryAdapter.kt:292-310`
-  `totalBytes = source.fileSize` (captured at scan). If the file grew (e.g. a watch-folder file still being written), the loop stops early and returns `true`. With `verifyAfterCopy` off and `deleteAfterImport` on, the full source is then deleted. With verify on, `verifyCopy` compares the stale `source.hash` and deletes the good copy. **Fix:** copy to EOF (don't bound by cached size); re-stat before copy; verify against a freshly computed source hash.
+- [x] **Copy bounded by stale scan-time file size → truncated copy** — fixed: copy loops to EOF with re-stat; `verifyCopy` uses fresh source hash (2026-07-28).
 
 ## P1 — Incorrect behavior / hangs / silently-wrong output
 
-- [ ] **Infinite loop in `resolveConflict` when the pattern has no `{counter}`** — `infrastructure/adapter/NamingAdapter.kt:137-140`
-  `do { path = generateFilePath(..., counter); counter++ } while (File(path).exists())`. `generateFileName` only varies with `counter` if the pattern contains `{counter}`; otherwise the path is identical each iteration and the loop never terminates. **Fix:** if the pattern lacks `{counter}`, append a disambiguator (or force-append counter) before looping.
+- [x] **Infinite loop in `resolveConflict` when the pattern has no `{counter}`** — fixed in `NamingAdapter.resolveConflict`: appends `_N` before extension when pattern lacks `{counter}` (2026-07-28).
 
-- [ ] **MWG face-region XMP on files with pre-existing XMP** — verify merge behavior when ExifTool rewrites XMP on photos that already had non-MWG XMP. `PhotoScanMetadataMapper` emits `XMP-mwg-rs:RegionInfo` structs; add regression tests for merge/passthrough on sample files with existing XMP.
+- [x] **MWG face-region XMP on files with pre-existing XMP** — verified: export with `copyOriginalExif` preserves prior XMP-dc tags while writing MWG RegionInfo (`XmpFaceRegionExportTest`, 2026-07-29).
 
-- [ ] **`ReorganizeService` `renameOnly` is a dead no-op** — `application/ReorganizeService.kt:111` ✓ verified
-  `val destRoot = if (renameOnly) folderPath else folderPath` — both branches identical; `generateFolderPath` runs unconditionally, so "rename only" still relocates files into subfolders. **Fix:** when `renameOnly`, keep each file in its current directory and only change the filename.
+- [x] **`ReorganizeService` `renameOnly` is a dead no-op** — fixed: `renameOnly` keeps each file in its current directory (2026-07-28).
 
-- [ ] **Reorganize empty-dir cleanup deletes unrelated empty folders** — `application/ReorganizeService.kt:230-233`, `application/FileOperationExecutor.kt:202-213`
-  Cleanup root is derived as the grandparent of the first file, then every empty dir under it is deleted regardless of involvement in the move. Can delete a user's intentionally-empty folders. **Fix:** only remove directories that were actually emptied by this operation.
+- [x] **Reorganize empty-dir cleanup deletes unrelated empty folders** — fixed: only removes source parents of moved files (2026-07-28).
 
-- [ ] **RAW+JPEG pairing matches base filename only** — `application/ImportService.kt:164-204`
-  Pairs on `nameWithoutExtension` (case-insensitive) with no timestamp/folder check, contradicting the KDoc. Same-named files in different subfolders mispair; under `JPEG_ONLY`, a RAW with no real JPEG counterpart is silently dropped. **Fix:** require same directory (and/or timestamp) for a pair.
+- [x] **RAW+JPEG pairing matches base filename only** — fixed: `detectRawJpegPairs` requires same parent directory (2026-07-28).
 
-- [ ] **Import `counter` only advances on full success** — `application/ImportExecutor.kt:305` (increment), `continue` at 116/148/179/210
-  Skipped/failed/hash-mismatch files `continue` without incrementing, so `{counter}` collides and sequence numbers gap. **Fix:** advance the counter for every attempted file (or decouple sequence number from the filename counter).
+- [x] **Import `counter` only advances on full success** — fixed: counter advances for skipped/failed/hash-mismatch/success paths (2026-07-28).
 
-- [ ] **GPS seconds carry-over is dead code** — `domain/model/ExifValueResolver.kt:131` ✓ verified
-  `if (secondsRounded >= 6000000)` has an extra zero (max value is 600000), so the branch never fires; the `minutes >= 60` branch (`:139`) is likewise unreachable. A coordinate rounding to 60.0000″ is emitted as `60″` (invalid DMS). **Fix:** compare against `600000`; add a rounding-boundary test.
+- [x] **GPS seconds carry-over is dead code** — fixed: seconds≥60″ and minutes≥60′ cascade correctly (2026-07-28).
 
-- [ ] **`copyOriginalExif` not implemented in ExifTool export path** — `PhotoScanMetadataMapper` / `MetadataWritingService` do not yet copy source EXIF baseline when `PhotoScanConfiguration.copyOriginalExif` is true. Wizard/export behavior may differ from the old Commons Imaging path.
+- [x] **`copyOriginalExif` not implemented in ExifTool export path** — fixed: `MetadataWritingService` merges transferable source tags via `SourceExifBaselineMerger` when `copyOriginalExif=true` (2026-07-28).
 
-- [ ] **Import duplicate count hard-coded to 0** — `application/ImportExecutor.kt:61` (acknowledged TODO)
-  `ImportResult`/history always report 0 duplicates. Reporting inaccuracy, not data loss.
+- [x] **Import duplicate count hard-coded to 0** — fixed: ViewModel tracks already-transferred + visual-dupe counts; `ImportExecutor` accepts `detectedDuplicateCount` (2026-07-28).
 
 ## P2 — Metadata-editor consistency & usability (primary goal)
 
 _Two intentional pages: standalone Bulk Metadata Editor (`ui/screens/metadataeditor/`) and the Photo-Scan wizard editor (`ui/screens/wizard/edit/`, `wizard/metadata/`). These fixes address inconsistency **within** those pages and reduce clicks._
 
-- [ ] **Unify override-checkbox semantics (biggest usability issue)** — `ui/screens/metadataeditor/MetadataEditorPanel.kt`; `ui/screens/wizard/edit/MetadataEditorPanel.kt` (`!= NULL_OUT` vs `== KEEP_SOURCE` on camera fields)
-  `overrideToggle` (description/keywords/date/year/GPS) is checked when `state != NULL_OUT`, so the default (null) renders checked/editable. Camera-field toggles use different semantics, so those fields open disabled and require an extra click before you can type. **Fix:** one consistent rule across all fields.
+- [x] **Unify override-checkbox semantics (biggest usability issue)** — both description and camera fields use `OverrideUiSemantics` (`!= NULL_OUT` / KEEP_SOURCE↔NULL_OUT) in the wizard panel (2026-07-29).
 
-- [ ] **Standalone screen re-implements rotation controls** — `ui/screens/metadataeditor/MetadataEditorScreen.kt:654-724` vs shared `ui/screens/wizard/edit/EditSections.kt:80` (`RotationSection`)
-  Different label ("Rotate:" vs "Rotation"), padding (12/4 vs 16/8), and degree display (`RotationBadge` vs plain `Text`). **Fix:** have the standalone screen consume the shared `RotationSection`.
+- [x] **Standalone screen re-implements rotation controls** — standalone preview pane consumes shared `RotationSection` (2026-07-29).
 
-- [ ] **Panel headers inconsistent between the two pages**
-  - Single-edit: standalone shows filename **+ Clear button** (`metadataeditor/MetadataEditorPanel.kt:118-136`); wizard shows `"Photo N"` **without Clear** (`wizard/edit/MetadataEditorPanel.kt:140-146`).
-  - Multi-edit: standalone header has **Clear + Apply**; wizard has **Apply only** (`:106-111` vs `:125-133`).
-  **Fix:** standardize the header (title/"N selected" + consistent Clear/Apply placement) across both panels.
+- [x] **Panel headers inconsistent between the two pages** — both panels use shared `MetadataEditorPanelHeader` (title + Clear; Apply + hint in batch mode) (2026-07-29).
 
-- [ ] **Source-EXIF hints missing on camera fields in the bulk editor** — `ui/screens/metadataeditor/MetadataEditorPanel.kt:354`
-  `CameraSection` is passed `sourceExif = null`, so the user can't see the original camera values being overridden (intentional for scans, wrong for real photos in the bulk editor). **Fix:** thread `sourceExif` into the standalone `CameraSection`.
+- [x] **Source-EXIF hints missing on camera fields in the bulk editor** — `CameraSection` receives `sourceExif` in the standalone panel (2026-07-29).
 
-- [ ] **Off-theme color for "Clear All" tags** — `ui/screens/wizard/edit/EditSections.kt:790`
-  Uses `Color(0xFFFF6666)` while every other destructive affordance uses `MaterialTheme.colorScheme.error`. Won't adapt to dark mode. **Fix:** use `colorScheme.error`.
+- [x] **Off-theme color for "Clear All" tags** — uses `colorScheme.error` (2026-07-29).
 
-- [ ] **Dead conditional in keyword field** — `ui/screens/wizard/edit/EditSections.kt:205`
-  `if (availableSuggestions.isNotEmpty() || true)` is always true. **Fix:** remove the condition.
+- [x] **Dead conditional in keyword field** — suggestion dropdown gated on non-empty filtered suggestions (2026-07-29).
 
 ## P3 — Broader UI/UX
 
-- [ ] **Design tokens exist but are never used** — `ui/theme/DefaultSpacing.kt`, `ui/theme/DefaultColors.kt`
-  Zero external references; every screen hardcodes dp/colors. Root cause of most visual drift. **Fix:** adopt the tokens (incrementally) and lint against raw `.dp` literals for spacing.
-- [ ] **Keyboard nav only in the wizard + metadata editor** — `MediaImportScreen`, `DuplicateScannerScreen`, `ReorganizeScreen`, `ScanScreen`, `ImagePreviewScreen` have no key handling. No Enter-to-submit on primary CTAs, no Esc-to-cancel, no arrow-key triage in the file grid, no `Ctrl+1..5` tab switching.
-- [ ] **Shortcut help dialog is undiscoverable** — `wizard/KeyboardShortcuts.kt:346` is only reachable from two wizard screens. **Fix:** global `?`/F1 binding + a menu entry.
-- [ ] **Off-brand loading spinner** — `ui/components/CircularSpinner.kt:31` defaults to `Color(0xFF1A73E8)` (Google blue), used everywhere, doesn't adapt to dark mode. Plus three different "busy" widgets across the app. **Fix:** theme the spinner; consolidate on one.
-- [ ] **Destructive actions inconsistently guarded** — scan-screen "Re-detect" (`ScanScreen.kt:165`) just empties the list (doesn't re-detect) and discards corner edits with no confirm/undo; photo delete (`scan/ScanPhotoList.kt:48`) is immediate — while other screens do confirm.
-- [ ] **Misc:** `ReorganizeScreen` title uses `labelLarge` where peers use `headlineSmall`; action-bar alignment and mid-job Cancel presence differ across screens; dead "Keep" `AssistChip` with `onClick={}` (`duplicatescanner/DuplicateGroupCard.kt:80`); state-encoding icons pass `contentDescription=null`; errors signaled by color alone.
+- [x] **Design tokens adopted on high-traffic Dup/Reorg surfaces** — `DefaultSpacing` on Duplicate Scanner / Reorganize screens & action bars; `DefaultColors` theme-aware (Material scheme) + used for status/KEEP chip accents. Broader `.dp` lint still optional.
+- [x] **Keyboard nav on Duplicate Scanner / Reorganize** — Esc cancel during busy / leave results or preview; Enter resolve/apply/confirm undo; setup Enter preserved (`SetupScreenKeyboard` helpers, 2026-07-29).
+- [x] **Shortcut help discoverability** — global `F1` / `Ctrl+/` via `AppKeyboardShortcuts`; wizard hint string mentions F1. Menu entry still optional.
+- [x] **Loading spinner themed** — `CircularSpinner` defaults to `MaterialTheme.colorScheme.primary` + `DefaultSpacing` (no hardcoded Google blue). Consolidating other busy widgets still optional.
+- [x] **Scan-screen destructive actions** — legacy `ScanScreen` / `ScanPhotoList` removed; Photo Scan wizard owns that flow with confirmations where needed.
+- [x] **Misc quick UI fixes** — `ReorganizeScreen` title uses `headlineSmall`; dead "Keep" chip removed; error icons have content descriptions + `DefaultColors.error` (not color alone).
 
 ## P3 — Test coverage
 
 _Highest-value remaining gaps:_
 
-- [ ] `MetadataEditService.saveFile` — OVERWRITE backup vs SAVE_NEW, output-dir fallback, journal-entry correctness.
-- [ ] `MetadataEditUndoService.redo` (backup-as-EXIF-source) and undo-with-missing-backup.
-- [ ] **`ReorganizeService.undo` — currently zero tests** (MOVE round-trip, COPY undo, partial-failure `undone` flag).
-- [ ] `FileOperationExecutor` cross-filesystem `renameTo`-fallback (only fails across volumes → green in CI, broken in prod).
-- [ ] `ImportExecutor` hash-mismatch / sidecar / delete-after-import paths.
-- [ ] `MetadataEditorViewModel.applyBatchRotationCorrection` (current test re-implements the logic and never calls the VM) + multi-edit/location state transitions.
-- [ ] **`copyOriginalExif` baseline behavior** once implemented in the ExifTool export path.
-- [ ] **Remove scratch harnesses from the suite:** `*Debug*`, `ContourVisualizer`, `*ComparisonTest`, `AccuracyCheckTest` under `src/test/.../infrastructure/photoscan/**`.
+- [x] `MetadataEditService.saveFile` — OVERWRITE backup abort/success, SAVE_NEW parent fallback + outDir (`MetadataEditServiceTest`, 2026-07-29).
+- [x] `MetadataEditUndoService.redo` + undo-with-missing-backup (`MetadataEditUndoServiceTest`, 2026-07-29).
+- [x] **`ReorganizeService.undo`** — MOVE round-trip, COPY undo (deletes copy), missing-journal error (`ReorganizeServiceTest.Undo`, 2026-07-29).
+- [x] `FileOperationExecutor` cross-filesystem `renameTo`-fallback (`FileOperationExecutorTest`, 2026-07-29).
+- [x] `ImportExecutor` hash-mismatch / sidecar / delete-after-import (`ImportExecutorTest`, 2026-07-29).
+- [x] `MetadataEditorViewModel.applyBatchRotationCorrection` — detection→apply VM path; replaced duplicated `nearestCorrectionDeg` tests (2026-07-29).
+- [x] **`copyOriginalExif` baseline behavior** — covered by `SourceExifBaselineMergerTest` + export path in `MetadataWritingService` (2026-07-28).
+- [x] **Scratch harnesses excluded from default suite** — photoscan `*Debug*` / `AccuracyCheckTest` tagged `@Tag("scratch")`; `tasks.test` excludes `scratch` (2026-07-29).
 
 _Integration tests (require bundled ExifTool + sibling `photo-metadata-editor` repo):_
 
@@ -117,20 +99,19 @@ Sample RAW/JPEG fixtures come from `metadata-test-fixtures` on the test classpat
 
 ## P3 — Docs & structure
 
-- [ ] **`ADVERSARIAL_ANALYSIS.md` is stale** — ~12 findings cite files that no longer exist (`PeopleScreen`, `PersonService`, `FaceGroupingService`, `FaceEmbedding`, `Person`, `JsonPersonDirectoryAdapter`); that people/face-recognition subsystem was split out. Add a status/date header and prune, or archive it. (Only the duplicate-count TODO, M1, still maps to real code.)
-- [ ] **Docs oversell features** — README/DEVELOPER_GUIDE promote a `@Preview` "component preview system" but there are **0 `@Preview`s** in the codebase; `./gradlew run` is described as "hot reload" (it isn't). `docs/ARCHITECTURE.md` misstates the `AppPaths` boundary exception (removed for `PathsPort`) and claims `PhotoScanWizardState` is "~1500 lines" (actually 494).
-- [ ] **Remove `javax.inject` dependency** — `build.gradle.kts:89`; contradicts the konsist test that forbids JSR-330 and is unused.
-- [ ] **Dev-only harnesses** — `src/dev/kotlin/.../LocationPickerTestApp.kt` and `MapTileRenderTestApp.kt` each declare a `fun main()`. Keep them out of `src/main` (already moved to `src/dev`; wire a dev source set if needed).
-- [ ] **Structural cleanups** — standalone metadata editor reaches sideways into `wizard/edit/` and `wizard/metadata/` and models per-file state on `PhotoScanConfiguration` (scan-only fields ride along); consider a neutral shared module + a dedicated `MetadataOverrides` model. Two files both named `MetadataEditorPanel.kt` (different packages). Nine files exceed 800 lines (`MapTileRenderer` 1532, `BackImagePickerDialog` 1453, `FaceSelectorOverlay` 1418, `EditSections` 1134, …) — split candidates. Domain-layer boundaries are otherwise clean.
+- [x] **`ADVERSARIAL_ANALYSIS.md` marked stale** — status header added (2026-07-29); treat as historical. Full prune/archive still optional.
+- [x] **Docs accuracy** — README / DEVELOPER_GUIDE / QUICK_REFERENCE no longer claim hot reload or in-repo `@Preview`; ARCHITECTURE `PhotoScanWizardState` line count + `PathsPort` boundary updated; CONTRIBUTING AppPaths exception removed (2026-07-29).
+- [x] **`javax.inject` dependency removed** — no longer in `build.gradle.kts`; aligns with konsist JSR-330 forbid.
+- [x] **Dev-only harnesses** — `src/dev` Kotlin source set wired; `runMapTileTest` / `runLocationPickerTest` use `dev` classpath (2026-07-29).
+- [x] **Structural cleanups** — shared metadata types moved to `ui/screens/shared/metadata/`; oversized UI files split into focused screen, dialog, rendering, cache, and action files (`EditScreen`, `FaceSelectorOverlay`, `MapTileRenderer`, `BackImagePickerDialog`, `SummaryScreen`, `ImagePreviewScreen`, `MetadataEditorFileBrowserPanel`, `MetadataEditorViewModel`, and `EditSections`). `MetadataOverrides` extraction remains an optional domain follow-up.
+- [x] **Post-split cleanup** — dead standalone-editor back-image API removed (no UI entry point existed); hard-coded English strings in the wizard/summary/back-image/location-picker UI routed through `StringKey` (4 new keys synced to all locales); `SidebarAction` no longer picks its icon by comparing an English label; `UiTextLocalizationInspector` now also flags positionally-passed `Icon(…, "text")` descriptions so this gap class fails the build; `PRODUCTION_READINESS.md` / `LOCALIZATION.md` marked as snapshots and `DEVELOPER_GUIDE.md` Photo Scan section rewritten around `WizardStep` / `WizardContainer` (2026-07-29).
 
 ---
 
 ## Suggested first milestone
 
-Bundle the remaining metadata-editor UX work and import safety fixes:
+P0–P3 plan items are largely complete as of 2026-07-29. Optional follow-ups:
 
-1. P2: unify override-checkbox semantics, adopt shared `RotationSection`, standardize headers, thread `sourceExif`, theme "Clear All", drop the dead conditional.
-2. P0/P1: duplicate-hash grouping, copy-to-EOF, `renameOnly`, GPS rounding boundary.
-3. Tests: `MetadataEditService.saveFile`, `MetadataEditUndoService.redo`, `ReorganizeService.undo`.
-
-Quick low-risk batch (independent one-liners): `renameOnly` no-op (P1), GPS `6000000` (P1), dead keyword conditional (P2).
+1. Broader `.dp` → `DefaultSpacing` adoption beyond Dup/Reorg.
+2. Extract `MetadataOverrides` from `PhotoScanConfiguration`.
+3. Full prune/archive of `ADVERSARIAL_ANALYSIS.md`.

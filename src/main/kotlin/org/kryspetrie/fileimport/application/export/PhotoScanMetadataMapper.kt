@@ -1,23 +1,22 @@
 package org.kryspetrie.fileimport.application.export
 
 import com.petrielabs.metadataeditor.domain.WriteMetadataCommand
+import java.nio.file.Path
 import org.kryspetrie.fileimport.domain.model.ExifValueResolver
 import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.OverrideState
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
-import java.nio.file.Path
 
 /**
  * Maps [PhotoScanConfiguration] fields to ExifTool group-qualified tag names for selective writes.
  *
- * Uses the same tri-state / upsert semantics as the legacy Commons-Imaging writers: blank fields are
- * skipped (preserve source), non-blank fields are written, and [OverrideState.NULL_OUT] clears tags.
+ * Uses the same tri-state / upsert semantics as the legacy Commons-Imaging writers: blank fields
+ * are skipped (preserve source), non-blank fields are written, and [OverrideState.NULL_OUT] clears
+ * tags.
  */
 object PhotoScanMetadataMapper {
 
-    data class MappedMetadata(
-        val command: WriteMetadataCommand,
-    )
+    data class MappedMetadata(val command: WriteMetadataCommand)
 
     fun map(
         filePath: Path,
@@ -64,12 +63,7 @@ object PhotoScanMetadataMapper {
         mapTextField(
             override = config.overrideDescription,
             value = config.description,
-            tags =
-                listOf(
-                    "EXIF:ImageDescription",
-                    "IPTC:Caption-Abstract",
-                    "XMP-dc:Description",
-                ),
+            tags = listOf("EXIF:ImageDescription", "IPTC:Caption-Abstract", "XMP-dc:Description"),
         )
 
         when (config.overrideKeywords) {
@@ -79,10 +73,12 @@ object PhotoScanMetadataMapper {
             OverrideState.OVERRIDE,
             OverrideState.KEEP_SOURCE,
             null -> {
-                val keywordParts = buildList {
-                    addAll(config.keywordList())
-                    addAll(config.subjectList())
-                }.distinct()
+                val keywordParts =
+                    buildList {
+                            addAll(config.keywordList())
+                            addAll(config.subjectList())
+                        }
+                        .distinct()
                 if (keywordParts.isNotEmpty()) {
                     val joined = keywordParts.joinToString(", ")
                     changes["IPTC:Keywords"] = joined
@@ -270,11 +266,7 @@ object PhotoScanMetadataMapper {
     }
 
     fun hasWritableChanges(config: PhotoScanConfiguration): Boolean {
-        val mapped =
-            map(
-                filePath = Path.of("placeholder"),
-                config = config,
-            )
+        val mapped = map(filePath = Path.of("placeholder"), config = config)
         return mapped.command.changes.isNotEmpty()
     }
 

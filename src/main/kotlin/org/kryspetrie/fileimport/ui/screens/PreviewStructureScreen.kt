@@ -110,7 +110,10 @@ fun PreviewStructureScreen(
                             tint = MaterialTheme.colorScheme.error,
                         )
                         Text(
-                            s.t(StringKey.IMPORT_CONFLICTS_WARNING, "count" to conflictCount.toString()),
+                            s.t(
+                                StringKey.IMPORT_CONFLICTS_WARNING,
+                                "count" to conflictCount.toString(),
+                            ),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                         )
@@ -218,9 +221,7 @@ fun PreviewStructureScreen(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             OutlinedButton(onClick = onBack) { Text(s.t(StringKey.ACTION_BACK)) }
             Button(onClick = onImport) {
-                Text(
-                    s.t(StringKey.IMPORT_PROCEED_COPY, "count" to previews.size.toString())
-                )
+                Text(s.t(StringKey.IMPORT_PROCEED_COPY, "count" to previews.size.toString()))
             }
         }
     }

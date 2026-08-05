@@ -54,8 +54,6 @@ fun AdvancedSettingsSection(
         expanded = advancedExpanded,
         onToggle = { advancedExpanded = !advancedExpanded },
     ) {
-        AutoOrientSection(configuration, onConfigChange)
-        Spacer(Modifier.height(6.dp))
         RawJpegPairSection(configuration, onConfigChange)
         Spacer(Modifier.height(6.dp))
         SidecarSection(configuration, onConfigChange)
@@ -70,28 +68,6 @@ fun AdvancedSettingsSection(
         )
         Spacer(Modifier.height(6.dp))
         CacheManagementSection(onClearCache)
-    }
-}
-
-@Composable
-private fun AutoOrientSection(
-    configuration: ImportConfiguration,
-    onConfigChange: (ImportConfiguration) -> Unit,
-) {
-    val s = strings()
-    SectionLabel(s.t(StringKey.SETTINGS_ORIENTATION))
-    SettingsToggle(
-        checked = configuration.autoOrientEnabled,
-        onCheckedChange = { onConfigChange(configuration.copy(autoOrientEnabled = it)) },
-        label = s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT),
-        description = s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT_DESC),
-    )
-    if (configuration.autoOrientEnabled) {
-        Text(
-            s.t(StringKey.SETTINGS_ORIENTATION_AUTO_ORIENT_ENABLED_NOTE),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
     }
 }
 
@@ -143,7 +119,7 @@ private fun SidecarSection(
                 checked = configuration.importSidecars,
                 onCheckedChange = { onConfigChange(configuration.copy(importSidecars = it)) },
                 label = s.t(StringKey.SETTINGS_IMPORT_SIDECARS),
-                description = ".xmp, .thm, .lrv, .aae",
+                description = s.t(StringKey.SETTINGS_SIDECAR_TYPES_DESC),
             )
         }
         Column(Modifier.weight(1f)) {
@@ -151,7 +127,7 @@ private fun SidecarSection(
                 checked = configuration.verifyAfterCopy,
                 onCheckedChange = { onConfigChange(configuration.copy(verifyAfterCopy = it)) },
                 label = s.t(StringKey.SETTINGS_VERIFY_COPIES),
-                description = "Hash check after import",
+                description = s.t(StringKey.SETTINGS_VERIFY_COPIES_DESC),
             )
         }
     }
@@ -161,7 +137,7 @@ private fun SidecarSection(
                 checked = configuration.deleteAfterImport,
                 onCheckedChange = { onConfigChange(configuration.copy(deleteAfterImport = it)) },
                 label = s.t(StringKey.SETTINGS_DELETE_SOURCE),
-                description = "Remove after successful copy",
+                description = s.t(StringKey.SETTINGS_DELETE_SOURCE_DESC),
             )
         }
     }

@@ -1,5 +1,6 @@
 package org.kryspetrie.fileimport.ui.theme
 
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
@@ -7,23 +8,10 @@ import androidx.compose.ui.graphics.Color
 /**
  * Semantic color tokens for the PhotoImporter application.
  *
- * Defines named color tokens that map to roles in the app, not raw color values. Light and dark
- * mode variants are provided. Use these tokens instead of `Color(0xFF...)` or
- * `MaterialTheme.colorScheme.*` directly in most cases, as they carry semantic meaning and are
- * easier to theme.
+ * Theme-aware getters read from [MaterialTheme.colorScheme] where a matching role exists.
+ * App-specific tokens (warning, success, modified indicator, auto-orient) keep fixed values.
  *
- * ## Usage
- *
- * ```kotlin
- * Text("Error", color = DefaultColors.error)
- * Surface(color = DefaultColors.cardBackground) { }
- * ```
- *
- * ## Light/Dark Mode
- * By default, these tokens adapt to the current theme (light/dark). Use the `@Composable`
- * properties which read from `MaterialTheme.colorScheme`.
- *
- * For static contexts (non-Composable), use the explicit `Light.*` or `Dark.*` objects.
+ * For static contexts (non-Composable), use [Light] or [Dark].
  */
 object DefaultColors {
 
@@ -31,33 +19,33 @@ object DefaultColors {
 
     /** Primary brand color for main actions, selected states. */
     val primary: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFF4A6FA5)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primary
 
     /** Text/icons on primary background. */
     val onPrimary: Color
-        @Composable @ReadOnlyComposable get() = Color.White
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onPrimary
 
     /** Light variant for primary containers/backgrounds. */
     val primaryContainer: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFFE8EEF4)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primaryContainer
 
     /** Text on primary container. */
     val onPrimaryContainer: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFF1A3A5C)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onPrimaryContainer
 
     /** Secondary accent color for completion, success states. */
     val secondary: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFF5A7A6B)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.secondary
 
     /** Tertiary decorative color for highlights. */
     val tertiary: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFF7A6B5A)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.tertiary
 
     // ── Status Colors ─────────────────────────────────────────
 
     /** Error color for destructive actions, validation errors. */
     val error: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFFCC3333)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.error
 
     /** Warning color for caution states. */
     val warning: Color
@@ -69,53 +57,53 @@ object DefaultColors {
 
     // ── Surface Colors ────────────────────────────────────────
 
-    /** Main app background (light gray). */
+    /** Main app background. */
     val background: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFFF5F5F7)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.background
 
-    /** Card/surface background (white). */
+    /** Card/surface background. */
     val cardBackground: Color
-        @Composable @ReadOnlyComposable get() = Color.White
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.surface
 
     /** Elevated surface background. */
     val surfaceVariant: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFFECECEE)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.surfaceVariant
 
     // ── Text Colors ────────────────────────────────────────────
 
     /** Primary text on surface. */
     val textPrimary: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFF1D1D1F)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurface
 
     /** Secondary/muted text. */
     val textSecondary: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFF6E6E73)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onSurfaceVariant
 
     /** Text on primary background. */
     val textOnPrimary: Color
-        @Composable @ReadOnlyComposable get() = Color.White
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.onPrimary
 
     // ── Border/Divider Colors ─────────────────────────────────
 
     /** Standard border color. */
     val border: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFFD1D1D6)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.outline
 
     /** Light variant border color. */
     val borderLight: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFFE5E5EA)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.outlineVariant
 
     // ── Modified Item Indicator ────────────────────────────────
 
     /** Indicator dot for modified-but-unsaved items. */
     val modifiedIndicator: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFFCC3333)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.error
 
     // ── Auto-Orient Indicator ─────────────────────────────────
 
     /** Background color for auto-orient badge. */
     val autoOrientBackground: Color
-        @Composable @ReadOnlyComposable get() = Color(0xFFE8EEF4)
+        @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme.primaryContainer
 
     // ── Static light/dark palettes for non-Composable contexts ─
 

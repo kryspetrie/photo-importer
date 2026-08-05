@@ -53,6 +53,8 @@ data class ReorganizePreview(
     val conflictCount: Int,
     val newFolderCount: Int,
     val operationMode: ReorganizeMode = ReorganizeMode.MOVE,
+    /** Root folder passed to [ReorganizeService.scanAndPreview]. */
+    val libraryRoot: String = "",
 )
 
 /** Progress tracking during reorganization. */

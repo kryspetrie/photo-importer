@@ -4,12 +4,14 @@ import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import kotlin.math.hypot
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.kryspetrie.fileimport.domain.model.PhotoCorner
 
 /** Debug test to understand why GT[1] is being missed. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Tag("scratch")
 class DebugGT1MissedTest {
 
     private lateinit var img02: BufferedImage

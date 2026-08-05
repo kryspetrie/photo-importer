@@ -24,6 +24,7 @@ import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
 import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
 import org.kryspetrie.fileimport.domain.port.FileSystemPort
+import org.kryspetrie.fileimport.domain.port.FolderThumbnailCachePort
 import org.kryspetrie.fileimport.domain.port.GeocodingPort
 import org.kryspetrie.fileimport.domain.port.HashCachePort
 import org.kryspetrie.fileimport.domain.port.IdGenerator
@@ -42,6 +43,7 @@ import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
 import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
 import org.kryspetrie.fileimport.domain.port.PlatformPort
 import org.kryspetrie.fileimport.domain.port.SettingsPort
+import org.kryspetrie.fileimport.domain.port.ThumbnailExtractorPort
 import org.kryspetrie.fileimport.domain.port.TimeProvider
 import org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.ClasspathModelResourceAdapter
@@ -61,6 +63,7 @@ import org.kryspetrie.fileimport.infrastructure.adapter.PathsAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.PlatformInfoAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.SettingsAdapter
 import org.kryspetrie.fileimport.infrastructure.adapter.SurfDeduplicationService
+import org.kryspetrie.fileimport.infrastructure.adapter.ThumbnailExtractorAdapter
 import org.kryspetrie.fileimport.infrastructure.download.HuggingFaceModelDownloadAdapter
 import org.kryspetrie.fileimport.infrastructure.i18n.JsonLocaleAdapter
 import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
@@ -71,8 +74,10 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.OrientationDetectionSe
 import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.infrastructure.photoscan.PhotoScanDetectorService
 import org.kryspetrie.fileimport.infrastructure.photoscan.RectangleDetector
+import org.kryspetrie.fileimport.infrastructure.thumbnails.FolderThumbnailCacheAdapter
 import org.kryspetrie.fileimport.ui.screens.MediaImportViewModel
 import org.kryspetrie.fileimport.ui.screens.metadataeditor.MetadataEditorViewModel
+import org.kryspetrie.fileimport.ui.screens.wizard.WizardContainerViewModel
 
 /**
  * Koin DI module for the Petrie File Importer application.
@@ -95,6 +100,14 @@ val appModule = module {
     }
     single<HashCachePort> { HashCacheAdapter(dispatcherProvider = get(), timeProvider = get()) }
     single<FileSystemPort> { FileSystemAdapter() }
+    single<ThumbnailExtractorPort> { ThumbnailExtractorAdapter }
+    single<FolderThumbnailCachePort> {
+        FolderThumbnailCacheAdapter(
+            fileSystem = get(),
+            thumbnailExtractor = get(),
+            dispatcherProvider = get(),
+        )
+    }
     single<DevicePort> { DeviceAdapter(dispatcherProvider = get()) }
     single<ModelResourcePort> { ClasspathModelResourceAdapter() }
 
@@ -147,7 +160,7 @@ val appModule = module {
     }
     single { ReorganizeJournalRepository(get()) }
     single { FileOperationExecutor(get(), get()) }
-    single { ReorganizeService(get(), get(), get(), get(), get(), get(), get()) }
+    single { ReorganizeService(get(), get(), get(), get(), get(), get(), get(), get()) }
     single {
         DuplicateScannerService(
             imageRepository = get(),
@@ -247,6 +260,8 @@ val appModule = module {
             fileSystemAdapter = get(),
             orientationCorrection = get(),
             modelDownloadPort = get(),
+            faceDetectionPort = get(),
+            folderThumbnailCache = get(),
             localePort = get(),
         )
     }
@@ -258,6 +273,22 @@ val appModule = module {
             settingsPort = get(),
             watchFolderManager = get(),
             timeProvider = get(),
+            pathsPort = get(),
+            localePort = get(),
+        )
+    }
+    single {
+        WizardContainerViewModel(
+            detectorService = get(),
+            exportService = get(),
+            perspectiveService = get(),
+            appLogger = get(),
+            settingsPort = get(),
+            dispatcherProvider = get(),
+            faceRegionTransformer = get(),
+            faceDetectionPort = get(),
+            orientationCorrection = get(),
+            imageProcessing = get(),
             pathsPort = get(),
             localePort = get(),
         )

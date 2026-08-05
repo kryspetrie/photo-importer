@@ -37,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import java.awt.image.BufferedImage
+import java.io.File
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.i18n.strings
 
@@ -55,6 +57,8 @@ import org.kryspetrie.fileimport.ui.i18n.strings
 fun BulkSelectionDialog(
     state: BulkEditState,
     thumbnailCache: java.util.concurrent.ConcurrentHashMap<String, BufferedImage>,
+    thumbnailCacheRevision: Int,
+    onEnsureThumbnail: suspend (File) -> Unit,
     selectedIndices: Set<Int>,
     onToggleSelection: (Int) -> Unit,
     onSelectAll: () -> Unit,
@@ -78,7 +82,10 @@ fun BulkSelectionDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
-                        Text(s.t(StringKey.META_SELECT_PHOTOS), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            s.t(StringKey.META_SELECT_PHOTOS),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
                         Text(
                             s.t(
                                 StringKey.META_SELECTED_OF_TOTAL,
@@ -93,12 +100,18 @@ fun BulkSelectionDialog(
                         OutlinedButton(onClick = onSelectAll, modifier = Modifier.height(32.dp)) {
                             Icon(Icons.Default.SelectAll, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(s.t(StringKey.ACTION_ALL), style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                s.t(StringKey.ACTION_ALL),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                         }
                         OutlinedButton(onClick = onSelectNone, modifier = Modifier.height(32.dp)) {
                             Icon(Icons.Default.Deselect, null, Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text(s.t(StringKey.ACTION_NONE), style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                s.t(StringKey.ACTION_NONE),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                         }
                         IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, s.close) }
                     }
@@ -126,6 +139,9 @@ fun BulkSelectionDialog(
                                 ),
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
+                                LaunchedEffect(file.absolutePath, thumbnailCacheRevision) {
+                                    onEnsureThumbnail(file)
+                                }
                                 val thumb = thumbnailCache[file.absolutePath]
                                 if (thumb != null) {
                                     val bitmap = remember(thumb) { thumb.toComposeImageBitmap() }
@@ -177,7 +193,7 @@ fun BulkSelectionDialog(
                                 s.t(
                                     StringKey.META_EDIT_N_PHOTOS,
                                     "count" to selectedIndices.size.toString(),
-                                ),
+                                )
                         )
                     }
                 }

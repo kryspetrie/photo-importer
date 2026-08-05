@@ -248,4 +248,35 @@ class NamingAdapterTest {
             assertThat(previews[0].fileName).isEqualTo("IMG_1234.jpg")
         }
     }
+
+    @Nested
+    @DisplayName("resolveConflict")
+    inner class ResolveConflict {
+        @Test
+        @DisplayName("should not loop when pattern lacks counter and file exists")
+        fun shouldDisambiguateWithoutCounter() {
+            val tempFile = java.io.File.createTempFile("naming_test_", ".jpg")
+            tempFile.deleteOnExit()
+            val existing = java.io.File(tempFile.parent, "duplicate_name.jpg")
+            existing.writeText("existing")
+            existing.deleteOnExit()
+
+            val config =
+                ImportConfiguration(
+                    fileNamePattern = "{original}",
+                    preserveOriginalName = true,
+                    createSubfolders = false,
+                )
+            val image =
+                ImageFile(
+                    path = FilePath("/source/duplicate_name.jpg"),
+                    metadata = ImageMetadata(dateTimeOriginal = LocalDateTime.of(2024, 1, 1, 0, 0)),
+                )
+
+            val resolved = adapter.resolveConflict(image, tempFile.parent, config)
+
+            assertThat(resolved).isNotEqualTo(existing.absolutePath)
+            assertThat(java.io.File(resolved).name).contains("_")
+        }
+    }
 }

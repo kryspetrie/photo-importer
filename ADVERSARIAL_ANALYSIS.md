@@ -1,5 +1,11 @@
 # 🔍 Adversarial Analysis — Petrie File Importer
 
+> **Status: STALE (as of 2026-07-29).** Kept for historical reference only.
+> Many findings cite code that no longer exists in this repo — notably the people/face-recognition
+> subsystem (`PeopleScreen`, `PersonService`, `FaceGroupingService`, `FaceEmbedding`, `Person`,
+> `JsonPersonDirectoryAdapter`), which was split out. Do not treat unchecked items here as a live
+> backlog; prefer `IMPROVEMENT_PLAN.md` for current work. Re-audit before acting on any finding.
+
 This report synthesizes a deep audit across all layers: application services, domain models, infrastructure adapters, and UI.
 
 ## 🔴 Critical — Data Loss & Corruption

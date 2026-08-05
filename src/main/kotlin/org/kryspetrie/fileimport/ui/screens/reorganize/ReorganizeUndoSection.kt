@@ -60,7 +60,10 @@ fun ReorganizeUndoSection(
                     tint = MaterialTheme.colorScheme.primary,
                 )
                 Column(Modifier.weight(1f)) {
-                    Text(s.t(StringKey.REORG_UNDO_HISTORY), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        s.t(StringKey.REORG_UNDO_HISTORY),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
                     Text(
                         s.t(
                             StringKey.REORG_UNDO_OPERATIONS,
@@ -147,7 +150,7 @@ private fun JournalRow(
             )
         }
         Text(
-            if (!journal.undone) "Undo" else s.t(StringKey.REORG_VIEW),
+            if (!journal.undone) s.t(StringKey.META_UNDO) else s.t(StringKey.REORG_VIEW),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.primary,
         )

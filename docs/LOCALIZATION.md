@@ -1,5 +1,9 @@
 # Petrie Image Importer — Localization (i18n) Design
 
+> **Status: implemented.** This is the original design proposal; the phased plan in section 3 has been
+> carried out, so the per-file string counts there refer to files that have since been split or renamed
+> (for example `EditSections.kt`). The architecture described in section 2 still matches the code.
+
 ## 1. Design Goals
 - Support multiple languages via simple JSON text files that non-developers can create
 - No code changes required to add a new language

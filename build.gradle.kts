@@ -23,6 +23,18 @@ version = "1.0.0"
 
 kotlin { jvmToolchain(21) }
 
+sourceSets {
+    create("dev") {
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += output + sourceSets["main"].output + sourceSets["main"].runtimeClasspath
+    }
+}
+
+configurations {
+    named("devImplementation") { extendsFrom(configurations["implementation"]) }
+    named("devRuntimeOnly") { extendsFrom(configurations["runtimeOnly"]) }
+}
+
 compose.desktop {
     application {
         mainClass = "org.kryspetrie.fileimport.PetrieFileImporterAppKt"
@@ -112,12 +124,13 @@ dependencies {
     testImplementation("com.lemonappdev:konsist:0.17.3")
     testImplementation("org.jetbrains.compose.ui:ui-test-junit4:1.11.0-beta01")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5:2.3.10")
+    testImplementation("junit:junit:4.13.2")
     testImplementation("org.junit.vintage:junit-vintage-engine:5.11.4") {
         because("ComposeTestRule requires JUnit 4 rule support within JUnit 5")
     }
 
     tasks.test {
-        useJUnitPlatform { excludeTags("UiComponentTest", "integration") }
+        useJUnitPlatform { excludeTags("UiComponentTest", "integration", "scratch") }
         testLogging { showStandardStreams = true }
         // ONNX models (orientation detection ~350MB) require additional heap
         jvmArgs("-Xmx2g")
@@ -126,10 +139,20 @@ dependencies {
     tasks.register<Test>("uiTest") {
         description = "Runs UI component tests (Compose rendering tests)"
         group = "verification"
-        useJUnitPlatform { includeTags("UiComponentTest") }
+        // Support both JUnit 4 (for @Rule) and JUnit 5 (for @Tag)
+        // Use JUnit Platform for JUnit 5 tests, vintage engine handles JUnit 4 tests
+        useJUnitPlatform()
         testLogging { showStandardStreams = true }
         classpath = sourceSets["test"].runtimeClasspath
         testClassesDirs = sourceSets["test"].output.classesDirs
+        // Enable JUnit 4 support for ComposeTestRule @Rule annotation
+        systemProperty("junit.jupiter.extensions.autodetection.enabled", "true")
+        // Filter to only run UI tests by class name pattern
+        include("**/*UiComponentTest*.class")
+        include("**/*ComprehensiveTest*.class")
+        include("**/*StateTest*.class")
+        include("**/*InteractionTest*.class")
+        include("**/*ComponentTest*.class")
     }
 
     tasks.register<Test>("integrationTest") {
@@ -144,20 +167,20 @@ dependencies {
     tasks.register<JavaExec>("runMapTileTest") {
         description = "Launches a standalone window to test OsmMapView tile rendering"
         group = "verification"
-        classpath = sourceSets.main.get().runtimeClasspath
+        classpath = project.sourceSets["dev"].runtimeClasspath
         mainClass.set("org.kryspetrie.fileimport.ui.screens.wizard.metadata.MapTileRenderTestAppKt")
-        dependsOn("classes")
+        dependsOn("devClasses")
     }
 
     tasks.register<JavaExec>("runLocationPickerTest") {
         description =
             "Launches a standalone window to test the full LocationPickerContent (search + map)"
         group = "verification"
-        classpath = sourceSets.main.get().runtimeClasspath
+        classpath = project.sourceSets["dev"].runtimeClasspath
         mainClass.set(
             "org.kryspetrie.fileimport.ui.screens.wizard.metadata.LocationPickerTestAppKt"
         )
-        dependsOn("classes")
+        dependsOn("devClasses")
     }
 
     tasks.register<JavaExec>("generateIcons") {

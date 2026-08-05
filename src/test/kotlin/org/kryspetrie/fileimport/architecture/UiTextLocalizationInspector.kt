@@ -26,12 +26,22 @@ object UiTextLocalizationInspector {
             "LocalizedExempt",
         )
 
-    private val patterns =
+    /** Patterns matched against whitespace-normalized source, so multi-line calls are covered. */
+    private val normalizedPatterns =
         listOf(
             Regex("""\bText\s*\(\s*"([^"$\\][^"]*)"""),
             Regex("""\bText\s*\(\s*text\s*=\s*"([^"$\\][^"]*)"""),
             Regex("""\b(?:Menu|Item)\s*\(\s*"([^"$\\][^"]*)"""),
-            Regex("""\b(?:title|label|contentDescription|placeholder|message|hint)\s*=\s*"([^"$\\][^"]*)"""),
+            Regex(
+                """\b(?:title|label|contentDescription|placeholder|message|hint)\s*=\s*"([^"$\\][^"]*)"""
+            ),
+            // contentDescription passed positionally: Icon(Icons.Default.Close, "Close")
+            Regex("""\bIcon\s*\(\s*[A-Za-z_][\w.]*\s*,\s*"([^"$\\][^"]*)"""),
+        )
+
+    /** Patterns matched against comment-stripped source with original line breaks. */
+    private val rawPatterns =
+        listOf(
             Regex("""\bShortcutRow\s*\(\s*"[^"]*"\s*,\s*"([^"$\\][^"]*)"""),
             Regex("""\bShortcutSection\s*\(\s*title\s*=\s*"([^"$\\][^"]*)"""),
             Regex("""\badd\s*\(\s*"([^"$\\][^"]*)"\s+to\b"""),
@@ -53,7 +63,9 @@ object UiTextLocalizationInspector {
                 val relative = kotlinRoot.relativize(file.toPath()).toString()
                 relative.startsWith("ui") || extraSources.any { relative.endsWith(it) }
             }
-            .flatMap { file -> inspectFile(kotlinRoot.relativize(file.toPath()).toString(), file.readText()) }
+            .flatMap { file ->
+                inspectFile(kotlinRoot.relativize(file.toPath()).toString(), file.readText())
+            }
             .sortedWith(compareBy({ it.file }, { it.line }, { it.literal }))
             .toList()
     }
@@ -66,8 +78,10 @@ object UiTextLocalizationInspector {
         val lineStarts = buildLineStartOffsets(withoutComments)
 
         val violations = mutableListOf<Violation>()
-        for ((pattern, regex) in patterns.withIndex()) {
-            for (match in regex.findAll(if (pattern <= 3) normalized else withoutComments)) {
+        val searches =
+            normalizedPatterns.map { it to normalized } + rawPatterns.map { it to withoutComments }
+        for ((regex, haystack) in searches) {
+            for (match in regex.findAll(haystack)) {
                 val literal = match.groupValues[1]
                 if (!isUserFacingLiteral(literal)) continue
 
@@ -79,7 +93,11 @@ object UiTextLocalizationInspector {
                         .trim()
                 if (i18nMarkers.any { snippet.contains(it) }) continue
 
-                val line = lineNumberAt(lineStarts, match.range.first.coerceAtMost(withoutComments.length - 1))
+                val line =
+                    lineNumberAt(
+                        lineStarts,
+                        match.range.first.coerceAtMost(withoutComments.length - 1),
+                    )
                 violations.add(Violation(relativePath, line, literal, snippet.take(120)))
             }
         }
@@ -105,9 +123,7 @@ object UiTextLocalizationInspector {
 
     private fun buildLineStartOffsets(text: String): IntArray {
         val starts = mutableListOf(0)
-        text.forEachIndexed { index, char ->
-            if (char == '\n') starts.add(index + 1)
-        }
+        text.forEachIndexed { index, char -> if (char == '\n') starts.add(index + 1) }
         return starts.toIntArray()
     }
 

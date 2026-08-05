@@ -277,6 +277,136 @@ class MetadataEditUndoServiceTest {
         assertEquals(1, loaded.entries.size)
         assertEquals("/test/photo.jpg", loaded.entries[0].filePath)
     }
+
+    @Test
+    fun `redo rewrites using backup as EXIF source`() = runBlocking {
+        val undoService =
+            MetadataEditUndoService(journalRepository, fileSystem, AwtTestImageProcessing())
+
+        val original = File(tempDir, "photo.jpg")
+        original.writeText("current content")
+        val backup = File(tempDir, "backup_photo.jpg")
+        backup.writeText("backup content")
+
+        val entry =
+            MetadataEditEntry(
+                filePath = original.absolutePath,
+                backupPath = backup.absolutePath,
+                configSnapshot = PhotoScanConfiguration(description = "redo me"),
+                wasSuccessful = true,
+            )
+        val journalPath =
+            journalRepository.saveJournal(
+                MetadataEditJournal(
+                    sourceFolderPath = tempDir.absolutePath,
+                    outputMode = "OVERWRITE",
+                    entries = listOf(entry),
+                    undone = true,
+                )
+            )!!
+
+        var writerExifSource: String? = null
+        val redone =
+            undoService.redo(journalPath) { path, config, exifSource ->
+                writerExifSource = exifSource?.path
+                assertEquals(original.absolutePath, path.path)
+                assertEquals("redo me", config.description)
+            }
+
+        assertEquals(1, redone)
+        assertEquals(backup.absolutePath, writerExifSource)
+        assertFalse(journalRepository.getJournal(journalPath)!!.undone)
+    }
+
+    @Test
+    fun `redo falls back to file path when backup is missing`() = runBlocking {
+        val undoService =
+            MetadataEditUndoService(journalRepository, fileSystem, AwtTestImageProcessing())
+
+        val original = File(tempDir, "photo.jpg")
+        original.writeText("current content")
+
+        val entry =
+            MetadataEditEntry(
+                filePath = original.absolutePath,
+                backupPath = File(tempDir, "missing-backup.jpg").absolutePath,
+                configSnapshot = PhotoScanConfiguration(description = "redo"),
+                wasSuccessful = true,
+            )
+        val journalPath =
+            journalRepository.saveJournal(
+                MetadataEditJournal(
+                    sourceFolderPath = tempDir.absolutePath,
+                    outputMode = "OVERWRITE",
+                    entries = listOf(entry),
+                    undone = true,
+                )
+            )!!
+
+        var writerExifSource: String? = null
+        val redone =
+            undoService.redo(journalPath) { _, _, exifSource ->
+                writerExifSource = exifSource?.path
+            }
+
+        assertEquals(1, redone)
+        assertEquals(original.absolutePath, writerExifSource)
+    }
+
+    @Test
+    fun `redo returns -1 when journal is not undone`() = runBlocking {
+        val undoService =
+            MetadataEditUndoService(journalRepository, fileSystem, AwtTestImageProcessing())
+        val original = File(tempDir, "photo.jpg").apply { writeText("x") }
+        val journalPath =
+            journalRepository.saveJournal(
+                MetadataEditJournal(
+                    sourceFolderPath = tempDir.absolutePath,
+                    outputMode = "OVERWRITE",
+                    entries =
+                        listOf(
+                            MetadataEditEntry(
+                                filePath = original.absolutePath,
+                                backupPath = "",
+                                wasSuccessful = true,
+                            )
+                        ),
+                    undone = false,
+                )
+            )!!
+
+        assertEquals(-1, undoService.redo(journalPath) { _, _, _ -> })
+    }
+
+    @Test
+    fun `undo with missing backup skips restore but marks journal undone`() = runBlocking {
+        val undoService =
+            MetadataEditUndoService(journalRepository, fileSystem, AwtTestImageProcessing())
+
+        val original = File(tempDir, "photo.jpg")
+        original.writeText("modified content")
+
+        val entry =
+            MetadataEditEntry(
+                filePath = original.absolutePath,
+                backupPath = File(tempDir, "gone-backup.jpg").absolutePath,
+                wasSavedNew = false,
+                wasSuccessful = true,
+            )
+        val journalPath =
+            journalRepository.saveJournal(
+                MetadataEditJournal(
+                    sourceFolderPath = tempDir.absolutePath,
+                    outputMode = "OVERWRITE",
+                    entries = listOf(entry),
+                )
+            )!!
+
+        val restored = undoService.undo(journalPath)
+        assertEquals(0, restored)
+        assertEquals("modified content", original.readText())
+        assertTrue(journalRepository.getJournal(journalPath)!!.undone)
+    }
 }
 
 /** Minimal ImageProcessingPort implementation for tests. */

@@ -1,5 +1,8 @@
 package org.kryspetrie.fileimport.application.export.integration
 
+import com.petrielabs.metadataeditor.adapters.exiftool.ExifToolProcessRunner
+import java.nio.file.Path
+import javax.imageio.ImageIO
 import kotlinx.coroutines.runBlocking
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -11,7 +14,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import com.petrielabs.metadataeditor.adapters.exiftool.ExifToolProcessRunner
 import org.kryspetrie.fileimport.application.TestDispatcherProvider
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
 import org.kryspetrie.fileimport.application.metadata.MetadataEditJournalRepository
@@ -26,8 +28,6 @@ import org.kryspetrie.fileimport.infrastructure.photoscan.FaceRegionTransformer
 import org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService
 import org.kryspetrie.fileimport.testsupport.ExifToolTestSupport
 import org.kryspetrie.fileimport.testsupport.RawPayloadTestSupport
-import java.nio.file.Path
-import javax.imageio.ImageIO
 
 /**
  * End-to-end rotation tests through [MetadataEditService]: RAW files must receive orientation-only
@@ -89,12 +89,7 @@ class RawMetadataRotationIntegrationTest {
 
     @ParameterizedTest(name = "metadata-only rotation on {0}")
     @ValueSource(
-        strings =
-            [
-                "samples/canon_eos_40d.CR2",
-                "samples/nikon_d2h.NEF",
-                "samples/sony_ilce_7s.ARW",
-            ]
+        strings = ["samples/canon_eos_40d.CR2", "samples/nikon_d2h.NEF", "samples/sony_ilce_7s.ARW"]
     )
     fun rotationUpdatesOrientationWithoutChangingPayload(resourcePath: String) {
         val path = ExifToolTestSupport.copySampleResource(resourcePath)
@@ -165,7 +160,9 @@ class RawMetadataRotationIntegrationTest {
         val runner = ExifToolTestSupport.createProcessRunner()
         val orientation = readOrientationNumeric(path, runner)
         assertThat(orientation == null || orientation == 1)
-            .describedAs("Expected normal orientation (1) after pixel rotation but got $orientation")
+            .describedAs(
+                "Expected normal orientation (1) after pixel rotation but got $orientation"
+            )
             .isTrue()
     }
 

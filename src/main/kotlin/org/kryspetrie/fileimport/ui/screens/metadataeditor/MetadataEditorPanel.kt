@@ -2,36 +2,27 @@ package org.kryspetrie.fileimport.ui.screens.metadataeditor
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.kryspetrie.fileimport.domain.model.AppSettings
 import org.kryspetrie.fileimport.domain.model.MetadataHistory
 import org.kryspetrie.fileimport.domain.model.RecentMetadataSet
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.port.DispatcherProvider
 import org.kryspetrie.fileimport.domain.port.SettingsPort
-import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.components.ChunkyScrollbar
 import org.kryspetrie.fileimport.ui.i18n.strings
+import org.kryspetrie.fileimport.ui.screens.shared.MetadataEditorPanelHeader
+import org.kryspetrie.fileimport.ui.screens.shared.metadata.MetadataEditState
+import org.kryspetrie.fileimport.ui.screens.shared.metadata.RecentValuesDropdown
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.CameraSection
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.LocationSection
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.QuickEditMetadataFields
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.SourceMetadataSection
 import org.kryspetrie.fileimport.ui.screens.wizard.edit.SubjectsSection
-import org.kryspetrie.fileimport.ui.screens.wizard.metadata.MetadataEditState
-import org.kryspetrie.fileimport.ui.screens.wizard.metadata.RecentValuesDropdown
 import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
 
 /**
@@ -46,8 +37,8 @@ import org.kryspetrie.fileimport.ui.wizard.state.SourceExifSummary
  * The standalone metadata editor uses pure upsert behavior:
  * - Non-blank field values are written to the output (overwriting any source value).
  * - Blank field values preserve the source EXIF (no overwrite).
- * - There are no per-field override checkboxes — the intent is always "write what I provide,
- *   keep what I don't touch."
+ * - There are no per-field override checkboxes — the intent is always "write what I provide, keep
+ *   what I don't touch."
  * - This matches the legacy `OverrideState = null` behavior in the EXIF writer, which is the
  *   simplest and most predictable model for bulk metadata editing.
  */
@@ -67,70 +58,55 @@ fun MetadataEditorPanel(
     onPickLocation: (List<Int>) -> Unit,
     onApply: () -> Unit = {},
     onClear: () -> Unit = {},
+    onSelectFaces: (() -> Unit)? = null,
+    onRemoveFace: ((Int) -> Unit)? = null,
+    onClearAllFaces: (() -> Unit)? = null,
+    wideSourceMetadata: Boolean = false,
+    keywordsFocusTrigger: Int = 0,
     modifier: Modifier = Modifier,
 ) {
     val s = strings()
-    val isMultiSelect = isMultiEditMode && selectedIndices.size > 1
+    val isMultiSelect =
+        MetadataEditorPanelController.isMultiPhotoSelection(isMultiEditMode, selectedIndices.size)
+    val isBatchEdit = MetadataEditorPanelController.isBatchEditMode(isMultiEditMode)
     val singleEditBoxId: String? = state.selectedFile?.absolutePath
 
     ChunkyScrollbar(modifier = modifier) {
         Column(
-            modifier = Modifier.padding(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             // Header
-            if (isMultiSelect) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        s.t(StringKey.META_PHOTOS_SELECTED, "count" to selectedIndices.size.toString()),
-                        style =
-                            MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    OutlinedButton(onClick = onClear, modifier = Modifier.height(28.dp)) {
-                        Text(s.t(StringKey.META_CLEAR), style = MaterialTheme.typography.labelSmall)
-                    }
-                    Button(onClick = onApply, modifier = Modifier.height(28.dp)) {
-                        Text(s.apply, style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-                Text(
-                    s.t(StringKey.META_MULTI_EDIT_HINT),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+            if (isBatchEdit) {
+                MetadataEditorPanelHeader(
+                    title =
+                        if (isMultiSelect) {
+                            s.t(
+                                StringKey.META_PHOTOS_SELECTED,
+                                "count" to selectedIndices.size.toString(),
+                            )
+                        } else {
+                            state.selectedFile?.name ?: s.t(StringKey.META_NO_FILE_SELECTED)
+                        },
+                    onClear = onClear,
+                    onApply = onApply,
+                    hint = s.t(StringKey.META_MULTI_EDIT_HINT),
                 )
             } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        state.selectedFile?.name ?: s.t(StringKey.META_NO_FILE_SELECTED),
-                        style =
-                            MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    OutlinedButton(onClick = onClear, modifier = Modifier.height(28.dp)) {
-                        Text(s.t(StringKey.META_CLEAR), style = MaterialTheme.typography.labelSmall)
-                    }
-                }
+                MetadataEditorPanelHeader(
+                    title = state.selectedFile?.name ?: s.t(StringKey.META_NO_FILE_SELECTED),
+                    onClear = onClear,
+                )
             }
 
             // Recent values (multi-edit only)
             if (isMultiSelect && metadataHistory.recentSets.isNotEmpty()) {
                 RecentValuesDropdown(
-                    recentSets = metadataHistory.recentSets,
+                    recentSets =
+                        MetadataEditorPanelController.recentSetsForBatch(
+                            metadataHistory,
+                            isMultiSelect,
+                        ),
                     onApplySet = { set ->
                         editState.loadFromSet(set)
                         onSettingsChange(currentSettings.addMetadataSet(set))
@@ -140,7 +116,7 @@ fun MetadataEditorPanel(
 
             // ── Source metadata display (single-edit only) ──
             if (!isMultiSelect && sourceExif != null) {
-                SourceMetadataSection(sourceExif = sourceExif)
+                SourceMetadataSection(sourceExif = sourceExif, wideLayout = wideSourceMetadata)
             }
 
             // ── Metadata sections ──
@@ -196,6 +172,7 @@ fun MetadataEditorPanel(
                 overrideYear = null,
                 onOverrideYearChange = null,
                 sourceExif = sourceExif,
+                keywordsFocusTrigger = keywordsFocusTrigger,
             )
 
             LocationSection(
@@ -268,9 +245,15 @@ fun MetadataEditorPanel(
                     run {
                         val exif = sourceExif ?: return@run null
                         val parts = mutableListOf<String>()
-                        exif.gpsLatitude?.let { lat -> parts.add("Lat: $lat") }
-                        exif.gpsLongitude?.let { lon -> parts.add("Lon: $lon") }
-                        if (parts.isNotEmpty()) "Source: ${parts.joinToString(", ")}" else null
+                        exif.gpsLatitude?.let { lat ->
+                            parts.add(s.t(StringKey.FIELD_SOURCE_LAT, "value" to lat))
+                        }
+                        exif.gpsLongitude?.let { lon ->
+                            parts.add(s.t(StringKey.FIELD_SOURCE_LON, "value" to lon))
+                        }
+                        if (parts.isNotEmpty()) {
+                            s.t(StringKey.FIELD_SOURCE_GPS, "value" to parts.joinToString(", "))
+                        } else null
                     },
             )
 
@@ -287,10 +270,10 @@ fun MetadataEditorPanel(
                 onMetadataHistoryRemove = { field, value ->
                     onSettingsChange(currentSettings.removeMetadataHistory(field, value))
                 },
-                onSelectFaces = null,
+                onSelectFaces = if (!isMultiSelect) onSelectFaces else null,
                 faceRegions = if (!isMultiSelect) state.selectedConfig.faceRegions else emptyList(),
-                onRemoveFace = null,
-                onClearAllFaces = null,
+                onRemoveFace = if (!isMultiSelect) onRemoveFace else null,
+                onClearAllFaces = if (!isMultiSelect) onClearAllFaces else null,
             )
 
             CameraSection(

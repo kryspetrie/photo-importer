@@ -35,7 +35,7 @@ internal fun RefinementControls(
     val s = strings()
     Surface(tonalElevation = 3.dp, modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(48.dp),
+            modifier = Modifier.fillMaxWidth().height(36.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -99,7 +99,10 @@ internal fun RefinementControls(
                         },
                         modifier = Modifier.height(32.dp),
                     ) {
-                        Text(s.t(StringKey.WIZARD_DESELECT), style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            s.t(StringKey.WIZARD_DESELECT),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
                     }
                 } else {
                     Text(

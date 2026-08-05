@@ -152,7 +152,7 @@ org.kryspetrie.fileimport/
 │   │   ├── FaceDetectionService.kt    # YOLO12n face detection (bounding boxes + confidence)
 │   │   └── yolo/                  # YOLO neural network pipeline
 │   └── wizard/                    # Photo Scan wizard UI state
-│       ├── PhotoScanWizardState.kt  # Central wizard state (1534 lines)
+│       ├── PhotoScanWizardState.kt  # Central wizard state (~500 lines)
 │       ├── BoundingBox.kt         # Type aliases to domain.geometry
 │       ├── BoundingBoxList.kt     # Type alias to domain.geometry
 │       ├── PhotoConfiguration.kt  # Type alias → PhotoScanConfiguration
@@ -186,17 +186,28 @@ org.kryspetrie.fileimport/
         │   ├── WizardContainer.kt  # Wizard orchestrator
         │   ├── OverviewScreen.kt   # Photo overview & selection
         │   ├── RefinementScreen.kt # Corner adjustment
-        │   ├── SummaryScreen.kt    # Photo summary & export settings
+        │   ├── SummaryScreen.kt    # Thin photo-summary orchestrator
+        │   ├── summary/            # Summary list, preview, toolbar, and fullscreen components
+        │   ├── EditScreen.kt       # Edit-step state and orchestration
+        │   ├── edit/               # Edit preview, metadata sections, dialogs, and picker hosts
+        │   ├── FaceSelectorOverlay.kt # Face-selection session orchestration
+        │   ├── FaceSelector*.kt    # Canvas, sidebar, naming, and visual components
         │   ├── metadata/           # Metadata editing
         │   │   ├── MetadataScreen.kt      # Metadata editing form
-        │   │   ├── MetadataEditState.kt   # Compose state holder
+        │   │   ├── (shared) MetadataEditState.kt  # ui/screens/shared/metadata
         │   │   └── MetadataField.kt      # Reusable metadata field
         │   └── ...
         ├── metadataeditor/         # Standalone bulk metadata editor tab
         │   ├── MetadataEditorScreen.kt  # Main editor orchestrator (source path, preview, dialogs)
-        │   ├── MetadataEditorSidebar.kt # Thumbnail sidebar with modified indicators
-        │   ├── MetadataEditorPanel.kt   # Metadata fields panel with override toggles
-        │   ├── MetadataEditorViewModel.kt # Save/undo/redo orchestration
+        │   ├── MetadataEditorFileBrowserPanel.kt # File-browser orchestration
+        │   ├── MetadataEditor*View.kt # List, icons, hierarchy, and column browser views
+        │   ├── MetadataEditorPanel.kt   # Standalone metadata fields panel
+        │   ├── WizardEditMetadataPanel.kt  # Wizard edit-step metadata panel (wizard/edit/)
+    ├── ui/shared/
+    │   ├── face/                    # FaceRegionMutator, preview overlay (shared by wizard + editor)
+    │   └── image/                   # PreviewImageGeometry (letterbox coordinate mapping)
+        │   ├── MetadataEditorViewModel.kt # Stable state/service facade
+        │   ├── MetadataEditor*Actions.kt # Loading, save, orientation, face, dialog, and browser actions
         │   ├── BulkEditState.kt         # Per-file metadata state, UiMessage, OutputMode
         │   └── BulkSelectionDialog.kt   # Multi-select thumbnail overlay dialog
         ├── duplicatescanner/       # Standalone duplicate scanner tab
@@ -319,7 +330,7 @@ Some application services are tightly coupled to `BufferedImage` and `java.awt`.
 
 | Crossing | Rationale |
 |---|---|
-| UI → `AppPaths` | Simple path constants (`settingsDir`, `defaultDestination`). No logic to test. |
+| UI → `PathsPort` / `PathsAdapter` | Path constants and user directories. Prefer the port from UI; avoid importing concrete path helpers when a port exists. |
 | UI → `Platform` | OS detection utility (`isMac`, `isWindows`, `openFile()`). Single-function calls. |
 | UI → `toProcessedImage()` / `toBufferedImage()` | Type bridge converting `BufferedImage` ↔ `ProcessedImage` at the UI boundary. |
 | UI → `PhotoScanWizardState` & `infrastructure.wizard.*` | The wizard state package manages `BufferedImage` and `java.io.File`. The UI directly reads/writes this state — extracting it to a port would add complexity with no testability benefit. |

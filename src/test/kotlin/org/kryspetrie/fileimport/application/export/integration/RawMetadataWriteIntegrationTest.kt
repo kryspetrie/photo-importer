@@ -1,14 +1,12 @@
 package org.kryspetrie.fileimport.application.export.integration
 
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.TestInstance
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.kryspetrie.fileimport.application.export.MetadataWritingService
@@ -39,7 +37,8 @@ class RawMetadataWriteIntegrationTest {
                 imageProcessing =
                     org.kryspetrie.fileimport.infrastructure.adapter.AwtImageProcessingAdapter(
                         org.kryspetrie.fileimport.infrastructure.adapter.FileSystemAdapter(),
-                        org.kryspetrie.fileimport.infrastructure.photoscan.PerspectiveCorrectionService(),
+                        org.kryspetrie.fileimport.infrastructure.photoscan
+                            .PerspectiveCorrectionService(),
                     ),
             )
     }
@@ -82,15 +81,7 @@ class RawMetadataWriteIntegrationTest {
                 description = "RAW integration test",
                 keywords = "integration-test",
                 faceRegions =
-                    listOf(
-                        FaceRegion(
-                            name = "Test Face",
-                            x = 0.25,
-                            y = 0.25,
-                            w = 0.2,
-                            h = 0.3,
-                        )
-                    ),
+                    listOf(FaceRegion(name = "Test Face", x = 0.25, y = 0.25, w = 0.2, h = 0.3)),
             )
 
         metadataService.writeMetadataOnly(
@@ -122,7 +113,11 @@ class RawMetadataWriteIntegrationTest {
             if (beforeBytes.contentEquals(afterBytes)) continue
 
             val beforePixels = beforeJpegPixels[tag]
-            if (beforePixels != null && afterBytes != null && RawPayloadTestSupport.isJpeg(afterBytes)) {
+            if (
+                beforePixels != null &&
+                    afterBytes != null &&
+                    RawPayloadTestSupport.isJpeg(afterBytes)
+            ) {
                 val afterPixels = RawPayloadTestSupport.jpegPixelsOnly(afterBytes, runner)
                 assertEquals(
                     RawPayloadTestSupport.sha256(beforePixels),

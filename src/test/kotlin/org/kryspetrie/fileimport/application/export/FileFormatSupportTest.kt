@@ -18,18 +18,24 @@ class FileFormatSupportTest {
 
     @Test
     fun rawFormatsSupportLosslessOrientationAndInPlaceMetadata() {
-        ImageFileType.entries.filter { it.isRawFormat }.forEach { rawType ->
-            assertThat(FileFormatSupport.canSetOrientationLossless(rawType)).isTrue()
-            assertThat(FileFormatSupport.canWriteMetadataInPlace(rawType)).isTrue()
-            assertThat(FileFormatSupport.metadataSupport(rawType)).isEqualTo(MetadataSupport.FULL)
-        }
+        ImageFileType.entries
+            .filter { it.isRawFormat }
+            .forEach { rawType ->
+                assertThat(FileFormatSupport.canSetOrientationLossless(rawType)).isTrue()
+                assertThat(FileFormatSupport.canWriteMetadataInPlace(rawType)).isTrue()
+                assertThat(FileFormatSupport.metadataSupport(rawType))
+                    .isEqualTo(MetadataSupport.FULL)
+            }
     }
 
     @Test
     fun videoFormatsDoNotSupportMetadataEditing() {
-        ImageFileType.entries.filter { it.isVideo }.forEach { videoType ->
-            assertThat(FileFormatSupport.metadataSupport(videoType)).isEqualTo(MetadataSupport.NONE)
-            assertThat(FileFormatSupport.canWriteMetadataInPlace(videoType)).isFalse()
-        }
+        ImageFileType.entries
+            .filter { it.isVideo }
+            .forEach { videoType ->
+                assertThat(FileFormatSupport.metadataSupport(videoType))
+                    .isEqualTo(MetadataSupport.NONE)
+                assertThat(FileFormatSupport.canWriteMetadataInPlace(videoType)).isFalse()
+            }
     }
 }

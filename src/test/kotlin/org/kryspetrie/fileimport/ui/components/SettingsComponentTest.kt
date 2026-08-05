@@ -10,7 +10,7 @@ import androidx.compose.ui.test.performClick
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.Rule
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
+import org.junit.Test
 import org.kryspetrie.fileimport.ui.screens.components.CollapsibleSubsection
 import org.kryspetrie.fileimport.ui.screens.components.CompactCheck
 import org.kryspetrie.fileimport.ui.screens.components.ProgressCard

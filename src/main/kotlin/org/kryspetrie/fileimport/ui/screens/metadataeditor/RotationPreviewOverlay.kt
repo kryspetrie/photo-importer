@@ -30,7 +30,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -41,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +75,8 @@ fun RotationPreviewOverlay(
     excludedPaths: Set<String>,
     previewIndex: Int,
     thumbnailCache: java.util.concurrent.ConcurrentHashMap<String, BufferedImage>,
+    thumbnailCacheRevision: Int,
+    onEnsureThumbnail: suspend (File) -> Unit,
     currentImage: BufferedImage?,
     onToggleExclusion: (String) -> Unit,
     onSelectAll: () -> Unit,
@@ -85,11 +87,12 @@ fun RotationPreviewOverlay(
     modifier: Modifier = Modifier,
 ) {
     val s = strings()
-    val items = files.mapIndexed { index, file ->
-        val result = orientationResults[file.absolutePath]
-        val isChecked = file.absolutePath !in excludedPaths
-        RotationPreviewItem(file, result, isChecked)
-    }
+    val items =
+        files.mapIndexed { index, file ->
+            val result = orientationResults[file.absolutePath]
+            val isChecked = file.absolutePath !in excludedPaths
+            RotationPreviewItem(file, result, isChecked)
+        }
     val checkedCount = items.count { it.isChecked && it.result != null }
     val totalDetected = items.count { it.result != null }
     // The file shown in the large preview
@@ -118,7 +121,8 @@ fun RotationPreviewOverlay(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         s.t(StringKey.META_ROTATION_PREVIEW_TITLE),
-                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        style =
+                            MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     )
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -130,11 +134,12 @@ fun RotationPreviewOverlay(
                     OutlinedButton(onClick = onDeselectAll, modifier = Modifier.height(32.dp)) {
                         Icon(Icons.Default.Deselect, null, Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text(s.t(StringKey.ACTION_NONE), style = MaterialTheme.typography.labelSmall)
+                        Text(
+                            s.t(StringKey.ACTION_NONE),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
                     }
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, s.close)
-                    }
+                    IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, s.close) }
                 }
             }
             Text(
@@ -160,16 +165,20 @@ fun RotationPreviewOverlay(
                 ) {
                     items(items) { item ->
                         val result = item.result
-                        val rotationDeg = result?.let {
-                            nearestCorrectionDegrees(it.nearestRotation)
-                        } ?: 0
-                        val needsRotation = result != null && result.nearestRotation != RotationAngle.NONE
+                        val rotationDeg =
+                            result?.let { nearestCorrectionDegrees(it.nearestRotation) } ?: 0
+                        val needsRotation =
+                            result != null && result.nearestRotation != RotationAngle.NONE
 
                         Card(
-                            modifier = Modifier.height(120.dp).clickable {
-                                val idx = files.indexOfFirst { it.absolutePath == item.file.absolutePath }
-                                if (idx >= 0) onSetPreviewIndex(idx)
-                            },
+                            modifier =
+                                Modifier.height(120.dp).clickable {
+                                    val idx =
+                                        files.indexOfFirst {
+                                            it.absolutePath == item.file.absolutePath
+                                        }
+                                    if (idx >= 0) onSetPreviewIndex(idx)
+                                },
                             shape = RoundedCornerShape(6.dp),
                             colors =
                                 CardDefaults.cardColors(
@@ -177,11 +186,16 @@ fun RotationPreviewOverlay(
                                         if (previewFile?.absolutePath == item.file.absolutePath)
                                             MaterialTheme.colorScheme.primaryContainer
                                         else if (!item.isChecked)
-                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                            MaterialTheme.colorScheme.surfaceVariant.copy(
+                                                alpha = 0.5f
+                                            )
                                         else MaterialTheme.colorScheme.surfaceVariant
                                 ),
                         ) {
                             Box(modifier = Modifier.fillMaxSize()) {
+                                LaunchedEffect(item.file.absolutePath, thumbnailCacheRevision) {
+                                    onEnsureThumbnail(item.file)
+                                }
                                 val thumb = thumbnailCache[item.file.absolutePath]
                                 if (thumb != null) {
                                     val bitmap = remember(thumb) { thumb.toComposeImageBitmap() }
@@ -189,12 +203,11 @@ fun RotationPreviewOverlay(
                                         bitmap = bitmap,
                                         contentDescription = item.file.name,
                                         modifier =
-                                            Modifier.fillMaxSize()
-                                                .padding(2.dp)
-                                                .let { mod ->
-                                                    if (rotationDeg != 0) mod.clip(RoundedCornerShape(4.dp))
-                                                    else mod
-                                                },
+                                            Modifier.fillMaxSize().padding(2.dp).let { mod ->
+                                                if (rotationDeg != 0)
+                                                    mod.clip(RoundedCornerShape(4.dp))
+                                                else mod
+                                            },
                                         contentScale = ContentScale.Fit,
                                     )
                                 } else {
@@ -221,14 +234,20 @@ fun RotationPreviewOverlay(
                                     )
                                 }
                                 // "No rotation needed" badge
-                                if (result != null && result.nearestRotation == RotationAngle.NONE) {
+                                if (
+                                    result != null && result.nearestRotation == RotationAngle.NONE
+                                ) {
                                     Surface(
                                         modifier = Modifier.align(Alignment.TopEnd).padding(2.dp),
                                         color = MaterialTheme.colorScheme.surfaceVariant,
                                         shape = RoundedCornerShape(4.dp),
                                     ) {
                                         Row(
-                                            modifier = Modifier.padding(horizontal = 3.dp, vertical = 1.dp),
+                                            modifier =
+                                                Modifier.padding(
+                                                    horizontal = 3.dp,
+                                                    vertical = 1.dp,
+                                                ),
                                             verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Icon(
@@ -239,7 +258,10 @@ fun RotationPreviewOverlay(
                                             )
                                             Text(
                                                 "0°",
-                                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                                style =
+                                                    MaterialTheme.typography.labelSmall.copy(
+                                                        fontSize = 8.sp
+                                                    ),
                                                 color = MaterialTheme.colorScheme.outline,
                                             )
                                         }
@@ -248,7 +270,8 @@ fun RotationPreviewOverlay(
                                 // File name at bottom
                                 Text(
                                     item.file.name,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                                    style =
+                                        MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     modifier = Modifier.align(Alignment.BottomStart).padding(2.dp),
@@ -264,27 +287,31 @@ fun RotationPreviewOverlay(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     if (previewFile != null && currentImage != null) {
-                        val previewBitmap = remember(currentImage) {
-                            currentImage.toComposeImageBitmap()
-                        }
+                        val previewBitmap =
+                            remember(currentImage) { currentImage.toComposeImageBitmap() }
                         Box(
-                            modifier = Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(8.dp)),
+                            modifier =
+                                Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            val displayRotation = previewResult?.let {
-                                nearestCorrectionDegrees(it.nearestRotation).toFloat()
-                            } ?: 0f
+                            val displayRotation =
+                                previewResult?.let {
+                                    nearestCorrectionDegrees(it.nearestRotation).toFloat()
+                                } ?: 0f
 
                             Image(
                                 bitmap = previewBitmap,
                                 contentDescription = previewFile.name,
-                                modifier = Modifier.fillMaxSize().let { mod ->
-                                    if (displayRotation != 0f) {
-                                        mod.then(
-                                            Modifier.graphicsLayer { rotationZ = displayRotation }
-                                        )
-                                    } else mod
-                                },
+                                modifier =
+                                    Modifier.fillMaxSize().let { mod ->
+                                        if (displayRotation != 0f) {
+                                            mod.then(
+                                                Modifier.graphicsLayer {
+                                                    rotationZ = displayRotation
+                                                }
+                                            )
+                                        } else mod
+                                    },
                                 contentScale = ContentScale.Fit,
                             )
                         }
@@ -311,14 +338,20 @@ fun RotationPreviewOverlay(
                                         Text(
                                             s.t(
                                                 StringKey.ORIENTATION_DETECTED_ANGLE,
-                                                "angle" to previewResult.orientationDegrees.toInt().toString(),
+                                                "angle" to
+                                                    previewResult.orientationDegrees
+                                                        .toInt()
+                                                        .toString(),
                                             ),
                                             style = MaterialTheme.typography.bodySmall,
                                         )
                                         Text(
                                             s.t(
                                                 StringKey.ORIENTATION_DIALOG_CONFIDENCE,
-                                                "confidence" to (previewResult.confidence * 100).toInt().toString(),
+                                                "confidence" to
+                                                    (previewResult.confidence * 100)
+                                                        .toInt()
+                                                        .toString(),
                                             ),
                                             style = MaterialTheme.typography.bodySmall,
                                         )
@@ -335,26 +368,41 @@ fun RotationPreviewOverlay(
                                             ) {
                                                 Text(
                                                     s.t(StringKey.META_ROTATION_UPRIGHT_DETAIL),
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    modifier =
+                                                        Modifier.padding(
+                                                            horizontal = 6.dp,
+                                                            vertical = 2.dp,
+                                                        ),
                                                     style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                    color =
+                                                        MaterialTheme.colorScheme.onPrimaryContainer,
                                                 )
                                             }
                                         } else {
                                             RotationBadge(
-                                                rotationDegrees = nearestCorrectionDegrees(previewResult.nearestRotation),
+                                                rotationDegrees =
+                                                    nearestCorrectionDegrees(
+                                                        previewResult.nearestRotation
+                                                    ),
                                                 isAutoDetected = true,
                                             )
                                             Text(
                                                 s.t(
                                                     StringKey.ORIENTATION_DIALOG_CORRECTION,
-                                                    "correction" to previewResult.correctionDegrees.toInt().toString(),
+                                                    "correction" to
+                                                        previewResult.correctionDegrees
+                                                            .toInt()
+                                                            .toString(),
                                                 ),
                                                 style = MaterialTheme.typography.bodySmall,
                                             )
                                         }
                                     }
-                                    if (OrientationCorrectionService.isJpegFile(previewFile.absolutePath)) {
+                                    if (
+                                        OrientationCorrectionService.isJpegFile(
+                                            previewFile.absolutePath
+                                        )
+                                    ) {
                                         Surface(
                                             color = MaterialTheme.colorScheme.errorContainer,
                                             shape = RoundedCornerShape(4.dp),
@@ -362,7 +410,11 @@ fun RotationPreviewOverlay(
                                         ) {
                                             Text(
                                                 s.t(StringKey.META_ROTATION_JPEG_METADATA_ONLY),
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                modifier =
+                                                    Modifier.padding(
+                                                        horizontal = 6.dp,
+                                                        vertical = 2.dp,
+                                                    ),
                                                 style = MaterialTheme.typography.labelSmall,
                                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                             )
@@ -418,15 +470,16 @@ fun RotationPreviewOverlay(
                 Spacer(Modifier.width(16.dp))
                 TextButton(onClick = onDismiss) { Text(s.cancel) }
                 Spacer(Modifier.width(8.dp))
-                Button(
-                    onClick = onApply,
-                    enabled = checkedCount > 0,
-                ) {
-                    Icon(Icons.Default.AutoFixHigh, s.t(StringKey.ACC_APPLY_ROTATION), Modifier.size(16.dp))
+                Button(onClick = onApply, enabled = checkedCount > 0) {
+                    Icon(
+                        Icons.Default.AutoFixHigh,
+                        s.t(StringKey.ACC_APPLY_ROTATION),
+                        Modifier.size(16.dp),
+                    )
                     Spacer(Modifier.width(4.dp))
                     Text(
                         if (checkedCount == 1) s.t(StringKey.META_ROTATE_ONE_PHOTO)
-                        else s.t(StringKey.META_ROTATE_N_PHOTOS, "count" to checkedCount.toString()),
+                        else s.t(StringKey.META_ROTATE_N_PHOTOS, "count" to checkedCount.toString())
                     )
                 }
             }

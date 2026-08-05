@@ -5,7 +5,7 @@
 ### Running the Application
 
 ```bash
-# Run with hot reload
+# Run the desktop app
 ./gradlew run
 
 # Or use convenience script
@@ -90,20 +90,7 @@ when (currentTab) {
 }
 ```
 
-3. **Add preview** for development:
-
-```kotlin
-@Preview(showBackground = true)
-@Composable
-fun MyNewScreenPreview() {
-    PetrieTheme {
-        MyNewScreen(
-            settings = AppSettings(),
-            onSettingsChange = {}
-        )
-    }
-}
-```
+3. **Exercise the UI** with `./gradlew run` (or add a Compose UI test under `src/test`).
 
 ### Creating a Reusable Component
 
@@ -123,16 +110,9 @@ fun MyButton(
         Text(text)
     }
 }
-
-// Preview
-@Preview
-@Composable
-fun MyButtonPreview() {
-    PetrieTheme {
-        MyButton(text = "Click Me", onClick = {})
-    }
-}
 ```
+
+This project does not use Compose `@Preview` annotations in-repo; prefer unit/UI tests.
 
 ### State Management Pattern
 

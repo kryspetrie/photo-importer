@@ -124,8 +124,11 @@ fun isImageFile(file: File): Boolean {
 
 /** Check if a file supports metadata editing via ExifTool. */
 fun isMetadataEditableFile(file: File): Boolean {
-    val fileType = org.kryspetrie.fileimport.domain.model.ImageFileType.fromExtension(file.extension)
-    return org.kryspetrie.fileimport.application.export.FileFormatSupport.canWriteMetadataInPlace(fileType)
+    val fileType =
+        org.kryspetrie.fileimport.domain.model.ImageFileType.fromExtension(file.extension)
+    return org.kryspetrie.fileimport.application.export.FileFormatSupport.canWriteMetadataInPlace(
+        fileType
+    )
 }
 
 /**

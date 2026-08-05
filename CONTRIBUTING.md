@@ -174,7 +174,7 @@ petrie-file-importer/
     │           │   ├── SummaryScreen.kt             # Summary & export settings
     │           │   ├── metadata/                    # Metadata editing
     │           │   │   ├── MetadataScreen.kt
-    │           │   │   ├── MetadataEditState.kt     # Compose state holder
+    │           │   │   ├── MetadataEditState.kt     # shared/metadata Compose state holder
     │           │   │   └── MetadataField.kt
     │           │   └── ...
     │           └── ...
@@ -224,7 +224,7 @@ UI → Application → Domain (models + ports)
 
 **Never** import infrastructure classes from the domain layer. The UI layer accesses infrastructure only through domain ports (registered in `AppModule.kt`).
 
-A few pragmatic exceptions exist (e.g., `AppPaths`, `Platform`, `PhotoScanWizardState`) — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#boundary-exceptions) for details.
+A few pragmatic exceptions exist (e.g., `Platform`, `PhotoScanWizardState`) — see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#boundary-exceptions) for details.
 
 ---
 

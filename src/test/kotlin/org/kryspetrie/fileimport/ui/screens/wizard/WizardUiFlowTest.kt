@@ -367,7 +367,9 @@ class WizardUiFlowTest {
                 )
             }
 
-            composeTestRule.onNodeWithText("3 photo(s) exported").assertIsDisplayed()
+            composeTestRule
+                .onNodeWithText("3 extracted photo(s) exported from this scan")
+                .assertIsDisplayed()
         }
 
         @Test
@@ -391,7 +393,11 @@ class WizardUiFlowTest {
                 )
             }
 
-            composeTestRule.onNodeWithText("3 photo(s) exported (1 failed)").assertIsDisplayed()
+            composeTestRule
+                .onNodeWithText(
+                    "3 extracted photo(s) exported from this scan (1 failed)"
+                )
+                .assertIsDisplayed()
         }
 
         @Test

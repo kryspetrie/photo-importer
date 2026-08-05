@@ -50,7 +50,9 @@ class MediaImportViewModel(
     val pathsPort: PathsPort,
     private val localePort: LocalePort,
 ) {
-    private fun t(key: StringKey, vararg params: Pair<String, String>): String = localePort.t(key, *params)
+    private fun t(key: StringKey, vararg params: Pair<String, String>): String =
+        localePort.t(key, *params)
+
     // ── Device detection ─────────────────────────────────────────
 
     var detectedDevices by mutableStateOf<List<CameraDevice>>(emptyList())
@@ -67,6 +69,13 @@ class MediaImportViewModel(
     var filteredImages by mutableStateOf<List<ImageFile>>(emptyList())
 
     var duplicates by mutableStateOf<List<DuplicateInfo>>(emptyList())
+
+    /**
+     * Count of duplicates detected before copy (already-transferred filters + visual-dupe groups).
+     * Reported in [ImportResult.duplicateCount] / history.
+     */
+    var detectedDuplicateCount by mutableStateOf(0)
+        private set
 
     var importProgress by mutableStateOf(ImportProgress())
 
@@ -237,6 +246,7 @@ class MediaImportViewModel(
         images = emptyList()
         filteredImages = emptyList()
         duplicates = emptyList()
+        detectedDuplicateCount = 0
         importResult = null
         errorMessage = null
         scanProgress = ""
@@ -256,9 +266,13 @@ class MediaImportViewModel(
             scope.launch {
                 try {
                     val result =
-                        importService.executeImport(toImport, currentDestPath, currentConfig) {
-                            importProgress = it
-                        }
+                        importService.executeImport(
+                            images = toImport,
+                            destinationPath = currentDestPath,
+                            configuration = currentConfig,
+                            onProgress = { importProgress = it },
+                            detectedDuplicateCount = detectedDuplicateCount,
+                        )
                     completeImport(result)
                     result.historyEntry?.let { entry -> historyPort.addEntry(entry) }
                         ?: run {
@@ -292,7 +306,10 @@ class MediaImportViewModel(
                 } catch (e: Exception) {
                     errorMessage =
                         e.message
-                            ?: t(StringKey.ERROR_IMPORT_FAILED, "message" to t(StringKey.ERROR_UNKNOWN))
+                            ?: t(
+                                StringKey.ERROR_IMPORT_FAILED,
+                                "message" to t(StringKey.ERROR_UNKNOWN),
+                            )
                     completeImport(
                         ImportResult(
                             totalFiles = toImport.size,
@@ -320,16 +337,19 @@ class MediaImportViewModel(
             scope.launch {
                 try {
                     var toImport = importService.applyPairFilter(selectedImages, currentConfig)
+                    var alreadyTransferredCount = 0
                     if (currentImportMode == ImportMode.NEW) {
                         flowStep = MediaImportFlowStep.INDEXING
                         importService.indexFolder(currentDestPath, true) { indexProgress = it }
                         val destHashes = importService.getDestinationHashes(currentDestPath)
+                        val beforeFilter = toImport.size
                         toImport =
                             importService.filterAlreadyTransferred(
                                 toImport,
                                 destHashes,
                                 currentConfig,
                             )
+                        alreadyTransferredCount = (beforeFilter - toImport.size).coerceAtLeast(0)
                     }
                     filteredImages = toImport
                     if (currentConfig.detectVisualDuplicates) {
@@ -337,10 +357,13 @@ class MediaImportViewModel(
                         val found = importService.findVisualDuplicates(toImport, currentConfig)
                         if (found.isNotEmpty()) {
                             duplicates = found
+                            detectedDuplicateCount =
+                                alreadyTransferredCount + found.sumOf { it.duplicateImages.size }
                             flowStep = MediaImportFlowStep.DUPE_REVIEW
                             return@launch
                         }
                     }
+                    detectedDuplicateCount = alreadyTransferredCount
                     if (currentWantsReview) flowStep = MediaImportFlowStep.PREVIEW
                     else doImport(scope, toImport)
                 } catch (_: CancellationException) {

@@ -28,7 +28,10 @@ fun DestinationSelector(
             if (destination.isNotBlank()) {
                 Text(destination, style = MaterialTheme.typography.labelSmall)
             } else {
-                Text(s.t(StringKey.WIZARD_BROWSE_OR_TYPE), style = MaterialTheme.typography.labelSmall)
+                Text(
+                    s.t(StringKey.WIZARD_BROWSE_OR_TYPE),
+                    style = MaterialTheme.typography.labelSmall,
+                )
             }
         },
     )

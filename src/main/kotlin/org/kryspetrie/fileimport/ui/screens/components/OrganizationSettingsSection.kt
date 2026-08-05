@@ -39,15 +39,11 @@ import org.kryspetrie.fileimport.ui.i18n.strings
 fun OrganizationSettingsSection(
     configuration: ImportConfiguration,
     onConfigChange: (ImportConfiguration) -> Unit,
+    /** When false, renders contents only (for use inside a top-level [CollapsibleSettingsCard]). */
+    collapsible: Boolean = true,
 ) {
     val s = strings()
-    var orgExpanded by remember { mutableStateOf(true) }
-    CollapsibleSubsection(
-        title = s.t(StringKey.SETTINGS_ORG),
-        icon = Icons.Default.FolderCopy,
-        expanded = orgExpanded,
-        onToggle = { orgExpanded = !orgExpanded },
-    ) {
+    val body: @Composable () -> Unit = {
         Row(Modifier.fillMaxWidth()) {
             Column(Modifier.weight(1f)) {
                 SettingsToggle(
@@ -83,6 +79,20 @@ fun OrganizationSettingsSection(
         ConflictResolutionRadioGroup(configuration, onConfigChange)
         SectionLabel(s.t(StringKey.SETTINGS_ORG_DATE_SOURCE))
         DateSourceRadioGroup(configuration, onConfigChange)
+    }
+
+    if (collapsible) {
+        var orgExpanded by remember { mutableStateOf(true) }
+        CollapsibleSubsection(
+            title = s.t(StringKey.SETTINGS_ORG),
+            icon = Icons.Default.FolderCopy,
+            expanded = orgExpanded,
+            onToggle = { orgExpanded = !orgExpanded },
+        ) {
+            body()
+        }
+    } else {
+        body()
     }
 }
 

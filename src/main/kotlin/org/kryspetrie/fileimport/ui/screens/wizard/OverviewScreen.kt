@@ -1,12 +1,12 @@
 package org.kryspetrie.fileimport.ui.screens.wizard
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,18 +14,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,10 +37,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
-import org.kryspetrie.fileimport.ui.components.LoadingIndicator
+import kotlinx.coroutines.delay
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.ui.components.LoadingIndicator
 import org.kryspetrie.fileimport.ui.i18n.strings
-
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.FourPointStatusBar
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewCanvas
 import org.kryspetrie.fileimport.ui.screens.wizard.overview.OverviewControlsPanel
@@ -60,7 +54,6 @@ import org.kryspetrie.fileimport.ui.wizard.state.ZoomController
  * Overview screen showing the full scanned image with all detected bounding boxes. Users can
  * select, add, remove, and navigate to refinement for individual boxes.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OverviewScreen(
     state: PhotoScanWizardState,
@@ -77,16 +70,18 @@ fun OverviewScreen(
     val selectedBoxIndex by state.boxes.selectedBoxIndex.collectAsState()
     val zoomController by state.zoom.zoomController.collectAsState()
     val image by state.image.collectAsState()
+    // Gate here too: a single file chosen by path must never show Skip Photo.
+    val batchSourceFiles by state.batch.sourceFiles.collectAsState()
+    val skipCurrentPhoto =
+        if (batchSourceFiles.size > 1) onSkipCurrentPhoto else null
 
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var showHelpDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     var showBoxRejectedMessage by remember { mutableStateOf(false) }
     var hasFittedToView by remember { mutableStateOf(false) }
-    val snackbarHostState = remember { SnackbarHostState() }
 
     // Focus requester for auto-focus on load (so keyboard works immediately without clicking)
-    // Also used to re-grab focus after button clicks steal it from the canvas
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
@@ -100,67 +95,71 @@ fun OverviewScreen(
         }
     }
 
-    // Launch snackbar when box is rejected
+    // Auto-dismiss the box-rejected message after a short delay
     LaunchedEffect(showBoxRejectedMessage) {
         if (showBoxRejectedMessage) {
-            snackbarHostState.showSnackbar(
-                message = s.t(StringKey.WIZARD_BOX_TOO_SMALL),
-                duration = SnackbarDuration.Short,
-            )
+            delay(2000)
             showBoxRejectedMessage = false
         }
     }
 
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            OverviewTopBar(
+    Column(modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+        OverviewTopBar(
+            wizardMode = wizardMode,
+            fourPointState = fourPointState,
+            selectedBoxIndex = selectedBoxIndex,
+            onDeleteSelected = { showDeleteConfirmDialog = true },
+            onShowHelp = { showHelpDialog = true },
+        )
+
+        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            OverviewCanvasSection(
+                state = state,
+                image = image,
+                containerSize = containerSize,
                 wizardMode = wizardMode,
                 fourPointState = fourPointState,
-                selectedBoxIndex = selectedBoxIndex,
-                onDeleteSelected = { showDeleteConfirmDialog = true },
-                onShowHelp = { showHelpDialog = true },
+                zoomController = zoomController,
+                focusRequester = focusRequester,
+                onContainerSizeChanged = { containerSize = it },
+                onBoxRejected = { showBoxRejectedMessage = true },
+                onToSummary = onToSummary,
+                onBack = onBack,
             )
-        },
-        content = { paddingValues ->
-            Column(
-                modifier =
-                    modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                        .background(MaterialTheme.colorScheme.surface)
-            ) {
-                OverviewCanvasSection(
-                    state = state,
-                    image = image,
-                    containerSize = containerSize,
-                    wizardMode = wizardMode,
-                    fourPointState = fourPointState,
-                    zoomController = zoomController,
-                    focusRequester = focusRequester,
-                    onContainerSizeChanged = { containerSize = it },
-                    onBoxRejected = { showBoxRejectedMessage = true },
-                    onToSummary = onToSummary,
-                    onBack = onBack,
-                )
 
-                // BOTTOM HALF: All controls consolidated
-                OverviewControlsPanel(
-                    state = state,
-                    wizardMode = wizardMode,
-                    fourPointState = fourPointState,
-                    selectedBoxIndex = selectedBoxIndex,
-                    boxCount = boundingBoxList.size(),
-                    onBack = onBack,
-                    onToSummary = onToSummary,
-                    onSkipCurrentPhoto = onSkipCurrentPhoto,
-                    refocus = { focusRequester.requestFocus() },
-                    viewportWidth = containerSize.width.toDouble(),
-                    viewportHeight = containerSize.height.toDouble(),
-                )
+            // Inline box-rejected banner
+            if (showBoxRejectedMessage) {
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    tonalElevation = 4.dp,
+                ) {
+                    Text(
+                        s.t(StringKey.WIZARD_BOX_TOO_SMALL),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
             }
-        },
-    )
+        }
+
+        // Bottom controls
+        OverviewControlsPanel(
+            state = state,
+            wizardMode = wizardMode,
+            fourPointState = fourPointState,
+            selectedBoxIndex = selectedBoxIndex,
+            boxCount = boundingBoxList.size(),
+            onBack = onBack,
+            onToSummary = onToSummary,
+            onSkipCurrentPhoto = skipCurrentPhoto,
+            refocus = { focusRequester.requestFocus() },
+            viewportWidth = containerSize.width.toDouble(),
+            viewportHeight = containerSize.height.toDouble(),
+        )
+    }
 
     // Help dialog
     if (showHelpDialog) {
@@ -172,12 +171,7 @@ fun OverviewScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirmDialog = false },
             title = { Text(s.t(StringKey.WIZARD_DELETE_PHOTO)) },
-            text = {
-                Text(
-                    "Remove this photo box? This cannot be undone, " +
-                        "but you can use Undo (Ctrl+Z) to restore it."
-                )
-            },
+            text = { Text(s.t(StringKey.WIZARD_DELETE_PHOTO_MESSAGE)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -195,8 +189,7 @@ fun OverviewScreen(
     }
 }
 
-/** Top app bar with mode indicator, delete, and help actions. */
-@OptIn(ExperimentalMaterial3Api::class)
+/** Top bar with mode indicator, delete, and help actions. */
 @Composable
 private fun OverviewTopBar(
     wizardMode: WizardMode,
@@ -206,55 +199,61 @@ private fun OverviewTopBar(
     onShowHelp: () -> Unit,
 ) {
     val s = strings()
-    TopAppBar(
-        title = { Text(s.t(StringKey.WIZARD_SELECT_PHOTOS), maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        navigationIcon = {},
-        actions = {
-            // Mode indicator
-            when (wizardMode) {
-                WizardMode.NORMAL -> {
-                    // No mode indicator
+    Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                s.t(StringKey.WIZARD_SELECT_PHOTOS),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Mode indicator
+                when (wizardMode) {
+                    WizardMode.NORMAL -> { /* No mode indicator */ }
+                    WizardMode.FOUR_POINT -> {
+                        Surface(
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            shape = RoundedCornerShape(4.dp),
+                        ) {
+                            Text(
+                                fourPointState.statusMessage(),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
+                    }
+                    WizardMode.ADD_BOX -> { /* Handled via fourPointState */ }
+                    WizardMode.REFINEMENT -> { /* Handled in refinement screen */ }
                 }
-                WizardMode.FOUR_POINT -> {
-                    Surface(
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        shape = RoundedCornerShape(4.dp),
-                    ) {
-                        Text(
-                            fourPointState.statusMessage(),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            style = MaterialTheme.typography.labelMedium,
+
+                // Delete button (only when box selected)
+                if (selectedBoxIndex >= 0) {
+                    IconButton(onClick = onDeleteSelected) {
+                        Icon(
+                            Icons.Default.Delete,
+                            s.t(StringKey.WIZARD_DELETE_SELECTED),
+                            tint = MaterialTheme.colorScheme.error,
                         )
                     }
                 }
-                WizardMode.ADD_BOX -> {
-                    // Handled via fourPointState
-                }
-                WizardMode.REFINEMENT -> {
-                    // Handled in refinement screen
+
+                // Help button
+                IconButton(onClick = onShowHelp) {
+                    Icon(Icons.Default.Info, s.t(StringKey.MENU_HELP))
                 }
             }
-
-            // Delete button (only when box selected)
-            if (selectedBoxIndex >= 0) {
-                IconButton(onClick = onDeleteSelected) {
-                    Icon(
-                        Icons.Default.Delete,
-                        "Delete selected",
-                        tint = MaterialTheme.colorScheme.error,
-                    )
-                }
-            }
-
-            // Help button
-            IconButton(onClick = onShowHelp) { Icon(Icons.Default.Info, "Help") }
-        },
-    )
+        }
+    }
 }
 
 /** Canvas section occupying the top half of the overview screen. */
 @Composable
-private fun ColumnScope.OverviewCanvasSection(
+private fun OverviewCanvasSection(
     state: PhotoScanWizardState,
     image: BufferedImage?,
     containerSize: IntSize,
@@ -267,10 +266,11 @@ private fun ColumnScope.OverviewCanvasSection(
     onToSummary: () -> Unit,
     onBack: () -> Unit,
 ) {
+    val s = strings()
     Box(
         modifier =
             Modifier.fillMaxWidth()
-                .weight(1f)
+                .fillMaxSize()
                 .background(Color.DarkGray)
                 .onSizeChanged { onContainerSizeChanged(it) }
                 .focusRequester(focusRequester)
@@ -295,7 +295,7 @@ private fun ColumnScope.OverviewCanvasSection(
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 LoadingIndicator()
                 Text(
-                    "Loading image...",
+                    s.t(StringKey.WIZARD_LOADING_IMAGE),
                     color = Color.White,
                     modifier = Modifier.padding(top = 60.dp),
                 )

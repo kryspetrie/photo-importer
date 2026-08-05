@@ -116,7 +116,8 @@ fun CompletionScreen(
                     Text(
                         if (failedCount > 0) {
                             s.t(StringKey.WIZARD_EXPORTED, "count" to "$photoCount") +
-                                " " + s.t(StringKey.WIZARD_FAILED, "count" to "$failedCount")
+                                " " +
+                                s.t(StringKey.WIZARD_FAILED, "count" to "$failedCount")
                         } else {
                             s.t(StringKey.WIZARD_EXPORTED, "count" to "$photoCount")
                         },
@@ -470,7 +471,10 @@ private fun ExportResultsSummary(results: List<ExportResult>, modifier: Modifier
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(s.t(StringKey.WIZARD_EXPORT_RESULTS), style = MaterialTheme.typography.titleSmall)
+                Text(
+                    s.t(StringKey.WIZARD_EXPORT_RESULTS),
+                    style = MaterialTheme.typography.titleSmall,
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     if (successCount > 0) {
                         Row(
@@ -484,7 +488,7 @@ private fun ExportResultsSummary(results: List<ExportResult>, modifier: Modifier
                                 tint = Color(0xFF4CAF50),
                             )
                             Text(
-                                "$successCount ${if (successCount == 1) "success" else "successes"}",
+                                s.t(StringKey.WIZARD_SUCCESSES, "count" to successCount.toString()),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF4CAF50),
                             )

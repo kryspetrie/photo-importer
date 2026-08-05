@@ -125,27 +125,22 @@ object ExifValueResolver {
         val remainingAfterMinutes = minutesDecimal - minutes
         val secondsDecimal = remainingAfterMinutes * 60.0
         // Round seconds to 4 decimal places (denominator = 10000)
-        val secondsRounded = kotlin.math.round(secondsDecimal * 10000.0).toInt()
+        var secondsRounded = kotlin.math.round(secondsDecimal * 10000.0).toInt()
+        var minutesOut = minutes
+        var degreesOut = degrees
 
-        // Handle seconds rounding up to 60.0000 (600000 in our units)
+        // Seconds rounding to 60.0000″ must carry into minutes (and possibly degrees).
         if (secondsRounded >= 600000) {
-            return arrayOf(
-                RationalNumber(degrees, 1),
-                RationalNumber(minutes + 1, 1),
-                RationalNumber(0, 10000),
-            )
+            secondsRounded = 0
+            minutesOut += 1
         }
-        // Handle minutes rounding up to 60
-        if (minutes >= 60) {
-            return arrayOf(
-                RationalNumber(degrees + 1, 1),
-                RationalNumber(0, 1),
-                RationalNumber(0, 10000),
-            )
+        if (minutesOut >= 60) {
+            minutesOut = 0
+            degreesOut += 1
         }
         return arrayOf(
-            RationalNumber(degrees, 1),
-            RationalNumber(minutes, 1),
+            RationalNumber(degreesOut, 1),
+            RationalNumber(minutesOut, 1),
             RationalNumber(secondsRounded, 10000),
         )
     }

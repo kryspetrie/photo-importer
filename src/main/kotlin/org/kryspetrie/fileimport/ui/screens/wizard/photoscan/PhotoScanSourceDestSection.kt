@@ -95,7 +95,10 @@ fun SourceDestRow(
                 when {
                     sourcePath.isBlank() -> Text(s.t(StringKey.WIZARD_FILE_OR_FOLDER))
                     sourceFile == null ->
-                        Text(s.t(StringKey.IMPORT_PATH_NOT_FOUND), color = MaterialTheme.colorScheme.error)
+                        Text(
+                            s.t(StringKey.IMPORT_PATH_NOT_FOUND),
+                            color = MaterialTheme.colorScheme.error,
+                        )
                     sourceFile.isDirectory -> {
                         val imageCount =
                             sourceFile.listFiles { f -> f.isFile && isImageFile(f) }?.size ?: 0
@@ -118,9 +121,15 @@ fun SourceDestRow(
                 when {
                     destinationPath.isBlank() -> Text(s.t(StringKey.IMPORT_PATH_HINT))
                     !destValid && !destCanCreate ->
-                        Text(s.t(StringKey.IMPORT_PATH_NOT_ACCESSIBLE), color = MaterialTheme.colorScheme.error)
+                        Text(
+                            s.t(StringKey.IMPORT_PATH_NOT_ACCESSIBLE),
+                            color = MaterialTheme.colorScheme.error,
+                        )
                     !destValid && destCanCreate ->
-                        Text(s.t(StringKey.IMPORT_PATH_WILL_CREATE), color = MaterialTheme.colorScheme.primary)
+                        Text(
+                            s.t(StringKey.IMPORT_PATH_WILL_CREATE),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     else -> Text(destDirName.orEmpty())
                 }
             },

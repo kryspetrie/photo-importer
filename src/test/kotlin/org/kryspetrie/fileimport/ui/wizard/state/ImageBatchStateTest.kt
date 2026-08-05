@@ -100,8 +100,24 @@ class ImageBatchStateTest {
         val files = createTempFiles(1)
         state.initializeBatch(files)
 
-        // Single file batch has no "more" images
+        // Single-file "batch" is rejected — not multi-source mode
+        assertFalse(state.isBatchMode)
+        assertFalse(state.canOfferSkipPhoto)
         assertFalse(state.hasMoreNonSkippedBatchImages)
+    }
+
+    @Test
+    fun `initializeBatch with fewer than two files does not enter batch mode`() {
+        val state = ImageBatchState()
+        val pair = createTempFiles(2)
+        state.initializeBatch(pair)
+        assertTrue(state.isBatchMode)
+        assertTrue(state.canOfferSkipPhoto)
+
+        state.initializeBatch(createTempFiles(1))
+        assertFalse(state.isBatchMode)
+        assertFalse(state.canOfferSkipPhoto)
+        assertEquals(0, state.batchTotal)
     }
 
     @Test

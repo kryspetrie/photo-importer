@@ -46,12 +46,8 @@ class LocaleCompletenessTest {
         val enumKeys = StringKey.entries.map { it.name }.toSet()
         SupportedLocales.bundled.forEach { locale ->
             val jsonKeys = loadLocaleKeys(locale)
-            assertThat(jsonKeys - enumKeys)
-                .describedAs("unknown keys in $locale.json")
-                .isEmpty()
-            assertThat(enumKeys - jsonKeys)
-                .describedAs("missing keys in $locale.json")
-                .isEmpty()
+            assertThat(jsonKeys - enumKeys).describedAs("unknown keys in $locale.json").isEmpty()
+            assertThat(enumKeys - jsonKeys).describedAs("missing keys in $locale.json").isEmpty()
         }
     }
 
@@ -68,9 +64,6 @@ class LocaleCompletenessTest {
                 "Missing locale resource: $resource"
             }
         val content = stream.bufferedReader().readText()
-        return Regex("\"([A-Z0-9_]+)\"\\s*:")
-            .findAll(content)
-            .map { it.groupValues[1] }
-            .toSet()
+        return Regex("\"([A-Z0-9_]+)\"\\s*:").findAll(content).map { it.groupValues[1] }.toSet()
     }
 }

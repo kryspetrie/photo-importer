@@ -48,6 +48,7 @@ class MetadataWritingService(
         return writeViaExifTool(
             outputPath = outputPath,
             config = mergedConfig,
+            sourcePath = sourcePath,
             preRotationWidth = preRotationWidth,
             preRotationHeight = preRotationHeight,
             physicalPixelRotationApplied = physicalPixelRotationApplied,
@@ -85,6 +86,7 @@ class MetadataWritingService(
     private fun writeViaExifTool(
         outputPath: FilePath,
         config: PhotoScanConfiguration,
+        sourcePath: FilePath?,
         preRotationWidth: Int,
         preRotationHeight: Int,
         physicalPixelRotationApplied: Boolean = false,
@@ -98,11 +100,33 @@ class MetadataWritingService(
                 faceRegions = config.faceRegions,
                 physicalPixelRotationApplied = physicalPixelRotationApplied,
             )
-        if (mapped.command.changes.isEmpty()) {
+
+        val changes =
+            if (config.copyOriginalExif && sourcePath != null) {
+                val sourceTags =
+                    try {
+                        metadataEditor.read(Paths.get(sourcePath.path)).tags
+                    } catch (_: Exception) {
+                        emptyList()
+                    }
+                SourceExifBaselineMerger.merge(sourceTags, mapped.command.changes)
+            } else {
+                mapped.command.changes
+            }
+
+        if (changes.isEmpty()) {
             return true
         }
 
-        when (val result = metadataEditor.write(mapped.command)) {
+        val command =
+            mapped.command.copy(
+                changes = changes,
+                allowProtectedWrites =
+                    mapped.command.allowProtectedWrites ||
+                        (config.copyOriginalExif && sourcePath != null),
+            )
+
+        when (val result = metadataEditor.write(command)) {
             is MetadataWriteResult.Success -> return true
             is MetadataWriteResult.Failure ->
                 throw MetadataWriteException(result.message, result.cause)

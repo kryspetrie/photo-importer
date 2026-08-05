@@ -19,11 +19,7 @@ import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
 /** Shared ExifTool wiring for tests (bundled binary + photo-metadata-editor services). */
 object ExifToolTestSupport {
     private val resourceRoots =
-        listOf(
-            File("appResources/macos"),
-            File("appResources/linux"),
-            File("appResources/windows"),
-        )
+        listOf(File("appResources/macos"), File("appResources/linux"), File("appResources/windows"))
 
     fun assumeExifToolAvailable() {
         configureExifToolResources()
@@ -75,7 +71,9 @@ object ExifToolTestSupport {
             ) {
                 "Missing classpath resource: $resourcePath (metadata-test-fixtures)"
             }
-        val suffix = "." + java.nio.file.Path.of(resourcePath).fileName.toString().substringAfterLast('.', "")
+        val suffix =
+            "." +
+                java.nio.file.Path.of(resourcePath).fileName.toString().substringAfterLast('.', "")
         val target = Files.createTempFile("sample-", suffix)
         stream.use { Files.copy(it, target, StandardCopyOption.REPLACE_EXISTING) }
         target.toFile().deleteOnExit()

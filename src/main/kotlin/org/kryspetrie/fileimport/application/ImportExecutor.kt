@@ -42,6 +42,7 @@ class ImportExecutor(
      * @param configuration Import configuration
      * @param importProgress MutableStateFlow for progress updates
      * @param onProgress Progress callback
+     * @param detectedDuplicateCount Duplicates detected before copy (already-transferred + visual)
      * @return ImportResult with statistics and detailed file information
      */
     @Suppress("NestedBlockDepth")
@@ -51,6 +52,7 @@ class ImportExecutor(
         configuration: ImportConfiguration,
         importProgress: MutableStateFlow<ImportProgress>,
         onProgress: (ImportProgress) -> Unit = {},
+        detectedDuplicateCount: Int = 0,
     ): ImportResult {
         val startTime = timeProvider.currentTimeMillis()
         val copiedFiles = mutableListOf<CopiedFile>()
@@ -58,8 +60,7 @@ class ImportExecutor(
 
         val errors = mutableListOf<ImportError>()
         var successCount = 0
-        // TODO: Compute actual duplicate count from scan results (currently always 0)
-        var duplicateCount = 0
+        val duplicateCount = detectedDuplicateCount.coerceAtLeast(0)
         var skippedCount = 0
         var deletedCount = 0
 
@@ -113,7 +114,8 @@ class ImportExecutor(
                                     sequenceNumber = counter,
                                 )
                             )
-                            // Advance counter even for skipped files so {counter} sequence numbers don't collide
+                            // Advance counter even for skipped files so {counter} sequence numbers
+                            // don't collide
                             counter++
                             continue
                         }
@@ -147,7 +149,8 @@ class ImportExecutor(
                                     sequenceNumber = counter,
                                 )
                             )
-                            // Advance counter even for skipped files so {counter} sequence numbers don't collide
+                            // Advance counter even for skipped files so {counter} sequence numbers
+                            // don't collide
                             counter++
                             continue
                         }
@@ -180,7 +183,8 @@ class ImportExecutor(
                             sequenceNumber = counter,
                         )
                     )
-                    // Advance counter even for failed files so {counter} sequence numbers don't collide
+                    // Advance counter even for failed files so {counter} sequence numbers don't
+                    // collide
                     counter++
                     continue
                 }
@@ -213,7 +217,8 @@ class ImportExecutor(
                                 sequenceNumber = counter,
                             )
                         )
-                        // Advance counter even for hash-mismatch files so {counter} sequence numbers don't collide
+                        // Advance counter even for hash-mismatch files so {counter} sequence
+                        // numbers don't collide
                         counter++
                         continue
                     }

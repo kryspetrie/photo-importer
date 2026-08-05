@@ -2,6 +2,7 @@ package org.kryspetrie.fileimport.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -14,9 +15,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import kotlin.math.min
 import kotlinx.coroutines.delay
+import org.kryspetrie.fileimport.ui.theme.DefaultSpacing
 
 /**
  * Indeterminate circular progress indicator using time-based animation.
@@ -24,13 +25,15 @@ import kotlinx.coroutines.delay
  * Visually similar to Material3's `CircularProgressIndicator` but uses `System.nanoTime() +
  * delay()` instead of `InfiniteTransition.animateFloat()`, avoiding `MonotonicFrameClock` issues in
  * Compose Desktop AWT contexts.
+ *
+ * Defaults to [MaterialTheme.colorScheme.primary] so the spinner adapts to light/dark themes.
  */
 @Composable
 fun CircularSpinner(
     modifier: Modifier = Modifier,
-    color: Color = Color(0xFF1A73E8),
-    strokeWidth: Dp = 4.dp,
-    size: Dp = 48.dp,
+    color: Color = MaterialTheme.colorScheme.primary,
+    strokeWidth: Dp = DefaultSpacing.progressStrokeWidth * 2,
+    size: Dp = DefaultSpacing.xxxl + DefaultSpacing.xl,
 ) {
     var rotation by remember { mutableFloatStateOf(0f) }
     var arcLength by remember { mutableFloatStateOf(45f) }

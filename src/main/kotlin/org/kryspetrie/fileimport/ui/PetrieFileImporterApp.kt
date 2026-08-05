@@ -1,7 +1,8 @@
 package org.kryspetrie.fileimport.ui
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -13,8 +14,8 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationRail
+import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -46,8 +47,8 @@ import org.kryspetrie.fileimport.ui.theme.ImporterTheme
 /**
  * Defines the available navigation tabs in the PhotoImporter application.
  *
- * This enumeration represents the main features/screens accessible through the bottom navigation
- * bar. Each tab corresponds to a distinct use case in the photo management workflow:
+ * This enumeration represents the main features/screens accessible through the side navigation
+ * rail. Each tab corresponds to a distinct use case in the photo management workflow:
  * 1. **Media Import**: Import photos/videos from cameras, SD cards, or folders
  * 2. **Photo Scan Import**: Extract individual photos from scanned images
  * 3. **Reorganize**: Reorganize existing photo libraries with new naming/folder patterns
@@ -56,8 +57,8 @@ import org.kryspetrie.fileimport.ui.theme.ImporterTheme
  *
  * ## Navigation Pattern
  *
- * Uses a bottom navigation bar (Material Design [NavigationBar]) which is standard for desktop
- * applications with 3-5 main sections. Each tab has:
+ * Uses a side navigation rail (Material Design [NavigationRail]) for all window sizes. Each tab
+ * has:
  * - A descriptive label for clarity
  * - An icon for quick visual recognition
  * - Exclusive selection (only one tab active at a time)
@@ -70,13 +71,13 @@ import org.kryspetrie.fileimport.ui.theme.ImporterTheme
  * 3. Add a branch in the `when` statement in [PetrieFileImporterApp]
  * 4. Ensure the screen follows the standard settings callback pattern
  *
- * @property label The display name shown to users in the navigation bar. Should be concise (1-2
+ * @property label The display name shown to users in the navigation rail. Should be concise (1-2
  *   words) and clearly describe the feature.
  * @property icon The Material Design icon representing this tab. Uses [ImageVector] from
  *   compose.materialIcons for vector graphics.
  * @see PetrieFileImporterApp Main application composable that uses these tabs
- * @see NavigationBar Material Design bottom navigation component
- * @see NavigationBarItem Individual tab item in the navigation bar
+ * @see NavigationRail Material Design side navigation component
+ * @see NavigationRailItem Individual tab item in the navigation rail
  */
 private enum class AppTab(val labelKey: StringKey, val icon: ImageVector) {
     /**
@@ -167,7 +168,7 @@ private enum class AppTab(val labelKey: StringKey, val icon: ImageVector) {
  * This is the root composable for the entire application UI. It sets up the main application
  * structure including:
  * - Theme configuration (light/dark/system)
- * - Navigation bar with five tabs (Import, Photo Scan, Reorganize, Duplicates, Metadata Editor)
+ * - Side navigation rail with five tabs (Import, Photo Scan, Reorganize, Duplicates, Metadata Editor)
  * - Screen content based on selected tab
  * - Settings state management
  *
@@ -189,19 +190,11 @@ private enum class AppTab(val labelKey: StringKey, val icon: ImageVector) {
  * ## Layout Structure
  *
  * ```
- * ┌─────────────────────────────────────┐
- * │           (Top Bar - optional)      │
- * ├─────────────────────────────────────┤
- * │                                     │
- * │                                     │
- * │         Screen Content              │
- * │   (ImportScreen, etc.)              │
- * │                                     │
- * │                                     │
- * ├─────────────────────────────────────┤
- * │  [Import] [Reorganize] [Duplicates] │
- * │        Navigation Bar               │
- * └─────────────────────────────────────┘
+ * ┌──────┬──────────────────────────────┐
+ * │ Rail │       Screen Content           │
+ * │ tabs │   (ImportScreen, etc.)         │
+ * │      │                                │
+ * └──────┴──────────────────────────────┘
  * ```
  *
  * ## Theming
@@ -240,7 +233,7 @@ private enum class AppTab(val labelKey: StringKey, val icon: ImageVector) {
  * @see ImportScreen Import workflow screen
  * @see ReorganizeScreen Library reorganization screen
  * @see DuplicateScannerScreen Duplicate detection screen
- * @see NavigationBar Material Design bottom navigation
+ * @see NavigationRail Material Design side navigation
  * @see Surface Material Design surface container with background color
  */
 @Composable
@@ -289,6 +282,12 @@ fun PetrieFileImporterApp(
      * - Window management operations
      */
     windowState: WindowState,
+
+    /**
+     * Invoked when the user requests the keyboard shortcut help dialog (e.g. from a shortcut).
+     * Host window typically shows [KeyboardShortcutHelpDialog].
+     */
+    onRequestKeyboardShortcutHelp: () -> Unit = {},
 
     /**
      * Modifier for layout customization.
@@ -372,19 +371,11 @@ fun PetrieFileImporterApp(
                 modifier = modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
             ) {
-                // Column: Vertical layout container
-                // Arranges navigation bar and screen content vertically
-                Column(modifier = Modifier.fillMaxSize()) {
-
-                    // NavigationBar: Bottom navigation bar with tabs
-                    // tonalElevation adds subtle shadow for depth
-                    // Standard Material Design navigation pattern
-                    NavigationBar(tonalElevation = 1.dp) {
-                        // Create navigation item for each tab
+                // Side rail is used at all window sizes (no bottom-bar alternate).
+                Row(modifier = Modifier.fillMaxSize()) {
+                    NavigationRail(modifier = Modifier.fillMaxHeight()) {
                         AppTab.entries.forEach { tab ->
-                            NavigationBarItem(
-                                // Icon: Visual representation of the tab
-                                // Uses 20.dp size for consistency
+                            NavigationRailItem(
                                 icon = {
                                     Icon(
                                         tab.icon,
@@ -392,23 +383,19 @@ fun PetrieFileImporterApp(
                                         modifier = Modifier.size(20.dp),
                                     )
                                 },
-                                // Label: Text shown below icon
-                                // Uses Material Theme typography for consistency
                                 label = {
-                                    Text(s.t(tab.labelKey), style = MaterialTheme.typography.labelSmall)
+                                    Text(
+                                        s.t(tab.labelKey),
+                                        style = MaterialTheme.typography.labelSmall,
+                                    )
                                 },
-                                // Selection state: Highlight when tab is active
                                 selected = currentTab == tab,
-                                // Click handler: Switch to this tab
                                 onClick = { currentTab = tab },
                             )
                         }
                     }
 
-                    // Box: Container for screen content
-                    // Fills remaining space after navigation bar
-                    // Adds 12dp padding around content for breathing room
-                    Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                    Box(modifier = Modifier.weight(1f).fillMaxSize().padding(12.dp)) {
                         // Conditional rendering based on selected tab
                         // Only the active screen is composed (performance optimization)
                         // Each screen receives settings and callback for consistency

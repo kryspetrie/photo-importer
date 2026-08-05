@@ -3,11 +3,13 @@ package org.kryspetrie.fileimport.infrastructure.photoscan
 import java.awt.image.BufferedImage
 import javax.imageio.ImageIO
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
 /** Test to visualize the binary image and understand what contours are being detected. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Tag("scratch")
 class BinaryThresholdDebugTest {
 
     private lateinit var img02: BufferedImage

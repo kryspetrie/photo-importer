@@ -43,16 +43,33 @@ class ImageBatchState {
     private val _skippedBatchIndices = MutableStateFlow<Set<Int>>(emptySet())
     val skippedBatchIndices: StateFlow<Set<Int>> = _skippedBatchIndices.asStateFlow()
 
-    /** True when in batch mode (multiple source files). */
+    /** True when in batch mode (multiple source files from a folder import). */
     val isBatchMode: Boolean
         get() = _sourceFiles.value.size > 1
 
-    /** Total number of source images in the batch. */
+    /** Total number of source images in the batch (0 when a single file was chosen by path). */
     val batchTotal: Int
         get() = _sourceFiles.value.size
 
-    /** Initializes batch mode with a list of source files. */
+    /**
+     * Whether the wizard UI should show "Skip Photo" for the current session.
+     *
+     * Only offered for multi-file folder imports. Selecting a single image by filename never enables
+     * this, even if other images exist next to it on disk (those are only available for back-image
+     * picking, not as skip targets).
+     */
+    val canOfferSkipPhoto: Boolean
+        get() = isBatchMode
+
+    /**
+     * Initializes multi-file batch mode. Lists with fewer than two files are ignored (single-file
+     * selection by path/name always runs non-batch).
+     */
     fun initializeBatch(files: List<File>) {
+        if (files.size <= 1) {
+            reset()
+            return
+        }
         _sourceFiles.value = files
         _currentImageIndex.value = 0
         _preProcessedCache.value = emptyMap()

@@ -6,11 +6,13 @@ import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
 /** Test to understand what contours are being found and why GT[1] isn't detected. */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@Tag("scratch")
 class ContourDebugTest {
 
     private lateinit var img02: BufferedImage

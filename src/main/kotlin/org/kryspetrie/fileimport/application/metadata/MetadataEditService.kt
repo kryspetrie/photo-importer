@@ -93,16 +93,17 @@ class MetadataEditService(
         var backImageOutputPath: String? = null
         var entryOutputPath: String? = null
 
-        val backupPath = if (outputMode == "OVERWRITE") {
-            val bp = undoService.createBackup(file.absolutePath)
-            if (bp == null) {
-                System.err.println(
-                    "[MetadataEditService] ERROR: Backup creation failed for ${file.absolutePath}. Aborting save to prevent data loss."
-                )
-                return null
-            }
-            bp
-        } else null
+        val backupPath =
+            if (outputMode == "OVERWRITE") {
+                val bp = undoService.createBackup(file.absolutePath)
+                if (bp == null) {
+                    System.err.println(
+                        "[MetadataEditService] ERROR: Backup creation failed for ${file.absolutePath}. Aborting save to prevent data loss."
+                    )
+                    return null
+                }
+                bp
+            } else null
 
         // Determine if we need to decode the image at all.
         val fileType = ImageFileType.fromExtension(file.extension)
@@ -118,8 +119,7 @@ class MetadataEditService(
             val sourceImage =
                 withContext(Dispatchers.IO) {
                     imageProcessing.readImage(FilePath(file.absolutePath))
-                }
-                    ?: return null
+                } ?: return null
 
             // Pre-rotation dimensions for face region coordinate transforms.
             val preRotationWidth = sourceImage.width
@@ -163,7 +163,10 @@ class MetadataEditService(
                     if (config.hasBackImage()) {
                         backImageOutputPath =
                             writeBackImage(
-                                finalImage, config, file.parent, file.nameWithoutExtension
+                                finalImage,
+                                config,
+                                file.parent,
+                                file.nameWithoutExtension,
                             )
                     }
                 }
@@ -187,7 +190,10 @@ class MetadataEditService(
                             if (outputDirectory.isNotBlank()) outputDirectory else file.parent
                         backImageOutputPath =
                             writeBackImage(
-                                finalImage, config, backOutDir, file.nameWithoutExtension
+                                finalImage,
+                                config,
+                                backOutDir,
+                                file.nameWithoutExtension,
                             )
                     }
                 }
@@ -197,10 +203,7 @@ class MetadataEditService(
             val meta =
                 withContext(Dispatchers.IO) {
                     imageRepository.getMetadata(
-                        ImageFile(
-                            path = FilePath(file.absolutePath),
-                            fileSize = file.length(),
-                        )
+                        ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
                     )
                 }
             val imageWidth = meta?.imageWidth ?: 0
@@ -282,8 +285,7 @@ class MetadataEditService(
             val sourceImage =
                 withContext(Dispatchers.IO) {
                     imageProcessing.readImage(FilePath(file.absolutePath))
-                }
-                    ?: throw MetadataWriteException("Could not read image: ${file.absolutePath}")
+                } ?: throw MetadataWriteException("Could not read image: ${file.absolutePath}")
 
             val preRotationWidth = sourceImage.width
             val preRotationHeight = sourceImage.height
@@ -312,10 +314,7 @@ class MetadataEditService(
             val meta =
                 withContext(Dispatchers.IO) {
                     imageRepository.getMetadata(
-                        ImageFile(
-                            path = FilePath(file.absolutePath),
-                            fileSize = file.length(),
-                        )
+                        ImageFile(path = FilePath(file.absolutePath), fileSize = file.length())
                     )
                 }
             metadataWritingService.writeMetadataOnly(

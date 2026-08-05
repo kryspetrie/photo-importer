@@ -5,21 +5,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Snackbar
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -36,28 +37,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.io.File
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.kryspetrie.fileimport.domain.model.AppSettings
-import org.kryspetrie.fileimport.domain.port.DispatcherProvider
-import org.kryspetrie.fileimport.domain.port.FaceDetectionPort
-import org.kryspetrie.fileimport.domain.port.FaceRegionTransformerPort
-import org.kryspetrie.fileimport.domain.port.PathsPort
-import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
-import org.kryspetrie.fileimport.domain.port.PhotoScanDetectorPort
-import org.kryspetrie.fileimport.application.OrientationCorrectionService
-import org.kryspetrie.fileimport.domain.port.ImageProcessingPort
-import org.kryspetrie.fileimport.domain.port.PhotoScanExportPort
-import org.kryspetrie.fileimport.domain.port.SettingsPort
-import org.kryspetrie.fileimport.infrastructure.logging.AppLogger
-import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 import org.kryspetrie.fileimport.domain.model.i18n.StringKey
+import org.kryspetrie.fileimport.infrastructure.logging.OperationType
 import org.kryspetrie.fileimport.ui.components.LoadingIndicator
-import org.kryspetrie.fileimport.ui.i18n.strings
-import org.kryspetrie.fileimport.ui.components.PreviewCache
 import org.kryspetrie.fileimport.ui.components.pickFolder
 import org.kryspetrie.fileimport.ui.components.pickImageFile
+import org.kryspetrie.fileimport.ui.i18n.strings
 import org.kryspetrie.fileimport.ui.wizard.state.PhotoScanWizardState
 import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
 
@@ -68,27 +56,15 @@ import org.kryspetrie.fileimport.ui.wizard.state.WizardStep
  * When [AppSettings.skipCropAndRotate] is true, the Summary (Crop & Rotate) step is skipped
  * entirely, going directly from Overview to Edit (starting in metadata mode).
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WizardContainer(
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
-    detectorService: PhotoScanDetectorPort = koinInject(),
-    exportService: PhotoScanExportPort = koinInject(),
-    perspectiveService: PerspectiveCorrectionPort = koinInject(),
-    appLogger: AppLogger = koinInject(),
-    settingsPort: SettingsPort = koinInject(),
-    dispatcherProvider: DispatcherProvider = koinInject(),
-    faceRegionTransformer: FaceRegionTransformerPort = koinInject(),
-    faceDetectionPort: FaceDetectionPort = koinInject(),
-    orientationCorrection: OrientationCorrectionService = koinInject(),
-    imageProcessing: ImageProcessingPort = koinInject(),
-    pathsPort: PathsPort = koinInject(),
-    localePort: org.kryspetrie.fileimport.domain.port.LocalePort = koinInject(),
+    vm: WizardContainerViewModel = koinInject(),
 ) {
     val state = remember { PhotoScanWizardState() }
-    state.setLogger(appLogger)
+    state.setLogger(vm.appLogger)
     val currentStep by state.navigation.currentStep.collectAsState()
     var isLoading by remember { mutableStateOf(false) }
     var loadingMessage by remember { mutableStateOf("") }
@@ -97,15 +73,11 @@ fun WizardContainer(
     var processingCurrentFile by remember { mutableStateOf("") }
     var failedExportCount by remember { mutableStateOf(0) }
     var exportResults by remember { mutableStateOf<List<ExportResult>>(emptyList()) }
-    val settings by settingsPort.observeSettings().collectAsState()
-    var exportDestination by remember {
-        mutableStateOf(
-            settings.photoScanImportTabSettings.lastDestinationPath.ifBlank {
-                pathsPort.defaultDestination
-            }
-        )
-    }
-    // Sync exportDestination when settings change (e.g. user changed destination on import screen)
+    val settings by vm.settingsPort.observeSettings().collectAsState()
+    var exportDestination by
+        remember(settings.photoScanImportTabSettings.lastDestinationPath) {
+            mutableStateOf(vm.initialExportDestination(settings))
+        }
     LaunchedEffect(settings.photoScanImportTabSettings.lastDestinationPath) {
         val settingsDest = settings.photoScanImportTabSettings.lastDestinationPath
         if (settingsDest.isNotBlank() && settingsDest != exportDestination) {
@@ -113,69 +85,31 @@ fun WizardContainer(
         }
     }
     val scope = rememberCoroutineScope()
-    val previewCache = remember { PreviewCache(perspectiveService) }
-
-    // Clear preview cache when the source image changes (new import)
     val sourceImage by state.image.collectAsState()
-    LaunchedEffect(sourceImage) { previewCache.clear() }
+    LaunchedEffect(sourceImage) { vm.previewCache.clear() }
 
-    // Preload ML models eagerly on a background thread so the first detection call
-    // doesn't pay the cold-start cost (~57 MB classpath I/O + ONNX session creation).
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.withContext(dispatcherProvider.io) {
-            try {
-                detectorService.preload()
-            } catch (_: Exception) {
-                // Preloading is best-effort; detection will still work (just slower first call)
-            }
-            try {
-                faceDetectionPort.preload()
-            } catch (_: Exception) {
-                // Face detection model is optional; don't fail if unavailable
-            }
-        }
-    }
+    LaunchedEffect(Unit) { vm.preloadModels() }
 
     Box(modifier = modifier.fillMaxSize()) {
         WizardStepContent(
             currentStep = currentStep,
             state = state,
-            settingsPort = settingsPort,
+            vm = vm,
             settings = settings,
-            detectorService = detectorService,
-            exportService = exportService,
-            perspectiveService = perspectiveService,
-            previewCache = previewCache,
-            appLogger = appLogger,
-            dispatcherProvider = dispatcherProvider,
-            faceRegionTransformer = faceRegionTransformer,
-            orientationCorrection = orientationCorrection,
-            imageProcessing = imageProcessing,
-            scope = scope,
             isLoading = { isLoading = it },
             onMessage = { loadingMessage = it },
             onError = { errorMessage = it },
             exportDestination = exportDestination,
             onExportDestinationChange = { newDest ->
                 exportDestination = newDest
-                // Persist to settings so the import screen stays in sync
-                scope.launch {
-                    val currentSettings = settingsPort.observeSettings().first()
-                    val updated =
-                        currentSettings.withPhotoScanImportTabSettings(
-                            currentSettings.photoScanImportTabSettings.withRecentDestinationPath(
-                                newDest
-                            )
-                        )
-                    settingsPort.saveSettings(updated)
-                }
+                scope.launch { vm.persistExportDestination(newDest) }
             },
             processingProgress = processingProgress,
             processingCurrentFile = processingCurrentFile,
             onProgress = { progress, file ->
                 processingProgress = progress
                 processingCurrentFile = file
-                appLogger.debug("Export progress: ${(progress * 100).toInt()}% - $file")
+                vm.appLogger.debug("Export progress: ${(progress * 100).toInt()}% - $file")
             },
             failedExportCount = failedExportCount,
             onFailedCountChange = { count -> failedExportCount = count },
@@ -183,14 +117,14 @@ fun WizardContainer(
             exportResults = exportResults,
             onComplete = onComplete,
             onCancel = onCancel,
-            localePort = localePort,
+            scope = scope,
         )
 
         if (isLoading) {
             LoadingOverlay(message = loadingMessage)
         }
 
-        ErrorSnackbar(
+        ErrorBanner(
             errorMessage = errorMessage,
             onDismiss = {
                 errorMessage = null
@@ -208,17 +142,8 @@ fun WizardContainer(
 private fun WizardStepContent(
     currentStep: WizardStep,
     state: PhotoScanWizardState,
-    settingsPort: SettingsPort,
+    vm: WizardContainerViewModel,
     settings: AppSettings,
-    detectorService: PhotoScanDetectorPort,
-    exportService: PhotoScanExportPort,
-    perspectiveService: PerspectiveCorrectionPort,
-    previewCache: PreviewCache,
-    appLogger: AppLogger,
-    dispatcherProvider: DispatcherProvider,
-    faceRegionTransformer: FaceRegionTransformerPort,
-    orientationCorrection: OrientationCorrectionService,
-    imageProcessing: ImageProcessingPort,
     scope: kotlinx.coroutines.CoroutineScope,
     isLoading: (Boolean) -> Unit,
     onMessage: (String) -> Unit,
@@ -234,14 +159,15 @@ private fun WizardStepContent(
     exportResults: List<ExportResult>,
     onComplete: (List<ProcessedPhoto>) -> Unit,
     onCancel: () -> Unit,
-    localePort: org.kryspetrie.fileimport.domain.port.LocalePort,
 ) {
     val s = strings()
-    // Shared completion handler for all export flows
+    // Observe source list so Skip Photo appears/disappears with multi-file session state.
+    val batchSourceFiles by state.batch.sourceFiles.collectAsState()
+    val canOfferSkipPhoto = batchSourceFiles.size > 1
     val handleExportComplete: (List<ProcessedPhoto>) -> Unit = { processedPhotos ->
         onFailedCountChange(processedPhotos.count { it.isError })
         onExportResults(processedPhotos.map { it.toExportResult() })
-        appLogger.logOperationComplete(
+        vm.appLogger.logOperationComplete(
             OperationType.EXPORT_COMPLETE,
             "Exported ${processedPhotos.size} ${if (processedPhotos.size == 1) "photo" else "photos"} to $exportDestination",
         )
@@ -252,18 +178,16 @@ private fun WizardStepContent(
         WizardStep.IMPORT -> {
             PhotoScanImportScreen(
                 state = state,
-                settingsPort = settingsPort,
-                onSettingsChange = { newSettings ->
-                    scope.launch { settingsPort.saveSettings(newSettings) }
-                },
+                settingsPort = vm.settingsPort,
+                onSettingsChange = { newSettings -> scope.launch { vm.saveSettings(newSettings) } },
                 onImageSelected = { file, batchFiles ->
                     startNewImport(
                         state,
                         file,
                         batchFiles,
-                        detectorService,
-                        appLogger,
-                        dispatcherProvider,
+                        vm.detectorService,
+                        vm.appLogger,
+                        vm.dispatcherProvider,
                         isLoading,
                         onMessage,
                         onError,
@@ -291,16 +215,16 @@ private fun WizardStepContent(
                         }
                     },
                     onSkipCurrentPhoto =
-                        if (state.batch.isBatchMode) {
+                        if (canOfferSkipPhoto) {
                             {
                                 state.batch.markBatchIndexSkipped(
                                     state.batch.currentImageIndex.value
                                 )
                                 continueToNextBatchPhoto(
                                     state,
-                                    detectorService,
-                                    appLogger,
-                                    dispatcherProvider,
+                                    vm.detectorService,
+                                    vm.appLogger,
+                                    vm.dispatcherProvider,
                                     isLoading,
                                     onMessage,
                                     onError,
@@ -329,8 +253,8 @@ private fun WizardStepContent(
                 SummaryScreen(
                     state = state,
                     image = image,
-                    perspectiveService = perspectiveService,
-                    previewCache = previewCache,
+                    perspectiveService = vm.perspectiveService,
+                    previewCache = vm.previewCache,
                     onBack = { state.goToOverview() },
                     onExport = { state.navigation.goToEdit() },
                 )
@@ -345,30 +269,16 @@ private fun WizardStepContent(
                 EditScreen(
                     state = state,
                     image = image,
-                    perspectiveService = perspectiveService,
-                    previewCache = previewCache,
+                    perspectiveService = vm.perspectiveService,
+                    previewCache = vm.previewCache,
                     metadataHistory = settings.metadataHistory,
                     onMetadataHistoryUpdate = { fieldKey, value ->
-                        scope.launch {
-                            val currentSettings = settingsPort.observeSettings().first()
-                            val updated = currentSettings.addMetadataHistory(fieldKey, value)
-                            settingsPort.saveSettings(updated)
-                        }
+                        scope.launch { vm.addMetadataHistory(fieldKey, value) }
                     },
                     onMetadataHistoryRemove = { fieldKey, value ->
-                        scope.launch {
-                            val currentSettings = settingsPort.observeSettings().first()
-                            val updated = currentSettings.removeMetadataHistory(fieldKey, value)
-                            settingsPort.saveSettings(updated)
-                        }
+                        scope.launch { vm.removeMetadataHistory(fieldKey, value) }
                     },
-                    onRecordMetadataSet = { set ->
-                        scope.launch {
-                            val currentSettings = settingsPort.observeSettings().first()
-                            val updated = currentSettings.addMetadataSet(set)
-                            settingsPort.saveSettings(updated)
-                        }
-                    },
+                    onRecordMetadataSet = { set -> scope.launch { vm.recordMetadataSet(set) } },
                     onBack = {
                         if (settings.skipCropAndRotate) {
                             state.goToOverview()
@@ -384,23 +294,23 @@ private fun WizardStepContent(
                             exportPhotos(
                                 state = state,
                                 image = image,
-                                exportService = exportService,
+                                exportService = vm.exportService,
                                 destinationPath = exportDestination,
-                                appLogger = appLogger,
-                                dispatcherProvider = dispatcherProvider,
+                                appLogger = vm.appLogger,
+                                dispatcherProvider = vm.dispatcherProvider,
                                 isLoading = isLoading,
                                 onMessage = onMessage,
                                 onError = onError,
                                 onProgress = onProgress,
                                 onComplete = handleExportComplete,
-                                orientationCorrection = orientationCorrection,
-                                imageProcessing = imageProcessing,
-                                localePort = localePort,
+                                orientationCorrection = vm.orientationCorrection,
+                                imageProcessing = vm.imageProcessing,
+                                localePort = vm.localePort,
                             )
                         }
                     },
                     onSkipCurrentPhoto =
-                        if (state.batch.isBatchMode) {
+                        if (canOfferSkipPhoto) {
                             {
                                 // Mark current batch image as skipped and advance
                                 state.batch.markBatchIndexSkipped(
@@ -408,9 +318,9 @@ private fun WizardStepContent(
                                 )
                                 continueToNextBatchPhoto(
                                     state,
-                                    detectorService,
-                                    appLogger,
-                                    dispatcherProvider,
+                                    vm.detectorService,
+                                    vm.appLogger,
+                                    vm.dispatcherProvider,
                                     isLoading,
                                     onMessage,
                                     onError,
@@ -419,7 +329,7 @@ private fun WizardStepContent(
                             }
                         } else null,
                     startWithMetadata = settings.skipCropAndRotate,
-                    faceRegionTransformer = faceRegionTransformer,
+                    faceRegionTransformer = vm.faceRegionTransformer,
                 )
             } else {
                 LoadingContent(message = s.t(StringKey.WIZARD_LOADING_IMAGE))
@@ -458,9 +368,9 @@ private fun WizardStepContent(
                             state,
                             File(path),
                             null,
-                            detectorService,
-                            appLogger,
-                            dispatcherProvider,
+                            vm.detectorService,
+                            vm.appLogger,
+                            vm.dispatcherProvider,
                             isLoading,
                             onMessage,
                             onError,
@@ -472,16 +382,15 @@ private fun WizardStepContent(
                     val path = pickFolder("Select Source Folder")
                     if (path != null) {
                         val folder = File(path)
-                        val batchFiles = collectImageFiles(folder)
-                        if (batchFiles.isNotEmpty()) {
-                            val batch = if (batchFiles.size > 1) batchFiles else null
+                        val images = collectImageFiles(folder)
+                        if (images.isNotEmpty()) {
                             startNewImport(
                                 state,
-                                batchFiles.first(),
-                                batch,
-                                detectorService,
-                                appLogger,
-                                dispatcherProvider,
+                                images.first(),
+                                resolveImportBatchFiles(folder),
+                                vm.detectorService,
+                                vm.appLogger,
+                                vm.dispatcherProvider,
                                 isLoading,
                                 onMessage,
                                 onError,
@@ -494,9 +403,9 @@ private fun WizardStepContent(
                 onContinueToNextPhoto = {
                     continueToNextBatchPhoto(
                         state,
-                        detectorService,
-                        appLogger,
-                        dispatcherProvider,
+                        vm.detectorService,
+                        vm.appLogger,
+                        vm.dispatcherProvider,
                         isLoading,
                         onMessage,
                         onError,
@@ -504,7 +413,7 @@ private fun WizardStepContent(
                     )
                 },
                 onSkipNextPhoto =
-                    if (state.batch.hasMoreNonSkippedBatchImages) {
+                    if (canOfferSkipPhoto && state.batch.hasMoreNonSkippedBatchImages) {
                         { skipNextBatchPhoto(state) }
                     } else null,
                 onCancelImport = { state.resetToImportStep() },
@@ -515,14 +424,32 @@ private fun WizardStepContent(
 }
 
 @Composable
-private fun BoxScope.ErrorSnackbar(errorMessage: String?, onDismiss: () -> Unit) {
+private fun BoxScope.ErrorBanner(errorMessage: String?, onDismiss: () -> Unit) {
     val s = strings()
     errorMessage?.let { error ->
-        Snackbar(
-            modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
-            action = { TextButton(onClick = onDismiss) { Text(s.t(StringKey.WIZARD_DISMISS_RETRY)) } },
+        Surface(
+            modifier = Modifier.align(Alignment.BottomCenter).padding(12.dp),
+            shape = RoundedCornerShape(6.dp),
+            color = MaterialTheme.colorScheme.errorContainer,
+            tonalElevation = 4.dp,
         ) {
-            Text(error)
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    error,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                TextButton(onClick = onDismiss) {
+                    Text(
+                        s.t(StringKey.WIZARD_DISMISS_RETRY),
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
         }
     }
 }
@@ -606,7 +533,11 @@ private fun ProcessingScreen(
 
             if (totalPhotos > 0) {
                 Text(
-                    s.t(StringKey.SCAN_PHOTO_LABEL, "index" to "$currentIndex", "total" to "$totalPhotos"),
+                    s.t(
+                        StringKey.SCAN_PHOTO_LABEL,
+                        "index" to "$currentIndex",
+                        "total" to "$totalPhotos",
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -618,7 +549,9 @@ private fun ProcessingScreen(
             )
 
             Text(
-                if (currentFile.isNotEmpty()) s.t(StringKey.WIZARD_PROCESSING, "file" to currentFile) else s.t(StringKey.WIZARD_FINALIZING),
+                if (currentFile.isNotEmpty())
+                    s.t(StringKey.WIZARD_PROCESSING, "file" to currentFile)
+                else s.t(StringKey.WIZARD_FINALIZING),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -648,9 +581,7 @@ private fun ProcessingScreen(
         AlertDialog(
             onDismissRequest = { showCancelConfirm = false },
             title = { Text(s.t(StringKey.WIZARD_CANCEL_EXPORT)) },
-            text = {
-                Text(s.t(StringKey.WIZARD_CANCEL_EXPORT_MESSAGE))
-            },
+            text = { Text(s.t(StringKey.WIZARD_CANCEL_EXPORT_MESSAGE)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -658,11 +589,16 @@ private fun ProcessingScreen(
                         onBack()
                     }
                 ) {
-                    Text(s.t(StringKey.WIZARD_CANCEL_EXPORT), color = MaterialTheme.colorScheme.error)
+                    Text(
+                        s.t(StringKey.WIZARD_CANCEL_EXPORT),
+                        color = MaterialTheme.colorScheme.error,
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCancelConfirm = false }) { Text(s.t(StringKey.WIZARD_CONTINUE_EXPORT)) }
+                TextButton(onClick = { showCancelConfirm = false }) {
+                    Text(s.t(StringKey.WIZARD_CONTINUE_EXPORT))
+                }
             },
         )
     }

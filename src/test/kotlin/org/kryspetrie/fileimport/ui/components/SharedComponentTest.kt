@@ -10,7 +10,7 @@ import org.junit.Rule
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
+import org.junit.Test
 
 @DisplayName("Shared UI Components")
 @Tag("UiComponentTest")

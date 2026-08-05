@@ -195,13 +195,14 @@ data class PhotoScanConfiguration(
     val overrideKeywords: OverrideState? = null,
     val overrideOriginalDate: OverrideState? = null,
     val overrideYear: OverrideState? = null,
-    val overrideCameraMake: OverrideState? = null,
-    val overrideCameraModel: OverrideState? = null,
-    val overrideLensModel: OverrideState? = null,
-    val overrideFocalLength: OverrideState? = null,
-    val overrideAperture: OverrideState? = null,
-    val overrideShutterSpeed: OverrideState? = null,
-    val overrideIso: OverrideState? = null,
+    /** Camera fields default excluded (unchecked) so scanner EXIF is not written unless opted in. */
+    val overrideCameraMake: OverrideState? = OverrideState.NULL_OUT,
+    val overrideCameraModel: OverrideState? = OverrideState.NULL_OUT,
+    val overrideLensModel: OverrideState? = OverrideState.NULL_OUT,
+    val overrideFocalLength: OverrideState? = OverrideState.NULL_OUT,
+    val overrideAperture: OverrideState? = OverrideState.NULL_OUT,
+    val overrideShutterSpeed: OverrideState? = OverrideState.NULL_OUT,
+    val overrideIso: OverrideState? = OverrideState.NULL_OUT,
     val overrideGps: OverrideState? = null, // covers lat+lon together
 ) {
     /** Cycles rotation 90° clockwise: 0→90→180→270→0, transforming face regions accordingly. */

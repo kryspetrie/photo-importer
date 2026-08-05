@@ -9,7 +9,7 @@ import org.junit.Rule
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
+import org.junit.Test
 import org.kryspetrie.fileimport.domain.model.ImportProgress
 import org.kryspetrie.fileimport.domain.model.ImportResult
 import org.kryspetrie.fileimport.domain.model.ImportStatus

@@ -37,7 +37,12 @@ data class MetadataFolderNode(
 /** Builds a folder tree from loaded files and the current source path. */
 fun buildMetadataFileTree(files: List<File>, sourcePath: String): MetadataFolderNode {
     if (files.isEmpty()) {
-        return MetadataFolderNode(folder = null, name = "", fileIndices = emptyList(), children = emptyList())
+        return MetadataFolderNode(
+            folder = null,
+            name = "",
+            fileIndices = emptyList(),
+            children = emptyList(),
+        )
     }
 
     val root = resolveMetadataRootFolder(files, sourcePath)
@@ -102,9 +107,9 @@ private fun buildFolderNode(folder: File, pathToIndex: Map<String, Int>): Metada
     }
 
     val children =
-        childNames.sortedBy { it.lowercase() }.map { name ->
-            buildFolderNode(File(folder, name), pathToIndex)
-        }
+        childNames
+            .sortedBy { it.lowercase() }
+            .map { name -> buildFolderNode(File(folder, name), pathToIndex) }
 
     return MetadataFolderNode(
         folder = folder,

@@ -30,6 +30,21 @@ fun collectImageFiles(folder: File): List<File> {
         ?: emptyList()
 }
 
+/**
+ * Resolves the multi-file batch list for a Photo Scan import source path.
+ *
+ * - A path that is a regular file (chosen by filename) always yields `null` — never a sibling list.
+ * - A directory yields the sorted image list only when it contains at least two images.
+ * - Everything else yields `null`.
+ */
+fun resolveImportBatchFiles(source: File?): List<File>? {
+    if (source == null) return null
+    // File-by-path selection must never enter batch / "Skip Photo" mode, even if siblings exist.
+    if (source.isFile) return null
+    if (!source.isDirectory) return null
+    return collectImageFiles(source).takeIf { it.size > 1 }
+}
+
 /** Loads an image from file and runs detection if auto-detect is enabled. */
 suspend fun loadImageAndDetect(
     state: PhotoScanWizardState,
@@ -140,10 +155,16 @@ fun startNewImport(
 ) {
     state.resetToImportStep()
     scope.launch {
-        val isSinglePhoto = state.importSettings.singlePhotoMode.value && batchFiles == null
-        if (batchFiles != null && batchFiles.size > 1) {
-            state.batch.initializeBatch(batchFiles)
+        // Multi-file batch only for explicit folder imports with 2+ images.
+        // A single file chosen by filename must never enable "Skip Photo".
+        val multiBatch = batchFiles?.takeIf { it.size > 1 }
+        if (multiBatch != null) {
+            state.batch.initializeBatch(multiBatch)
+        } else {
+            // Defensive: any prior batch session stays fully cleared for file-by-path import.
+            state.batch.reset()
         }
+        val isSinglePhoto = state.importSettings.singlePhotoMode.value && multiBatch == null
         if (isSinglePhoto) {
             // Single photo mode: load image, skip detection, go straight to Quick Edit
             withContext(dispatcherProvider.io) {

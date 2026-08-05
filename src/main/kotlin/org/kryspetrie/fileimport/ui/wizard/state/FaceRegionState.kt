@@ -7,6 +7,7 @@ import org.kryspetrie.fileimport.domain.model.FaceRegion
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.RegionType
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
+import org.kryspetrie.fileimport.ui.shared.face.FaceRegionMutator
 
 /**
  * Manages face region state for the photo scan wizard: face selection mode, face region CRUD
@@ -26,7 +27,7 @@ import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
 class FaceRegionState(
     private val _photoConfigurations: MutableStateFlow<Map<String, PhotoScanConfiguration>>,
     private val _boundingBoxList: MutableStateFlow<BoundingBoxList>,
-) {
+) : FaceRegionMutator {
 
     // ========== Face Selection Mode ==========
 
@@ -63,13 +64,13 @@ class FaceRegionState(
      * @param type Region type (default: FACE)
      * @param size Preset size (default: MEDIUM)
      */
-    fun addFaceRegion(
+    override fun addFaceRegion(
         photoIndex: Int,
         name: String,
         x: Double,
         y: Double,
-        type: RegionType = RegionType.FACE,
-        size: FaceSize = FaceSize.DEFAULT,
+        type: RegionType,
+        size: FaceSize,
     ) {
         val list = _boundingBoxList.value
         if (photoIndex < 0 || photoIndex >= list.size()) return
@@ -100,7 +101,7 @@ class FaceRegionState(
      * @param photoIndex Index of the photo in the bounding box list
      * @param faceIndex Index of the face region within the photo's faceRegions list
      */
-    fun removeFaceRegion(photoIndex: Int, faceIndex: Int) {
+    override fun removeFaceRegion(photoIndex: Int, faceIndex: Int) {
         val list = _boundingBoxList.value
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
@@ -124,7 +125,7 @@ class FaceRegionState(
      *
      * @param photoIndex Index of the photo in the bounding box list
      */
-    fun clearAllFaceRegions(photoIndex: Int) {
+    override fun clearAllFaceRegions(photoIndex: Int) {
         val list = _boundingBoxList.value
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
@@ -144,7 +145,7 @@ class FaceRegionState(
      * @param photoIndex Index of the photo in the bounding box list
      * @param regions List of face regions to add (typically from face detection)
      */
-    fun addDetectedFaceRegions(photoIndex: Int, regions: List<FaceRegion>) {
+    override fun addDetectedFaceRegions(photoIndex: Int, regions: List<FaceRegion>) {
         val list = _boundingBoxList.value
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
@@ -164,7 +165,7 @@ class FaceRegionState(
      * @param faceIndex Index of the face region within the photo's faceRegions list
      * @param name New name for the face region
      */
-    fun updateFaceRegionName(photoIndex: Int, faceIndex: Int, name: String) {
+    override fun updateFaceRegionName(photoIndex: Int, faceIndex: Int, name: String) {
         val list = _boundingBoxList.value
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
@@ -190,7 +191,7 @@ class FaceRegionState(
      * @param x New center X (0.0-1.0), or null to keep current
      * @param y New center Y (0.0-1.0), or null to keep current
      */
-    fun updateFaceRegion(photoIndex: Int, faceIndex: Int, x: Double? = null, y: Double? = null) {
+    override fun updateFaceRegion(photoIndex: Int, faceIndex: Int, x: Double?, y: Double?) {
         val list = _boundingBoxList.value
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
@@ -215,7 +216,7 @@ class FaceRegionState(
      * @param faceIndex Index of the face region within the photo's faceRegions list
      * @param size The new preset size
      */
-    fun resizeFaceRegion(photoIndex: Int, faceIndex: Int, size: FaceSize) {
+    override fun resizeFaceRegion(photoIndex: Int, faceIndex: Int, size: FaceSize) {
         val list = _boundingBoxList.value
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id
@@ -240,7 +241,7 @@ class FaceRegionState(
      * @param dx X offset to add (in normalized coordinates)
      * @param dy Y offset to add (in normalized coordinates)
      */
-    fun moveFaceRegion(photoIndex: Int, faceIndex: Int, dx: Double, dy: Double) {
+    override fun moveFaceRegion(photoIndex: Int, faceIndex: Int, dx: Double, dy: Double) {
         val list = _boundingBoxList.value
         if (photoIndex < 0 || photoIndex >= list.size()) return
         val boxId = list.boxes[photoIndex].id

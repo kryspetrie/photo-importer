@@ -35,12 +35,12 @@ import androidx.compose.ui.unit.dp
 import java.awt.image.BufferedImage
 import org.kryspetrie.fileimport.domain.model.PhotoScanConfiguration
 import org.kryspetrie.fileimport.domain.model.geometry.BoundingBoxList
+import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.domain.port.PerspectiveCorrectionPort
 import org.kryspetrie.fileimport.ui.components.PreviewCache
-import org.kryspetrie.fileimport.domain.model.i18n.StringKey
-import org.kryspetrie.fileimport.ui.i18n.strings
-
 import org.kryspetrie.fileimport.ui.components.RotationBadge
+import org.kryspetrie.fileimport.ui.i18n.strings
+import org.kryspetrie.fileimport.ui.theme.LocalUiDensityScale
 
 /**
  * Vertical sidebar showing photo thumbnails stacked top-to-bottom. Includes the multi-edit toggle
@@ -60,21 +60,22 @@ internal fun PhotoSidebar(
     onDeselectAll: () -> Unit,
 ) {
     val s = strings()
+    val density = LocalUiDensityScale.current
+    val scale = density.thumbnailCardSize.value / 88f
     val photoCount = boundingBoxList.size()
-    // Scale thumbnails based on how many there are — smaller when crowded
     val thumbHeight =
         when {
-            photoCount <= 3 -> 80.dp
-            photoCount <= 6 -> 64.dp
-            photoCount <= 10 -> 52.dp
-            else -> 44.dp
+            photoCount <= 3 -> (80f * scale).dp
+            photoCount <= 6 -> (64f * scale).dp
+            photoCount <= 10 -> (52f * scale).dp
+            else -> (44f * scale).dp
         }
     val thumbWidth =
         when {
-            photoCount <= 3 -> 100.dp
-            photoCount <= 6 -> 80.dp
-            photoCount <= 10 -> 66.dp
-            else -> 56.dp
+            photoCount <= 3 -> (100f * scale).dp
+            photoCount <= 6 -> (80f * scale).dp
+            photoCount <= 10 -> (66f * scale).dp
+            else -> (56f * scale).dp
         }
 
     Surface(
@@ -105,11 +106,14 @@ internal fun PhotoSidebar(
                                 onDeselectAll()
                                 onToggleMultiEdit()
                             },
-                            modifier = Modifier.height(24.dp),
+                            modifier = Modifier.height(density.controlMinHeight),
                             contentPadding =
                                 androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp),
                         ) {
-                            Text(s.t(StringKey.META_DONE), style = MaterialTheme.typography.labelSmall)
+                            Text(
+                                s.t(StringKey.META_DONE),
+                                style = MaterialTheme.typography.labelSmall,
+                            )
                         }
                     }
                 } else {
@@ -159,7 +163,8 @@ internal fun PhotoSidebar(
                             if (thumbnail != null) {
                                 Image(
                                     bitmap = thumbnail,
-                                    contentDescription = s.t(StringKey.ACC_THUMBNAIL, "index" to "${index + 1}"),
+                                    contentDescription =
+                                        s.t(StringKey.ACC_THUMBNAIL, "index" to "${index + 1}"),
                                     modifier = Modifier.fillMaxSize().padding(2.dp),
                                     contentScale = ContentScale.Fit,
                                 )
@@ -174,7 +179,7 @@ internal fun PhotoSidebar(
                                 } else {
                                     Icon(
                                         Icons.Default.CheckCircle,
-                                        "Selected",
+                                        s.t(StringKey.ACC_SELECTED),
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.align(Alignment.TopEnd).size(16.dp),
                                     )

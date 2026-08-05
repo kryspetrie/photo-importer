@@ -1,26 +1,19 @@
 package org.kryspetrie.fileimport.ui.screens.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Compare
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.kryspetrie.fileimport.domain.model.AppSettings
@@ -31,6 +24,10 @@ import org.kryspetrie.fileimport.domain.model.i18n.StringKey
 import org.kryspetrie.fileimport.ui.i18n.configSummary
 import org.kryspetrie.fileimport.ui.i18n.strings
 
+/**
+ * Media Import settings: Orientation and Organization are top-level panels; remaining options
+ * (dedupe, advanced) stay under Custom Settings.
+ */
 @Composable
 fun SettingsSection(
     expanded: Boolean,
@@ -47,64 +44,76 @@ fun SettingsSection(
     scope: CoroutineScope,
 ) {
     val s = strings()
-    OutlinedCard(Modifier.fillMaxWidth()) {
-        Column {
-            Row(
-                Modifier.fillMaxWidth()
-                    .clickable(onClick = onToggle)
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Icon(
-                    Icons.Default.Tune,
-                    null,
-                    Modifier.size(16.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        s.t(StringKey.IMPORT_SETTINGS_LABEL),
-                        style =
-                            MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
-                    )
-                    if (!expanded) {
-                        Text(
-                            s.configSummary(configuration),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-                Icon(
-                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    s.t(StringKey.ACC_TOGGLE),
-                    Modifier.size(16.dp),
-                )
-            }
-            if (expanded) {
-                Column {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Column(
-                        Modifier.padding(10.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp),
+    var orientationExpanded by remember { mutableStateOf(false) }
+    var organizationExpanded by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        CollapsibleSettingsCard(
+            title = s.t(StringKey.IMPORT_ORIENTATION),
+            icon = Icons.Default.AutoFixHigh,
+            expanded = orientationExpanded,
+            onToggle = { orientationExpanded = !orientationExpanded },
+            summary =
+                if (configuration.autoOrientEnabled) {
+                    s.t(StringKey.IMPORT_SUMMARY_AUTO_ORIENT)
+                } else {
+                    null
+                },
+        ) {
+            OrientationSettingsSection(
+                configuration = configuration,
+                onConfigChange = onConfigChange,
+                collapsible = false,
+            )
+        }
+
+        CollapsibleSettingsCard(
+            title = s.t(StringKey.IMPORT_ORGANIZATION),
+            icon = Icons.Default.Folder,
+            expanded = organizationExpanded,
+            onToggle = { organizationExpanded = !organizationExpanded },
+            summary = s.configSummary(configuration),
+        ) {
+            OrganizationSettingsSection(
+                configuration = configuration,
+                onConfigChange = onConfigChange,
+                collapsible = false,
+            )
+        }
+
+        CollapsibleSettingsCard(
+            title = s.t(StringKey.IMPORT_SETTINGS_LABEL),
+            icon = Icons.Default.Tune,
+            expanded = expanded,
+            onToggle = onToggle,
+            summary =
+                buildString {
+                    if (
+                        configuration.detectVisualDuplicates ||
+                            configuration.detectTransferredByHash ||
+                            configuration.detectTransferredByExif
                     ) {
-                        OrganizationSettingsSection(configuration, onConfigChange)
-                        DeduplicationSettingsSection(configuration, onConfigChange)
-                        AdvancedSettingsSection(
-                            configuration = configuration,
-                            onConfigChange = onConfigChange,
-                            onClearCache = onClearCache,
-                            sourcePath = sourcePath,
-                            destinationPath = destinationPath,
-                            onStartWatchFolder = onStartWatchFolder,
-                            watchStatus = watchStatus,
-                            scope = scope,
-                        )
+                        append(s.t(StringKey.IMPORT_DEDUPLICATION))
                     }
-                }
+                    if (isNotEmpty()) append(s.t(StringKey.IMPORT_SUMMARY_SEPARATOR))
+                    append(s.t(StringKey.IMPORT_ADVANCED))
+                },
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                DeduplicationSettingsSection(configuration, onConfigChange)
+                AdvancedSettingsSection(
+                    configuration = configuration,
+                    onConfigChange = onConfigChange,
+                    onClearCache = onClearCache,
+                    sourcePath = sourcePath,
+                    destinationPath = destinationPath,
+                    onStartWatchFolder = onStartWatchFolder,
+                    watchStatus = watchStatus,
+                    scope = scope,
+                )
             }
         }
     }

@@ -113,6 +113,16 @@ class OrientationCorrectionService(
     /** Returns whether the orientation detection model is available. */
     fun isAvailable(): Boolean = orientationDetection.isOrientationDetectionAvailable()
 
+    /**
+     * Preloads the orientation detection model eagerly.
+     *
+     * Call this early to front-load the model loading cost. Without preloading, the first call to
+     * detect orientation pays the cost of classpath I/O + ONNX session creation.
+     *
+     * @return true if the model was successfully initialized, false if unavailable
+     */
+    fun preload(): Boolean = orientationDetection.preload()
+
     companion object {
         /** Common JPEG file extensions (lowercase). */
         private val JPEG_EXTENSIONS = setOf(".jpg", ".jpeg", ".jpe", ".jfif")

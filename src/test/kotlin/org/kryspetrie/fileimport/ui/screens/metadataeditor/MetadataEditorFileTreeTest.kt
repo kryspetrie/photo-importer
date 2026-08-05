@@ -14,11 +14,7 @@ class MetadataEditorFileTreeTest {
         // GIVEN
         val root = File("/tmp/album")
         val files =
-            listOf(
-                File(root, "a.jpg"),
-                File(root, "nested/b.jpg"),
-                File(root, "nested/deep/c.jpg"),
-            )
+            listOf(File(root, "a.jpg"), File(root, "nested/b.jpg"), File(root, "nested/deep/c.jpg"))
 
         // WHEN
         val tree = buildMetadataFileTree(files, root.absolutePath)
@@ -35,11 +31,7 @@ class MetadataEditorFileTreeTest {
     @Test
     fun groupsFilesUnderCommonAncestorWhenParentsDiffer() {
         // GIVEN
-        val files =
-            listOf(
-                File("/tmp/one/a.jpg"),
-                File("/tmp/two/b.jpg"),
-            )
+        val files = listOf(File("/tmp/one/a.jpg"), File("/tmp/two/b.jpg"))
 
         // WHEN
         val tree = buildMetadataFileTree(files, "")

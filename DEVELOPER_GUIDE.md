@@ -37,14 +37,14 @@ Welcome to Compose Multiplatform! As a Spring developer, you're already familiar
 ### 1. Running the Application
 
 ```bash
-# Run the desktop application with hot reload
+# Run the desktop application
 ./gradlew run
 
 # Or use the convenience script
 ./photo-import.sh
 ```
 
-**Hot Reload**: Compose Desktop supports live reload. When you change UI code, the application automatically refreshes without restarting. This is similar to Spring DevTools.
+**Note:** `./gradlew run` starts a normal Compose Desktop process. After UI changes, restart the app (this project does not enable Compose hot reload).
 
 ### 2. Building Native Installers
 
@@ -118,41 +118,15 @@ class MyScreenTest {
 
 **Note**: The current project uses JUnit 5 for unit tests. UI component tests require additional setup with `compose.ui.test.junit4`.
 
-### 4. Previewing Components (Like WidgetBook)
+### 4. Previewing Components
 
-**Compose Preview** is the standard way to preview components during development - similar to WidgetBook or Storybook:
+This repository does **not** ship `@Preview` composables. Prefer:
 
-```kotlin
-@Composable
-fun MyButton(text: String, onClick: () -> Unit) {
-    Button(onClick = onClick) {
-        Text(text)
-    }
-}
+1. Unit tests for pure UI helpers and view-model logic (`./gradlew test`)
+2. Tagged Compose UI tests (`./gradlew uiTest`)
+3. Running the app (`./gradlew run`) or the optional `src/dev` harnesses (`runMapTileTest`, `runLocationPickerTest`)
 
-// Preview for IntelliJ
-@Preview(showBackground = true)
-@Composable
-fun MyButtonPreview() {
-    PetrieTheme {
-        MyButton("Click Me", onClick = {})
-    }
-}
-
-// Preview with dark theme
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-fun MyButtonDarkPreview() {
-    PetrieTheme {
-        MyButton("Click Me", onClick = {})
-    }
-}
-```
-
-**To view previews in IntelliJ**:
-1. Look for the "Preview" button in the gutter next to `@Preview` functions
-2. Click it to see a live preview of your component
-3. Multiple previews show as tabs
+If you add an IntelliJ Compose `@Preview` locally for exploration, keep it out of `src/main` unless the team adopts previews project-wide.
 
 ### 5. Debugging and Inspection
 
@@ -608,7 +582,7 @@ val filteredImages by remember(images) {
 | `@Autowired` | `koinInject()` |
 | `@Configuration` | Koin modules (`appModule`) |
 | Thymeleaf/Templates | Compose UI declarations |
-| Spring Boot DevTools | Compose hot reload |
+| Spring Boot DevTools | Restart `./gradlew run` after UI changes |
 | MockMvc | Compose UI Test |
 | Application Properties | SettingsAdapter with JSON |
 
@@ -670,10 +644,9 @@ val scope = rememberCoroutineScope()
 
 1. **Run the application**: `./gradlew run`
 2. **Explore the code**: Start with `PetrieFileImporterApp.kt`
-3. **Make a small change**: Modify a label or color, see hot reload
-4. **Add a preview**: Add `@Preview` to a composable
-5. **Write a test**: Add a unit test for a pure function
-6. **Build an installer**: `./gradlew packageDmg` (or your OS)
+3. **Make a small change**: Modify a label or color, then restart the app
+4. **Write a test**: Add a unit test for a pure function or view-model behavior
+5. **Build an installer**: `./gradlew packageDmg` (or your OS)
 
 Remember: Compose is declarative. Think "UI is a function of state" and you'll be productive quickly!
 
@@ -687,7 +660,7 @@ The Photo Scan feature allows importing physical photographs that have been phot
 ┌─────────────────────────────────────────────────────────────────┐
 │                      Photo Scan Workflow                         │
 ├─────────────────────────────────────────────────────────────────┤
-│  DETECTING → CORNER_EDITING → METADATA_EDITING → EXPORTING     │
+│  IMPORT → OVERVIEW → SUMMARY → EDIT → PROCESSING → COMPLETE    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -695,12 +668,14 @@ The Photo Scan feature allows importing physical photographs that have been phot
 
 | Component | Location | Purpose |
 |-----------|----------|---------|
-| `PhotoScanState` | `domain/model/` | Workflow state management |
+| `PhotoScanWizardState` | `ui/wizard/state/` | Workflow state management |
 | `PhotoScanDetectorService` | `application/` | Edge detection for photos |
 | `PerspectiveCorrectionService` | `application/` | Bilinear interpolation |
 | `PhotoScanExportService` | `application/` | JPEG export with metadata |
-| `PhotoScanScreen` | `ui/screens/` | Main orchestration |
-| `PhotoScanPreviewScreen` | `ui/screens/` | Corner editing canvas |
+| `WizardContainer` | `ui/screens/wizard/` | Step routing and orchestration |
+| `OverviewScreen` | `ui/screens/wizard/` | Bounding box editing canvas |
+| `SummaryScreen` | `ui/screens/wizard/` | Per-photo rotation review |
+| `EditScreen` | `ui/screens/wizard/` | Metadata editing per photo |
 
 ### Domain Models
 
@@ -741,44 +716,42 @@ data class PhotoScanConfiguration(
 ### Adding a New Feature to Photo Scan
 
 1. **Add domain model**: Update `PhotoScanModels.kt` or `PhotoScanConfiguration.kt`
-2. **Add state management**: Update `PhotoScanState.kt` with new methods
+2. **Add state management**: Update `PhotoScanWizardState.kt` (or the delegate it owns) with new methods
 3. **Implement service logic**: Create or update service in `application/`
-4. **Add UI**: Create composable in `ui/screens/`
+4. **Add UI**: Create composable in `ui/screens/wizard/`
 5. **Register in DI**: Update `di/AppModule.kt`
 6. **Add tests**: Create test in `src/test/kotlin/`
 
 ### Example: Adding a New Workflow Step
 
 ```kotlin
-// 1. Add step to enum in PhotoScanState.kt
-enum class Step {
-    DETECTING,
-    CORNER_EDITING,
-    METADATA_EDITING,
-    EXPORTING,
+// 1. Add step to WizardStep (ui/wizard/state/)
+enum class WizardStep {
+    IMPORT,
+    OVERVIEW,
+    REFINEMENT,
+    SUMMARY,
+    EDIT,
+    PROCESSING,
     COMPLETE,
-    NEW_STEP  // <-- Add here
+    NEW_STEP, // <-- Add here
 }
 
-// 2. Add state and handlers
-fun proceedToNewStep() {
-    step.value = Step.NEW_STEP
+// 2. Add a navigation helper in WizardNavigationState.kt
+fun goToNewStep() {
+    _currentStep.value = WizardStep.NEW_STEP
 }
 
-// 3. Add UI in PhotoScanScreen.kt
-when (scanState.step.value) {
-    PhotoScanState.Step.NEW_STEP -> NewStepScreen(...)
+// 3. Route the step in WizardContainer.kt
+when (currentStep) {
+    WizardStep.NEW_STEP -> NewStepScreen(...)
 }
 
-// 4. Add transition logic
-when (event) {
-    is ScanEvent.ProceedToNewStep -> scanState.proceedToNewStep()
-}
-
-// 5. Add test
+// 4. Add test
 @Test
 fun shouldTransitionToNewStep() {
-    scanState.proceedToNewStep()
-    assertThat(scanState.step.value).isEqualTo(PhotoScanState.Step.NEW_STEP)
+    val navigation = WizardNavigationState()
+    navigation.goToNewStep()
+    assertThat(navigation.currentStep.value).isEqualTo(WizardStep.NEW_STEP)
 }
 ```

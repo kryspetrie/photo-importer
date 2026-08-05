@@ -378,21 +378,21 @@ The project uses multiple testing strategies:
    ./gradlew test
    ```
 
-2. **UI Component Previews**: Live preview while developing
-   - Add `@Preview` annotation to composables
-   - View in IntelliJ preview panel
-   - Similar to WidgetBook/Storybook
-
-3. **UI Component Tests**: Test UI interactions
-   - Uses Compose UI Test framework
+2. **UI Component Tests**: Compose UI Test for interactions
    - See examples in `src/test/kotlin/org/kryspetrie/fileimport/ui/`
+   - Run with `./gradlew uiTest`
+
+3. **Manual UI checks**: Run the app and exercise the screen under change
+   ```bash
+   ./gradlew run
+   ```
 
 See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#testing-ui-components) for detailed examples.
 
 ### Development Workflow
 
 ```bash
-# Run with hot reload
+# Run the desktop app (restart after UI changes)
 ./gradlew run
 
 # Run tests
@@ -409,21 +409,14 @@ See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#testing-ui-components) for detailed 
 
 See [QUICK_REFERENCE.md](QUICK_REFERENCE.md) for complete command reference.
 
-### Component Preview System
+### Dev harnesses (optional)
 
-Compose provides a built-in preview system similar to WidgetBook:
+Standalone map / location-picker windows live under `src/dev` and are not packaged with the app:
 
-```kotlin
-@Preview(showBackground = true)
-@Composable
-fun MyComponentPreview() {
-    PetrieTheme {
-        MyComponent(text = "Preview")
-    }
-}
+```bash
+./gradlew runMapTileTest
+./gradlew runLocationPickerTest
 ```
 
-Click the "Preview" button in IntelliJ to see live preview. Multiple previews appear as tabs.
-
-See [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md#previewing-components-like-widgetbook) for more details.
+Compose Desktop `@Preview` is not used in this repository; prefer unit/UI tests and `./gradlew run`.
 
